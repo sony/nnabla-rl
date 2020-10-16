@@ -1,0 +1,23 @@
+{
+    "algorithm_name": "DDPG",
+    "algorithm_class_name": "DDPG",
+    "algorithm_params": {
+        "tau": 0.05,
+        "gamma": 0.99,
+        "learning_rate": 0.001,
+        "batch_size": 100,
+        "start_timesteps": 200,
+        "replay_buffer_size": 1000000
+    },
+    "iteration_num": 10000,
+    "models": [
+        "q",
+        "target_q",
+        "pi",
+        "target_pi"
+    ],
+    "solvers": [
+        "q_solver",
+        "pi_solver"
+    ]
+}

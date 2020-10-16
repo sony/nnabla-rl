@@ -1,0 +1,15 @@
+scipy
+matplotlib
+sklearn
+pandas
+pytest
+tqdm
+opencv-python
+argparse
+pylint
+seaborn
+gym[atari]
+graphviz
+nnabla
+nnabla-ext-cuda102
+pybullet

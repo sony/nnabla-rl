@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+import pathlib
+import numpy as np
+
+import argparse
+
+
+def load_data(path):
+    path = pathlib.Path(path)
+    return np.loadtxt(str(path), delimiter='\t', skiprows=1)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--tsvpath',
+                        type=str,
+                        required=True,
+                        help='evaluation tsv filepath')
+
+    args = parser.parse_args()
+
+    results = load_data(args.tsvpath)
+
+    best_mean_iteration = np.argmax(results[:, 1])
+    best_median_iteration = np.argmax(results[:, 5])
+
+    print('best mean_iteration {}, score: mean: {}+/-{}, median: {}'.format(int(results[best_mean_iteration][0]),
+                                                                         results[best_mean_iteration][1],
+                                                                         results[best_mean_iteration][2],
+                                                                         results[best_mean_iteration][5]))
+    print('best median_iteration {}, score: mean: {}+/-{}, median: {}'.format(int(results[best_median_iteration][0]),
+                                                                           results[best_median_iteration][1],
+                                                                           results[best_median_iteration][2],
+                                                                           results[best_median_iteration][5]))

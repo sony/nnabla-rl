@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+
+from datetime import datetime as dt
+import sys
+import pathlib
+import numpy as np
+
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
+
+import argparse
+
+
+def load_data(path):
+    path = pathlib.Path(path)
+    return np.loadtxt(str(path), delimiter='\t', skiprows=1)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--tsvpath',
+                        type=str,
+                        required=True,
+                        help='evaluation tsv filepath')
+
+    # Graph options
+    parser.add_argument('--xlabel', type=str, default='steps')
+    parser.add_argument('--ylabel', type=str, default='score')
+
+    parser.add_argument('--outdir', type=str, default='./')
+    parser.add_argument('--savename', type=str, default='result.png')
+
+    parser.add_argument('--xnlim', type=int, default=None)
+    parser.add_argument('--xplim', type=int, default=None)
+    parser.add_argument('--ynlim', type=int, default=None)
+    parser.add_argument('--yplim', type=int, default=None)
+
+    parser.add_argument('--legend-pos', type=str, default='upper left')
+
+    parser.add_argument('--hlines', type=float, nargs='*', default=[])
+
+    parser.add_argument('--show-fig', action='store_true')
+
+    args = parser.parse_args()
+
+    results = load_data(args.tsvpath)
+
+    itr_x = results[:, 0]
+    avg_y = results[:, 1]
+    std_y = results[:, 2]
+    min_y = results[:, 3]
+    max_y = results[:, 4]
+    med_y = results[:, 5]
+
+    x = itr_x
+
+    if args.xnlim is None:
+        args.xnlim = np.amin(x)
+    if args.xplim is None:
+        args.xplim = np.amax(x)
+    if args.ynlim is None:
+        args.ynlim = np.amin(min_y)
+    if args.yplim is None:
+        args.yplim = np.amax(max_y)
+
+    fig = plt.figure(figsize=(5, 4), dpi=80)
+    ax = fig.add_subplot(111)
+
+    ax.plot(x, avg_y, label='average', linewidth=1)
+    ax.fill_between(x, avg_y + std_y, avg_y - std_y, alpha=0.3)
+    ax.plot(x, med_y, label='median', linewidth=1)
+
+    ax.legend(loc=args.legend_pos, fontsize=8)
+    ax.set_xlim(args.xnlim, args.xplim)
+    ax.set_ylim(args.ynlim, args.yplim)
+
+    ax.set_xlabel(args.xlabel)
+    ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+
+    ax.set_ylabel(args.ylabel)
+    ax.ticklabel_format(style="sci",  axis="x", scilimits=(0, 0))
+
+    for height in args.hlines:
+        plt.axhline(y=height, color='red')
+
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(args.outdir + '/' + args.savename)
+    if args.show_fig:
+        plt.show()
