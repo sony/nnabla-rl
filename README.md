@@ -1,3 +1,5 @@
+[![Build status](https://github.com/nnabla/nnabla-rl/workflows/Build%20nnabla-rl/badge.svg)](https://github.com/nnabla/nnabla-rl/actions)
+
 # Reinforcement Learning Libraries built on top of Neural Network Libraries
 
 NNablaRL is a deep reinforcement learning framework that is intended to be used for research, development and production.
