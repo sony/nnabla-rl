@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 import warnings
 from collections import namedtuple
@@ -24,13 +24,13 @@ def default_q_func_builder(scope_name, state_shape, n_action):
 
 def default_q_solver_builder(q_func, params):
     try:
-        solver = S.RMSpropgraves(
+        solver = NS.RMSpropgraves(
             lr=params.learning_rate, decay=params.decay,
             momentum=params.momentum, eps=params.min_squared_gradient)
     except AttributeError:
         warnings.warn("Instead of RMSpropgraves, use Adam as a Solver, \
             Please check learning rate. It might be needed to tune it")
-        solver = S.Adam(params.learning_rate)
+        solver = NS.Adam(params.learning_rate)
     solver.set_parameters(q_func.get_parameters())
     return solver
 
@@ -197,11 +197,11 @@ class DQN(Algorithm):
                                 self._training_variables.a_current)
 
         # take loss
-        self._huber_loss_var = F.sum(0.5
-                                     * F.huber_loss(self._q_var, target_q_var))
+        self._huber_loss_var = NF.sum(0.5
+                                      * NF.huber_loss(self._q_var, target_q_var))
 
         # compute td_error for prioritized replay buffer
-        self._td_error_var = F.absolute_error(self._q_var, target_q_var)
+        self._td_error_var = NF.absolute_error(self._q_var, target_q_var)
         self._td_error_var.need_grad = False
 
     def _build_evaluation_graph(self):

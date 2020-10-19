@@ -1,13 +1,13 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.parametric_functions as PF
+import nnabla.functions as NF
+import nnabla.parametric_functions as NPF
 
 from nnabla_rl.models.perturbator import Perturbator
 
 
 class BCQPerturbator(Perturbator):
     """
-    Perturbator model proposed by S. Fujimoto in BCQ paper for mujoco environment.
+    Perturbator model proposed by NS. Fujimoto in BCQ paper for mujoco environment.
     See: https://arxiv.org/abs/1812.02900
     """
 
@@ -21,10 +21,10 @@ class BCQPerturbator(Perturbator):
         assert s.shape[1] == self._state_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = F.concatenate(s, a)
-            h = PF.affine(h, n_outmaps=400, name="linear1")
-            h = F.relu(x=h)
-            h = PF.affine(h, n_outmaps=300, name="linear2")
-            h = F.relu(x=h)
-            h = PF.affine(h, n_outmaps=self._action_dim, name="linear3")
-        return F.tanh(h) * self._max_action_value * phi
+            h = NF.concatenate(s, a)
+            h = NPF.affine(h, n_outmaps=400, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=300, name="linear2")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=self._action_dim, name="linear3")
+        return NF.tanh(h) * self._max_action_value * phi

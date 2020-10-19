@@ -1,7 +1,7 @@
 import pytest
 
 import nnabla as nn
-import nnabla.functions as F
+import nnabla.functions as NF
 
 import numpy as np
 
@@ -41,7 +41,7 @@ class TestAdjustableTemperature(object):
 
         value = temperature()
 
-        loss = 0.5 * F.mean(value ** 2)
+        loss = 0.5 * NF.mean(value ** 2)
         loss.forward()
 
         solver.zero_grad()

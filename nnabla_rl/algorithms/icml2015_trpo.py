@@ -1,6 +1,6 @@
 import nnabla as nn
 
-import nnabla.functions as F
+import nnabla.functions as NF
 
 import numpy as np
 
@@ -103,13 +103,13 @@ class ICML2015TRPO(Algorithm):
         old_distribution = self._old_policy.pi(
             self._training_variables.s_current)
 
-        self._kl_divergence = F.mean(
+        self._kl_divergence = NF.mean(
             old_distribution.kl_divergence(distribution))
 
         _kl_divergence_grads = nn.grad(
             [self._kl_divergence], self._policy.get_parameters().values())
 
-        self._kl_divergence_flat_grads = F.concatenate(
+        self._kl_divergence_flat_grads = NF.concatenate(
             *[grad.reshape((-1,)) for grad in _kl_divergence_grads])
         self._kl_divergence_flat_grads.need_grad = True
 
@@ -117,14 +117,14 @@ class ICML2015TRPO(Algorithm):
         old_log_prob = old_distribution.log_prob(
             self._training_variables.a_current)
 
-        prob_ratio = F.exp(log_prob - old_log_prob)
-        self._approximate_return = F.mean(
+        prob_ratio = NF.exp(log_prob - old_log_prob)
+        self._approximate_return = NF.mean(
             prob_ratio*self._training_variables.accumulated_reward)
 
         _approximate_return_grads = nn.grad(
             [self._approximate_return], self._policy.get_parameters().values())
 
-        self._approximate_return_flat_grads = F.concatenate(
+        self._approximate_return_flat_grads = NF.concatenate(
             *[grad.reshape((-1,)) for grad in _approximate_return_grads])
         self._approximate_return_flat_grads.need_grad = True
 

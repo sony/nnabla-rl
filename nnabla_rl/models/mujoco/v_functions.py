@@ -2,9 +2,9 @@ import numpy as np
 
 import nnabla as nn
 
-import nnabla.functions as F
-import nnabla.parametric_functions as PF
-import nnabla.initializer as I
+import nnabla.functions as NF
+import nnabla.parametric_functions as NPF
+import nnabla.initializer as NI
 
 from nnabla_rl.models.v_function import VFunction, preprocess_state
 import nnabla_rl.initializers as RI
@@ -24,11 +24,11 @@ class SACVFunction(VFunction):
         assert s.shape[1] == self._state_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(s, n_outmaps=256, name="linear1")
-            h = F.relu(x=h)
-            h = PF.affine(h, n_outmaps=256, name="linear2")
-            h = F.relu(x=h)
-            h = PF.affine(h, n_outmaps=1, name="linear3")
+            h = NPF.affine(s, n_outmaps=256, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=256, name="linear2")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=1, name="linear3")
         return h
 
 
@@ -48,14 +48,14 @@ class TRPOVFunction(VFunction):
         assert s.shape[1] == self._state_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(s, n_outmaps=64, name="linear1",
-                          w_init=I.OrthogonalInitializer(np.sqrt(2.)))
-            h = F.tanh(x=h)
-            h = PF.affine(h, n_outmaps=64, name="linear2",
-                          w_init=I.OrthogonalInitializer(np.sqrt(2.)))
-            h = F.tanh(x=h)
-            h = PF.affine(h, n_outmaps=1, name="linear3",
-                          w_init=I.OrthogonalInitializer(np.sqrt(2.)))
+            h = NPF.affine(s, n_outmaps=64, name="linear1",
+                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=64, name="linear2",
+                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=1, name="linear3",
+                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
         return h
 
 
@@ -74,14 +74,14 @@ class PPOVFunction(VFunction):
     def v(self, s):
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("linear1"):
-                h = PF.affine(s, n_outmaps=64,
-                              w_init=RI.NormcInitializer(std=1.0))
-            h = F.tanh(x=h)
+                h = NPF.affine(s, n_outmaps=64,
+                               w_init=RI.NormcInitializer(std=1.0))
+            h = NF.tanh(x=h)
             with nn.parameter_scope("linear2"):
-                h = PF.affine(h, n_outmaps=64,
-                              w_init=RI.NormcInitializer(std=1.0))
-            h = F.tanh(x=h)
+                h = NPF.affine(h, n_outmaps=64,
+                               w_init=RI.NormcInitializer(std=1.0))
+            h = NF.tanh(x=h)
             with nn.parameter_scope("linear_v"):
-                v = PF.affine(h, n_outmaps=1,
-                              w_init=RI.NormcInitializer(std=1.0))
+                v = NPF.affine(h, n_outmaps=1,
+                               w_init=RI.NormcInitializer(std=1.0))
         return v

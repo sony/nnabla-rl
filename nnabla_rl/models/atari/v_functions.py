@@ -1,6 +1,6 @@
 import nnabla as nn
 
-import nnabla.parametric_functions as PF
+import nnabla.parametric_functions as NPF
 
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.v_function import VFunction
@@ -22,8 +22,8 @@ class PPOVFunction(VFunction):
         h = self._hidden(s)
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("linear_v"):
-                v = PF.affine(h, n_outmaps=1,
-                              w_init=RI.NormcInitializer(std=0.01))
+                v = NPF.affine(h, n_outmaps=1,
+                               w_init=RI.NormcInitializer(std=0.01))
         return v
 
     def _hidden(self, s):

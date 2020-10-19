@@ -1,5 +1,5 @@
 import nnabla as nn
-import nnabla.functions as F
+import nnabla.functions as NF
 
 import numpy as np
 
@@ -17,10 +17,10 @@ def compute_hessian(y, x):
         param.grad.zero()
     grads = nn.grad([y], x)
     if len(grads) > 1:
-        flat_grads = F.concatenate(
-            *[F.reshape(grad, (-1,), inplace=False) for grad in grads])
+        flat_grads = NF.concatenate(
+            *[NF.reshape(grad, (-1,), inplace=False) for grad in grads])
     else:
-        flat_grads = F.reshape(grads[0], (-1,), inplace=False)
+        flat_grads = NF.reshape(grads[0], (-1,), inplace=False)
     flat_grads.need_grad = True
 
     hessian = np.zeros(

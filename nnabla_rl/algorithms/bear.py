@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 
@@ -115,7 +115,7 @@ class AdjustableLagrangeMultiplier(Model):
         self()
 
     def __call__(self):
-        return F.exp(self._log_lagrange)
+        return NF.exp(self._log_lagrange)
 
     def clip(self, min_value, max_value):
         self._log_lagrange.d = np.clip(
@@ -227,31 +227,31 @@ class BEAR(Algorithm):
     def _build_evaluation_graph(self):
         if self._params.use_mean_for_eval:
             eval_distribution = self._pi.pi(self._eval_state_var)
-            self._eval_action = F.tanh(eval_distribution.mean())
+            self._eval_action = NF.tanh(eval_distribution.mean())
         else:
             repeat_num = 10
             state = RF.repeat(x=self._eval_state_var,
                               repeats=repeat_num, axis=0)
             assert state.shape == (repeat_num, self._eval_state_var.shape[1])
             eval_distribution = self._pi.pi(state)
-            self._eval_action = F.tanh(eval_distribution.sample())
+            self._eval_action = NF.tanh(eval_distribution.sample())
             q_values = self._q_ensembles[0].q(state, self._eval_action)
             self._eval_max_index = RF.argmax(q_values, axis=0)
 
     def _setup_solver(self):
         self._q_solvers = []
         for q in self._q_ensembles:
-            solver = S.Adam(alpha=self._params.learning_rate)
+            solver = NS.Adam(alpha=self._params.learning_rate)
             solver.set_parameters(q.get_parameters())
             self._q_solvers.append(solver)
 
-        self._pi_solver = S.Adam(alpha=self._params.learning_rate)
+        self._pi_solver = NS.Adam(alpha=self._params.learning_rate)
         self._pi_solver.set_parameters(self._pi.get_parameters())
 
-        self._vae_solver = S.Adam(alpha=self._params.learning_rate)
+        self._vae_solver = NS.Adam(alpha=self._params.learning_rate)
         self._vae_solver.set_parameters(self._vae.get_parameters())
 
-        self._lagrange_solver = S.Adam(alpha=self._params.learning_rate)
+        self._lagrange_solver = NS.Adam(alpha=self._params.learning_rate)
         self._lagrange_solver.set_parameters(self._lagrange.get_parameters())
 
     def _run_online_training_iteration(self, env):
@@ -287,19 +287,19 @@ class BEAR(Algorithm):
             x=self._s_next_var, repeats=self._params.num_action_samples, axis=0)
         policy_distribution = self._target_pi.pi(s_next_rep)
         self._pi_ln_var = policy_distribution._ln_var
-        a_next_rep = F.tanh(policy_distribution.sample())
-        q_values = F.stack(*(q_target.q(s_next_rep, a_next_rep)
-                             for q_target in self._target_q_ensembles))
+        a_next_rep = NF.tanh(policy_distribution.sample())
+        q_values = NF.stack(*(q_target.q(s_next_rep, a_next_rep)
+                              for q_target in self._target_q_ensembles))
         assert q_values.shape == (self._params.num_q_ensembles,
                                   self._params.batch_size * self._params.num_action_samples,
                                   1)
-        weighted_q_minmax = self._params.lmb * F.min(q_values, axis=0) \
-            + (1.0 - self._params.lmb) * F.max(q_values, axis=0)
+        weighted_q_minmax = self._params.lmb * NF.min(q_values, axis=0) \
+            + (1.0 - self._params.lmb) * NF.max(q_values, axis=0)
         assert weighted_q_minmax.shape == (
             self._params.batch_size * self._params.num_action_samples, 1)
 
-        next_q_value = F.max(
-            F.reshape(weighted_q_minmax, shape=(self._params.batch_size, -1)), axis=1, keepdims=True)
+        next_q_value = NF.max(
+            NF.reshape(weighted_q_minmax, shape=(self._params.batch_size, -1)), axis=1, keepdims=True)
         assert next_q_value.shape == (self._params.batch_size, 1)
         target_q_value = self._reward_var + self._params.gamma * \
             self._non_terminal_var * next_q_value
@@ -317,7 +317,7 @@ class BEAR(Algorithm):
         policy_distribution = self._pi.pi(self._s_current_var)
         unsquashed_pi_actions = policy_distribution.sample_multiple(
             num_samples=self._params.num_mmd_actions, noise_clip=(-0.5, 0.5))
-        squashed_pi_actions = F.tanh(unsquashed_pi_actions)
+        squashed_pi_actions = NF.tanh(unsquashed_pi_actions)
 
         if self._params.mmd_type == 'gaussian':
             mmd_loss = self._compute_gaussian_mmd(
@@ -332,25 +332,25 @@ class BEAR(Algorithm):
 
         s_hat = RF.expand_dims(self._s_current_var, axis=0)
         s_hat = RF.repeat(s_hat, repeats=self._params.num_mmd_actions, axis=0)
-        s_hat = F.reshape(s_hat, shape=(self._params.batch_size *
-                                        self._params.num_mmd_actions, self._s_current_var.shape[-1]))
-        a_hat = F.transpose(squashed_pi_actions, axes=(1, 0, 2))
-        a_hat = F.reshape(a_hat, shape=(self._params.batch_size *
-                                        self._params.num_mmd_actions,
-                                        self._a_current_var.shape[-1]))
+        s_hat = NF.reshape(s_hat, shape=(self._params.batch_size *
+                                         self._params.num_mmd_actions, self._s_current_var.shape[-1]))
+        a_hat = NF.transpose(squashed_pi_actions, axes=(1, 0, 2))
+        a_hat = NF.reshape(a_hat, shape=(self._params.batch_size *
+                                         self._params.num_mmd_actions,
+                                         self._a_current_var.shape[-1]))
 
-        q_values = F.stack(*(q.q(s_hat, a_hat) for q in self._q_ensembles))
+        q_values = NF.stack(*(q.q(s_hat, a_hat) for q in self._q_ensembles))
         assert q_values.shape == (
             self._params.num_q_ensembles, self._params.num_mmd_actions * self._params.batch_size, 1)
-        q_values = F.reshape(q_values, shape=(
+        q_values = NF.reshape(q_values, shape=(
             self._params.num_q_ensembles, self._params.num_mmd_actions, self._params.batch_size, 1))
         # Compute mean among sampled actions
-        q_values = F.mean(q_values, axis=1)
+        q_values = NF.mean(q_values, axis=1)
         assert q_values.shape == (
             self._params.num_q_ensembles, self._params.batch_size, 1)
 
         # Compute the minimum among ensembles
-        q_min = F.min(q_values, axis=0)
+        q_min = NF.min(q_values, axis=0)
 
         assert q_min.shape == (self._params.batch_size, 1)
         # Compute stddev among q funciton ensembles
@@ -360,30 +360,30 @@ class BEAR(Algorithm):
         else:
             q_stddev = 0.0
 
-        self._pi_loss = F.mean(-q_min +
-                               q_stddev * self._params.stddev_coeff +
-                               self._lagrange() * mmd_loss)
-        self._pi_warmup_loss = F.mean(self._lagrange() * mmd_loss)
+        self._pi_loss = NF.mean(-q_min +
+                                q_stddev * self._params.stddev_coeff +
+                                self._lagrange() * mmd_loss)
+        self._pi_warmup_loss = NF.mean(self._lagrange() * mmd_loss)
 
         # Must forward pi_loss before forwarding lagrange_loss
-        self._lagrange_loss = -F.mean(-q_min +
-                                      q_stddev * self._params.stddev_coeff +
-                                      self._lagrange() * (mmd_loss - self._params.epsilon))
+        self._lagrange_loss = -NF.mean(-q_min +
+                                       q_stddev * self._params.stddev_coeff +
+                                       self._lagrange() * (mmd_loss - self._params.epsilon))
 
     def _build_vae_update_graph(self):
         latent_distribution, reconstructed_action = self._vae(
             self._s_current_var, self._a_current_var)
-        squashed_action = F.tanh(reconstructed_action)
+        squashed_action = NF.tanh(reconstructed_action)
         reconstruction_loss = RF.mean_squared_error(
             self._a_current_var, squashed_action)
         kl_divergence = \
             latent_distribution.kl_divergence(self._target_latent_distribution)
-        latent_loss = 0.5 * F.mean(kl_divergence)
+        latent_loss = 0.5 * NF.mean(kl_divergence)
         self._vae_loss = reconstruction_loss + latent_loss
 
     def _build_exploration_graph(self):
         exploration_distribution = self._pi.pi(self._exploration_state_var)
-        self._exploration_action = F.tanh(exploration_distribution.sample())
+        self._exploration_action = NF.tanh(exploration_distribution.sample())
 
     def _bear_training(self, replay_buffer):
         experiences, *_ = replay_buffer.sample(self._params.batch_size)
@@ -449,20 +449,20 @@ class BEAR(Algorithm):
         k_xx = RF.expand_dims(x=samples1, axis=2) - \
             RF.expand_dims(x=samples1, axis=1)
         last_axis = len(k_xx.shape) - 1
-        sum_k_xx = F.sum(
-            F.exp(-F.sum(k_xx**2, axis=last_axis, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
+        sum_k_xx = NF.sum(
+            NF.exp(-NF.sum(k_xx**2, axis=last_axis, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
 
         k_xy = RF.expand_dims(x=samples1, axis=2) - \
             RF.expand_dims(x=samples2, axis=1)
         last_axis = len(k_xy.shape) - 1
-        sum_k_xy = F.sum(
-            F.exp(-F.sum(k_xy**2, axis=last_axis, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
+        sum_k_xy = NF.sum(
+            NF.exp(-NF.sum(k_xy**2, axis=last_axis, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
 
         k_yy = RF.expand_dims(x=samples2, axis=2) - \
             RF.expand_dims(x=samples2, axis=1)
         last_axis = len(k_yy.shape) - 1
-        sum_k_yy = F.sum(
-            F.exp(-F.sum(k_yy**2, axis=last_axis, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
+        sum_k_yy = NF.sum(
+            NF.exp(-NF.sum(k_yy**2, axis=last_axis, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
 
         mmd_squared = \
             (sum_k_xx / (n*n) - 2.0 * sum_k_xy / (m*n) + sum_k_yy / (m*m))
@@ -476,18 +476,18 @@ class BEAR(Algorithm):
         k_xx = RF.expand_dims(x=samples1, axis=2) - \
             RF.expand_dims(x=samples1, axis=1)
 
-        sum_k_xx = F.sum(
-            F.exp(-F.sum(F.abs(k_xx), axis=3, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
+        sum_k_xx = NF.sum(
+            NF.exp(-NF.sum(NF.abs(k_xx), axis=3, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
 
         k_xy = RF.expand_dims(x=samples1, axis=2) - \
             RF.expand_dims(x=samples2, axis=1)
-        sum_k_xy = F.sum(
-            F.exp(-F.sum(F.abs(k_xy), axis=3, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
+        sum_k_xy = NF.sum(
+            NF.exp(-NF.sum(NF.abs(k_xy), axis=3, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
 
         k_yy = RF.expand_dims(x=samples2, axis=2) - \
             RF.expand_dims(x=samples2, axis=1)
-        sum_k_yy = F.sum(
-            F.exp(-F.sum(F.abs(k_yy), axis=3, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
+        sum_k_yy = NF.sum(
+            NF.exp(-NF.sum(NF.abs(k_yy), axis=3, keepdims=True) / (2.0 * sigma)), axis=(1, 2))
 
         mmd_squared = \
             (sum_k_xx / (n*n) - 2.0 * sum_k_xy / (m*n) + sum_k_yy / (m*m))

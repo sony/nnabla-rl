@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 
@@ -128,7 +128,7 @@ class ICML2018SAC(Algorithm):
 
         target_q1 = self._q1.q(self._s_current_var, sampled_action)
         target_q2 = self._q2.q(self._s_current_var, sampled_action)
-        target_q_var = F.minimum2(target_q1, target_q2)
+        target_q_var = NF.minimum2(target_q1, target_q2)
 
         y = (target_q_var - log_pi)
         y.need_grad = False
@@ -150,23 +150,23 @@ class ICML2018SAC(Algorithm):
         sampled_action, log_pi = policy_distribution.sample_and_compute_log_prob()
         q1 = self._q1.q(self._s_current_var, sampled_action)
         q2 = self._q2.q(self._s_current_var, sampled_action)
-        q = F.minimum2(q1, q2)
-        self._pi_loss = F.mean(log_pi - q)
+        q = NF.minimum2(q1, q2)
+        self._pi_loss = NF.mean(log_pi - q)
 
     def _build_evaluation_graph(self):
         self._eval_distribution = self._pi.pi(self._eval_state_var)
 
     def _setup_solver(self):
-        self._v_solver = S.Adam(alpha=self._params.learning_rate)
+        self._v_solver = NS.Adam(alpha=self._params.learning_rate)
         self._v_solver.set_parameters(self._v.get_parameters())
 
-        self._q1_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q1_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q1_solver.set_parameters(self._q1.get_parameters())
 
-        self._q2_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q2_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q2_solver.set_parameters(self._q2.get_parameters())
 
-        self._pi_solver = S.Adam(alpha=self._params.learning_rate)
+        self._pi_solver = NS.Adam(alpha=self._params.learning_rate)
         self._pi_solver.set_parameters(self._pi.get_parameters())
 
     def _run_online_training_iteration(self, env):

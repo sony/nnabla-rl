@@ -27,10 +27,10 @@ if __name__ == '__main__':
     best_median_iteration = np.argmax(results[:, 5])
 
     print('best mean_iteration {}, score: mean: {}+/-{}, median: {}'.format(int(results[best_mean_iteration][0]),
-                                                                         results[best_mean_iteration][1],
-                                                                         results[best_mean_iteration][2],
-                                                                         results[best_mean_iteration][5]))
+                                                                            results[best_mean_iteration][1],
+                                                                            results[best_mean_iteration][2],
+                                                                            results[best_mean_iteration][5]))
     print('best median_iteration {}, score: mean: {}+/-{}, median: {}'.format(int(results[best_median_iteration][0]),
-                                                                           results[best_median_iteration][1],
-                                                                           results[best_median_iteration][2],
-                                                                           results[best_median_iteration][5]))
+                                                                              results[best_median_iteration][1],
+                                                                              results[best_median_iteration][2],
+                                                                              results[best_median_iteration][5]))

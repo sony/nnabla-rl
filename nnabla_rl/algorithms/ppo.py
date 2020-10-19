@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 from collections import namedtuple
@@ -207,20 +207,20 @@ class PPO(Algorithm):
         distribution = self._policy.pi(self._variables.s_current)
         log_prob_new = distribution.log_prob(self._variables.a_current)
         log_prob_old = self._variables.log_prob
-        probability_ratio = F.exp(log_prob_new - log_prob_old)
-        clipped_ratio = F.clip_by_value(probability_ratio,
-                                        1 - self._params.epsilon * self._variables.alpha,
-                                        1 + self._params.epsilon * self._variables.alpha)
-        lower_bounds = F.minimum2(probability_ratio * self._variables.advantage,
-                                  clipped_ratio * self._variables.advantage)
-        clip_loss = F.mean(lower_bounds)
+        probability_ratio = NF.exp(log_prob_new - log_prob_old)
+        clipped_ratio = NF.clip_by_value(probability_ratio,
+                                         1 - self._params.epsilon * self._variables.alpha,
+                                         1 + self._params.epsilon * self._variables.alpha)
+        lower_bounds = NF.minimum2(probability_ratio * self._variables.advantage,
+                                   clipped_ratio * self._variables.advantage)
+        clip_loss = NF.mean(lower_bounds)
 
         value = self._v_function.v(self._variables.s_current)
         value_loss = self._params.value_coefficient * \
             RF.mean_squared_error(value, self._variables.v_target)
 
         entropy = distribution.entropy()
-        entropy_loss = F.mean(entropy)
+        entropy_loss = NF.mean(entropy)
 
         policy_loss = -clip_loss - self._params.entropy_coefficient * entropy_loss
         self._loss = value_loss + policy_loss
@@ -230,9 +230,9 @@ class PPO(Algorithm):
         self._eval_action = distribution.sample()
 
     def _setup_solver(self):
-        self._v_solver = S.Adam(self._params.learning_rate, eps=1e-5)
+        self._v_solver = NS.Adam(self._params.learning_rate, eps=1e-5)
         self._v_solver.set_parameters(self._v_function.get_parameters())
-        self._policy_solver = S.Adam(self._params.learning_rate, eps=1e-5)
+        self._policy_solver = NS.Adam(self._params.learning_rate, eps=1e-5)
         self._policy_solver.set_parameters(self._policy.get_parameters())
 
     def _before_training_start(self, env_or_buffer):

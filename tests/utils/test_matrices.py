@@ -3,9 +3,9 @@ import pytest
 import numpy as np
 
 import nnabla as nn
-import nnabla.parametric_functions as PF
-import nnabla.functions as F
-import nnabla.initializer as I
+import nnabla.parametric_functions as NPF
+import nnabla.functions as NF
+import nnabla.initializer as NI
 
 from nnabla_rl.utils.matrices import compute_hessian
 from nnabla.parameter import get_parameter_or_create
@@ -28,10 +28,10 @@ class TestComputeHessian():
 
     def test_compute_network_parameters(self):
         state = nn.Variable((1, 2))
-        output = PF.affine(state, 1, w_init=I.ConstantInitializer(
-            value=1.), b_init=I.ConstantInitializer(value=1.))
+        output = NPF.affine(state, 1, w_init=NI.ConstantInitializer(
+            value=1.), b_init=NI.ConstantInitializer(value=1.))
 
-        loss = F.sum(output**2)
+        loss = NF.sum(output**2)
         state_array = np.array([[1.0, 0.5]])
         state.d = state_array
 

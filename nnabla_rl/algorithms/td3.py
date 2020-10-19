@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 
@@ -117,15 +117,15 @@ class TD3(Algorithm):
     def _build_training_graph(self):
         # Critic optimization graph
         a_next_var = self._target_pi.pi(self._s_next_var)
-        epsilon = F.clip_by_value(F.randn(sigma=self._params.train_action_noise_sigma,
-                                          shape=a_next_var.shape),
-                                  min=-self._params.train_action_noise_abs,
-                                  max=self._params.train_action_noise_abs)
+        epsilon = NF.clip_by_value(NF.randn(sigma=self._params.train_action_noise_sigma,
+                                            shape=a_next_var.shape),
+                                   min=-self._params.train_action_noise_abs,
+                                   max=self._params.train_action_noise_abs)
         a_tilde_var = a_next_var + epsilon
 
         target_q1_var = self._target_q1.q(self._s_next_var, a_tilde_var)
         target_q2_var = self._target_q2.q(self._s_next_var, a_tilde_var)
-        target_q_var = F.minimum2(target_q1_var, target_q2_var)
+        target_q_var = NF.minimum2(target_q1_var, target_q2_var)
 
         y = self._reward_var + self._params.gamma * \
             self._non_terminal_var * target_q_var
@@ -141,19 +141,19 @@ class TD3(Algorithm):
         # Actor optimization graph
         action_var = self._pi.pi(self._s_current_var)
         q1 = self._q1.q(self._s_current_var, action_var)
-        self._pi_loss = -F.mean(q1)
+        self._pi_loss = -NF.mean(q1)
 
     def _build_evaluation_graph(self):
         self._eval_action = self._pi.pi(self._eval_state_var)
 
     def _setup_solver(self):
-        self._q1_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q1_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q1_solver.set_parameters(self._q1.get_parameters())
 
-        self._q2_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q2_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q2_solver.set_parameters(self._q2.get_parameters())
 
-        self._pi_solver = S.Adam(alpha=self._params.learning_rate)
+        self._pi_solver = NS.Adam(alpha=self._params.learning_rate)
         self._pi_solver.set_parameters(self._pi.get_parameters())
 
     def _run_online_training_iteration(self, env):

@@ -1,5 +1,5 @@
 import nnabla as nn
-import nnabla.functions as F
+import nnabla.functions as NF
 
 import numpy as np
 
@@ -21,21 +21,21 @@ class SquashedGaussian(Distribution):
             ln_var = nn.Variable.from_numpy_array(ln_var)
 
         self._mean = mean
-        self._var = F.exp(ln_var)
+        self._var = NF.exp(ln_var)
         self._ln_var = ln_var
 
     def sample(self, noise_clip=None):
         x = RF.sample_gaussian(mean=self._mean,
                                ln_var=self._ln_var,
                                noise_clip=noise_clip)
-        return F.tanh(x)
+        return NF.tanh(x)
 
     def sample_multiple(self, num_samples, noise_clip=None):
         x = RF.sample_gaussian_multiple(self._mean,
                                         self._ln_var,
                                         num_samples,
                                         noise_clip=noise_clip)
-        return F.tanh(x)
+        return NF.tanh(x)
 
     def sample_and_compute_log_prob(self, noise_clip=None):
         '''
@@ -48,7 +48,7 @@ class SquashedGaussian(Distribution):
             mean=self._mean, ln_var=self._ln_var, noise_clip=noise_clip)
         log_prob = self._log_prob_internal(
             x, self._mean, self._var, self._ln_var)
-        return F.tanh(x), log_prob
+        return NF.tanh(x), log_prob
 
     def sample_multiple_and_compute_log_prob(self, num_samples, noise_clip=None):
         '''
@@ -70,19 +70,20 @@ class SquashedGaussian(Distribution):
         assert ln_var.shape == mean.shape
 
         log_prob = self._log_prob_internal(x, mean, var, ln_var)
-        return F.tanh(x), log_prob
+        return NF.tanh(x), log_prob
 
     def choose_probable(self):
-        return F.tanh(self._mean)
+        return NF.tanh(self._mean)
 
     def log_prob(self, x):
-        x = F.atanh(x)
+        x = NF.atanh(x)
         return self._log_prob_internal(x, self._mean, self._var, self._ln_var)
 
     def _log_prob_internal(self, x, mean, var, ln_var):
         axis = len(x.shape) - 1
         gaussian_part = common_utils.gaussian_log_prob(x, mean, var, ln_var)
-        adjust_part = F.sum(self._log_determinant_jacobian(x), axis=axis, keepdims=True)
+        adjust_part = NF.sum(self._log_determinant_jacobian(
+            x), axis=axis, keepdims=True)
         return gaussian_part - adjust_part
 
     def _log_determinant_jacobian(self, x):
@@ -90,4 +91,4 @@ class SquashedGaussian(Distribution):
         # Below computes log(1 - tanh(x)^2)
         # For derivation see:
         # https://github.com/tensorflow/probability/blob/master/tensorflow_probability/python/bijectors/tanh.py
-        return 2.0 * (np.log(2.0) - x - F.softplus(-2.0 * x))
+        return 2.0 * (np.log(2.0) - x - NF.softplus(-2.0 * x))

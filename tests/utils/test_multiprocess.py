@@ -1,8 +1,8 @@
 import pytest
 
 import nnabla as nn
-import nnabla.parametric_functions as PF
-import nnabla.initializer as I
+import nnabla.parametric_functions as NPF
+import nnabla.initializer as NI
 
 import numpy as np
 
@@ -13,8 +13,8 @@ import nnabla_rl.models as M
 
 class TestModel(M.Model):
     def __init__(self, scope_name, input_dim, output_dim,
-                 w_init=I.ConstantInitializer(100.0),
-                 b_init=I.ConstantInitializer(100.0)):
+                 w_init=NI.ConstantInitializer(100.0),
+                 b_init=NI.ConstantInitializer(100.0)):
         super(TestModel, self).__init__(scope_name)
         self._input_dim = input_dim
         self._output_dim = output_dim
@@ -25,12 +25,12 @@ class TestModel(M.Model):
         assert x.shape[1] == self._input_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(x, n_outmaps=256, name="linear1",
-                          w_init=self._w_init, b_init=self._b_init)
-            h = PF.affine(h, n_outmaps=256, name="linear2",
-                          w_init=self._w_init, b_init=self._b_init)
-            h = PF.affine(h, n_outmaps=self._output_dim,
-                          name="linear3", w_init=self._w_init, b_init=self._b_init)
+            h = NPF.affine(x, n_outmaps=256, name="linear1",
+                           w_init=self._w_init, b_init=self._b_init)
+            h = NPF.affine(h, n_outmaps=256, name="linear2",
+                           w_init=self._w_init, b_init=self._b_init)
+            h = NPF.affine(h, n_outmaps=self._output_dim,
+                           name="linear3", w_init=self._w_init, b_init=self._b_init)
         return h
 
 

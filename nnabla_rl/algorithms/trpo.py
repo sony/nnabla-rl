@@ -1,7 +1,7 @@
 import nnabla as nn
 
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 import numpy as np
 
@@ -90,7 +90,7 @@ def _hessian_vector_product(flat_grads, params, vector):
     assert flat_grads.shape[0] == len(vector)
     if isinstance(vector, np.ndarray):
         vector = nn.Variable.from_numpy_array(vector)
-    hessian_multiplied_vector_loss = F.sum(flat_grads * vector)
+    hessian_multiplied_vector_loss = NF.sum(flat_grads * vector)
     hessian_multiplied_vector_loss.forward()
     for param in params:
         param.grad.zero()
@@ -215,13 +215,13 @@ class TRPO(Algorithm):
         old_distribution = self._old_policy.pi(
             self._training_variables.policy_s_current)
 
-        self._kl_divergence = F.mean(
+        self._kl_divergence = NF.mean(
             old_distribution.kl_divergence(distribution))
 
         _kl_divergence_grads = nn.grad(
             [self._kl_divergence], self._policy.get_parameters().values())
 
-        self._kl_divergence_flat_grads = F.concatenate(
+        self._kl_divergence_flat_grads = NF.concatenate(
             *[grad.reshape((-1,)) for grad in _kl_divergence_grads])
         self._kl_divergence_flat_grads.need_grad = True
 
@@ -230,14 +230,14 @@ class TRPO(Algorithm):
         old_log_prob = old_distribution.log_prob(
             self._training_variables.policy_a_current)
 
-        prob_ratio = F.exp(log_prob - old_log_prob)
-        self._approximate_return = F.mean(
+        prob_ratio = NF.exp(log_prob - old_log_prob)
+        self._approximate_return = NF.mean(
             prob_ratio*self._training_variables.advantage)
 
         _approximate_return_grads = nn.grad(
             [self._approximate_return], self._policy.get_parameters().values())
 
-        self._approximate_return_flat_grads = F.concatenate(
+        self._approximate_return_flat_grads = NF.concatenate(
             *[grad.reshape((-1,)) for grad in _approximate_return_grads])
         self._approximate_return_flat_grads.need_grad = True
 
@@ -247,7 +247,7 @@ class TRPO(Algorithm):
         self._eval_action = distribution.sample()
 
     def _setup_solver(self):
-        self._v_solver = S.Adam(alpha=self._params.vf_learning_rate)
+        self._v_solver = NS.Adam(alpha=self._params.vf_learning_rate)
         self._v_solver.set_parameters(self._v_function.get_parameters())
 
     def _run_online_training_iteration(self, env):

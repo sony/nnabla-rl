@@ -1,7 +1,7 @@
 import nnabla as nn
 
-import nnabla.functions as F
-import nnabla.parametric_functions as PF
+import nnabla.functions as NF
+import nnabla.parametric_functions as NPF
 
 from nnabla_rl.models.model import Model
 import nnabla_rl.initializers as RI
@@ -19,20 +19,20 @@ class PPOSharedFunctionHead(Model):
 
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("conv1"):
-                h = PF.convolution(s, outmaps=32, kernel=(8, 8), stride=(4, 4),
-                                   w_init=RI.NormcInitializer(std=1.0))
-            h = F.relu(x=h)
+                h = NPF.convolution(s, outmaps=32, kernel=(8, 8), stride=(4, 4),
+                                    w_init=RI.NormcInitializer(std=1.0))
+            h = NF.relu(x=h)
             with nn.parameter_scope("conv2"):
-                h = PF.convolution(h, outmaps=64, kernel=(4, 4), stride=(2, 2),
-                                   w_init=RI.NormcInitializer(std=1.0))
-            h = F.relu(x=h)
+                h = NPF.convolution(h, outmaps=64, kernel=(4, 4), stride=(2, 2),
+                                    w_init=RI.NormcInitializer(std=1.0))
+            h = NF.relu(x=h)
             with nn.parameter_scope("conv3"):
-                h = PF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1),
-                                   w_init=RI.NormcInitializer(std=1.0))
-            h = F.relu(x=h)
-            h = F.reshape(h, shape=(batch_size, -1))
+                h = NPF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1),
+                                    w_init=RI.NormcInitializer(std=1.0))
+            h = NF.relu(x=h)
+            h = NF.reshape(h, shape=(batch_size, -1))
             with nn.parameter_scope("linear1"):
-                h = PF.affine(h, n_outmaps=512,
-                              w_init=RI.NormcInitializer(std=1.0))
-            h = F.relu(x=h)
+                h = NPF.affine(h, n_outmaps=512,
+                               w_init=RI.NormcInitializer(std=1.0))
+            h = NF.relu(x=h)
         return h

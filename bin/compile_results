@@ -12,10 +12,12 @@ import argparse
 def load_data(path):
     return np.loadtxt(str(path), delimiter='\t', skiprows=1)
 
+
 def rmdir_if_exists(path):
     if path.exists():
         shutil.rmtree(path)
- 
+
+
 def list_all_directory_with(rootdir, filename):
     directories = []
     for f in rootdir.iterdir():
@@ -26,8 +28,11 @@ def list_all_directory_with(rootdir, filename):
             directories.extend(list_all_directory_with(f, filename))
     return directories
 
+
 def create_result_plot(eval_result_file, outdir):
-    subprocess.Popen(['plot_result', '--tsvpath', eval_result_file, '--outdir', outdir])
+    subprocess.Popen(['plot_result', '--tsvpath',
+                      eval_result_file, '--outdir', outdir])
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -44,7 +49,6 @@ if __name__ == '__main__':
                         type=str,
                         default="iteration-",
                         help='snapshot directory prefix')
-
 
     args = parser.parse_args()
 
@@ -65,8 +69,10 @@ if __name__ == '__main__':
         rmdir_if_exists(outdir)
         outdir.mkdir()
 
-        best_mean_dir = directory / (args.snapshot_dir_prefix + str(best_mean_iteration))
-        best_median_dir = directory / (args.snapshot_dir_prefix + str(best_median_iteration))
+        best_mean_dir = directory / \
+            (args.snapshot_dir_prefix + str(best_mean_iteration))
+        best_median_dir = directory / \
+            (args.snapshot_dir_prefix + str(best_median_iteration))
 
         out_mean_dir = outdir / 'best_mean'
         out_median_dir = outdir / 'best_median'

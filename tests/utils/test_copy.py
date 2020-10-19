@@ -3,8 +3,8 @@ import pytest
 import numpy as np
 
 import nnabla as nn
-import nnabla.parametric_functions as PF
-import nnabla.initializer as I
+import nnabla.parametric_functions as NPF
+import nnabla.initializer as NI
 
 from nnabla_rl.models import Model
 from nnabla_rl.utils.copy import copy_network_parameters
@@ -23,9 +23,9 @@ class DummyNetwork(Model):
 
     def __call__(self, dummy_variable):
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(dummy_variable, 1,
-                          w_init=self._weight_initializer,
-                          b_init=self._bias_initialzier)
+            h = NPF.affine(dummy_variable, 1,
+                           w_init=self._weight_initializer,
+                           b_init=self._bias_initialzier)
         return h
 
 
@@ -35,11 +35,11 @@ class TestCopy(object):
         nn.clear_parameters()
 
         base = DummyNetwork('base',
-                            I.ConstantInitializer(1),
-                            I.ConstantInitializer(1))
+                            NI.ConstantInitializer(1),
+                            NI.ConstantInitializer(1))
         target = DummyNetwork('target',
-                              I.ConstantInitializer(2),
-                              I.ConstantInitializer(2))
+                              NI.ConstantInitializer(2),
+                              NI.ConstantInitializer(2))
 
         copy_network_parameters(base.get_parameters(),
                                 target.get_parameters(),
@@ -52,11 +52,11 @@ class TestCopy(object):
         nn.clear_parameters()
 
         base = DummyNetwork('base',
-                            I.ConstantInitializer(1),
-                            I.ConstantInitializer(1))
+                            NI.ConstantInitializer(1),
+                            NI.ConstantInitializer(1))
 
-        weight_initializer = I.ConstantInitializer(2)
-        bias_initializer = I.ConstantInitializer(2)
+        weight_initializer = NI.ConstantInitializer(2)
+        bias_initializer = NI.ConstantInitializer(2)
         target_original = DummyNetwork('target_original',
                                        weight_initializer,
                                        bias_initializer)

@@ -2,9 +2,9 @@ import numpy as np
 
 import nnabla as nn
 
-import nnabla.functions as F
-import nnabla.parametric_functions as PF
-import nnabla.initializer as I
+import nnabla.functions as NF
+import nnabla.parametric_functions as NPF
+import nnabla.initializer as NI
 from nnabla.parameter import get_parameter_or_create
 
 import nnabla_rl.distributions as D
@@ -14,7 +14,7 @@ from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy, prepr
 
 class TD3Policy(DeterministicPolicy):
     """
-    Actor model proposed by S. Fujimoto in TD3 paper for mujoco environment.
+    Actor model proposed by NS. Fujimoto in TD3 paper for mujoco environment.
     See: https://arxiv.org/abs/1802.09477
     """
 
@@ -30,19 +30,19 @@ class TD3Policy(DeterministicPolicy):
         with nn.parameter_scope(self.scope_name):
             linear1_init = RI.HeUniform(
                 inmaps=self._state_dim, outmaps=400, factor=1/3)
-            h = PF.affine(s, n_outmaps=400, name="linear1",
-                          w_init=linear1_init, b_init=linear1_init)
-            h = F.relu(x=h)
+            h = NPF.affine(s, n_outmaps=400, name="linear1",
+                           w_init=linear1_init, b_init=linear1_init)
+            h = NF.relu(x=h)
             linear2_init = RI.HeUniform(
                 inmaps=400, outmaps=300, factor=1/3)
-            h = PF.affine(h, n_outmaps=300, name="linear2",
-                          w_init=linear2_init, b_init=linear2_init)
-            h = F.relu(x=h)
+            h = NPF.affine(h, n_outmaps=300, name="linear2",
+                           w_init=linear2_init, b_init=linear2_init)
+            h = NF.relu(x=h)
             linear3_init = RI.HeUniform(
                 inmaps=300, outmaps=self._action_dim, factor=1/3)
-            h = PF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                          w_init=linear3_init, b_init=linear3_init)
-        return F.tanh(h) * self._max_action_value
+            h = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
+                           w_init=linear3_init, b_init=linear3_init)
+        return NF.tanh(h) * self._max_action_value
 
 
 class SACPolicy(StochasticPolicy):
@@ -64,17 +64,17 @@ class SACPolicy(StochasticPolicy):
         assert s.shape[1] == self._state_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(s, n_outmaps=256, name="linear1")
-            h = F.relu(x=h)
-            h = PF.affine(h, n_outmaps=256, name="linear2")
-            h = F.relu(x=h)
-            h = PF.affine(h, n_outmaps=self._action_dim*2, name="linear3")
-            reshaped = F.reshape(h, shape=(-1, 2, self._action_dim))
-            mean, ln_sigma = F.split(reshaped, axis=1)
+            h = NPF.affine(s, n_outmaps=256, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=256, name="linear2")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=self._action_dim*2, name="linear3")
+            reshaped = NF.reshape(h, shape=(-1, 2, self._action_dim))
+            mean, ln_sigma = NF.split(reshaped, axis=1)
             assert mean.shape == ln_sigma.shape
             assert mean.shape == (s.shape[0], self._action_dim)
             if self._clip_log_sigma:
-                ln_sigma = F.clip_by_value(
+                ln_sigma = NF.clip_by_value(
                     ln_sigma, min=self._min_log_sigma, max=self._max_log_sigma)
             ln_var = ln_sigma * 2.0
         return D.SquashedGaussian(mean=mean, ln_var=ln_var)
@@ -97,20 +97,20 @@ class BEARPolicy(StochasticPolicy):
         with nn.parameter_scope(self.scope_name):
             linear1_init = RI.HeUniform(
                 inmaps=self._state_dim, outmaps=400, factor=1/3)
-            h = PF.affine(s, n_outmaps=400, name="linear1",
-                          w_init=linear1_init, b_init=linear1_init)
-            h = F.relu(x=h)
+            h = NPF.affine(s, n_outmaps=400, name="linear1",
+                           w_init=linear1_init, b_init=linear1_init)
+            h = NF.relu(x=h)
             linear2_init = RI.HeUniform(
                 inmaps=400, outmaps=300, factor=1/3)
-            h = PF.affine(h, n_outmaps=300, name="linear2",
-                          w_init=linear2_init, b_init=linear2_init)
-            h = F.relu(x=h)
+            h = NPF.affine(h, n_outmaps=300, name="linear2",
+                           w_init=linear2_init, b_init=linear2_init)
+            h = NF.relu(x=h)
             linear3_init = RI.HeUniform(
                 inmaps=300, outmaps=self._action_dim*2, factor=1/3)
-            h = PF.affine(h, n_outmaps=self._action_dim*2, name="linear3",
-                          w_init=linear3_init, b_init=linear3_init)
-            reshaped = F.reshape(h, shape=(-1, 2, self._action_dim))
-            mean, ln_var = F.split(reshaped, axis=1)
+            h = NPF.affine(h, n_outmaps=self._action_dim*2, name="linear3",
+                           w_init=linear3_init, b_init=linear3_init)
+            reshaped = NF.reshape(h, shape=(-1, 2, self._action_dim))
+            mean, ln_var = NF.split(reshaped, axis=1)
             assert mean.shape == ln_var.shape
             assert mean.shape == (s.shape[0], self._action_dim)
         return D.Gaussian(mean=mean, ln_var=ln_var)
@@ -133,17 +133,17 @@ class PPOPolicy(StochasticPolicy):
         assert s.shape[1] == self._state_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(s, n_outmaps=64, name="linear1",
-                          w_init=RI.NormcInitializer(std=1.0))
-            h = F.tanh(x=h)
-            h = PF.affine(h, n_outmaps=64, name="linear2",
-                          w_init=RI.NormcInitializer(std=1.0))
-            h = F.tanh(x=h)
-            mean = PF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                             w_init=RI.NormcInitializer(std=0.01))
+            h = NPF.affine(s, n_outmaps=64, name="linear1",
+                           w_init=RI.NormcInitializer(std=1.0))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=64, name="linear2",
+                           w_init=RI.NormcInitializer(std=1.0))
+            h = NF.tanh(x=h)
+            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
+                              w_init=RI.NormcInitializer(std=0.01))
             ln_sigma = nn.parameter.get_parameter_or_create(
-                "ln_sigma", shape=(1, self._action_dim), initializer=I.ConstantInitializer(0.))
-            ln_var = F.broadcast(
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.))
+            ln_var = NF.broadcast(
                 ln_sigma, (s.shape[0], self._action_dim)) * 2.0
             assert mean.shape == ln_var.shape
             assert mean.shape == (s.shape[0], self._action_dim)
@@ -165,12 +165,12 @@ class ICML2015TRPOPolicy(StochasticPolicy):
         assert s.shape[1] == self._state_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(s, n_outmaps=30, name="linear1")
-            h = F.tanh(x=h)
-            h = PF.affine(h, n_outmaps=self._action_dim*2, name="linear2")
-            reshaped = F.reshape(
+            h = NPF.affine(s, n_outmaps=30, name="linear1")
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=self._action_dim*2, name="linear2")
+            reshaped = NF.reshape(
                 h, shape=(-1, 2, self._action_dim), inplace=False)
-            mean, ln_sigma = F.split(reshaped, axis=1)
+            mean, ln_sigma = NF.split(reshaped, axis=1)
             assert mean.shape == ln_sigma.shape
             assert mean.shape == (s.shape[0], self._action_dim)
             ln_var = ln_sigma * 2.0
@@ -194,18 +194,18 @@ class TRPOPolicy(StochasticPolicy):
         assert s.shape[1] == self._state_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(s, n_outmaps=64, name="linear1",
-                          w_init=I.OrthogonalInitializer(np.sqrt(2.)))
-            h = F.tanh(x=h)
-            h = PF.affine(h, n_outmaps=64, name="linear2",
-                          w_init=I.OrthogonalInitializer(np.sqrt(2.)))
-            h = F.tanh(x=h)
-            mean = PF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                             w_init=I.OrthogonalInitializer(np.sqrt(2.)))
+            h = NPF.affine(s, n_outmaps=64, name="linear1",
+                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=64, name="linear2",
+                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NF.tanh(x=h)
+            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
+                              w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
             assert mean.shape == (s.shape[0], self._action_dim)
 
             ln_sigma = get_parameter_or_create(
-                "ln_sigma", shape=(1, self._action_dim), initializer=I.ConstantInitializer(0.))
-            ln_var = F.broadcast(
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.))
+            ln_var = NF.broadcast(
                 ln_sigma, (s.shape[0], self._action_dim)) * 2.0
         return D.Gaussian(mean, ln_var)

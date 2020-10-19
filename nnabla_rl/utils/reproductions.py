@@ -29,7 +29,7 @@ def build_atari_env(id_or_env, test=False, seed=None, render=False):
 def build_mujoco_env(id_or_env, test=False, seed=None, render=False):
     try:
         # Add pybullet env
-        import pybullet_envs # noqa
+        import pybullet_envs  # noqa
     except ModuleNotFoundError:
         # Do nothing if pybullet is not installed
         pass

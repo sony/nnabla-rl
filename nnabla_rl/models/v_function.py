@@ -9,7 +9,8 @@ def preprocess_state(function):
             processed = self._state_preprocessor.process(s)
             return function(self, processed)
         else:
-            raise NotImplementedError("decorated with preprecess_state but preprocessor is not set")
+            raise NotImplementedError(
+                "decorated with preprecess_state but preprocessor is not set")
     return wrapped
 
 

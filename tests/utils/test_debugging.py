@@ -1,8 +1,8 @@
 import pytest
 
 import nnabla as nn
-import nnabla.parametric_functions as PF
-import nnabla.functions as F
+import nnabla.parametric_functions as NPF
+import nnabla.functions as NF
 
 from nnabla_rl.utils.debugging import count_parameter_number
 
@@ -15,7 +15,7 @@ class TestCountParameterNumber():
         dummy_input = nn.Variable((batch_size, state_size))
 
         with nn.parameter_scope("dummy_affine"):
-            _ = F.relu(PF.affine(dummy_input, output_size))
+            _ = NF.relu(NPF.affine(dummy_input, output_size))
 
         parameter_number = count_parameter_number(nn.get_parameters())
 
