@@ -10,13 +10,14 @@ tests_require = ['pytest', 'pytest-cov', 'mock']
 setup_requires = ['pytest-runner']
 
 scripts = ['bin/plot_result',
-           'bin/check_best_iteration', 
+           'bin/check_best_iteration',
            'bin/compile_results']
-
+description = '''Deep reinforcement learning framework that is intended \
+                 to be used for research, development and production.'''
 setup(
     name='nnabla_rl',
     version='0.0.1',
-    description='Deep reinforcement learning framework that is intended to be used for research, development and production.',
+    description=description,
     author='Yu Ishihara',
     author_email='yu.ishihara@sony.com',
     install_requires=install_requires,

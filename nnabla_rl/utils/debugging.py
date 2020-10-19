@@ -1,7 +1,4 @@
-import nnabla as nn
 import nnabla.experimental.viewers as V
-
-import numpy as np
 
 from nnabla_rl.hook import Hook
 from nnabla_rl.logger import logger
@@ -55,5 +52,5 @@ try:
         def print_summary(self, rows, limit=30, sort='size', order='descending'):
             for line in summary.format_(rows, limit=limit, sort=sort, order=order):
                 logger.debug(line)
-except:
+except ModuleNotFoundError:
     pass

@@ -12,7 +12,6 @@ from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 import nnabla_rl.models as M
 import nnabla_rl.functions as RF
-from nnabla_rl.models.model import Model
 from nnabla_rl.distributions import Gaussian
 
 

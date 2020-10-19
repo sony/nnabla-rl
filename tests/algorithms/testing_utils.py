@@ -50,9 +50,9 @@ def is_same_parameter_id_and_key(param1, param2):
     assert len(param1) == len(param2)
 
     for key1, value1 in param1.items():
-        if not key1 in param2.keys():
+        if key1 not in param2.keys():
             return False
-        if not value1 in param2.values():
+        if value1 not in param2.values():
             return False
 
     return True

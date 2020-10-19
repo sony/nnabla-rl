@@ -1,8 +1,6 @@
 import pytest
 from unittest.mock import create_autospec
 
-import numpy as np
-
 from nnabla_rl.replay_buffers.decorable_replay_buffer import DecorableReplayBuffer
 
 

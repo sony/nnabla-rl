@@ -1,7 +1,6 @@
 import nnabla as nn
 
 import nnabla.functions as F
-import nnabla.parametric_functions as PF
 import nnabla.solvers as S
 
 import numpy as np
@@ -14,7 +13,6 @@ from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_actio
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.logger import logger
 import nnabla_rl.exploration_strategies as ES
 import nnabla_rl.models as M
 import nnabla_rl.functions as RF

@@ -3,11 +3,8 @@ import nnabla as nn
 import nnabla.functions as F
 import nnabla.parametric_functions as PF
 
-from nnabla_rl.models.v_function import VFunction
-from nnabla_rl.models.policy import StochasticPolicy
 from nnabla_rl.models.model import Model
 import nnabla_rl.initializers as RI
-import nnabla_rl.distributions as D
 
 
 class PPOSharedFunctionHead(Model):

@@ -40,7 +40,7 @@ class SACParam(AlgorithmParam):
     def __post_init__(self):
         '''__post_init__
 
-        Check the set values are in valid range.        
+        Check the set values are in valid range.
 
         '''
         if not ((0.0 <= self.tau) & (self.tau <= 1.0)):
@@ -81,11 +81,11 @@ class AdjustableTemperature(Model):
 class SAC(Algorithm):
     '''Soft Actor-Critic (SAC) algorithm implementation.
 
-    This class implements the extended version of Soft Actor Critic (SAC) algorithm 
+    This class implements the extended version of Soft Actor Critic (SAC) algorithm
     proposed by T. Haarnoja, et al. in the paper: "Soft Actor-Critic Algorithms and Applications"
     For detail see: https://arxiv.org/pdf/1812.05905.pdf
 
-    This algorithm is slightly differs from the implementation of Soft Actor-Critic algorithm presented 
+    This algorithm is slightly differs from the implementation of Soft Actor-Critic algorithm presented
     also by T. Haarnoja, et al. in the following paper:  https://arxiv.org/pdf/1801.01290.pdf
 
     The temperature parameter is adjusted automatically instead of providing reward scalar as a

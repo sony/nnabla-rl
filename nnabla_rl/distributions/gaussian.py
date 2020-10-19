@@ -72,4 +72,6 @@ class Gaussian(Distribution):
     def kl_divergence(self, q):
         assert isinstance(q, Gaussian)
         p = self
-        return 0.5 * F.sum(q._ln_var - p._ln_var + (p._var + (p._mean - q._mean) ** 2.0) / q._var - 1, axis=1, keepdims=True)
+        return 0.5 * F.sum(q._ln_var - p._ln_var + (p._var + (p._mean - q._mean) ** 2.0) / q._var - 1,
+                           axis=1,
+                           keepdims=True)

@@ -5,9 +5,9 @@ import nnabla.parametric_functions as PF
 import nnabla.initializer as I
 
 import numpy as np
-import multiprocessing as mp
 
-from nnabla_rl.utils.multiprocess import mp_array_from_np_array, np_to_mp_array, mp_to_np_array, new_mp_arrays_from_params, copy_params_to_mp_arrays, copy_mp_arrays_to_params
+from nnabla_rl.utils.multiprocess import mp_array_from_np_array, np_to_mp_array, mp_to_np_array, \
+    new_mp_arrays_from_params, copy_params_to_mp_arrays, copy_mp_arrays_to_params
 import nnabla_rl.models as M
 
 

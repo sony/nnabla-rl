@@ -1,5 +1,3 @@
-import time
-
 from nnabla_rl.hook import Hook
 from nnabla_rl.logger import logger
 

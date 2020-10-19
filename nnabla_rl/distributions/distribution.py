@@ -9,7 +9,7 @@ class Distribution(metaclass=ABCMeta):
         Sample a value from the distribution
 
         Args:
-            noise_clip(tuple or None): integer tuple of size 2 which contains the minimum and maximum value of the noise to append.
+            noise_clip(tuple or None): integer tuple of size 2 which contains the min and max value of the noise.
 
         Returns:
              nnabla.Variable: Sampled value
@@ -20,16 +20,16 @@ class Distribution(metaclass=ABCMeta):
         '''sample
 
         Sample mutiple value from the distribution
-        New axis will be added between the first and second axis. 
+        New axis will be added between the first and second axis.
         Thefore, the returned value shape for mean and variance with shape (batch_size, data_shape)
         will be changed to (batch_size, num_samples, data_shape)
 
         Args:
             num_samples(int): number of samples per batch
-            noise_clip(tuple or None): integer tuple of size 2 which contains the minimum and maximum value of the noise to append.
+            noise_clip(tuple or None): integer tuple of size 2 which contains the min and max value of the noise.
 
         Returns:
-             nnabla.Variable: Sampled value. 
+             nnabla.Variable: Sampled value.
         '''
         raise NotImplementedError
 
@@ -76,7 +76,7 @@ class Distribution(metaclass=ABCMeta):
         Sample a value from the distribution and compute the logarithm of policy distribution
 
         Args:
-            noise_clip(tuple or None): integer tuple of size 2 which contains the minimum and maximum value of the noise to append.
+            noise_clip(tuple or None): integer tuple of size 2 which contains the min and max value of the noise.
 
         Returns: (nnabla.Variable, nnabla.Variable)
             Sampled value and its log probabilty

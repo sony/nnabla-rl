@@ -3,12 +3,9 @@ import numpy as np
 import nnabla as nn
 
 import nnabla.functions as F
-import nnabla.initializer as I
 import nnabla.parametric_functions as PF
 import nnabla.initializer as I
 from nnabla.parameter import get_parameter_or_create
-
-import numpy as np
 
 import nnabla_rl.distributions as D
 import nnabla_rl.initializers as RI
@@ -143,10 +140,11 @@ class PPOPolicy(StochasticPolicy):
                           w_init=RI.NormcInitializer(std=1.0))
             h = F.tanh(x=h)
             mean = PF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                          w_init=RI.NormcInitializer(std=0.01))
+                             w_init=RI.NormcInitializer(std=0.01))
             ln_sigma = nn.parameter.get_parameter_or_create(
                 "ln_sigma", shape=(1, self._action_dim), initializer=I.ConstantInitializer(0.))
-            ln_var = F.broadcast(ln_sigma, (s.shape[0], self._action_dim)) * 2.0
+            ln_var = F.broadcast(
+                ln_sigma, (s.shape[0], self._action_dim)) * 2.0
             assert mean.shape == ln_var.shape
             assert mean.shape == (s.shape[0], self._action_dim)
         return D.Gaussian(mean=mean, ln_var=ln_var)

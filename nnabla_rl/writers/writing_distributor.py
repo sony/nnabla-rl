@@ -1,5 +1,3 @@
-import pathlib
-
 import numpy as np
 
 from nnabla_rl.writer import Writer

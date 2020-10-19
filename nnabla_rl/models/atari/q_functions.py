@@ -3,8 +3,6 @@ import nnabla as nn
 import nnabla.functions as F
 import nnabla.parametric_functions as PF
 
-import numpy as np
-
 import nnabla_rl.initializers as RI
 import nnabla_rl.functions as RF
 from nnabla_rl.models.q_function import QFunction
@@ -18,9 +16,6 @@ class DQNQFunction(QFunction):
 
     def __init__(self, scope_name, state_shape, n_action):
         super(DQNQFunction, self).__init__(scope_name)
-        dummy_state = nn.Variable((1, *state_shape))
-        dummy_action = nn.Variable((1, 1))
-
         self._state_shape = state_shape
         self._n_action = n_action
 
@@ -64,8 +59,6 @@ class DQNQFunction(QFunction):
         return h
 
     def q(self, s, a):
-        batch_size = s.shape[0]
-
         q_values = self._predict_q_values(s)
 
         q_value = F.sum(q_values

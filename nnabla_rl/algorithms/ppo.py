@@ -8,12 +8,10 @@ from collections import namedtuple
 import numpy as np
 
 import multiprocessing as mp
-from multiprocessing import sharedctypes
 
 import os
 import gym
 
-import nnabla_rl
 import nnabla_rl.models as M
 import nnabla_rl.preprocessors as RP
 import nnabla_rl.functions as RF
@@ -21,7 +19,9 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences, unzip
-from nnabla_rl.utils.multiprocess import mp_to_np_array, np_to_mp_array, mp_array_from_np_array, new_mp_arrays_from_params, copy_mp_arrays_to_params, copy_params_to_mp_arrays
+from nnabla_rl.utils.multiprocess import mp_to_np_array, np_to_mp_array, \
+    mp_array_from_np_array, new_mp_arrays_from_params, \
+    copy_mp_arrays_to_params, copy_params_to_mp_arrays
 import nnabla_rl.utils.context as context
 
 
@@ -416,7 +416,8 @@ class _PPOActor(object):
         action_space = self._env.action_space
 
         MultiProcessingArrays = namedtuple('MultiProcessingArrays',
-                                           ['state', 'action', 'reward', 'non_terminal', 'next_state', 'log_prob', 'v_target', 'advantage'])
+                                           ['state', 'action', 'reward', 'non_terminal',
+                                            'next_state', 'log_prob', 'v_target', 'advantage'])
 
         state_mp_array_shape = (self._timesteps, *obs_space.shape)
         state_mp_array = mp_array_from_np_array(
@@ -521,7 +522,8 @@ class _PPOActor(object):
             s_next, reward, done, info = self._env.step(action)
             # We don't treat done at max_episode_length as False.
             # In Swimmer, done must be treated as done even if max_episode_length is reached
-            truncated = info.get('TimeLimit.truncated', False) and self._params.only_reset_if_truncated
+            truncated = info.get('TimeLimit.truncated',
+                                 False) and self._params.only_reset_if_truncated
             if done and not truncated:
                 non_terminal = 0.0
             else:

@@ -2,7 +2,6 @@ import nnabla as nn
 
 import nnabla.functions as F
 import nnabla.solvers as S
-import nnabla.initializer as I
 
 import numpy as np
 

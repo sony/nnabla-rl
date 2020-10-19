@@ -1,11 +1,10 @@
 import gym
 from nnabla.monitor import Monitor, MonitorSeries
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 from nnabla_rl.writer import Writer
-from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv
+from nnabla_rl.environments.wrappers import NumpyFloat32Env
 from nnabla_rl.hook import as_hook
 from nnabla_rl.utils.files import create_dir_if_not_exist
 

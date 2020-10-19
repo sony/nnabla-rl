@@ -9,6 +9,7 @@ import nnabla.initializer as I
 from nnabla_rl.models.v_function import VFunction, preprocess_state
 import nnabla_rl.initializers as RI
 
+
 class SACVFunction(VFunction):
     """
     VFunciton model proposed by T. Haarnoja in SAC paper for mujoco environment.

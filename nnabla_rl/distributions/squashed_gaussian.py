@@ -81,7 +81,9 @@ class SquashedGaussian(Distribution):
 
     def _log_prob_internal(self, x, mean, var, ln_var):
         axis = len(x.shape) - 1
-        return common_utils.gaussian_log_prob(x, mean, var, ln_var) - F.sum(self._log_determinant_jacobian(x), axis=axis, keepdims=True)
+        gaussian_part = common_utils.gaussian_log_prob(x, mean, var, ln_var)
+        adjust_part = F.sum(self._log_determinant_jacobian(x), axis=axis, keepdims=True)
+        return gaussian_part - adjust_part
 
     def _log_determinant_jacobian(self, x):
         # arctanh(y)' = 1/(1 - y^2) (y=tanh(x))

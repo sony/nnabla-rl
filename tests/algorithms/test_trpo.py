@@ -7,8 +7,6 @@ import nnabla.initializer as I
 
 import numpy as np
 
-from nnabla_rl.algorithm import EnvironmentInfo
-from nnabla_rl.replay_buffer import ReplayBuffer
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
 from nnabla_rl.algorithms.trpo import _hessian_vector_product, \

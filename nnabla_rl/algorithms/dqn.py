@@ -3,7 +3,6 @@ import nnabla.functions as F
 import nnabla.solvers as S
 
 import warnings
-import random
 from collections import namedtuple
 from dataclasses import dataclass
 
@@ -13,11 +12,9 @@ import numpy as np
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.debugging import print_network, view_graph
 from nnabla_rl.utils.copy import copy_network_parameters
 import nnabla_rl.exploration_strategies as ES
 from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_action_selection
-import nnabla_rl.functions as RF
 import nnabla_rl.models as M
 
 
@@ -30,7 +27,7 @@ def default_q_solver_builder(q_func, params):
         solver = S.RMSpropgraves(
             lr=params.learning_rate, decay=params.decay,
             momentum=params.momentum, eps=params.min_squared_gradient)
-    except:
+    except AttributeError:
         warnings.warn("Instead of RMSpropgraves, use Adam as a Solver, \
             Please check learning rate. It might be needed to tune it")
         solver = S.Adam(params.learning_rate)

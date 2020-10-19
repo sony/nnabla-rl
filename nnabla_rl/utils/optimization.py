@@ -1,8 +1,5 @@
 import numpy as np
 
-import nnabla as nn
-import nnabla.functions as F
-
 
 def conjugate_gradient(compute_Ax, b, max_iterations=10, residual_tol=1e-10):
     """ Conjugate gradient method to solve x = A^-1b

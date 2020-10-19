@@ -1,25 +1,26 @@
-from nnabla_rl.utils import files
-from unittest import mock
 import pytest
 import tempfile
 import datetime
-import argparse
 import os
+from unittest import mock
+
+from nnabla_rl.utils import files
 
 
 class TestFiles(object):
     def test_file_exists(self):
-        with mock.patch('os.path.exists', return_value=True) as mock_exists:
+        with mock.patch('os.path.exists', return_value=True) as _:
             test_file = "test"
-            assert files.file_exists(test_file) == True
+            assert files.file_exists(test_file) is True
 
     def test_file_does_not_exist(self):
-        with mock.patch('os.path.exists', return_value=False) as mock_exists:
+        with mock.patch('os.path.exists', return_value=False) as _:
             test_file = "test"
-            assert files.file_exists(test_file) == False
+            assert files.file_exists(test_file) is False
 
     def test_create_dir_if_not_exist(self):
-        with mock.patch('os.path.exists', return_value=False) as mock_exists, mock.patch('os.makedirs') as mock_mkdirs:
+        with mock.patch('os.path.exists', return_value=False) as mock_exists, \
+                mock.patch('os.makedirs') as mock_mkdirs:
             test_file = "test"
             files.create_dir_if_not_exist(test_file)
 
@@ -27,7 +28,8 @@ class TestFiles(object):
             mock_mkdirs.assert_called_once()
 
     def test_create_dir_when_exists(self):
-        with mock.patch('os.path.exists', return_value=True) as mock_exists, mock.patch('os.makedirs') as mock_mkdirs:
+        with mock.patch('os.path.exists', return_value=True) as mock_exists, \
+                mock.patch('os.makedirs') as mock_mkdirs:
             with mock.patch('os.path.isdir', return_value=True):
                 test_file = "test"
                 files.create_dir_if_not_exist(test_file)
@@ -36,7 +38,8 @@ class TestFiles(object):
                 mock_mkdirs.assert_not_called()
 
     def test_create_dir_when_target_is_not_directory(self):
-        with mock.patch('os.path.exists', return_value=True) as mock_exists, mock.patch('os.makedirs') as mock_mkdirs:
+        with mock.patch('os.path.exists', return_value=True) as mock_exists, \
+                mock.patch('os.makedirs') as mock_mkdirs:
             with mock.patch('os.path.isdir', return_value=False):
                 with pytest.raises(RuntimeError):
                     test_file = "test"

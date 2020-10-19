@@ -45,9 +45,12 @@ class BEARParam(AlgorithmParam):
         mmd_type(str): kernel type used for MMD computation. laplacian or gaussian is supported. Defaults to gaussian.
         mmd_sigma(float): parameter used for adjusting the  MMD. Defaults to 20.0.
         use_stddev(bool): Use standard deviation. Defaults to False.
-        stddev_coeff(float): Weight parameter for standard deviation. Defaults to 1.2. It does not take affect if use_stddev is False.
+        stddev_coeff(float): Weight parameter for standard deviation. Defaults to 1.2.
+                             It does not take affect if use_stddev is False.
         warmup_iterations(int): Number of iterations until start updating the policy. Defaults to 20000
-        start_timesteps(int or None): Number of iterations to start training the networks. Only used on online training and must be set on online training. Defaults to None.
+        start_timesteps(int or None): Number of iterations to start training the networks.
+                                      Only used on online training and must be set on online training.
+                                      Defaults to None.
         batch_size(int or None): Number of iterations starting to train the networks. Defaults to None.
         use_mean_for_eval(bool): Use mean value instead of best action among the samples for evaluation
     '''

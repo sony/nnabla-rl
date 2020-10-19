@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 
-from nnabla_rl.replay_buffers.prioritized_replay_buffer\
+from nnabla_rl.replay_buffers.prioritized_replay_buffer \
     import SumTree, PrioritizedReplayBuffer
 
 
@@ -197,7 +197,6 @@ class TestPrioritizedReplayBuffer(object):
         buffer = self._generate_buffer_with_experiences(experience_num=10)
         with pytest.raises(ValueError):
             buffer.sample(num_samples=100)
-
 
     @pytest.mark.parametrize(
         "beta",

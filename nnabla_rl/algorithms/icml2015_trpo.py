@@ -1,12 +1,10 @@
 import nnabla as nn
 
 import nnabla.functions as F
-import nnabla.parametric_functions as PF
-import nnabla.solvers as S
 
 import numpy as np
 
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from dataclasses import dataclass
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
@@ -18,7 +16,6 @@ from nnabla_rl.algorithms.trpo import _hessian_vector_product,\
     _concat_network_params_in_ndarray, _update_network_params_by_flat_params
 from nnabla_rl.logger import logger
 import nnabla_rl.models as M
-import nnabla_rl.functions as RF
 
 
 @dataclass
@@ -33,7 +30,7 @@ class ICML2015TRPOParam(AlgorithmParam):
     def __post_init__(self):
         '''__post_init__
 
-        Check the values are in valid range.        
+        Check the values are in valid range.
 
         '''
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
@@ -57,9 +54,9 @@ def build_default_discrete_policy(scope_name, state_shape, action_dim):
 
 
 class ICML2015TRPO(Algorithm):
-    """ Trust Region Policy Optimiation method, this implements pure one. 
+    """ Trust Region Policy Optimiation method, this implements pure one.
         Please note that original TRPO use Single Path method to estimate Q value
-        instead of Generalized Advantage Estimation (GAE). 
+        instead of Generalized Advantage Estimation (GAE).
         See: https://arxiv.org/pdf/1502.05477.pdf
     """
 
@@ -161,7 +158,7 @@ class ICML2015TRPO(Algorithm):
             non_terminal = np.float32(0.0 if done else 1.0)
 
             experience.append((self._state, self._action,
-                               r, done, self._next_state))
+                               r, non_terminal, self._next_state))
             self._state = self._next_state
 
         return experience
@@ -221,7 +218,7 @@ class ICML2015TRPO(Algorithm):
         accumulated_reward_batch = []
 
         for experience in experiences:
-            s_seq, a_seq, r_seq, non_terminal_seq, s_next_seq = marshall_experiences(
+            s_seq, a_seq, r_seq, _, _ = marshall_experiences(
                 experience)
             accumulated_reward = self._compute_accumulated_reward(
                 r_seq, self._params.gamma)

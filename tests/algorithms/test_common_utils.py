@@ -3,10 +3,8 @@ import pytest
 import numpy as np
 
 import nnabla as nn
-import nnabla.parametric_functions as PF
 
 import nnabla_rl.models as M
-import nnabla_rl.environments as E
 from nnabla_rl.algorithms.common_utils import compute_v_target_and_advantage
 
 

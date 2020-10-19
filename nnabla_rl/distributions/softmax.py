@@ -3,8 +3,7 @@ import nnabla.functions as F
 
 import numpy as np
 
-import nnabla_rl.functions as RF
-from nnabla_rl.distributions import Distribution, common_utils
+from nnabla_rl.distributions import Distribution
 
 
 class Softmax(Distribution):
@@ -56,4 +55,6 @@ class Softmax(Distribution):
     def kl_divergence(self, q):
         if not isinstance(q, Softmax):
             raise ValueError("Invalid q to compute kl divergence")
-        return F.sum(self._distribution * (F.log(self._distribution) - F.log(q._distribution)), axis=1, keepdims=True)
+        return F.sum(self._distribution * (F.log(self._distribution) - F.log(q._distribution)),
+                     axis=1,
+                     keepdims=True)

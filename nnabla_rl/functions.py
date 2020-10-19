@@ -1,8 +1,6 @@
 import nnabla as nn
 import nnabla.functions as F
 
-import numpy as np
-
 
 def sample_gaussian(mean, ln_var, noise_clip=None):
     assert isinstance(mean, nn.Variable)
@@ -75,8 +73,8 @@ def argmax(x, axis=None):
 
 def quantile_huber_loss(x0, x1, kappa, tau):
     ''' Quantile huber loss
-    See following papers for details: 
-    https://arxiv.org/pdf/1710.10044.pdf 
+    See following papers for details:
+    https://arxiv.org/pdf/1710.10044.pdf
     https://arxiv.org/pdf/1806.06923.pdf
     '''
     u = x0 - x1

@@ -1,8 +1,4 @@
 import os
-import datetime
-import argparse
-import sys
-import json
 
 
 def file_exists(path):
@@ -15,7 +11,7 @@ def file_exists(path):
     Returns
     -------
     file_existence : bool
-        True if file exists otherwise False        
+        True if file exists otherwise False
     """
     return os.path.exists(path)
 

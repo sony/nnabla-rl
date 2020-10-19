@@ -1,7 +1,6 @@
 import nnabla as nn
 
 import nnabla.functions as F
-import nnabla.parametric_functions as PF
 import nnabla.solvers as S
 
 import numpy as np
@@ -14,7 +13,6 @@ from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_actio
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.logger import logger
 import nnabla_rl.exploration_strategies as ES
 import nnabla_rl.models as M
 import nnabla_rl.functions as RF
@@ -224,29 +222,29 @@ class CategoricalDQN(Algorithm):
         bj = (Tz - self._params.v_min) / self._delta_z
         bj = np.clip(bj, 0, self._params.num_atoms - 1)
 
-        l = np.floor(bj)
-        u = np.ceil(bj)
-        assert l.shape == (self._params.batch_size, self._params.num_atoms)
-        assert u.shape == (self._params.batch_size, self._params.num_atoms)
+        lower = np.floor(bj)
+        upper = np.ceil(bj)
+        assert lower.shape == (self._params.batch_size, self._params.num_atoms)
+        assert upper.shape == (self._params.batch_size, self._params.num_atoms)
 
         offset = np.arange(0,
                            self._params.batch_size * self._params.num_atoms,
                            self._params.num_atoms,
                            dtype=np.int32)[..., None]
-        ml_indices = (l + offset).astype(np.int32)
-        mu_indices = (u + offset).astype(np.int32)
+        ml_indices = (lower + offset).astype(np.int32)
+        mu_indices = (upper + offset).astype(np.int32)
 
         mi = np.zeros(shape=(self._params.batch_size, self._params.num_atoms),
                       dtype=np.float32)
-        # Fix u - bj = bj - l = 0 (Prevent not getting both 0. u - l must always be 1)
-        # u - bj = (1 + l) - bj
-        u = 1 + l
+        # Fix upper - bj = bj - lower = 0 (Prevent not getting both 0. upper - l must always be 1)
+        # upper - bj = (1 + lower) - bj
+        upper = 1 + lower
         np.add.at(mi.ravel(),
                   ml_indices.ravel(),
-                  (pj * (u - bj)).ravel())
+                  (pj * (upper - bj)).ravel())
         np.add.at(mi.ravel(),
                   mu_indices.ravel(),
-                  (pj * (bj - l)).ravel())
+                  (pj * (bj - lower)).ravel())
 
         return mi
 

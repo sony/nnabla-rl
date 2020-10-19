@@ -11,7 +11,6 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 import nnabla_rl.models as M
-from nnabla_rl.models.model import Model
 import nnabla_rl.functions as RF
 
 
@@ -43,7 +42,7 @@ class ICML2018SACParam(AlgorithmParam):
     def __post_init__(self):
         '''__post_init__
 
-        Check the values are in valid range.        
+        Check the values are in valid range.
 
         '''
         self._assert_between(self.tau, 0.0, 1.0, 'tau')
@@ -58,11 +57,11 @@ class ICML2018SACParam(AlgorithmParam):
 class ICML2018SAC(Algorithm):
     '''Soft Actor-Critic (SAC) algorithm implementation.
 
-    This class implements the ICML2018 version of Soft Actor Critic (SAC) algorithm proposed by T. Haarnoja, et al. 
+    This class implements the ICML2018 version of Soft Actor Critic (SAC) algorithm proposed by T. Haarnoja, et al.
     in the paper: "Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor"
     For detail see: https://arxiv.org/pdf/1801.01290.pdf
 
-    This implementation slightly differs from the implementation of Soft Actor-Critic algorithm presented 
+    This implementation slightly differs from the implementation of Soft Actor-Critic algorithm presented
     also by T. Haarnoja, et al. in the following paper: https://arxiv.org/pdf/1812.05905.pdf
 
     You will need to scale the reward received from the environment properly to get the algorithm work.

@@ -44,7 +44,7 @@ class TD3Param(AlgorithmParam):
     def __post_init__(self):
         '''__post_init__
 
-        Check the set values are in valid range.        
+        Check the set values are in valid range.
 
         '''
         if not (0 < self.d):

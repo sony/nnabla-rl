@@ -1,4 +1,3 @@
-import nnabla as nn
 import nnabla.initializer as I
 
 import numpy as np
@@ -8,8 +7,8 @@ def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     """ Create Weight initialzier proposed by He et al. (Normal distribution version)
 
     Args:
-        inmaps (int): Map size of an input Variable, 
-        outmaps (int): Map size of an output Variable, 
+        inmaps (int): Map size of an input Variable,
+        outmaps (int): Map size of an output Variable,
         kernel (tuple(int) or None): Convolution kernel spatial shape.
             In Affine, use the default setting
         factor (float): Coefficient applied to the standard deviation computation. default is 2.0
@@ -35,8 +34,8 @@ def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
     """ Create Weight initialzier proposed in LeCun 98, Efficient Backprop (Normal distribution version)
 
     Args:
-        inmaps (int): Map size of an input Variable, 
-        outmaps (int): Map size of an output Variable, 
+        inmaps (int): Map size of an input Variable,
+        outmaps (int): Map size of an output Variable,
         kernel (tuple(int) or None): Convolution kernel spatial shape.
             In Affine, use the default setting
         factor (float): Coefficient applied to the standard deviation computation. default is 1.0
@@ -58,8 +57,8 @@ def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     """ Create Weight initialzier proposed by He et al. (Uniform distribution version)
 
     Args:
-        inmaps (int): Map size of an input Variable, 
-        outmaps (int): Map size of an output Variable, 
+        inmaps (int): Map size of an input Variable,
+        outmaps (int): Map size of an output Variable,
         kernel (tuple(int) or None): Convolution kernel spatial shape.
             In Affine, use the default setting
         factor (float): Coefficient applied to the uniform distribution limit computation. default is 2.0

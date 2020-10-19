@@ -11,7 +11,6 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 import nnabla_rl.models as M
-from nnabla_rl.models.model import Model
 
 
 def build_continuous_policy(scope_name, state_dim, action_dim, fixed_ln_var):

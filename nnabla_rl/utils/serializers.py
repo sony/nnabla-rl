@@ -6,7 +6,6 @@ import pickle
 
 from nnabla_rl.algorithm import Algorithm
 import nnabla_rl.algorithms as A
-from nnabla_rl.environments.environment_info import EnvironmentInfo
 import nnabla_rl.utils.files as files
 
 _TRAINING_INFO_FILENAME = 'training_info.json'
