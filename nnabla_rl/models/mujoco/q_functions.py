@@ -9,7 +9,7 @@ from nnabla_rl.models.q_function import QFunction
 
 class TD3QFunction(QFunction):
     """
-    Critic model proposed by NS. Fujimoto in TD3 paper for mujoco environment.
+    Critic model proposed by S. Fujimoto in TD3 paper for mujoco environment.
     See: https://arxiv.org/abs/1802.09477
     """
 

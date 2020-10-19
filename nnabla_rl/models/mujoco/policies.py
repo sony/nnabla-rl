@@ -14,7 +14,7 @@ from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy, prepr
 
 class TD3Policy(DeterministicPolicy):
     """
-    Actor model proposed by NS. Fujimoto in TD3 paper for mujoco environment.
+    Actor model proposed by S. Fujimoto in TD3 paper for mujoco environment.
     See: https://arxiv.org/abs/1802.09477
     """
 

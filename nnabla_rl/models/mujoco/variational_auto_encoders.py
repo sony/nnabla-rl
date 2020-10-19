@@ -10,7 +10,7 @@ from nnabla_rl.models.variational_auto_encoder import VariationalAutoEncoder
 
 class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
     """
-    Almost identical to BCQ style variational auto encoder proposed by NS. Fujimoto in BCQ paper for mujoco environment.
+    Almost identical to BCQ style variational auto encoder proposed by S. Fujimoto in BCQ paper for mujoco environment.
     See: https://arxiv.org/pdf/1812.02900.pdf
     The main difference is that the output action is not squashed with tanh for computational convenience.
     """
@@ -94,7 +94,7 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
 
 class BCQVariationalAutoEncoder(UnsquashedVariationalAutoEncoder):
     """
-    BCQ style variational auto encoder proposed by NS. Fujimoto in BCQ paper for mujoco environment.
+    BCQ style variational auto encoder proposed by S. Fujimoto in BCQ paper for mujoco environment.
     See: https://arxiv.org/pdf/1812.02900.pdf
     """
 

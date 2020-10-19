@@ -70,7 +70,7 @@ class BCQ(Algorithm):
     '''Batch-Constrained Q-learning (BCQ) algorithm implementation.
 
     This class implements the Batch-Constrained Q-learning (BCQ) algorithm
-    proposed by NS. Fujimoto, et al. in the paper: "Off-Policy Deep Reinforcement Learning without Exploration"
+    proposed by S. Fujimoto, et al. in the paper: "Off-Policy Deep Reinforcement Learning without Exploration"
     For detail see: https://arxiv.org/pdf/1812.02900.pdf
 
     '''

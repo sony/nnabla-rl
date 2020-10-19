@@ -7,7 +7,7 @@ from nnabla_rl.models.perturbator import Perturbator
 
 class BCQPerturbator(Perturbator):
     """
-    Perturbator model proposed by NS. Fujimoto in BCQ paper for mujoco environment.
+    Perturbator model proposed by S. Fujimoto in BCQ paper for mujoco environment.
     See: https://arxiv.org/abs/1812.02900
     """
 
