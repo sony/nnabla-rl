@@ -4,13 +4,14 @@ from setuptools import setup
 install_requires = ['nnabla', 'gym',
                     'dataclasses;python_version=="3.6"', 'opencv-python']
 
-tests_require = ['pytest', 'mock']
+tests_require = ['pytest', 'pytest-cov', 'mock']
 # pytest-runner is required to run tests with
 # $ python setup.py tests
 setup_requires = ['pytest-runner']
 
 scripts = ['bin/plot_result',
-           'bin/check_best_iteration', 'bin/compile_results']
+           'bin/check_best_iteration', 
+           'bin/compile_results']
 
 setup(
     name='nnabla_rl',
