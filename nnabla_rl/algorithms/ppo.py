@@ -19,9 +19,9 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences, unzip
-from nnabla_rl.utils.multiprocess import mp_to_np_array, np_to_mp_array, \
-    mp_array_from_np_array, new_mp_arrays_from_params, \
-    copy_mp_arrays_to_params, copy_params_to_mp_arrays
+from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
+                                          mp_array_from_np_array, new_mp_arrays_from_params,
+                                          copy_mp_arrays_to_params, copy_params_to_mp_arrays)
 import nnabla_rl.utils.context as context
 
 
