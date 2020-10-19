@@ -22,16 +22,13 @@ class C51ValueDistributionFunction(ValueDistributionFunction):
             batch_size = s.shape[0]
 
             with nn.parameter_scope("conv1"):
-                h = NPF.convolution(
-                    s, outmaps=32, stride=(4, 4), kernel=(8, 8))
+                h = NPF.convolution(s, outmaps=32, stride=(4, 4), kernel=(8, 8))
             h = NF.relu(x=h)
             with nn.parameter_scope("conv2"):
-                h = NPF.convolution(
-                    h, outmaps=64, kernel=(4, 4), stride=(2, 2))
+                h = NPF.convolution(h, outmaps=64, kernel=(4, 4), stride=(2, 2))
             h = NF.relu(x=h)
             with nn.parameter_scope("conv3"):
-                h = NPF.convolution(
-                    h, outmaps=64, kernel=(3, 3), stride=(1, 1))
+                h = NPF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1))
             h = NF.relu(x=h)
             h = NF.reshape(h, shape=(batch_size, -1))
             with nn.parameter_scope("affine1"):
@@ -59,24 +56,20 @@ class QRDQNQuantileDistributionFunction(QuantileDistributionFunction):
             batch_size = s.shape[0]
 
             with nn.parameter_scope("conv1"):
-                h = NPF.convolution(
-                    s, outmaps=32, stride=(4, 4), kernel=(8, 8))
+                h = NPF.convolution(s, outmaps=32, stride=(4, 4), kernel=(8, 8))
             h = NF.relu(x=h)
             with nn.parameter_scope("conv2"):
-                h = NPF.convolution(
-                    h, outmaps=64, kernel=(4, 4), stride=(2, 2))
+                h = NPF.convolution(h, outmaps=64, kernel=(4, 4), stride=(2, 2))
             h = NF.relu(x=h)
             with nn.parameter_scope("conv3"):
-                h = NPF.convolution(
-                    h, outmaps=64, kernel=(3, 3), stride=(1, 1))
+                h = NPF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1))
             h = NF.relu(x=h)
             h = NF.reshape(h, shape=(batch_size, -1))
             with nn.parameter_scope("affine1"):
                 h = NPF.affine(h, n_outmaps=512)
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
-                h = NPF.affine(h,
-                               n_outmaps=self._num_actions * self._num_quantiles)
+                h = NPF.affine(h, n_outmaps=self._num_actions * self._num_quantiles)
             quantiles = NF.reshape(
                 h, (-1, self._num_actions, self._num_quantiles))
         assert quantiles.shape == (
@@ -120,16 +113,13 @@ class IQNQuantileFunction(StateActionQuantileFunction):
             batch_size = s.shape[0]
 
             with nn.parameter_scope("conv1"):
-                h = NPF.convolution(
-                    s, outmaps=32, stride=(4, 4), kernel=(8, 8))
+                h = NPF.convolution(s, outmaps=32, stride=(4, 4), kernel=(8, 8))
             h = NF.relu(x=h)
             with nn.parameter_scope("conv2"):
-                h = NPF.convolution(
-                    h, outmaps=64, kernel=(4, 4), stride=(2, 2))
+                h = NPF.convolution(h, outmaps=64, kernel=(4, 4), stride=(2, 2))
             h = NF.relu(x=h)
             with nn.parameter_scope("conv3"):
-                h = NPF.convolution(
-                    h, outmaps=64, kernel=(3, 3), stride=(1, 1))
+                h = NPF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1))
             h = NF.relu(x=h)
             h = NF.reshape(h, shape=(batch_size, -1))
         encoded = RF.expand_dims(h, axis=1)

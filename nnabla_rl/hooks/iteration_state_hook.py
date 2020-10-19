@@ -16,17 +16,13 @@ class IterationStateHook(Hook):
         latest_iteration_state = algorithm.latest_iteration_state
 
         if 'scalar' in latest_iteration_state:
-            logger.info(pprint.pformat(latest_iteration_state['scalar']
-                                       ))
+            logger.info(pprint.pformat(latest_iteration_state['scalar']))
 
         if self._writer is not None:
             for key, value in latest_iteration_state.items():
                 if key == 'scalar':
-                    self._writer.write_scalar(
-                        algorithm.iteration_num, value)
+                    self._writer.write_scalar(algorithm.iteration_num, value)
                 if key == 'histogram':
-                    self._writer.write_histogram(
-                        algorithm.iteration_num, value)
+                    self._writer.write_histogram(algorithm.iteration_num, value)
                 if key == 'image':
-                    self._writer.write_image(
-                        algorithm.iteration_num, value)
+                    self._writer.write_image(algorithm.iteration_num, value)

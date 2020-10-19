@@ -20,17 +20,14 @@ class TestCommonUtils(object):
         var = np.exp(ln_var)
 
         actual = common_utils.gaussian_log_prob(nn.Variable.from_numpy_array(x),
-                                                nn.Variable.from_numpy_array(
-                                                    mean),
-                                                nn.Variable.from_numpy_array(
-                                                    var),
+                                                nn.Variable.from_numpy_array(mean),
+                                                nn.Variable.from_numpy_array(var),
                                                 nn.Variable.from_numpy_array(ln_var))
         actual.forward()
         actual = actual.d
 
         # FIXME: avoid using scipy
-        gaussian = stats.multivariate_normal(
-            mean=mean.squeeze(), cov=np.diag(var.squeeze()))
+        gaussian = stats.multivariate_normal(mean=mean.squeeze(), cov=np.diag(var.squeeze()))
         expected = gaussian.logpdf(x)
 
         assert np.allclose(expected, actual)

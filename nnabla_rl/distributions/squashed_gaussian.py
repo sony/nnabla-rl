@@ -82,8 +82,7 @@ class SquashedGaussian(Distribution):
     def _log_prob_internal(self, x, mean, var, ln_var):
         axis = len(x.shape) - 1
         gaussian_part = common_utils.gaussian_log_prob(x, mean, var, ln_var)
-        adjust_part = NF.sum(self._log_determinant_jacobian(
-            x), axis=axis, keepdims=True)
+        adjust_part = NF.sum(self._log_determinant_jacobian(x), axis=axis, keepdims=True)
         return gaussian_part - adjust_part
 
     def _log_determinant_jacobian(self, x):

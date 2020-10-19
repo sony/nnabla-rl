@@ -139,8 +139,7 @@ class TestInitializers(object):
 
         np.random.seed(0)
         expected = np.random.randn(*shape)
-        expected *= std / \
-            np.sqrt(np.square(expected).sum(axis=axis, keepdims=True))
+        expected *= std / np.sqrt(np.square(expected).sum(axis=axis, keepdims=True))
 
         np.testing.assert_almost_equal(actual, expected)
 
