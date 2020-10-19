@@ -16,7 +16,7 @@ jobs:
           pip install -r requirements.txt
       - name: check python code format with autopep8
         run: |
-          autopep8 -r --diff .
+          autopep8 -r --diff --max-line-length=120 .
   lint:
     runs-on: ubuntu-latest
     steps:
