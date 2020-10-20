@@ -1,5 +1,4 @@
-import nnabla as nn
-import nnabla.initializer as I
+import nnabla.initializer as NI
 
 import numpy as np
 
@@ -8,8 +7,8 @@ def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     """ Create Weight initialzier proposed by He et al. (Normal distribution version)
 
     Args:
-        inmaps (int): Map size of an input Variable, 
-        outmaps (int): Map size of an output Variable, 
+        inmaps (int): Map size of an input Variable,
+        outmaps (int): Map size of an output Variable,
         kernel (tuple(int) or None): Convolution kernel spatial shape.
             In Affine, use the default setting
         factor (float): Coefficient applied to the standard deviation computation. default is 2.0
@@ -28,15 +27,15 @@ def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     else:
         raise NotImplementedError('Unknown init mode: {}'.format(mode))
 
-    return I.NormalInitializer(s)
+    return NI.NormalInitializer(s)
 
 
 def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
     """ Create Weight initialzier proposed in LeCun 98, Efficient Backprop (Normal distribution version)
 
     Args:
-        inmaps (int): Map size of an input Variable, 
-        outmaps (int): Map size of an output Variable, 
+        inmaps (int): Map size of an input Variable,
+        outmaps (int): Map size of an output Variable,
         kernel (tuple(int) or None): Convolution kernel spatial shape.
             In Affine, use the default setting
         factor (float): Coefficient applied to the standard deviation computation. default is 1.0
@@ -51,15 +50,15 @@ def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
     else:
         raise NotImplementedError('Unknown init mode: {}'.format(mode))
 
-    return I.NormalInitializer(s)
+    return NI.NormalInitializer(s)
 
 
 def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     """ Create Weight initialzier proposed by He et al. (Uniform distribution version)
 
     Args:
-        inmaps (int): Map size of an input Variable, 
-        outmaps (int): Map size of an output Variable, 
+        inmaps (int): Map size of an input Variable,
+        outmaps (int): Map size of an output Variable,
         kernel (tuple(int) or None): Convolution kernel spatial shape.
             In Affine, use the default setting
         factor (float): Coefficient applied to the uniform distribution limit computation. default is 2.0
@@ -76,14 +75,14 @@ def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     else:
         raise NotImplementedError('Unknown init mode: {}'.format(mode))
 
-    return I.UniformInitializer(lim=(-lim, lim))
+    return NI.UniformInitializer(lim=(-lim, lim))
 
 
-class NormcInitializer(I.BaseInitializer):
+class NormcInitializer(NI.BaseInitializer):
     # See: https://github.com/openai/baselines/blob/master/baselines/common/tf_util.py
     def __init__(self, std=1.0, axis=0, rng=None):
         if rng is None:
-            rng = I.random.prng
+            rng = NI.random.prng
         self._rng = rng
         self._std = std
         self._axis = axis

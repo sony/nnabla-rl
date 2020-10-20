@@ -5,7 +5,6 @@ import numpy as np
 from unittest import mock
 
 import nnabla as nn
-import nnabla.functions as F
 
 import nnabla_rl.distributions as D
 
@@ -164,7 +163,8 @@ class TestGaussian(object):
             np.random.randn(batch_size, output_dim))
 
         with mock.patch('nnabla_rl.distributions.common_utils.gaussian_log_prob',
-                        return_value=nn.Variable.from_numpy_array(np.empty(shape=input_shape))) as mock_gaussian_log_prob:
+                        return_value=nn.Variable.from_numpy_array(np.empty(shape=input_shape))) \
+                as mock_gaussian_log_prob:
             distribution = D.Gaussian(mean=mean, ln_var=ln_var)
             distribution.log_prob(dummy_input)
 

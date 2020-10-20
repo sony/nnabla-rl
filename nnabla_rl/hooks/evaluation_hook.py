@@ -1,17 +1,12 @@
-import pathlib
-
 from nnabla_rl.hook import Hook
 from nnabla_rl.logger import logger
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
-from nnabla_rl.utils.files import create_dir_if_not_exist
-from nnabla_rl.algorithm import Algorithm
 
 import numpy as np
 
 
 class EvaluationHook(Hook):
-    def __init__(self, env, evaluator=EpisodicEvaluator(), timing=1000,
-                 writer=None):
+    def __init__(self, env, evaluator=EpisodicEvaluator(), timing=1000, writer=None):
         super(EvaluationHook, self).__init__(timing=timing)
         """
         Hook to run evaluation during training.

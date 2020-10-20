@@ -1,8 +1,8 @@
 import numpy as np
 
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.initializer as I
+import nnabla.functions as NF
+import nnabla.initializer as NI
 
 from nnabla_rl.models.model import Model
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
@@ -22,19 +22,19 @@ class RunningMeanNormalizer(Preprocessor, Model):
             self._mean = \
                 nn.parameter.get_parameter_or_create(name='mean',
                                                      shape=(1, *shape),
-                                                     initializer=I.ConstantInitializer(0.0))
+                                                     initializer=NI.ConstantInitializer(0.0))
             self._var = nn.parameter.get_parameter_or_create(name='var',
                                                              shape=(1, *shape),
-                                                             initializer=I.ConstantInitializer(1.0))
+                                                             initializer=NI.ConstantInitializer(1.0))
             self._count = nn.parameter.get_parameter_or_create(name='count',
                                                                shape=(1, 1),
-                                                               initializer=I.ConstantInitializer(1e-4))
+                                                               initializer=NI.ConstantInitializer(1e-4))
 
     def process(self, x):
         std = (self._var + self._epsilon) ** 0.5
         normalized = (x - self._mean) / std
         if self._value_clip is not None:
-            normalized = F.clip_by_value(
+            normalized = NF.clip_by_value(
                 normalized, min=self._value_clip[0], max=self._value_clip[1])
         normalized.need_grad = False
         return normalized

@@ -1,8 +1,7 @@
 import nnabla as nn
 
-import nnabla.functions as F
-import nnabla.parametric_functions as PF
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 import numpy as np
 
@@ -14,7 +13,6 @@ from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_actio
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.logger import logger
 import nnabla_rl.exploration_strategies as ES
 import nnabla_rl.models as M
 import nnabla_rl.functions as RF
@@ -144,11 +142,12 @@ class CategoricalDQN(Algorithm):
         atom_probabilities = self._probabilities_of(
             atom_probabilities,
             self._training_variables.a_current)
-        atom_probabilities = F.clip_by_value(atom_probabilities, 1e-10, 1.0)
-        cross_entropy = self._training_variables.mi * F.log(atom_probabilities)
+        atom_probabilities = NF.clip_by_value(atom_probabilities, 1e-10, 1.0)
+        cross_entropy = self._training_variables.mi * \
+            NF.log(atom_probabilities)
         assert cross_entropy.shape == (
             self._params.batch_size, self._params.num_atoms)
-        self._cross_entropy_loss = -F.mean(F.sum(cross_entropy, axis=1))
+        self._cross_entropy_loss = -NF.mean(NF.sum(cross_entropy, axis=1))
 
     def _build_evaluation_graph(self):
         atom_probabilities = self._atom_p.probabilities(
@@ -156,7 +155,7 @@ class CategoricalDQN(Algorithm):
         self._a_greedy = self._compute_argmax_q(atom_probabilities)
 
     def _setup_solver(self):
-        self._atom_p_solver = S.Adam(
+        self._atom_p_solver = NS.Adam(
             alpha=self._params.learning_rate, eps=1e-2 / self._params.batch_size)
         self._atom_p_solver.set_parameters(self._atom_p.get_parameters())
 
@@ -224,29 +223,29 @@ class CategoricalDQN(Algorithm):
         bj = (Tz - self._params.v_min) / self._delta_z
         bj = np.clip(bj, 0, self._params.num_atoms - 1)
 
-        l = np.floor(bj)
-        u = np.ceil(bj)
-        assert l.shape == (self._params.batch_size, self._params.num_atoms)
-        assert u.shape == (self._params.batch_size, self._params.num_atoms)
+        lower = np.floor(bj)
+        upper = np.ceil(bj)
+        assert lower.shape == (self._params.batch_size, self._params.num_atoms)
+        assert upper.shape == (self._params.batch_size, self._params.num_atoms)
 
         offset = np.arange(0,
                            self._params.batch_size * self._params.num_atoms,
                            self._params.num_atoms,
                            dtype=np.int32)[..., None]
-        ml_indices = (l + offset).astype(np.int32)
-        mu_indices = (u + offset).astype(np.int32)
+        ml_indices = (lower + offset).astype(np.int32)
+        mu_indices = (upper + offset).astype(np.int32)
 
         mi = np.zeros(shape=(self._params.batch_size, self._params.num_atoms),
                       dtype=np.float32)
-        # Fix u - bj = bj - l = 0 (Prevent not getting both 0. u - l must always be 1)
-        # u - bj = (1 + l) - bj
-        u = 1 + l
+        # Fix upper - bj = bj - lower = 0 (Prevent not getting both 0. upper - l must always be 1)
+        # upper - bj = (1 + lower) - bj
+        upper = 1 + lower
         np.add.at(mi.ravel(),
                   ml_indices.ravel(),
-                  (pj * (u - bj)).ravel())
+                  (pj * (upper - bj)).ravel())
         np.add.at(mi.ravel(),
                   mu_indices.ravel(),
-                  (pj * (bj - l)).ravel())
+                  (pj * (bj - lower)).ravel())
 
         return mi
 
@@ -269,29 +268,29 @@ class CategoricalDQN(Algorithm):
             batch_size, self._n_action, self._params.num_atoms)
         z = RF.expand_dims(self._z_var, axis=0)
         z = RF.expand_dims(z, axis=1)
-        z = F.broadcast(
+        z = NF.broadcast(
             z, shape=(batch_size, self._n_action, self._params.num_atoms))
-        q_values = F.sum(z * atom_probabilities, axis=2)
+        q_values = NF.sum(z * atom_probabilities, axis=2)
         assert q_values.shape == (batch_size, self._n_action)
         return q_values
 
     def _probabilities_of(self, probabilities, a):
         batch_size = probabilities.shape[0]
-        probabilities = F.transpose(probabilities, axes=(0, 2, 1))
+        probabilities = NF.transpose(probabilities, axes=(0, 2, 1))
         one_hot = self._to_one_hot(a)
         probabilities = probabilities * one_hot
-        probabilities = F.sum(probabilities, axis=2)
+        probabilities = NF.sum(probabilities, axis=2)
         assert probabilities.shape == (batch_size, self._params.num_atoms)
 
         return probabilities
 
     def _to_one_hot(self, a):
         batch_size = a.shape[0]
-        a = F.reshape(a, (-1, 1))
+        a = NF.reshape(a, (-1, 1))
         assert a.shape[0] == batch_size
-        one_hot = F.one_hot(a, (self._n_action,))
+        one_hot = NF.one_hot(a, (self._n_action,))
         one_hot = RF.expand_dims(one_hot, axis=1)
-        one_hot = F.broadcast(one_hot, shape=(
+        one_hot = NF.broadcast(one_hot, shape=(
             batch_size, self._params.num_atoms, self._n_action))
         return one_hot
 

@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 
@@ -40,7 +40,7 @@ class SACParam(AlgorithmParam):
     def __post_init__(self):
         '''__post_init__
 
-        Check the set values are in valid range.        
+        Check the set values are in valid range.
 
         '''
         if not ((0.0 <= self.tau) & (self.tau <= 1.0)):
@@ -75,17 +75,17 @@ class AdjustableTemperature(Model):
         self()
 
     def __call__(self):
-        return F.exp(self._log_temperature)
+        return NF.exp(self._log_temperature)
 
 
 class SAC(Algorithm):
     '''Soft Actor-Critic (SAC) algorithm implementation.
 
-    This class implements the extended version of Soft Actor Critic (SAC) algorithm 
+    This class implements the extended version of Soft Actor Critic (SAC) algorithm
     proposed by T. Haarnoja, et al. in the paper: "Soft Actor-Critic Algorithms and Applications"
     For detail see: https://arxiv.org/pdf/1812.05905.pdf
 
-    This algorithm is slightly differs from the implementation of Soft Actor-Critic algorithm presented 
+    This algorithm is slightly differs from the implementation of Soft Actor-Critic algorithm presented
     also by T. Haarnoja, et al. in the following paper:  https://arxiv.org/pdf/1801.01290.pdf
 
     The temperature parameter is adjusted automatically instead of providing reward scalar as a
@@ -166,7 +166,7 @@ class SAC(Algorithm):
 
         target_q1_var = self._target_q1.q(self._s_next_var, sampled_action)
         target_q2_var = self._target_q2.q(self._s_next_var, sampled_action)
-        target_q_var = F.minimum2(target_q1_var, target_q2_var)
+        target_q_var = NF.minimum2(target_q1_var, target_q2_var)
 
         y = self._reward_var + self._params.gamma * \
             self._non_terminal_var * \
@@ -185,27 +185,27 @@ class SAC(Algorithm):
         action_var, log_pi = policy_distribution.sample_and_compute_log_prob()
         q1 = self._q1.q(self._s_current_var, action_var)
         q2 = self._q2.q(self._s_current_var, action_var)
-        min_q = F.minimum2(q1, q2)
-        self._pi_loss = F.mean(self._temperature * log_pi - min_q)
+        min_q = NF.minimum2(q1, q2)
+        self._pi_loss = NF.mean(self._temperature * log_pi - min_q)
 
         log_pi_unlinked = log_pi.get_unlinked_variable()
-        self._alpha_loss = -F.mean(self._temperature *
-                                   (log_pi_unlinked + self._params.target_entropy))
+        self._alpha_loss = -NF.mean(self._temperature *
+                                    (log_pi_unlinked + self._params.target_entropy))
 
     def _build_evaluation_graph(self):
         self._eval_distribution = self._pi.pi(self._eval_state_var)
 
     def _setup_solver(self):
-        self._q1_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q1_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q1_solver.set_parameters(self._q1.get_parameters())
 
-        self._q2_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q2_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q2_solver.set_parameters(self._q2.get_parameters())
 
-        self._pi_solver = S.Adam(alpha=self._params.learning_rate)
+        self._pi_solver = NS.Adam(alpha=self._params.learning_rate)
         self._pi_solver.set_parameters(self._pi.get_parameters())
 
-        self._alpha_solver = S.Adam(alpha=self._params.learning_rate)
+        self._alpha_solver = NS.Adam(alpha=self._params.learning_rate)
         self._alpha_solver.set_parameters(self._alpha.get_parameters())
 
     def _run_online_training_iteration(self, env):

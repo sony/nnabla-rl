@@ -1,5 +1,4 @@
 import numpy as np
-import random
 from collections import deque
 
 from nnabla_rl.replay_buffer import ReplayBuffer
@@ -12,7 +11,7 @@ class MemoryEfficientAtariBuffer(ReplayBuffer):
     DQN (and other training algorithms) requires large replay buffer when training on Atari games.
     If you naively save the experiences, you'll need more than 100GB to save them (assuming 1M experiences).
     Which usually does not fit in the machine's memory (unless you have money:).
-    This replay buffer reduces the size of experience by casting the images to uint8 and 
+    This replay buffer reduces the size of experience by casting the images to uint8 and
     removing old frames concatenated to the observation.
     By using this buffer, you can hold 1M experiences using only 20GB(approx.) of memory.
     '''

@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 from collections import namedtuple
@@ -11,7 +11,6 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 import nnabla_rl.models as M
-from nnabla_rl.models.model import Model
 
 
 def build_continuous_policy(scope_name, state_dim, action_dim, fixed_ln_var):
@@ -84,7 +83,7 @@ class REINFORCE(Algorithm):
     def _build_training_graph(self):
         distribution = self._policy.pi(self._training_variables.s_current)
         log_prob = distribution.log_prob(self._training_variables.a_current)
-        self._policy_loss = F.sum(-log_prob.reshape((-1, )) * self._training_variables.accumulated_reward) / \
+        self._policy_loss = NF.sum(-log_prob.reshape((-1, )) * self._training_variables.accumulated_reward) / \
             self._params.num_rollouts_per_train_iteration
 
     def _build_evaluation_graph(self):
@@ -92,7 +91,7 @@ class REINFORCE(Algorithm):
         self._eval_action = distribution.sample()
 
     def _setup_solver(self):
-        self._policy_solver = S.Adam(alpha=self._params.learning_rate)
+        self._policy_solver = NS.Adam(alpha=self._params.learning_rate)
         self._policy_solver.set_parameters(self._policy.get_parameters())
 
     def _run_online_training_iteration(self, env):

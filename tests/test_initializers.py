@@ -136,12 +136,13 @@ class TestInitializers(object):
 
         shape = (5, 5)
         actual = initializer(shape)
-        
+
         np.random.seed(0)
         expected = np.random.randn(*shape)
         expected *= std / np.sqrt(np.square(expected).sum(axis=axis, keepdims=True))
-        
+
         np.testing.assert_almost_equal(actual, expected)
+
 
 if __name__ == "__main__":
     pytest.main()

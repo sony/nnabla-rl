@@ -1,8 +1,8 @@
-from nnabla_rl.hooks import IterationNumHook
-from nnabla_rl.writer import Writer
+import pytest
 
 from unittest import mock
-import pytest
+
+from nnabla_rl.hooks import IterationNumHook
 from nnabla_rl.logger import logger
 
 

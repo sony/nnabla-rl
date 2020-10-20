@@ -9,5 +9,4 @@ class SaveSnapshotHook(Hook):
         self._outdir = outdir
 
     def on_hook_called(self, algorithm):
-        if algorithm.iteration_num % self._timing == 0:
-            save_snapshot(self._outdir, algorithm)
+        save_snapshot(self._outdir, algorithm)

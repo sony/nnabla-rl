@@ -1,7 +1,3 @@
-import numpy as np
-import random
-from collections import deque
-
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 

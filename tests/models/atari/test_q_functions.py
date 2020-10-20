@@ -1,10 +1,8 @@
-import pytest
 from unittest import mock
 
 import numpy as np
 
 import nnabla as nn
-
 from nnabla_rl.models.atari.q_functions import DQNQFunction
 
 

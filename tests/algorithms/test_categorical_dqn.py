@@ -4,13 +4,10 @@ import nnabla as nn
 
 import numpy as np
 
-from nnabla_rl.algorithm import EnvironmentInfo
 from nnabla_rl.models.atari.distributional_functions import C51ValueDistributionFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
-
-import gym
 
 
 class TestCategoricalDQN(object):

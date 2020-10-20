@@ -1,7 +1,5 @@
 import pytest
 
-import numpy as np
-
 from nnabla_rl.utils.data import RingBuffer
 
 

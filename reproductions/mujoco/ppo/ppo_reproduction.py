@@ -1,18 +1,11 @@
 import argparse
 
-import gym
-
-import numpy as np
-
 import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
-import nnabla_rl.utils.context as context
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
 from nnabla_rl.utils.reproductions import build_mujoco_env
-from nnabla_rl.hook import as_hook
-from nnabla_rl.logger import logger
 from nnabla_rl.utils import serializers
 
 
@@ -22,6 +15,7 @@ def select_only_reset_if_truncated(env_name):
     else:
         reset_if_truncated = True
     return reset_if_truncated
+
 
 def run_training(args):
     nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)

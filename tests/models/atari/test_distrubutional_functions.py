@@ -1,11 +1,12 @@
 import pytest
-from unittest import mock
 
 import numpy as np
 
 import nnabla as nn
 
-from nnabla_rl.models.atari.distributional_functions import C51ValueDistributionFunction, QRDQNQuantileDistributionFunction, IQNQuantileFunction
+from nnabla_rl.models.atari.distributional_functions import C51ValueDistributionFunction, \
+    QRDQNQuantileDistributionFunction, \
+    IQNQuantileFunction
 
 
 class TestC51ValueDistributionFunction(object):

@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 
@@ -105,16 +105,16 @@ class DDPG(Algorithm):
         # Actor optimization graph
         action_var = self._pi.pi(self._s_current_var)
         q = self._q.q(self._s_current_var, action_var)
-        self._pi_loss = -F.mean(q)
+        self._pi_loss = -NF.mean(q)
 
     def _build_evaluation_graph(self):
         self._eval_action = self._pi.pi(self._eval_state_var)
 
     def _setup_solver(self):
-        self._q_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q_solver.set_parameters(self._q.get_parameters())
 
-        self._pi_solver = S.Adam(alpha=self._params.learning_rate)
+        self._pi_solver = NS.Adam(alpha=self._params.learning_rate)
         self._pi_solver.set_parameters(self._pi.get_parameters())
 
     def _run_online_training_iteration(self, env):

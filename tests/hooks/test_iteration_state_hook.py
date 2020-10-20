@@ -1,21 +1,11 @@
+from unittest import mock
+
 from nnabla_rl.hooks import IterationStateHook
 from nnabla_rl.writer import Writer
-
-import nnabla_rl.environments as E
-import nnabla_rl.algorithms as A
-from nnabla_rl.utils import files
-from unittest import mock
-import numpy as np
-import pytest
-import pathlib
-import tempfile
-import os
 
 
 class TestIterationStateHook():
     def test_call(self):
-        dummy_env = E.DummyContinuous()
-
         dummy_algorithm = mock.MagicMock()
 
         test_latest_iteration_state = {}

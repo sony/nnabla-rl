@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 from collections import namedtuple
@@ -8,12 +8,10 @@ from collections import namedtuple
 import numpy as np
 
 import multiprocessing as mp
-from multiprocessing import sharedctypes
 
 import os
 import gym
 
-import nnabla_rl
 import nnabla_rl.models as M
 import nnabla_rl.preprocessors as RP
 import nnabla_rl.functions as RF
@@ -21,7 +19,9 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences, unzip
-from nnabla_rl.utils.multiprocess import mp_to_np_array, np_to_mp_array, mp_array_from_np_array, new_mp_arrays_from_params, copy_mp_arrays_to_params, copy_params_to_mp_arrays
+from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
+                                          mp_array_from_np_array, new_mp_arrays_from_params,
+                                          copy_mp_arrays_to_params, copy_params_to_mp_arrays)
 import nnabla_rl.utils.context as context
 
 
@@ -207,20 +207,20 @@ class PPO(Algorithm):
         distribution = self._policy.pi(self._variables.s_current)
         log_prob_new = distribution.log_prob(self._variables.a_current)
         log_prob_old = self._variables.log_prob
-        probability_ratio = F.exp(log_prob_new - log_prob_old)
-        clipped_ratio = F.clip_by_value(probability_ratio,
-                                        1 - self._params.epsilon * self._variables.alpha,
-                                        1 + self._params.epsilon * self._variables.alpha)
-        lower_bounds = F.minimum2(probability_ratio * self._variables.advantage,
-                                  clipped_ratio * self._variables.advantage)
-        clip_loss = F.mean(lower_bounds)
+        probability_ratio = NF.exp(log_prob_new - log_prob_old)
+        clipped_ratio = NF.clip_by_value(probability_ratio,
+                                         1 - self._params.epsilon * self._variables.alpha,
+                                         1 + self._params.epsilon * self._variables.alpha)
+        lower_bounds = NF.minimum2(probability_ratio * self._variables.advantage,
+                                   clipped_ratio * self._variables.advantage)
+        clip_loss = NF.mean(lower_bounds)
 
         value = self._v_function.v(self._variables.s_current)
         value_loss = self._params.value_coefficient * \
             RF.mean_squared_error(value, self._variables.v_target)
 
         entropy = distribution.entropy()
-        entropy_loss = F.mean(entropy)
+        entropy_loss = NF.mean(entropy)
 
         policy_loss = -clip_loss - self._params.entropy_coefficient * entropy_loss
         self._loss = value_loss + policy_loss
@@ -230,9 +230,9 @@ class PPO(Algorithm):
         self._eval_action = distribution.sample()
 
     def _setup_solver(self):
-        self._v_solver = S.Adam(self._params.learning_rate, eps=1e-5)
+        self._v_solver = NS.Adam(self._params.learning_rate, eps=1e-5)
         self._v_solver.set_parameters(self._v_function.get_parameters())
-        self._policy_solver = S.Adam(self._params.learning_rate, eps=1e-5)
+        self._policy_solver = NS.Adam(self._params.learning_rate, eps=1e-5)
         self._policy_solver.set_parameters(self._policy.get_parameters())
 
     def _before_training_start(self, env_or_buffer):
@@ -416,7 +416,8 @@ class _PPOActor(object):
         action_space = self._env.action_space
 
         MultiProcessingArrays = namedtuple('MultiProcessingArrays',
-                                           ['state', 'action', 'reward', 'non_terminal', 'next_state', 'log_prob', 'v_target', 'advantage'])
+                                           ['state', 'action', 'reward', 'non_terminal',
+                                            'next_state', 'log_prob', 'v_target', 'advantage'])
 
         state_mp_array_shape = (self._timesteps, *obs_space.shape)
         state_mp_array = mp_array_from_np_array(
@@ -521,7 +522,8 @@ class _PPOActor(object):
             s_next, reward, done, info = self._env.step(action)
             # We don't treat done at max_episode_length as False.
             # In Swimmer, done must be treated as done even if max_episode_length is reached
-            truncated = info.get('TimeLimit.truncated', False) and self._params.only_reset_if_truncated
+            truncated = info.get('TimeLimit.truncated',
+                                 False) and self._params.only_reset_if_truncated
             if done and not truncated:
                 non_terminal = 0.0
             else:

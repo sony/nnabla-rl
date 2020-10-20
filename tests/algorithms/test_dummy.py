@@ -4,7 +4,6 @@ import nnabla as nn
 
 import numpy as np
 
-from nnabla_rl.algorithm import EnvironmentInfo
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
 

@@ -1,5 +1,5 @@
 import nnabla as nn
-import nnabla.functions as F
+import nnabla.functions as NF
 
 import numpy as np
 
@@ -20,7 +20,7 @@ class Gaussian(Distribution):
             ln_var = nn.Variable.from_numpy_array(ln_var)
 
         self._mean = mean
-        self._var = F.exp(ln_var)
+        self._var = NF.exp(ln_var)
         self._ln_var = ln_var
         self._batch_size = mean.shape[0]
         self._data_dim = mean.shape[1:]
@@ -67,9 +67,11 @@ class Gaussian(Distribution):
         return common_utils.gaussian_log_prob(x, self._mean, self._var, self._ln_var)
 
     def entropy(self):
-        return F.sum(0.5 + 0.5 * np.log(2.0 * np.pi) + 0.5 * self._ln_var, axis=1, keepdims=True)
+        return NF.sum(0.5 + 0.5 * np.log(2.0 * np.pi) + 0.5 * self._ln_var, axis=1, keepdims=True)
 
     def kl_divergence(self, q):
         assert isinstance(q, Gaussian)
         p = self
-        return 0.5 * F.sum(q._ln_var - p._ln_var + (p._var + (p._mean - q._mean) ** 2.0) / q._var - 1, axis=1, keepdims=True)
+        return 0.5 * NF.sum(q._ln_var - p._ln_var + (p._var + (p._mean - q._mean) ** 2.0) / q._var - 1,
+                            axis=1,
+                            keepdims=True)

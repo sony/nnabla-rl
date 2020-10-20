@@ -1,14 +1,12 @@
 import pytest
 
 import nnabla as nn
-import nnabla.parametric_functions as PF
-import nnabla.functions as F
-import nnabla.initializer as I
+import nnabla.parametric_functions as NPF
+import nnabla.functions as NF
+import nnabla.initializer as NI
 
 import numpy as np
 
-from nnabla_rl.algorithm import EnvironmentInfo
-from nnabla_rl.replay_buffer import ReplayBuffer
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
 from nnabla_rl.algorithms.trpo import _hessian_vector_product, \
@@ -23,10 +21,10 @@ class TestComputeHessianVectorProduct():
 
     def test_compute_hessian_vector_product_by_hand(self):
         state = nn.Variable((1, 2))
-        output = PF.affine(state, 1, w_init=I.ConstantInitializer(
+        output = NPF.affine(state, 1, w_init=NI.ConstantInitializer(
             value=1.), with_bias=False)
 
-        loss = F.sum(output**2)
+        loss = NF.sum(output**2)
         grads = nn.grad([loss], nn.get_parameters().values())
         flat_grads = grads[0].reshape((-1, ))
         flat_grads.need_grad = True
@@ -53,12 +51,12 @@ class TestComputeHessianVectorProduct():
 
     def test_compute_hessian_vector_product_by_hessian(self):
         state = nn.Variable((1, 2))
-        output = PF.affine(state, 1, w_init=I.ConstantInitializer(
-            value=1.), b_init=I.ConstantInitializer(value=1.))
+        output = NPF.affine(state, 1, w_init=NI.ConstantInitializer(
+            value=1.), b_init=NI.ConstantInitializer(value=1.))
 
-        loss = F.sum(output**2)
+        loss = NF.sum(output**2)
         grads = nn.grad([loss], nn.get_parameters().values())
-        flat_grads = F.concatenate(*[grad.reshape((-1,)) for grad in grads])
+        flat_grads = NF.concatenate(*[grad.reshape((-1,)) for grad in grads])
         flat_grads.need_grad = True
 
         def compute_Ax(vec):
@@ -85,7 +83,7 @@ class TestConcatNetworkParamsInNdarray():
         np.random.seed(0)
 
         state = nn.Variable((1, 2))
-        output = PF.affine(state, 1)
+        output = NPF.affine(state, 1)
         params = nn.get_parameters()
 
         actual = _concat_network_params_in_ndarray(params)
@@ -103,7 +101,7 @@ class TestUpdateNetworkParametersByFlatParams():
         np.random.seed(0)
 
         state = nn.Variable((1, 2))
-        output = PF.affine(state, 1)
+        output = NPF.affine(state, 1)
         params = nn.get_parameters()
         new_flat_params = np.random.randn(3)
 

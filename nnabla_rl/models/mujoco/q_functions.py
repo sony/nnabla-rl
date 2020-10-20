@@ -1,7 +1,7 @@
 import nnabla as nn
 
-import nnabla.functions as F
-import nnabla.parametric_functions as PF
+import nnabla.functions as NF
+import nnabla.parametric_functions as NPF
 
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.q_function import QFunction
@@ -23,21 +23,21 @@ class TD3QFunction(QFunction):
         assert a.shape[1] == self._action_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = F.concatenate(s, a)
+            h = NF.concatenate(s, a)
             linear1_init = RI.HeUniform(
                 inmaps=h.shape[1], outmaps=400, factor=1/3)
-            h = PF.affine(h, n_outmaps=400, name="linear1",
-                          w_init=linear1_init, b_init=linear1_init)
-            h = F.relu(x=h)
+            h = NPF.affine(h, n_outmaps=400, name="linear1",
+                           w_init=linear1_init, b_init=linear1_init)
+            h = NF.relu(x=h)
             linear2_init = RI.HeUniform(
                 inmaps=400, outmaps=300, factor=1/3)
-            h = PF.affine(h, n_outmaps=300, name="linear2",
-                          w_init=linear2_init, b_init=linear2_init)
-            h = F.relu(x=h)
+            h = NPF.affine(h, n_outmaps=300, name="linear2",
+                           w_init=linear2_init, b_init=linear2_init)
+            h = NF.relu(x=h)
             linear3_init = RI.HeUniform(
                 inmaps=300, outmaps=1, factor=1/3)
-            h = PF.affine(h, n_outmaps=1, name="linear3",
-                          w_init=linear3_init, b_init=linear3_init)
+            h = NPF.affine(h, n_outmaps=1, name="linear3",
+                           w_init=linear3_init, b_init=linear3_init)
         return h
 
 
@@ -57,10 +57,10 @@ class SACQFunction(QFunction):
         assert a.shape[1] == self._action_dim
 
         with nn.parameter_scope(self.scope_name):
-            h = F.concatenate(s, a)
-            h = PF.affine(h, n_outmaps=256, name="linear1")
-            h = F.relu(x=h)
-            h = PF.affine(h, n_outmaps=256, name="linear2")
-            h = F.relu(x=h)
-            h = PF.affine(h, n_outmaps=1, name="linear3")
+            h = NF.concatenate(s, a)
+            h = NPF.affine(h, n_outmaps=256, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=256, name="linear2")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=1, name="linear3")
         return h

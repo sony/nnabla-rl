@@ -3,10 +3,7 @@ import pytest
 import numpy as np
 import scipy.stats as stats
 
-from unittest import mock
-
 import nnabla as nn
-import nnabla.functions as F
 
 import nnabla_rl.distributions.common_utils as common_utils
 
@@ -23,9 +20,9 @@ class TestCommonUtils(object):
         var = np.exp(ln_var)
 
         actual = common_utils.gaussian_log_prob(nn.Variable.from_numpy_array(x),
-                                       nn.Variable.from_numpy_array(mean),
-                                       nn.Variable.from_numpy_array(var),
-                                       nn.Variable.from_numpy_array(ln_var))
+                                                nn.Variable.from_numpy_array(mean),
+                                                nn.Variable.from_numpy_array(var),
+                                                nn.Variable.from_numpy_array(ln_var))
         actual.forward()
         actual = actual.d
 
@@ -34,6 +31,7 @@ class TestCommonUtils(object):
         expected = gaussian.logpdf(x)
 
         assert np.allclose(expected, actual)
+
 
 if __name__ == "__main__":
     pytest.main()

@@ -1,8 +1,8 @@
 import numpy as np
 import nnabla as nn
 
-import nnabla.functions as F
-import nnabla.parametric_functions as PF
+import nnabla.functions as NF
+import nnabla.parametric_functions as NPF
 
 import nnabla_rl.distributions as D
 from nnabla_rl.models.policy import StochasticPolicy
@@ -28,14 +28,14 @@ class REINFORCEDiscretePolicy(StochasticPolicy):
 
     def pi(self, s):
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(s, n_outmaps=200, name="linear1",
-                          w_init=RI.HeNormal(s.shape[1], 200))
-            h = F.leaky_relu(h)
-            h = PF.affine(h, n_outmaps=200, name="linear2",
-                          w_init=RI.HeNormal(s.shape[1], 200))
-            h = F.leaky_relu(h)
-            z = PF.affine(h, n_outmaps=self._action_dim,
-                          name="linear3", w_init=RI.LeCunNormal(s.shape[1], 200))
+            h = NPF.affine(s, n_outmaps=200, name="linear1",
+                           w_init=RI.HeNormal(s.shape[1], 200))
+            h = NF.leaky_relu(h)
+            h = NPF.affine(h, n_outmaps=200, name="linear2",
+                           w_init=RI.HeNormal(s.shape[1], 200))
+            h = NF.leaky_relu(h)
+            z = NPF.affine(h, n_outmaps=self._action_dim,
+                           name="linear3", w_init=RI.LeCunNormal(s.shape[1], 200))
 
         return D.Softmax(z=z)
 
@@ -64,13 +64,13 @@ class REINFORCEContinousPolicy(StochasticPolicy):
     def pi(self, s):
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
-            h = PF.affine(s, n_outmaps=200, name="linear1",
-                          w_init=RI.HeNormal(s.shape[1], 200))
-            h = F.leaky_relu(h)
-            h = PF.affine(h, n_outmaps=200, name="linear2",
-                          w_init=RI.HeNormal(s.shape[1], 200))
-            h = F.leaky_relu(h)
-            z = PF.affine(h, n_outmaps=self._action_dim,
-                          name="linear3", w_init=RI.HeNormal(s.shape[1], 200))
+            h = NPF.affine(s, n_outmaps=200, name="linear1",
+                           w_init=RI.HeNormal(s.shape[1], 200))
+            h = NF.leaky_relu(h)
+            h = NPF.affine(h, n_outmaps=200, name="linear2",
+                           w_init=RI.HeNormal(s.shape[1], 200))
+            h = NF.leaky_relu(h)
+            z = NPF.affine(h, n_outmaps=self._action_dim,
+                           name="linear3", w_init=RI.HeNormal(s.shape[1], 200))
 
         return D.Gaussian(z, np.tile(self._fixed_ln_var, (batch_size, 1)))

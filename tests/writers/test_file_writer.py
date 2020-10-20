@@ -1,10 +1,7 @@
 import numpy as np
 
-import pathlib
 import tempfile
 import os
-
-from unittest import mock
 
 from nnabla_rl.writers.file_writer import FileWriter
 

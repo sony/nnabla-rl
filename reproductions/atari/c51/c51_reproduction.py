@@ -1,20 +1,13 @@
 import argparse
 
-import gym
-
-import numpy as np
-
 import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
-import nnabla_rl.utils.context as context
 import nnabla_rl.writers as W
 import nnabla_rl.replay_buffers as RB
-from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 from nnabla_rl.utils.evaluator import TimestepEvaluator, EpisodicEvaluator
 from nnabla_rl.utils.reproductions import build_atari_env
 from nnabla_rl.hook import as_hook
-from nnabla_rl.logger import logger
 from nnabla_rl.utils import serializers
 
 

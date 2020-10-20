@@ -3,7 +3,6 @@ import pytest
 import numpy as np
 
 import nnabla as nn
-import nnabla.functions as F
 
 import nnabla_rl.distributions as D
 
@@ -66,7 +65,6 @@ class TestSoftmax(object):
         nn.clear_parameters()
 
         batch_size = 1
-        action_num = 2
         z_p = np.array([[0.25, 0.95]])
         z_p_dist = self._softmax(z_p)
         distribution_p = D.Softmax(z=z_p)

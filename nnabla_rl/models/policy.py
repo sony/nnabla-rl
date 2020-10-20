@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
 from nnabla_rl.models.model import Model
-from nnabla_rl.preprocessors import Preprocessor
 
 
 def preprocess_state(function):

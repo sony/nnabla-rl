@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 
@@ -11,7 +11,6 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 import nnabla_rl.models as M
-from nnabla_rl.models.model import Model
 import nnabla_rl.functions as RF
 
 
@@ -43,7 +42,7 @@ class ICML2018SACParam(AlgorithmParam):
     def __post_init__(self):
         '''__post_init__
 
-        Check the values are in valid range.        
+        Check the values are in valid range.
 
         '''
         self._assert_between(self.tau, 0.0, 1.0, 'tau')
@@ -58,11 +57,11 @@ class ICML2018SACParam(AlgorithmParam):
 class ICML2018SAC(Algorithm):
     '''Soft Actor-Critic (SAC) algorithm implementation.
 
-    This class implements the ICML2018 version of Soft Actor Critic (SAC) algorithm proposed by T. Haarnoja, et al. 
+    This class implements the ICML2018 version of Soft Actor Critic (SAC) algorithm proposed by T. Haarnoja, et al.
     in the paper: "Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor"
     For detail see: https://arxiv.org/pdf/1801.01290.pdf
 
-    This implementation slightly differs from the implementation of Soft Actor-Critic algorithm presented 
+    This implementation slightly differs from the implementation of Soft Actor-Critic algorithm presented
     also by T. Haarnoja, et al. in the following paper: https://arxiv.org/pdf/1812.05905.pdf
 
     You will need to scale the reward received from the environment properly to get the algorithm work.
@@ -129,7 +128,7 @@ class ICML2018SAC(Algorithm):
 
         target_q1 = self._q1.q(self._s_current_var, sampled_action)
         target_q2 = self._q2.q(self._s_current_var, sampled_action)
-        target_q_var = F.minimum2(target_q1, target_q2)
+        target_q_var = NF.minimum2(target_q1, target_q2)
 
         y = (target_q_var - log_pi)
         y.need_grad = False
@@ -151,23 +150,23 @@ class ICML2018SAC(Algorithm):
         sampled_action, log_pi = policy_distribution.sample_and_compute_log_prob()
         q1 = self._q1.q(self._s_current_var, sampled_action)
         q2 = self._q2.q(self._s_current_var, sampled_action)
-        q = F.minimum2(q1, q2)
-        self._pi_loss = F.mean(log_pi - q)
+        q = NF.minimum2(q1, q2)
+        self._pi_loss = NF.mean(log_pi - q)
 
     def _build_evaluation_graph(self):
         self._eval_distribution = self._pi.pi(self._eval_state_var)
 
     def _setup_solver(self):
-        self._v_solver = S.Adam(alpha=self._params.learning_rate)
+        self._v_solver = NS.Adam(alpha=self._params.learning_rate)
         self._v_solver.set_parameters(self._v.get_parameters())
 
-        self._q1_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q1_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q1_solver.set_parameters(self._q1.get_parameters())
 
-        self._q2_solver = S.Adam(alpha=self._params.learning_rate)
+        self._q2_solver = NS.Adam(alpha=self._params.learning_rate)
         self._q2_solver.set_parameters(self._q2.get_parameters())
 
-        self._pi_solver = S.Adam(alpha=self._params.learning_rate)
+        self._pi_solver = NS.Adam(alpha=self._params.learning_rate)
         self._pi_solver.set_parameters(self._pi.get_parameters())
 
     def _run_online_training_iteration(self, env):

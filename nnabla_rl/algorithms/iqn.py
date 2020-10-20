@@ -1,8 +1,7 @@
 import nnabla as nn
 
-import nnabla.functions as F
-import nnabla.parametric_functions as PF
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 import numpy as np
 
@@ -14,7 +13,6 @@ from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_actio
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.logger import logger
 import nnabla_rl.exploration_strategies as ES
 import nnabla_rl.models as M
 import nnabla_rl.functions as RF
@@ -203,9 +201,9 @@ class IQN(Algorithm):
         assert quantile_huber_loss.shape == (self._params.batch_size,
                                              self._params.N,
                                              self._params.N_prime)
-        quantile_huber_loss = F.mean(quantile_huber_loss, axis=2)
-        quantile_huber_loss = F.sum(quantile_huber_loss, axis=1)
-        self._quantile_huber_loss = F.mean(quantile_huber_loss)
+        quantile_huber_loss = NF.mean(quantile_huber_loss, axis=2)
+        quantile_huber_loss = NF.sum(quantile_huber_loss, axis=1)
+        self._quantile_huber_loss = NF.mean(quantile_huber_loss)
 
     def _build_evaluation_graph(self):
         tau = self._risk_measure_function(
@@ -215,7 +213,7 @@ class IQN(Algorithm):
         self._a_greedy = self._compute_argmax_q(quantiles)
 
     def _setup_solver(self):
-        self._quantile_function_solver = S.Adam(
+        self._quantile_function_solver = NS.Adam(
             alpha=self._params.learning_rate, eps=1e-2 / self._params.batch_size)
         self._quantile_function_solver.set_parameters(
             self._quantile_function.get_parameters())
@@ -288,29 +286,29 @@ class IQN(Algorithm):
         batch_size = quantiles.shape[0]
         assert len(quantiles.shape) == 3
         assert quantiles.shape[2] == self._n_action
-        quantiles = F.transpose(quantiles, axes=(0, 2, 1))
-        q_values = F.mean(quantiles, axis=2)
+        quantiles = NF.transpose(quantiles, axes=(0, 2, 1))
+        q_values = NF.mean(quantiles, axis=2)
         assert q_values.shape == (batch_size, self._n_action)
         return q_values
 
     def _quantiles_of(self, quantiles, a):
         one_hot = self._to_one_hot(a, shape=quantiles.shape)
         quantiles = quantiles * one_hot
-        quantiles = F.sum(quantiles, axis=2)
+        quantiles = NF.sum(quantiles, axis=2)
         assert len(quantiles.shape) == 2
 
         return quantiles
 
     def _sample_tau(self, shape):
-        return F.rand(low=0.0, high=1.0, shape=shape)
+        return NF.rand(low=0.0, high=1.0, shape=shape)
 
     def _to_one_hot(self, a, shape):
         batch_size = a.shape[0]
-        a = F.reshape(a, (-1, 1))
+        a = NF.reshape(a, (-1, 1))
         assert a.shape[0] == batch_size
-        one_hot = F.one_hot(a, (self._n_action,))
+        one_hot = NF.one_hot(a, (self._n_action,))
         one_hot = RF.expand_dims(one_hot, axis=1)
-        one_hot = F.broadcast(one_hot, shape=shape)
+        one_hot = NF.broadcast(one_hot, shape=shape)
         return one_hot
 
     def _models(self):

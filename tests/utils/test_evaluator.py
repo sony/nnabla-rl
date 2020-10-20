@@ -1,9 +1,10 @@
-from nnabla_rl.utils.evaluator import EpisodicEvaluator, TimestepEvaluator
+import pytest
+
+from unittest import mock
+
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
-from nnabla_rl.utils import files
-from unittest import mock
-import pytest
+from nnabla_rl.utils.evaluator import EpisodicEvaluator, TimestepEvaluator
 
 
 class TestEpisodicEvaluator(object):

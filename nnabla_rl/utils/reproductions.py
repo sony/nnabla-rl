@@ -6,9 +6,6 @@ import numpy as np
 
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 
-from nnabla_rl.replay_buffer import ReplayBuffer
-from nnabla_rl.logger import logger
-
 
 def build_atari_env(id_or_env, test=False, seed=None, render=False):
     if isinstance(id_or_env, gym.Env):
@@ -32,8 +29,8 @@ def build_atari_env(id_or_env, test=False, seed=None, render=False):
 def build_mujoco_env(id_or_env, test=False, seed=None, render=False):
     try:
         # Add pybullet env
-        import pybullet_envs
-    except:
+        import pybullet_envs  # noqa
+    except ModuleNotFoundError:
         # Do nothing if pybullet is not installed
         pass
     if isinstance(id_or_env, gym.Env):

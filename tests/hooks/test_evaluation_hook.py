@@ -1,11 +1,8 @@
-from nnabla_rl.hooks import EvaluationHook
-from nnabla_rl.utils.evaluator import EpisodicEvaluator
+from unittest import mock
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.environments as E
-from unittest import mock
-import numpy as np
-import pytest
+from nnabla_rl.hooks import EvaluationHook
 
 
 class TestEvaluationHook():

@@ -1,6 +1,6 @@
 import nnabla as nn
-import nnabla.functions as F
-import nnabla.solvers as S
+import nnabla.functions as NF
+import nnabla.solvers as NS
 
 from dataclasses import dataclass
 
@@ -12,7 +12,6 @@ from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 import nnabla_rl.models as M
 import nnabla_rl.functions as RF
-from nnabla_rl.models.model import Model
 from nnabla_rl.distributions import Gaussian
 
 
@@ -173,16 +172,16 @@ class BCQ(Algorithm):
         self._eval_max_index = RF.argmax(q_values, axis=0)
 
     def _setup_solver(self):
-        self._vae_solver = S.Adam(alpha=self._params.learning_rate)
+        self._vae_solver = NS.Adam(alpha=self._params.learning_rate)
         self._vae_solver.set_parameters(self._vae.get_parameters())
 
         self._q_solvers = []
         for q in self._q_ensembles:
-            solver = S.Adam(alpha=self._params.learning_rate)
+            solver = NS.Adam(alpha=self._params.learning_rate)
             solver.set_parameters(q.get_parameters())
             self._q_solvers.append(solver)
 
-        self._xi_solver = S.Adam(alpha=self._params.learning_rate)
+        self._xi_solver = NS.Adam(alpha=self._params.learning_rate)
         self._xi_solver.set_parameters(self._xi.get_parameters())
 
     def _run_online_training_iteration(self, env):
@@ -198,7 +197,7 @@ class BCQ(Algorithm):
             self._a_current_var, reconstructed_action)
         kl_divergence = \
             latent_distribution.kl_divergence(self._target_latent_distribution)
-        latent_loss = 0.5 * F.mean(kl_divergence)
+        latent_loss = 0.5 * NF.mean(kl_divergence)
         self._vae_loss = reconstruction_loss + latent_loss
 
     def _build_q_update_graph(self):
@@ -211,18 +210,18 @@ class BCQ(Algorithm):
                                     self._action_dim)
         noise = self._target_xi.generate_noise(
             s_next_rep, a_next_rep, phi=self._params.phi)
-        q_values = F.stack(*(q_target.q(s_next_rep, a_next_rep + noise)
-                             for q_target in self._target_q_ensembles))
+        q_values = NF.stack(*(q_target.q(s_next_rep, a_next_rep + noise)
+                              for q_target in self._target_q_ensembles))
         assert q_values.shape == (self._params.num_q_ensembles,
                                   self._params.batch_size * self._params.num_action_samples,
                                   1)
-        weighted_q_minmax = self._params.lmb * F.min(q_values, axis=0) \
-            + (1.0 - self._params.lmb) * F.max(q_values, axis=0)
+        weighted_q_minmax = self._params.lmb * NF.min(q_values, axis=0) \
+            + (1.0 - self._params.lmb) * NF.max(q_values, axis=0)
         assert weighted_q_minmax.shape == (
             self._params.batch_size * self._params.num_action_samples, 1)
 
-        next_q_value = F.max(
-            F.reshape(weighted_q_minmax, shape=(self._params.batch_size, -1)), axis=1, keepdims=True)
+        next_q_value = NF.max(
+            NF.reshape(weighted_q_minmax, shape=(self._params.batch_size, -1)), axis=1, keepdims=True)
         assert next_q_value.shape == (self._params.batch_size, 1)
         target_q_value = self._reward_var + self._params.gamma * \
             self._non_terminal_var * next_q_value
@@ -246,7 +245,7 @@ class BCQ(Algorithm):
         xi_loss = -q_function.q(self._s_current_var, action + noise)
         assert xi_loss.shape == (self._params.batch_size, 1)
 
-        self._xi_loss = F.mean(xi_loss)
+        self._xi_loss = NF.mean(xi_loss)
 
     def _bcq_training(self, replay_buffer):
         experiences, *_ = replay_buffer.sample(self._params.batch_size)

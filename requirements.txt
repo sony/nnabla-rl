@@ -1,0 +1,9 @@
+nnabla
+gym
+dataclasses;python_version=="3.6"
+opencv-python
+autopep8
+flake8
+pylint
+pytest
+pytest-cov

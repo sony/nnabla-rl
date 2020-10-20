@@ -1,13 +1,7 @@
 import pytest
 
 import nnabla as nn
-import nnabla.functions as F
 
-import numpy as np
-
-import gym
-
-from nnabla_rl.algorithm import EnvironmentInfo
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
 

@@ -6,7 +6,7 @@ class Writer(object):
         """ Write scalar with your favorite tools
 
         Args:
-            iteration_num (int): iteration number 
+            iteration_num (int): iteration number
             scalar (dict): scalar of the latest iteration state
         """
         pass
@@ -15,7 +15,7 @@ class Writer(object):
         """ Write histogram with your favorite tools
 
         Args:
-            iteration_num (int): iteration number 
+            iteration_num (int): iteration number
             histogram: histogram of the latest iteration state
         """
         pass
@@ -24,7 +24,7 @@ class Writer(object):
         """ Write image with your favorite tools
 
         Args:
-            iteration_num (int): iteration number 
+            iteration_num (int): iteration number
             image: image of the latest iteration state
         """
         pass
