@@ -17,7 +17,7 @@ Following MuJoCo environments was tested with single seed:
 Reported score is rough estimate from the Figure 3 of the [ppo paper](https://arxiv.org/pdf/1707.06347.pdf).
 
 |Env|nnabla_rl best mean score|Reported score|
-|:---|:---:|:---:|:---:|
+|:---|:---:|:---:|
 |HalfCheetah-v2|1844+/-99|~0|
 |Hopper-v2|3573+/-137|~2100|
 |InvertedDoublePendulum-v2|8419+/-2723|~0|

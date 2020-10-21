@@ -13,7 +13,7 @@ Following MuJoCo environments was tested with single seed:
 ## Result
 
 |Env|nnabla_rl best mean score|Reported score|
-|:---|:---:|:---:|:---:|
+|:---|:---:|:---:|
 |Ant-v2|**1507.36+/-469.19**|888.77|
 |HalfCheetah-v2|**11053.76+/-164.23**|8577.29|
 |Hopper-v2|**3487.42+/-14.60**|1860.02|
