@@ -15,12 +15,12 @@ from nnabla_rl.models.model import Model
 import nnabla_rl.functions as RF
 
 
-def default_q_function_builder(scope_name, state_dim, action_dim):
-    return M.SACQFunction(scope_name, state_dim, action_dim)
+def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.SACQFunction(scope_name, env_info.state_dim, env_info.action_dim)
 
 
-def default_policy_builder(scope_name, state_dim, action_dim):
-    return M.SACPolicy(scope_name, state_dim, action_dim)
+def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.SACPolicy(scope_name, env_info.state_dim, env_info.action_dim)
 
 
 @dataclass
@@ -93,23 +93,17 @@ class SAC(Algorithm):
 
     '''
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  q_function_builder=default_q_function_builder,
                  policy_builder=default_policy_builder,
                  params=SACParam()):
-        super(SAC, self).__init__(env_info, params=params)
+        super(SAC, self).__init__(env_or_env_info, params=params)
 
-        state_dim = env_info.observation_space.shape[0]
-        action_dim = env_info.action_space.shape[0]
-
-        self._q1 = q_function_builder(
-            scope_name="q1", state_dim=state_dim, action_dim=action_dim)
+        self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q1, M.QFunction)
-        self._q2 = q_function_builder(
-            scope_name="q2", state_dim=state_dim, action_dim=action_dim)
+        self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q2, M.QFunction)
-        self._pi = policy_builder(
-            scope_name="pi", state_dim=state_dim, action_dim=action_dim)
+        self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._pi, M.StochasticPolicy)
 
         if self._params.fix_temperature & (self._params.initial_temperature is None):
@@ -119,14 +113,14 @@ class SAC(Algorithm):
             scope_name="temperature", initial_value=self._params.initial_temperature)
 
         self._target_q1 = q_function_builder(
-            scope_name="target_q1", state_dim=state_dim, action_dim=action_dim)
+            scope_name="target_q1", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._target_q1, M.QFunction)
         self._target_q2 = q_function_builder(
-            scope_name="target_q2", state_dim=state_dim, action_dim=action_dim)
+            scope_name="target_q2", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._target_q2, M.QFunction)
 
         if self._params.target_entropy is None:
-            self._params.target_entropy = -action_dim
+            self._params.target_entropy = -self._env_info.action_dim
 
         self._state = None
         self._action = None
@@ -135,9 +129,9 @@ class SAC(Algorithm):
         self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
 
         # training input/loss variables
-        self._s_current_var = nn.Variable((params.batch_size, state_dim))
-        self._a_current_var = nn.Variable((params.batch_size, action_dim))
-        self._s_next_var = nn.Variable((params.batch_size, state_dim))
+        self._s_current_var = nn.Variable((params.batch_size, self._env_info.state_dim))
+        self._a_current_var = nn.Variable((params.batch_size, self._env_info.action_dim))
+        self._s_next_var = nn.Variable((params.batch_size, self._env_info.state_dim))
         self._reward_var = nn.Variable((params.batch_size, 1))
         self._non_terminal_var = nn.Variable((params.batch_size, 1))
         self._pi_loss = None
@@ -145,7 +139,7 @@ class SAC(Algorithm):
         self._alpha_loss = None
 
         # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, state_dim))
+        self._eval_state_var = nn.Variable((1, self._env_info.state_dim))
         self._eval_distribution = None
 
     def _post_init(self):

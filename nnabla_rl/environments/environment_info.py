@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 import gym
 
+import numpy as np
+
 
 @dataclass
 class EnvironmentInfo(object):
@@ -17,6 +19,34 @@ class EnvironmentInfo(object):
 
     def is_discrete_action_env(self):
         return isinstance(self.action_space, gym.spaces.Discrete)
+
+    def is_continuous_action_env(self):
+        return not self.is_discrete_action_env()
+
+    @property
+    def state_shape(self):
+        return self.observation_space.shape
+
+    @property
+    def state_dim(self):
+        '''
+        Compute the dimension of state assuming that the state is flatten.
+        '''
+        return np.prod(self.observation_space.shape)
+
+    @property
+    def action_shape(self):
+        return self.action_space.shape
+
+    @property
+    def action_dim(self):
+        '''
+        Compute the dimension of action assuming that the action is flatten.
+        '''
+        if self.is_discrete_action_env():
+            return self.action_space.n
+        else:
+            return np.prod(self.action_space.shape)
 
     @staticmethod
     def _extract_max_episode_steps(env):

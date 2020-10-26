@@ -56,23 +56,21 @@ class TRPOParam(AlgorithmParam):
         self._assert_positive(self.vf_learning_rate, 'vf_learning_rate')
 
 
-def build_mujoco_state_preprocessor(scope_name, state_shape):
-    return RP.RunningMeanNormalizer(scope_name, state_shape, value_clip=(-5.0, 5.0))
+def build_mujoco_state_preprocessor(scope_name, env_info, algorithm_params, **kwargs):
+    return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
-def build_state_preprocessor(preprocessor_builder, state_shape, scope_name):
-    if preprocessor_builder is None:
-        return build_mujoco_state_preprocessor(scope_name, state_shape)
-    else:
-        return preprocessor_builder(scope_name, state_shape)
+def build_state_preprocessor(preprocessor_builder, scope_name, env_info, algorithm_params, **kwargs):
+    builder = build_mujoco_state_preprocessor if preprocessor_builder is None else preprocessor_builder
+    return builder(scope_name, env_info, algorithm_params, **kwargs)
 
 
-def build_default_policy(scope_name, state_dim, action_dim):
-    return M.TRPOPolicy(scope_name, state_dim, action_dim)
+def build_default_policy(scope_name, env_info, algorithm_params, **kwargs):
+    return M.TRPOPolicy(scope_name, env_info.state_dim, env_info.action_dim)
 
 
-def build_default_v_function(scope_name, state_dim):
-    return M.TRPOVFunction(scope_name, state_dim)
+def build_default_v_function(scope_name, env_info, algorithm_params, **kwargs):
+    return M.TRPOVFunction(scope_name, env_info.state_dim)
 
 
 def _hessian_vector_product(flat_grads, params, vector):
@@ -143,35 +141,27 @@ class TRPO(Algorithm):
             https://arxiv.org/pdf/1506.02438.pdf
     """
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  value_function_builder=build_default_v_function,
                  policy_builder=build_default_policy,
                  state_preprocessor_builder=None,
                  params=TRPOParam()):
-        super(TRPO, self).__init__(env_info, params=params)
-
-        state_shape = self._env_info.observation_space.shape
+        super(TRPO, self).__init__(env_or_env_info, params=params)
 
         if self._env_info.is_discrete_action_env():
             self._state_preprocessor = None
         else:
-            self._state_preprocessor = build_state_preprocessor(
-                state_preprocessor_builder, state_shape, "preprocessor")
-
-        if self._env_info.is_discrete_action_env():
-            action_dim = self._env_info.action_space.n
-        else:
-            action_dim = self._env_info.action_space.shape[0]
+            self._state_preprocessor = build_state_preprocessor(state_preprocessor_builder,
+                                                                scope_name="preprocessor",
+                                                                env_info=self._env_info,
+                                                                algorithm_params=self._params)
 
         if self._env_info.is_discrete_action_env():
             raise NotImplementedError
         else:
-            self._policy = policy_builder(
-                "pi", state_shape[0], action_dim)
-            self._old_policy = policy_builder(
-                "old_pi", state_shape[0], action_dim)
-            self._v_function = value_function_builder(
-                "v", state_dim=state_shape[0])
+            self._policy = policy_builder("pi", self._env_info, self._params)
+            self._old_policy = policy_builder("old_pi", self._env_info, self._params)
+            self._v_function = value_function_builder("v", self._env_info, self._params)
             self._policy.set_state_preprocessor(self._state_preprocessor)
             self._old_policy.set_state_preprocessor(self._state_preprocessor)
             self._v_function.set_state_preprocessor(self._state_preprocessor)
@@ -181,8 +171,6 @@ class TRPO(Algorithm):
         assert isinstance(self._v_function, M.VFunction)
         assert isinstance(self._state_preprocessor, RP.Preprocessor)
 
-        self._params = params
-
         self._state = None
         self._action = None
         self._next_state = None
@@ -191,8 +179,10 @@ class TRPO(Algorithm):
         self._evaluation_variables = None
         self._v_loss = None
 
-        self._create_variables(
-            state_shape, action_dim, self._params.num_steps_per_iteration, self._params.vf_batch_size)
+        self._create_variables(self._env_info.state_shape,
+                               self._env_info.action_dim,
+                               self._params.num_steps_per_iteration,
+                               self._params.vf_batch_size)
 
     def _post_init(self):
         super(TRPO, self)._post_init()
@@ -319,8 +309,7 @@ class TRPO(Algorithm):
     def _trpo_training(self, buffer):
         # sample all experience in the buffer
         experiences, *_ = buffer.sample(len(buffer))
-        s_batch, a_batch, v_target_batch, adv_batch = \
-            self._align_experiences(experiences)
+        s_batch, a_batch, v_target_batch, adv_batch = self._align_experiences(experiences)
 
         if self._state_preprocessor is not None:
             self._state_preprocessor.update(s_batch)
@@ -402,8 +391,7 @@ class TRPO(Algorithm):
             param.grad.zero()
 
     def _compute_full_step_params_update(self, s_batch, a_batch, adv_batch):
-        _, _, approximate_return_flat_grads = \
-            self._forward_variables(s_batch, a_batch, adv_batch)
+        _, _, approximate_return_flat_grads = self._forward_variables(s_batch, a_batch, adv_batch)
 
         step_direction = conjugate_gradient(
             self._fisher_vector_product, approximate_return_flat_grads,
@@ -495,7 +483,7 @@ class TRPO(Algorithm):
         solvers["v_solver"] = self._v_solver
         return solvers
 
-    @property
+    @ property
     def latest_iteration_state(self):
         latest_iteration_state = super(TRPO, self).latest_iteration_state()
         return latest_iteration_state

@@ -19,8 +19,11 @@ import nnabla_rl.models as M
 import nnabla_rl.functions as RF
 
 
-def default_quantile_dist_function_builder(scope_name, state_dim, action_dim, num_quantiles):
-    return M.QRDQNQuantileDistributionFunction(scope_name, state_dim, action_dim, num_quantiles)
+def default_quantile_dist_function_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.QRDQNQuantileDistributionFunction(scope_name,
+                                               env_info.state_shape,
+                                               env_info.action_dim,
+                                               algorithm_params.num_quantiles)
 
 
 def default_replay_buffer_builder(capacity):
@@ -73,11 +76,11 @@ class QRDQN(Algorithm):
     For detail see: https://arxiv.org/pdf/1710.10044.pdf
     '''
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  quantile_dist_function_builder=default_quantile_dist_function_builder,
                  params=QRDQNParam(),
                  replay_buffer_builder=default_replay_buffer_builder):
-        super(QRDQN, self).__init__(env_info, params=params)
+        super(QRDQN, self).__init__(env_or_env_info, params=params)
 
         if self._params.kappa == 0.0:
             logger.info(
@@ -87,21 +90,16 @@ class QRDQN(Algorithm):
                 "kappa is non 0.0. {} will use quantile huber loss".format(self.__name__))
 
         if not self._env_info.is_discrete_action_env():
-            raise ValueError(
-                '{} only supports discrete action environment'.format(self.__name__))
-        state_shape = self._env_info.observation_space.shape
-        self._n_action = self._env_info.action_space.n
-
+            raise ValueError('{} only supports discrete action environment'.format(self.__name__))
         self._qj = 1 / self._params.num_quantiles
 
         self._quantile_dist = quantile_dist_function_builder(
-            'quantile_dist_train', state_shape, self._n_action, self._params.num_quantiles)
+            'quantile_dist_train', self._env_info, self._params)
         assert isinstance(self._quantile_dist, M.QuantileDistributionFunction)
 
         self._target_quantile_dist = quantile_dist_function_builder(
-            'quantile_dist_target', state_shape, self._n_action, self._params.num_quantiles)
-        assert isinstance(self._target_quantile_dist,
-                          M.QuantileDistributionFunction)
+            'quantile_dist_target', self._env_info, self._params)
+        assert isinstance(self._target_quantile_dist, M.QuantileDistributionFunction)
 
         tau_hat = self._precompute_tau_hat(self._params.num_quantiles)
         self._tau_hat_var = nn.Variable.from_numpy_array(tau_hat)
@@ -120,12 +118,12 @@ class QRDQN(Algorithm):
 
         # Training input variables
         s_current_var = \
-            nn.Variable((params.batch_size, *state_shape))
+            nn.Variable((params.batch_size, *self._env_info.state_shape))
         a_current_var = \
             nn.Variable((params.batch_size, 1))
         reward_var = nn.Variable((params.batch_size, 1))
         non_terminal_var = nn.Variable((params.batch_size, 1))
-        s_next_var = nn.Variable((params.batch_size, *state_shape))
+        s_next_var = nn.Variable((params.batch_size, *self._env_info.state_shape))
         TrainingVariables = namedtuple(
             'TrainingVariables', ['s_current', 'a_current', 'reward', 'non_terminal', 's_next'])
         self._training_variables = \
@@ -136,7 +134,7 @@ class QRDQN(Algorithm):
         self._quantile_huber_loss = None
 
         # Evaluation input variables
-        s_eval_var = nn.Variable((1, *state_shape))
+        s_eval_var = nn.Variable((1, *self._env_info.state_shape))
 
         EvaluationVariables = \
             namedtuple('EvaluationVariables', ['s_eval'])
@@ -280,9 +278,9 @@ class QRDQN(Algorithm):
     def _compute_q_values(self, quantiles):
         batch_size = quantiles.shape[0]
         assert quantiles.shape == (
-            batch_size, self._n_action, self._params.num_quantiles)
+            batch_size, self._env_info.action_dim, self._params.num_quantiles)
         q_values = NF.sum(quantiles * self._qj, axis=2)
-        assert q_values.shape == (batch_size, self._n_action)
+        assert q_values.shape == (batch_size, self._env_info.action_dim)
         return q_values
 
     def _quantiles_of(self, quantiles, a):
@@ -299,10 +297,9 @@ class QRDQN(Algorithm):
         batch_size = a.shape[0]
         a = NF.reshape(a, (-1, 1))
         assert a.shape[0] == batch_size
-        one_hot = NF.one_hot(a, (self._n_action,))
+        one_hot = NF.one_hot(a, (self._env_info.action_dim,))
         one_hot = RF.expand_dims(one_hot, axis=1)
-        one_hot = NF.broadcast(one_hot, shape=(
-            batch_size, self._params.num_quantiles, self._n_action))
+        one_hot = NF.broadcast(one_hot, shape=(batch_size, self._params.num_quantiles, self._env_info.action_dim))
         return one_hot
 
     def _models(self):

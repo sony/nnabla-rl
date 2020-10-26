@@ -45,12 +45,12 @@ class ICML2015TRPOParam(AlgorithmParam):
             self.conjugate_gradient_damping, 'conjugate_gradient_damping')
 
 
-def build_default_continuous_policy(scope_name, state_dim, action_dim):
-    return M.ICML2015TRPOMujocoPolicy(scope_name, state_dim, action_dim)
+def build_default_continuous_policy(scope_name, env_info, algorithm_params, **kwargs):
+    return M.ICML2015TRPOMujocoPolicy(scope_name, env_info.state_dim, env_info.action_dim)
 
 
-def build_default_discrete_policy(scope_name, state_shape, action_dim):
-    return M.ICML2015TRPOAtariPolicy(scope_name, state_shape, action_dim)
+def build_default_discrete_policy(scope_name, env_info, algorithm_params, **kwargs):
+    return M.ICML2015TRPOAtariPolicy(scope_name, env_info.state_shape, env_info.action_dim)
 
 
 class ICML2015TRPO(Algorithm):
@@ -60,22 +60,15 @@ class ICML2015TRPO(Algorithm):
         See: https://arxiv.org/pdf/1502.05477.pdf
     """
 
-    def __init__(self, env_info, params=ICML2015TRPOParam()):
-        super(ICML2015TRPO, self).__init__(env_info, params=params)
+    def __init__(self, env_or_env_info, params=ICML2015TRPOParam()):
+        super(ICML2015TRPO, self).__init__(env_or_env_info, params=params)
 
-        state_shape = self._env_info.observation_space.shape
         if self._env_info.is_discrete_action_env():
-            action_dim = self._env_info.action_space.n
-            self._policy = build_default_discrete_policy(
-                "pi", state_shape, action_dim)
-            self._old_policy = build_default_discrete_policy(
-                "old_pi", state_shape, action_dim)
+            self._policy = build_default_discrete_policy("pi", self._env_info, self._params)
+            self._old_policy = build_default_discrete_policy("old_pi", self._env_info, self._params)
         else:
-            action_dim = self._env_info.action_space.shape[0]
-            self._policy = build_default_continuous_policy(
-                "pi", state_shape[0], action_dim)
-            self._old_policy = build_default_continuous_policy(
-                "old_pi", state_shape[0], action_dim)
+            self._policy = build_default_continuous_policy("pi", self._env_info, self._params)
+            self._old_policy = build_default_continuous_policy("old_pi", self._env_info, self._params)
 
         assert isinstance(self._policy, M.Policy)
         self._params = params
@@ -87,8 +80,9 @@ class ICML2015TRPO(Algorithm):
         self._training_variables = None
         self._evaluation_variables = None
 
-        self._create_variables(
-            state_shape, action_dim, batch_size=self._params.batch_size)
+        self._create_variables(self._env_info.state_shape,
+                               self._env_info.action_dim,
+                               batch_size=self._params.batch_size)
         self._build_computation_graph()
 
         copy_network_parameters(

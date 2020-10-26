@@ -16,16 +16,19 @@ from nnabla_rl.models.model import Model
 from nnabla_rl.distributions import Gaussian
 
 
-def default_q_function_builder(scope_name, state_dim, action_dim):
-    return M.TD3QFunction(scope_name, state_dim, action_dim)
+def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim)
 
 
-def default_policy_builder(scope_name, state_dim, action_dim):
-    return M.BEARPolicy(scope_name, state_dim, action_dim)
+def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.BEARPolicy(scope_name, env_info.state_dim, env_info.action_dim)
 
 
-def default_vae_builder(scope_name, state_dim, action_dim, latent_dim):
-    return M.UnsquashedVariationalAutoEncoder(scope_name, state_dim, action_dim, latent_dim)
+def default_vae_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.UnsquashedVariationalAutoEncoder(scope_name,
+                                              env_info.state_dim,
+                                              env_info.action_dim,
+                                              env_info.action_dim*2)
 
 
 @dataclass
@@ -135,36 +138,30 @@ class BEAR(Algorithm):
 
     '''
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  q_function_builder=default_q_function_builder,
                  policy_builder=default_policy_builder,
                  vae_builder=default_vae_builder,
                  params=BEARParam()):
-        super(BEAR, self).__init__(env_info, params=params)
-
-        state_dim = env_info.observation_space.shape[0]
-        action_dim = env_info.action_space.shape[0]
+        super(BEAR, self).__init__(env_or_env_info, params=params)
 
         self._q_ensembles = []
         self._target_q_ensembles = []
         for i in range(self._params.num_q_ensembles):
             q = q_function_builder(
-                scope_name="q{}".format(i), state_dim=state_dim, action_dim=action_dim)
+                scope_name="q{}".format(i), env_info=self._env_info, algorithm_params=self._params)
             assert isinstance(q, M.QFunction)
             target_q = q_function_builder(
-                scope_name="target_q{}".format(i), state_dim=state_dim, action_dim=action_dim)
+                scope_name="target_q{}".format(i), env_info=self._env_info, algorithm_params=self._params)
             self._q_ensembles.append(q)
             self._target_q_ensembles.append(target_q)
 
-        self._pi = policy_builder(
-            scope_name="pi", state_dim=state_dim, action_dim=action_dim)
+        self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._pi, M.StochasticPolicy)
-        self._target_pi = policy_builder(
-            scope_name="target_pi", state_dim=state_dim, action_dim=action_dim)
+        self._target_pi = policy_builder(scope_name="target_pi", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._target_pi, M.StochasticPolicy)
 
-        self._vae = vae_builder(
-            scope_name="vae", state_dim=state_dim, action_dim=action_dim, latent_dim=action_dim*2)
+        self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_params=self._params)
         self._lagrange = AdjustableLagrangeMultiplier(scope_name="alpha")
 
         self._state = None
@@ -173,9 +170,9 @@ class BEAR(Algorithm):
         self._replay_buffer = ReplayBuffer(capacity=None)
 
         # training input/loss variables
-        self._s_current_var = nn.Variable((params.batch_size, state_dim))
-        self._a_current_var = nn.Variable((params.batch_size, action_dim))
-        self._s_next_var = nn.Variable((params.batch_size, state_dim))
+        self._s_current_var = nn.Variable((params.batch_size, self._env_info.state_dim))
+        self._a_current_var = nn.Variable((params.batch_size, self._env_info.action_dim))
+        self._s_next_var = nn.Variable((params.batch_size, self._env_info.state_dim))
         self._reward_var = nn.Variable((params.batch_size, 1))
         self._non_terminal_var = nn.Variable((params.batch_size, 1))
         self._pi_warmup_loss = None
@@ -185,16 +182,16 @@ class BEAR(Algorithm):
         self._y = None
         self._lagrange_loss = None
 
-        latent_shape = (self._params.batch_size, action_dim * 2)
+        latent_shape = (self._params.batch_size, self._env_info.action_dim * 2)
         self._target_latent_distribution = Gaussian(mean=np.zeros(shape=latent_shape, dtype=np.float32),
                                                     ln_var=np.zeros(shape=latent_shape, dtype=np.float32))
 
         # exploration input/action variables
-        self._exploration_state_var = nn.Variable((1, state_dim))
+        self._exploration_state_var = nn.Variable((1, self._env_info.state_dim))
         self._exploration_action = None
 
         # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, state_dim))
+        self._eval_state_var = nn.Variable((1, self._env_info.state_dim))
         self._eval_action = None
         self._eval_max_index = None
 

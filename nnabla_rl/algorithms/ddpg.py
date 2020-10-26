@@ -14,17 +14,13 @@ import nnabla_rl.models as M
 import nnabla_rl.functions as RF
 
 
-def default_critic_builder(scope_name, env_info):
-    state_dim = env_info.observation_space.shape[0]
-    action_dim = env_info.action_space.shape[0]
-    return M.TD3QFunction(scope_name, state_dim, action_dim)
+def default_critic_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim)
 
 
-def default_actor_builder(scope_name, env_info):
-    state_dim = env_info.observation_space.shape[0]
-    action_dim = env_info.action_space.shape[0]
+def default_actor_builder(scope_name, env_info, algorithm_params, **kwargs):
     max_action_value = float(env_info.action_space.high[0])
-    return M.TD3Policy(scope_name, state_dim, action_dim, max_action_value=max_action_value)
+    return M.TD3Policy(scope_name, env_info.state_dim, env_info.action_dim, max_action_value=max_action_value)
 
 
 @dataclass
@@ -38,22 +34,22 @@ class DDPGParam(AlgorithmParam):
 
 
 class DDPG(Algorithm):
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  critic_builder=default_critic_builder,
                  actor_builder=default_actor_builder,
                  params=DDPGParam()):
-        super(DDPG, self).__init__(env_info, params=params)
+        super(DDPG, self).__init__(env_or_env_info, params=params)
 
-        self._q = critic_builder(scope_name="q", env_info=env_info)
+        self._q = critic_builder(scope_name="q", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q, M.Model)
-        self._pi = actor_builder(scope_name="pi", env_info=env_info)
+        self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._pi, M.Model)
 
         self._target_q = critic_builder(
-            scope_name="target_q", env_info=env_info)
+            scope_name="target_q", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q, M.Model)
         self._target_pi = actor_builder(
-            scope_name="target_pi", env_info=env_info)
+            scope_name="target_pi", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._target_pi, M.Model)
 
         self._state = None
@@ -63,19 +59,16 @@ class DDPG(Algorithm):
         self._episode_timesteps = None
 
         # training input/loss variables
-        state_dim = env_info.observation_space.shape[0]
-        action_dim = env_info.action_space.shape[0]
-
-        self._s_current_var = nn.Variable((params.batch_size, state_dim))
-        self._a_current_var = nn.Variable((params.batch_size, action_dim))
-        self._s_next_var = nn.Variable((params.batch_size, state_dim))
+        self._s_current_var = nn.Variable((params.batch_size, self._env_info.state_dim))
+        self._a_current_var = nn.Variable((params.batch_size, self._env_info.action_dim))
+        self._s_next_var = nn.Variable((params.batch_size, self._env_info.state_dim))
         self._reward_var = nn.Variable((params.batch_size, 1))
         self._non_terminal_var = nn.Variable((params.batch_size, 1))
         self._pi_loss = None
         self._critic_loss = None
 
         # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, state_dim))
+        self._eval_state_var = nn.Variable((1, self._env_info.state_dim))
         self._eval_action = None
 
     def _post_init(self):

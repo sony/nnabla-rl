@@ -13,8 +13,8 @@ class Dummy(Algorithm):
     This algorithm does nothing. Just used for understanding the concept of the framework.
     """
 
-    def __init__(self, env_info, params=DummyParam()):
-        super(Dummy, self).__init__(env_info, params=params)
+    def __init__(self, env_or_env_info, params=DummyParam()):
+        super(Dummy, self).__init__(env_or_env_info, params=params)
         self._action_space = self._env_info.action_space
 
     def compute_eval_action(self, state):

@@ -1,5 +1,7 @@
 import pytest
 
+import numpy as np
+
 import nnabla_rl.environments as E
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 
@@ -14,6 +16,68 @@ class TestEnvInfo(object):
             assert env_info.max_episode_steps == float('inf')
         else:
             assert env_info.max_episode_steps == max_episode_steps
+
+    def test_is_discrete_action_env(self):
+        dummy_env = E.DummyDiscrete()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.is_discrete_action_env()
+        assert not env_info.is_continuous_action_env()
+
+    def test_is_continuous_action_env(self):
+        dummy_env = E.DummyContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert not env_info.is_discrete_action_env()
+        assert env_info.is_continuous_action_env()
+
+    def test_state_shape_continuous(self):
+        dummy_env = E.DummyContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_shape == dummy_env.observation_space.shape
+
+    def test_state_shape_image(self):
+        dummy_env = E.DummyDiscreteImg()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_shape == dummy_env.observation_space.shape
+
+    def test_state_dim_continuous(self):
+        dummy_env = E.DummyContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_dim == dummy_env.observation_space.shape[0]
+
+    def test_state_dim_image(self):
+        dummy_env = E.DummyDiscreteImg()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_dim == np.prod(dummy_env.observation_space.shape)
+
+    def test_action_shape_continuous(self):
+        dummy_env = E.DummyContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.action_shape == dummy_env.action_space.shape
+
+    def test_action_shape_discrete(self):
+        dummy_env = E.DummyDiscreteImg()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.action_shape == dummy_env.action_space.shape
+
+    def test_action_dim_continuous(self):
+        dummy_env = E.DummyContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.action_dim == dummy_env.action_space.shape[0]
+
+    def test_action_dim_discrete(self):
+        dummy_env = E.DummyDiscrete()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.action_dim == dummy_env.action_space.n
 
 
 if __name__ == "__main__":

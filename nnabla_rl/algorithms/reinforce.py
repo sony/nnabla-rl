@@ -13,12 +13,15 @@ from nnabla_rl.utils.data import marshall_experiences
 import nnabla_rl.models as M
 
 
-def build_continuous_policy(scope_name, state_dim, action_dim, fixed_ln_var):
-    return M.REINFORCEContinousPolicy(scope_name, state_dim, action_dim, fixed_ln_var)
+def build_continuous_policy(scope_name, env_info, algorithm_params, **kwargs):
+    return M.REINFORCEContinousPolicy(scope_name,
+                                      env_info.state_dim,
+                                      env_info.action_dim,
+                                      algorithm_params.fixed_ln_var)
 
 
-def build_discrete_policy(scope_name, state_dim, action_dim):
-    return M.REINFORCEDiscretePolicy(scope_name, state_dim, action_dim)
+def build_discrete_policy(scope_name, env_info, algorithm_params, **kwargs):
+    return M.REINFORCEDiscretePolicy(scope_name, env_info.state_dim, env_info.action_dim)
 
 
 @dataclass
@@ -52,15 +55,10 @@ class REINFORCE(Algorithm):
         if policy_builder is not None:
             self._policy = policy_builder()
         else:
-            state_shape = self._env_info.observation_space.shape
             if self._env_info.is_discrete_action_env():
-                action_dim = self._env_info.action_space.n
-                self._policy = build_discrete_policy(
-                    "pi", state_shape[0], action_dim)
+                self._policy = build_discrete_policy("pi", self._env_info, self._params)
             else:
-                action_dim = self._env_info.action_space.shape[0]
-                self._policy = build_continuous_policy(
-                    "pi", state_shape[0], action_dim, params.fixed_ln_var)
+                self._policy = build_continuous_policy("pi", self._env_info, self._params)
 
         assert isinstance(self._policy, M.Policy)
 
@@ -72,7 +70,7 @@ class REINFORCE(Algorithm):
         self._evaluation_variables = None
 
         # The graph will be rebuilt when training runs
-        self._create_variables(state_shape[0], action_dim, batch_size=1)
+        self._create_variables(self._env_info.state_dim, self._env_info.action_dim, batch_size=1)
 
     def compute_eval_action(self, s):
         return self._compute_action(s)

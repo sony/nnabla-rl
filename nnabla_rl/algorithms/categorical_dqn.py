@@ -18,8 +18,11 @@ import nnabla_rl.models as M
 import nnabla_rl.functions as RF
 
 
-def default_value_distribution_builder(scope_name, state_dim, action_dim, num_atoms):
-    return M.C51ValueDistributionFunction(scope_name, state_dim, action_dim, num_atoms)
+def default_value_distribution_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.C51ValueDistributionFunction(scope_name,
+                                          env_info.state_shape,
+                                          env_info.action_dim,
+                                          algorithm_params.num_atoms)
 
 
 def default_replay_buffer_builder(capacity):
@@ -52,26 +55,21 @@ class CategoricalDQN(Algorithm):
     For detail see: https://arxiv.org/pdf/1707.06887.pdf
     '''
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  value_distribution_builder=default_value_distribution_builder,
                  replay_buffer_builder=default_replay_buffer_builder,
                  params=CategoricalDQNParam()):
-        super(CategoricalDQN, self).__init__(env_info, params=params)
+        super(CategoricalDQN, self).__init__(env_or_env_info, params=params)
         if not self._env_info.is_discrete_action_env():
             raise ValueError(
                 '{} only supports discrete action environment'.format(self.__name__))
-        state_shape = self._env_info.observation_space.shape
-        self._n_action = self._env_info.action_space.n
-
         N = self._params.num_atoms
         self._delta_z = (self._params.v_max - self._params.v_min) / (N - 1)
 
-        self._atom_p = value_distribution_builder(
-            'atom_p_train', state_shape, self._n_action, self._params.num_atoms)
+        self._atom_p = value_distribution_builder('atom_p_train', self._env_info, self._params)
         assert isinstance(self._atom_p, M.ValueDistributionFunction)
 
-        self._target_atom_p = value_distribution_builder(
-            'atom_p_target', state_shape, self._n_action, self._params.num_atoms)
+        self._target_atom_p = value_distribution_builder('atom_p_train', self._env_info, self._params)
         assert isinstance(self._target_atom_p, M.ValueDistributionFunction)
 
         self._z = self._precompute_z(self._params.num_atoms,
@@ -92,10 +90,10 @@ class CategoricalDQN(Algorithm):
 
         # Training input variables
         s_current_var = \
-            nn.Variable((params.batch_size, *state_shape))
+            nn.Variable((params.batch_size, *self._env_info.state_shape))
         a_current_var = \
             nn.Variable((params.batch_size, 1))
-        s_next_var = nn.Variable((params.batch_size, *state_shape))
+        s_next_var = nn.Variable((params.batch_size, *self._env_info.state_shape))
         mi_var = nn.Variable((params.batch_size, params.num_atoms))
 
         TrainingVariables = namedtuple(
@@ -108,7 +106,7 @@ class CategoricalDQN(Algorithm):
         self._cross_entropy_loss = None
 
         # Evaluation input variables
-        s_eval_var = nn.Variable((1, *state_shape))
+        s_eval_var = nn.Variable((1, *self._env_info.state_shape))
 
         EvaluationVariables = \
             namedtuple('EvaluationVariables', ['s_eval'])
@@ -265,13 +263,13 @@ class CategoricalDQN(Algorithm):
     def _compute_q_values(self, atom_probabilities):
         batch_size = atom_probabilities.shape[0]
         assert atom_probabilities.shape == (
-            batch_size, self._n_action, self._params.num_atoms)
+            batch_size, self._env_info.action_dim, self._params.num_atoms)
         z = RF.expand_dims(self._z_var, axis=0)
         z = RF.expand_dims(z, axis=1)
         z = NF.broadcast(
-            z, shape=(batch_size, self._n_action, self._params.num_atoms))
+            z, shape=(batch_size, self._env_info.action_dim, self._params.num_atoms))
         q_values = NF.sum(z * atom_probabilities, axis=2)
-        assert q_values.shape == (batch_size, self._n_action)
+        assert q_values.shape == (batch_size, self._env_info.action_dim)
         return q_values
 
     def _probabilities_of(self, probabilities, a):
@@ -288,10 +286,10 @@ class CategoricalDQN(Algorithm):
         batch_size = a.shape[0]
         a = NF.reshape(a, (-1, 1))
         assert a.shape[0] == batch_size
-        one_hot = NF.one_hot(a, (self._n_action,))
+        one_hot = NF.one_hot(a, (self._env_info.action_dim,))
         one_hot = RF.expand_dims(one_hot, axis=1)
         one_hot = NF.broadcast(one_hot, shape=(
-            batch_size, self._params.num_atoms, self._n_action))
+            batch_size, self._params.num_atoms, self._env_info.action_dim))
         return one_hot
 
     def _precompute_z(self, num_atoms, v_min, v_max):

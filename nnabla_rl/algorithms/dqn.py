@@ -18,8 +18,8 @@ from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_actio
 import nnabla_rl.models as M
 
 
-def default_q_func_builder(scope_name, state_shape, n_action):
-    return M.DQNQFunction(scope_name, state_shape, n_action)
+def default_q_func_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.DQNQFunction(scope_name, env_info.state_shape, env_info.action_dim)
 
 
 def default_q_solver_builder(q_func, params):
@@ -100,29 +100,22 @@ class DQNParam(AlgorithmParam):
 
 
 class DQN(Algorithm):
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  q_func_builder=default_q_func_builder,
                  params=DQNParam(),
                  replay_buffer_builder=default_replay_buffer_builder):
-        super(DQN, self).__init__(env_info, params=params)
+        super(DQN, self).__init__(env_or_env_info, params=params)
 
-        if not isinstance(env_info.action_space, gym.spaces.Discrete):
+        if not self._env_info.is_discrete_action_env():
             raise ValueError('Invalid env_info Action space of DQN must be {}'
                              .format(gym.spaces.Discrete))
 
-        _state_shape = env_info.observation_space.shape
-        _n_action = env_info.action_space.n  # discrete
-
         self._q = q_func_builder(
-            scope_name='q',
-            state_shape=_state_shape,
-            n_action=_n_action)
+            scope_name='q', env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q, M.QFunction)
 
         self._target_q = q_func_builder(
-            scope_name='target_q',
-            state_shape=_state_shape,
-            n_action=_n_action)
+            scope_name='target_q', env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._target_q, M.QFunction)
 
         self._state = None
@@ -139,11 +132,11 @@ class DQN(Algorithm):
 
         # Training input variables
         s_current_var = \
-            nn.Variable((params.batch_size, *_state_shape))
+            nn.Variable((params.batch_size, *self._env_info.state_shape))
         a_current_var = \
             nn.Variable((params.batch_size, 1)
                         )  # discrete (having 1 action dim)
-        s_next_var = nn.Variable((params.batch_size, *_state_shape))
+        s_next_var = nn.Variable((params.batch_size, *self._env_info.state_shape))
         reward_var = nn.Variable((params.batch_size, 1))
         non_terminal_var = nn.Variable((params.batch_size, 1))
         weight_var = nn.Variable((params.batch_size, 1))
@@ -160,7 +153,7 @@ class DQN(Algorithm):
         self._td_error_var = None
 
         # Evaluation input variables
-        s_eval_var = nn.Variable((1, *_state_shape))
+        s_eval_var = nn.Variable((1, *self._env_info.state_shape))
 
         EvaluationVariables = \
             namedtuple('EvaluationVariables', ['s_eval'])

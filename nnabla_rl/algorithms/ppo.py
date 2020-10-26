@@ -25,71 +25,62 @@ from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
 import nnabla_rl.utils.context as context
 
 
-def build_shared_policy(head, scope_name, state_shape, action_dim):
-    return M.PPOAtariPolicy(head=head, scope_name=scope_name, state_shape=state_shape, action_dim=action_dim)
+def build_shared_policy(scope_name, env_info, algorithm_params, head, **kwargs):
+    return M.PPOAtariPolicy(scope_name=scope_name,
+                            state_shape=env_info.state_shape,
+                            action_dim=env_info.action_dim,
+                            head=head)
 
 
-def build_shared_v_function(head, scope_name, state_shape):
-    return M.PPOAtariVFunction(head=head, scope_name=scope_name, state_shape=state_shape)
+def build_shared_v_function(scope_name, env_info, algorithm_params, head,  **kwargs):
+    return M.PPOAtariVFunction(scope_name=scope_name, state_shape=env_info.state_shape, head=head)
 
 
-def build_mujoco_policy(scope_name, state_shape, action_dim):
-    return M.PPOMujocoPolicy(scope_name=scope_name, state_dim=state_shape, action_dim=action_dim)
+def build_mujoco_policy(scope_name, env_info, algorithm_params, **kwargs):
+    return M.PPOMujocoPolicy(scope_name=scope_name, state_dim=env_info.state_dim, action_dim=env_info.action_dim)
 
 
-def build_mujoco_v_function(scope_name, state_shape):
-    return M.PPOMujocoVFunction(scope_name=scope_name, state_shape=state_shape)
+def build_mujoco_v_function(scope_name, env_info, algorithm_params, **kwargs):
+    return M.PPOMujocoVFunction(scope_name=scope_name, state_shape=env_info.state_shape)
 
 
-def build_mujoco_state_preprocessor(scope_name, state_shape):
-    return RP.RunningMeanNormalizer(scope_name, state_shape, value_clip=(-5.0, 5.0))
+def build_mujoco_state_preprocessor(scope_name, env_info, algorithm_params, **kwargs):
+    return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
 def build_discrete_env_policy_and_v_function(policy_builder, value_function_builder,
-                                             state_shape, action_dim):
-    shared_function_head = M.PPOSharedFunctionHead(
-        scope_name="value_and_pi", state_shape=state_shape, action_dim=action_dim)
-    if policy_builder is None:
-        policy = build_shared_policy(head=shared_function_head,
-                                     scope_name="value_and_pi",
-                                     state_shape=state_shape,
-                                     action_dim=action_dim)
-    else:
-        policy = policy_builder(
-            scope_name="pi", state_shape=state_shape, action_dim=action_dim)
-    if value_function_builder is None:
-        v_function = build_shared_v_function(head=shared_function_head,
-                                             scope_name="value_and_pi",
-                                             state_shape=state_shape)
-    else:
-        v_function = value_function_builder(
-            scope_name="v", state_shape=state_shape)
+                                             env_info, algorithm_params, **kwargs):
+    shared_function_head = M.PPOSharedFunctionHead(scope_name="value_and_pi",
+                                                   state_shape=env_info.state_shape,
+                                                   action_dim=env_info.action_dim)
+    kwargs['head'] = shared_function_head
+
+    pi_builder = build_shared_policy if policy_builder is None else policy_builder
+    pi_scope_name = "value_and_pi" if policy_builder is None else "pi"
+    policy = pi_builder(scope_name=pi_scope_name, env_info=env_info, algorithm_params=algorithm_params, **kwargs)
+
+    v_builder = build_shared_v_function if value_function_builder is None else value_function_builder
+    value_scope_name = "value_and_pi" if value_function_builder is None else "v"
+    v_function = v_builder(scope_name=value_scope_name,
+                           env_info=env_info,
+                           algorithm_params=algorithm_params,
+                           **kwargs)
     return policy, v_function
 
 
 def build_continuous_env_policy_and_v_function(policy_builder, value_function_builder,
-                                               state_shape, action_dim):
-    if policy_builder is None:
-        policy = build_mujoco_policy(scope_name="pi",
-                                     state_shape=state_shape,
-                                     action_dim=action_dim)
-    else:
-        policy = policy_builder(
-            scope_name="pi", state_shape=state_shape, action_dim=action_dim)
-    if value_function_builder is None:
-        v_function = build_mujoco_v_function(scope_name="v",
-                                             state_shape=state_shape)
-    else:
-        v_function = value_function_builder(
-            scope_name="v", state_shape=state_shape)
+                                               env_info, algorithm_params, **kwargs):
+    pi_builder = build_mujoco_policy if policy_builder is None else policy_builder
+    policy = pi_builder(scope_name="pi", env_info=env_info, algorithm_params=algorithm_params, **kwargs)
+
+    v_builder = build_mujoco_v_function if value_function_builder is None else value_function_builder
+    v_function = v_builder(scope_name="v", env_info=env_info, algorithm_params=algorithm_params, **kwargs)
     return policy, v_function
 
 
-def build_state_preprocessor(preprocessor_builder, state_shape):
-    if preprocessor_builder is None:
-        return build_mujoco_state_preprocessor(scope_name='preprocessor', state_shape=state_shape)
-    else:
-        return preprocessor_builder(scope_name='preprocessor', state_shape=state_shape)
+def build_state_preprocessor(preprocessor_builder, env_info, algorithm_params, **kwargs):
+    builder = build_mujoco_state_preprocessor if preprocessor_builder is None else preprocessor_builder
+    return builder(scope_name='preprocessor', env_info=env_info, algorithm_params=algorithm_params, **kwargs)
 
 
 @dataclass
@@ -132,7 +123,7 @@ class PPO(Algorithm):
     This algorithm only supports online training.
     '''
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  value_function_builder=None,
                  policy_builder=None,
                  state_preprocessor_builder=None,
@@ -141,20 +132,17 @@ class PPO(Algorithm):
         # Disable setting context by the Algorithm class
         if 0 <= self._gpu_id:
             context._gpu_id = -1
-        super(PPO, self).__init__(env_info, params=params)
+        super(PPO, self).__init__(env_or_env_info, params=params)
 
-        state_shape = self._env_info.observation_space.shape
         if self._env_info.is_discrete_action_env():
             self._state_preprocessor = None
-            action_dim = self._env_info.action_space.n
             self._policy, self._v_function = build_discrete_env_policy_and_v_function(
-                policy_builder, value_function_builder, state_shape, action_dim)
+                policy_builder, value_function_builder, self._env_info, self._params)
         else:
             self._state_preprocessor = build_state_preprocessor(
-                state_preprocessor_builder, state_shape)
-            action_dim = self._env_info.action_space.shape[0]
+                state_preprocessor_builder, self._env_info, self._params)
             self._policy, self._v_function = build_continuous_env_policy_and_v_function(
-                policy_builder, value_function_builder, state_shape[0], action_dim)
+                policy_builder, value_function_builder, self._env_info, self._params)
             self._policy.set_state_preprocessor(self._state_preprocessor)
             self._v_function.set_state_preprocessor(self._state_preprocessor)
         if self._state_preprocessor is not None:
@@ -174,7 +162,7 @@ class PPO(Algorithm):
                                ['s_current', 'a_current', 'log_prob', 'v_target', 'advantage', 'alpha'])
         if self._env_info.is_discrete_action_env():
             self._variables = Variables(
-                nn.Variable((params.batch_size, *state_shape)),
+                nn.Variable((params.batch_size, *self._env_info.state_shape)),
                 nn.Variable((params.batch_size, 1)),
                 nn.Variable((params.batch_size, 1)),
                 nn.Variable((params.batch_size, 1)),
@@ -182,8 +170,8 @@ class PPO(Algorithm):
                 nn.Variable((1, 1)))
         else:
             self._variables = Variables(
-                nn.Variable((params.batch_size, *state_shape)),
-                nn.Variable((params.batch_size, action_dim)),
+                nn.Variable((params.batch_size, *self._env_info.state_shape)),
+                nn.Variable((params.batch_size, self._env_info.action_dim)),
                 nn.Variable((params.batch_size, 1)),
                 nn.Variable((params.batch_size, 1)),
                 nn.Variable((params.batch_size, 1)),
@@ -191,7 +179,7 @@ class PPO(Algorithm):
         self._loss = None
 
         # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, *state_shape))
+        self._eval_state_var = nn.Variable((1, *self._env_info.state_shape))
         self._eval_action = None
 
         self._actors = None
@@ -567,8 +555,7 @@ class _PPOActor(object):
 
         v_current = None
         v_next = None
-        state_shape = self._env.observation_space.shape
-        state_var = nn.Variable((1, *state_shape))
+        state_var = nn.Variable((1, *self._env_info.state_shape))
         v_var = v_function.v(state_var)
         for t in reversed(range(T)):
             s_current, _, r, non_terminal, s_next, _ = experiences[t]

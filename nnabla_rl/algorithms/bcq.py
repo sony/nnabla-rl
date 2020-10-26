@@ -15,16 +15,25 @@ import nnabla_rl.functions as RF
 from nnabla_rl.distributions import Gaussian
 
 
-def default_q_function_builder(scope_name, state_dim, action_dim):
-    return M.TD3QFunction(scope_name, state_dim, action_dim)
+def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim)
 
 
-def default_vae_builder(scope_name, state_dim, action_dim, latent_dim, max_action_value):
-    return M.BCQVariationalAutoEncoder(scope_name, state_dim, action_dim, latent_dim, max_action_value)
+def default_vae_builder(scope_name, env_info, algorithm_params, **kwargs):
+    max_action_value = float(env_info.action_space.high[0])
+    return M.BCQVariationalAutoEncoder(scope_name,
+                                       env_info.state_dim,
+                                       env_info.action_dim,
+                                       env_info.action_dim*2,
+                                       max_action_value)
 
 
-def default_perturbator_builder(scope_name, state_dim, action_dim, max_action_value):
-    return M.BCQPerturbator(scope_name, state_dim, action_dim, max_action_value)
+def default_perturbator_builder(scope_name, env_info, algorithm_params, **kwargs):
+    max_action_value = float(env_info.action_space.high[0])
+    return M.BCQPerturbator(scope_name,
+                            env_info.state_dim,
+                            env_info.action_dim,
+                            max_action_value)
 
 
 @dataclass
@@ -75,45 +84,34 @@ class BCQ(Algorithm):
 
     '''
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  q_function_builder=default_q_function_builder,
                  vae_builder=default_vae_builder,
                  perturbator_builder=default_perturbator_builder,
                  params=BCQParam()):
-        super(BCQ, self).__init__(env_info, params=params)
-
-        state_dim = env_info.observation_space.shape[0]
-        action_dim = env_info.action_space.shape[0]
-        max_action_value = float(env_info.action_space.high[0])
-
-        self._state_dim = state_dim
-        self._action_dim = action_dim
+        super(BCQ, self).__init__(env_or_env_info, params=params)
 
         self._q_ensembles = []
         self._target_q_ensembles = []
         for i in range(self._params.num_q_ensembles):
-            q = q_function_builder(
-                scope_name="q{}".format(i), state_dim=state_dim, action_dim=action_dim)
+            q = q_function_builder(scope_name="q{}".format(i),
+                                   env_info=self._env_info,
+                                   algorithm_params=self._params)
             assert isinstance(q, M.QFunction)
-            target_q = q_function_builder(
-                scope_name="target_q{}".format(i), state_dim=state_dim, action_dim=action_dim)
+            target_q = q_function_builder(scope_name="q{}".format(i),
+                                          env_info=self._env_info,
+                                          algorithm_params=self._params)
             self._q_ensembles.append(q)
             self._target_q_ensembles.append(target_q)
 
-        self._vae = vae_builder(scope_name="vae",
-                                state_dim=state_dim,
-                                action_dim=action_dim,
-                                latent_dim=action_dim*2,
-                                max_action_value=max_action_value)
+        self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_params=self._params)
 
         self._xi = perturbator_builder(scope_name="xi",
-                                       state_dim=state_dim,
-                                       action_dim=action_dim,
-                                       max_action_value=max_action_value)
+                                       env_info=self._env_info,
+                                       algorithm_params=self._params)
         self._target_xi = perturbator_builder(scope_name="target_xi",
-                                              state_dim=state_dim,
-                                              action_dim=action_dim,
-                                              max_action_value=max_action_value)
+                                              env_info=self._env_info,
+                                              algorithm_params=self._params)
 
         self._state = None
         self._action = None
@@ -121,21 +119,21 @@ class BCQ(Algorithm):
         self._replay_buffer = ReplayBuffer(capacity=None)
 
         # training input/loss variables
-        self._s_current_var = nn.Variable((params.batch_size, state_dim))
-        self._a_current_var = nn.Variable((params.batch_size, action_dim))
-        self._s_next_var = nn.Variable((params.batch_size, state_dim))
+        self._s_current_var = nn.Variable((params.batch_size, self._env_info.state_dim))
+        self._a_current_var = nn.Variable((params.batch_size, self._env_info.action_dim))
+        self._s_next_var = nn.Variable((params.batch_size, self._env_info.state_dim))
         self._reward_var = nn.Variable((params.batch_size, 1))
         self._non_terminal_var = nn.Variable((params.batch_size, 1))
         self._vae_loss = None
         self._q_loss = None
         self._xi_loss = None
 
-        latent_shape = (self._params.batch_size, action_dim * 2)
+        latent_shape = (self._params.batch_size, self._env_info.action_dim * 2)
         self._target_latent_distribution = Gaussian(mean=np.zeros(shape=latent_shape, dtype=np.float32),
                                                     ln_var=np.zeros(shape=latent_shape, dtype=np.float32))
 
         # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, state_dim))
+        self._eval_state_var = nn.Variable((1, self._env_info.state_dim))
         self._eval_action = None
         self._eval_max_index = None
 
@@ -204,10 +202,10 @@ class BCQ(Algorithm):
         s_next_rep = RF.repeat(
             x=self._s_next_var, repeats=self._params.num_action_samples, axis=0)
         assert s_next_rep.shape == (self._params.batch_size * self._params.num_action_samples,
-                                    self._state_dim)
+                                    self._env_info.state_dim)
         a_next_rep = self._vae.decode(s_next_rep)
         assert a_next_rep.shape == (self._params.batch_size * self._params.num_action_samples,
-                                    self._action_dim)
+                                    self._env_info.action_dim)
         noise = self._target_xi.generate_noise(
             s_next_rep, a_next_rep, phi=self._params.phi)
         q_values = NF.stack(*(q_target.q(s_next_rep, a_next_rep + noise)

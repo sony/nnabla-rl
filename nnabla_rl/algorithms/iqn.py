@@ -18,8 +18,8 @@ import nnabla_rl.models as M
 import nnabla_rl.functions as RF
 
 
-def default_quantile_function_builder(scope_name, state_dim, action_dim, embedding_dim):
-    return M.IQNQuantileFunction(scope_name, state_dim, action_dim, embedding_dim)
+def default_quantile_function_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.IQNQuantileFunction(scope_name, env_info.state_shape, env_info.action_dim, algorithm_params.embedding_dim)
 
 
 def default_replay_buffer_builder(capacity):
@@ -82,36 +82,29 @@ class IQN(Algorithm):
     For detail see: https://arxiv.org/pdf/1806.06923.pdf
     '''
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  quantile_function_builder=default_quantile_function_builder,
                  risk_measure_function=risk_neutral_measure,
                  params=IQNParam(),
                  replay_buffer_builder=default_replay_buffer_builder):
-        super(IQN, self).__init__(env_info, params=params)
+        super(IQN, self).__init__(env_or_env_info, params=params)
 
         if not self._env_info.is_discrete_action_env():
-            raise ValueError(
-                '{} only supports discrete action environment'.format(self.__name__))
-        state_shape = self._env_info.observation_space.shape
-        self._n_action = self._env_info.action_space.n
-
+            raise ValueError('{} only supports discrete action environment'.format(self.__name__))
         self._quantile_function = quantile_function_builder(
-            'quantile_function', state_shape, self._n_action, self._params.embedding_dim)
-        assert isinstance(self._quantile_function,
-                          M.StateActionQuantileFunction)
+            'quantile_function', self._env_info, self._params)
+        assert isinstance(self._quantile_function, M.StateActionQuantileFunction)
 
         self._target_quantile_function = quantile_function_builder(
-            'target_quantile_function', state_shape, self._n_action, self._params.embedding_dim)
-        assert isinstance(self._target_quantile_function,
-                          M.StateActionQuantileFunction)
+            'target_quantile_function',  self._env_info, self._params)
+        assert isinstance(self._target_quantile_function, M.StateActionQuantileFunction)
 
         self._risk_measure_function = risk_measure_function
 
         self._state = None
         self._action = None
         self._next_state = None
-        self._replay_buffer = replay_buffer_builder(
-            capacity=params.replay_buffer_size)
+        self._replay_buffer = replay_buffer_builder(capacity=params.replay_buffer_size)
 
         self._exploration_strategy = ES.EpsilonGreedyExplorationStrategy(self._params.initial_epsilon,
                                                                          self._params.final_epsilon,
@@ -121,12 +114,12 @@ class IQN(Algorithm):
 
         # Training input variables
         s_current_var = \
-            nn.Variable((params.batch_size, *state_shape))
+            nn.Variable((params.batch_size, *self._env_info.state_shape))
         a_current_var = \
             nn.Variable((params.batch_size, 1))
         reward_var = nn.Variable((params.batch_size, 1))
         non_terminal_var = nn.Variable((params.batch_size, 1))
-        s_next_var = nn.Variable((params.batch_size, *state_shape))
+        s_next_var = nn.Variable((params.batch_size, *self._env_info.state_shape))
 
         TrainingVariables = namedtuple(
             'TrainingVariables', ['s_current', 'a_current', 'reward', 'non_terminal', 's_next'])
@@ -138,7 +131,7 @@ class IQN(Algorithm):
         self._quantile_huber_loss = None
 
         # Evaluation input variables
-        s_eval_var = nn.Variable((1, *state_shape))
+        s_eval_var = nn.Variable((1, *self._env_info.state_shape))
 
         EvaluationVariables = \
             namedtuple('EvaluationVariables', ['s_eval'])
@@ -285,10 +278,10 @@ class IQN(Algorithm):
     def _compute_q_values(self, quantiles):
         batch_size = quantiles.shape[0]
         assert len(quantiles.shape) == 3
-        assert quantiles.shape[2] == self._n_action
+        assert quantiles.shape[2] == self._env_info.action_dim
         quantiles = NF.transpose(quantiles, axes=(0, 2, 1))
         q_values = NF.mean(quantiles, axis=2)
-        assert q_values.shape == (batch_size, self._n_action)
+        assert q_values.shape == (batch_size, self._env_info.action_dim)
         return q_values
 
     def _quantiles_of(self, quantiles, a):
@@ -306,7 +299,7 @@ class IQN(Algorithm):
         batch_size = a.shape[0]
         a = NF.reshape(a, (-1, 1))
         assert a.shape[0] == batch_size
-        one_hot = NF.one_hot(a, (self._n_action,))
+        one_hot = NF.one_hot(a, (self._env_info.action_dim,))
         one_hot = RF.expand_dims(one_hot, axis=1)
         one_hot = NF.broadcast(one_hot, shape=shape)
         return one_hot

@@ -14,16 +14,16 @@ import nnabla_rl.models as M
 import nnabla_rl.functions as RF
 
 
-def default_v_function_builder(scope_name, state_dim):
-    return M.SACVFunction(scope_name, state_dim)
+def default_v_function_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.SACVFunction(scope_name, env_info.state_dim)
 
 
-def default_q_function_builder(scope_name, state_dim, action_dim):
-    return M.SACQFunction(scope_name, state_dim, action_dim)
+def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.SACQFunction(scope_name, env_info.state_dim, env_info.action_dim)
 
 
-def default_policy_builder(scope_name, state_dim, action_dim):
-    return M.SACPolicy(scope_name, state_dim, action_dim)
+def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
+    return M.SACPolicy(scope_name, env_info.state_dim, env_info.action_dim)
 
 
 @dataclass
@@ -67,31 +67,24 @@ class ICML2018SAC(Algorithm):
     You will need to scale the reward received from the environment properly to get the algorithm work.
     '''
 
-    def __init__(self, env_info,
+    def __init__(self, env_or_env_info,
                  v_function_builder=default_v_function_builder,
                  q_function_builder=default_q_function_builder,
                  policy_builder=default_policy_builder,
                  params=ICML2018SACParam()):
-        super(ICML2018SAC, self).__init__(env_info, params=params)
+        super(ICML2018SAC, self).__init__(env_or_env_info, params=params)
 
-        state_dim = env_info.observation_space.shape[0]
-        action_dim = env_info.action_space.shape[0]
-
-        self._v = v_function_builder(
-            scope_name="v", state_dim=state_dim)
+        self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._v, M.VFunction)
-        self._q1 = q_function_builder(
-            scope_name="q1", state_dim=state_dim, action_dim=action_dim)
+        self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q1, M.QFunction)
-        self._q2 = q_function_builder(
-            scope_name="q2", state_dim=state_dim, action_dim=action_dim)
+        self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q2, M.QFunction)
-        self._pi = policy_builder(
-            scope_name="pi", state_dim=state_dim, action_dim=action_dim)
+        self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._pi, M.StochasticPolicy)
 
         self._target_v = v_function_builder(
-            scope_name="target_v", state_dim=state_dim)
+            scope_name="target_v", env_info=self._env_info, algorithm_params=self._params)
 
         self._state = None
         self._action = None
@@ -100,9 +93,9 @@ class ICML2018SAC(Algorithm):
         self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
 
         # training input/loss variables
-        self._s_current_var = nn.Variable((params.batch_size, state_dim))
-        self._a_current_var = nn.Variable((params.batch_size, action_dim))
-        self._s_next_var = nn.Variable((params.batch_size, state_dim))
+        self._s_current_var = nn.Variable((params.batch_size, self._env_info.state_dim))
+        self._a_current_var = nn.Variable((params.batch_size, self._env_info.action_dim))
+        self._s_next_var = nn.Variable((params.batch_size, self._env_info.state_dim))
         self._reward_var = nn.Variable((params.batch_size, 1))
         self._non_terminal_var = nn.Variable((params.batch_size, 1))
         self._v_loss = None
@@ -110,7 +103,7 @@ class ICML2018SAC(Algorithm):
         self._pi_loss = None
 
         # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, state_dim))
+        self._eval_state_var = nn.Variable((1, self._env_info.state_dim))
         self._eval_distribution = None
 
     def _post_init(self):
