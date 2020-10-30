@@ -16,13 +16,85 @@ def load_data(path):
     return np.loadtxt(str(path), delimiter='\t', skiprows=1)
 
 
+def plot_results(args):
+    fig = plt.figure(figsize=(5, 4), dpi=80)
+    ax = fig.add_subplot(111)
+
+    xnlim = args.xnlim
+    xplim = args.xplim
+    ynlim = args.ynlim
+    yplim = args.yplim
+
+    for i, tsvpath in enumerate(args.tsvpaths):
+        results = load_data(tsvpath)
+
+        itr_x = results[:, 0]
+        avg_y = results[:, 1]
+        std_y = results[:, 2]
+        min_y = results[:, 3]
+        max_y = results[:, 4]
+        med_y = results[:, 5]
+
+        x = itr_x
+        if args.xnlim is None:
+            xnlim = np.amin(x)
+        else:
+            xnlim = min(np.amin(x), xnlim)
+        if args.xplim is None:
+            xplim = np.amax(x)
+        else:
+            xplim = max(np.amax(x), xplim)
+        if args.ynlim is None:
+            ynlim = np.amin(min_y)
+        else:
+            ynlim = max(np.amin(min_y), ynlim)
+        if args.yplim is None:
+            yplim = np.amax(max_y)
+        else:
+            yplim = max(np.amax(max_y), yplim)
+
+        mean_label = 'mean'
+        if i < len(args.tsvlabels):
+            mean_label = f'{mean_label}({args.tsvlabels[i]})'
+        ax.plot(x, avg_y, label=mean_label, linewidth=1)
+        ax.fill_between(x, avg_y + std_y, avg_y - std_y, alpha=0.3)
+
+        if args.plot_median:
+            median_label = 'mean'
+            if i < len(args.tsvlabels):
+                median_label = f'{median_label}({args.tsvlabels[i]})'
+                ax.plot(x, med_y, label=median_label, linewidth=1)
+    ax.set_xlim(args.xnlim, args.xplim)
+    ax.set_ylim(args.ynlim, args.yplim)
+    ax.set_xlabel(args.xlabel)
+    ax.set_ylabel(args.ylabel)
+    ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.ticklabel_format(style="sci",  axis="x", scilimits=(0, 0))
+    for height in args.hlines:
+        plt.axhline(y=height, color='red')
+
+    ax.legend(loc=args.legend_pos, fontsize=8)
+
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(args.outdir + '/' + args.savename)
+    if args.show_fig:
+        plt.show()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--tsvpath',
+    parser.add_argument('--tsvpaths',
                         type=str,
+                        nargs='+',
                         required=True,
                         help='evaluation tsv filepath')
+    parser.add_argument('--tsvlabels',
+                        type=str,
+                        nargs='+',
+                        default=[],
+                        help='evaluation tsv labels')
 
     # Graph options
     parser.add_argument('--xlabel', type=str, default='steps')
@@ -40,52 +112,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--hlines', type=float, nargs='*', default=[])
 
+    parser.add_argument('--plot-median', action='store_true')
+
     parser.add_argument('--show-fig', action='store_true')
 
     args = parser.parse_args()
 
-    results = load_data(args.tsvpath)
-
-    itr_x = results[:, 0]
-    avg_y = results[:, 1]
-    std_y = results[:, 2]
-    min_y = results[:, 3]
-    max_y = results[:, 4]
-    med_y = results[:, 5]
-
-    x = itr_x
-
-    if args.xnlim is None:
-        args.xnlim = np.amin(x)
-    if args.xplim is None:
-        args.xplim = np.amax(x)
-    if args.ynlim is None:
-        args.ynlim = np.amin(min_y)
-    if args.yplim is None:
-        args.yplim = np.amax(max_y)
-
-    fig = plt.figure(figsize=(5, 4), dpi=80)
-    ax = fig.add_subplot(111)
-
-    ax.plot(x, avg_y, label='average', linewidth=1)
-    ax.fill_between(x, avg_y + std_y, avg_y - std_y, alpha=0.3)
-    ax.plot(x, med_y, label='median', linewidth=1)
-
-    ax.legend(loc=args.legend_pos, fontsize=8)
-    ax.set_xlim(args.xnlim, args.xplim)
-    ax.set_ylim(args.ynlim, args.yplim)
-
-    ax.set_xlabel(args.xlabel)
-    ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-
-    ax.set_ylabel(args.ylabel)
-    ax.ticklabel_format(style="sci",  axis="x", scilimits=(0, 0))
-
-    for height in args.hlines:
-        plt.axhline(y=height, color='red')
-
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(args.outdir + '/' + args.savename)
-    if args.show_fig:
-        plt.show()
+    plot_results(args)

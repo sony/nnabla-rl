@@ -20,10 +20,10 @@ def select_only_reset_if_truncated(env_name):
 def run_training(args):
     nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
-    outdir = '{}_results'.format(args.env)
+    outdir = f'{args.env}_results/seed-{args.seed}'
 
     eval_env = build_mujoco_env(
-        args.env, test=True, seed=100)
+        args.env, test=True, seed=args.seed + 100)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
@@ -36,7 +36,7 @@ def run_training(args):
 
     total_iterations = 1000000
 
-    train_env = build_mujoco_env(args.env, seed=1, render=args.render)
+    train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
         only_reset_if_truncated = select_only_reset_if_truncated(args.env)
         params = A.PPOParam(epsilon=0.2,
@@ -61,7 +61,7 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=0)
+    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
     if args.snapshot_dir is None:
         raise ValueError(
@@ -71,7 +71,7 @@ def run_showcase(args):
         raise ValueError('Loaded snapshot is not trained with PPO!')
 
     eval_env = build_mujoco_env(
-        args.env, test=True, seed=200, render=True)
+        args.env, test=True, seed=args.seed + 200, render=True)
     evaluator = EpisodicEvaluator()
     evaluator(ppo, eval_env)
 
@@ -80,6 +80,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='Ant-v2')
     parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)

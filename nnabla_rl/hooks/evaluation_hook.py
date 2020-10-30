@@ -31,11 +31,14 @@ class EvaluationHook(Hook):
             minimum = np.min(returns)
             maximum = np.max(returns)
             # From python 3.6 or above, the dictionary preserves insertion order
-            results = {}
-            results['mean'] = mean
-            results['std_dev'] = std_dev
-            results['min'] = minimum
-            results['max'] = maximum
-            results['median'] = median
+            scalar_results = {}
+            scalar_results['mean'] = mean
+            scalar_results['std_dev'] = std_dev
+            scalar_results['min'] = minimum
+            scalar_results['max'] = maximum
+            scalar_results['median'] = median
+            self._writer.write_scalar(algorithm.iteration_num, scalar_results)
 
-            self._writer.write_scalar(algorithm.iteration_num, results)
+            histogram_results = {}
+            histogram_results['returns'] = returns
+            self._writer.write_histogram(algorithm.iteration_num, histogram_results)

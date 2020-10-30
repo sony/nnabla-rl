@@ -12,12 +12,11 @@ from nnabla_rl.utils import serializers
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=0)
+    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
-    outdir = '{}_results'.format(args.env)
+    outdir = f'{args.env}_results/seed-{args.seed}'
 
-    eval_env = build_mujoco_env(
-        args.env, test=True, seed=100)
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
@@ -45,7 +44,7 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=0)
+    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
     if args.snapshot_dir is None:
         raise ValueError(
@@ -55,7 +54,7 @@ def run_showcase(args):
         raise ValueError('Loaded snapshot is not trained with BCQ!')
 
     eval_env = build_mujoco_env(
-        args.env, test=True, seed=200, render=True)
+        args.env, test=True, seed=args.seed + 200, render=True)
     evaluator = EpisodicEvaluator()
     evaluator(bcq, eval_env)
 
@@ -63,6 +62,8 @@ def run_showcase(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='ant-expert-v0')
+    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)

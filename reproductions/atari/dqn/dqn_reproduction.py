@@ -23,12 +23,13 @@ def memory_efficient_buffer_builder(capacity):
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=0)
+    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
     eval_env = build_atari_env(
-        args.env, test=True, seed=100, render=args.render)
+        args.env, test=True, seed=args.seed + 100, render=args.render)
 
-    outdir = '{}_results'.format(args.env)
+    outdir = f'{args.env}_results/seed-{args.seed}'
+
     writer = FileWriter(outdir, "evaluation_result")
     evaluator = TimestepEvaluator(num_timesteps=125000)
     evaluation_hook = H.EvaluationHook(eval_env, evaluator,
@@ -37,7 +38,7 @@ def run_training(args):
     save_snapshot_hook = H.SaveSnapshotHook(
         outdir, timing=250000)
 
-    train_env = build_atari_env(args.env)
+    train_env = build_atari_env(args.env, seed=args.seed)
 
     params = A.DQNParam()
     dqn = A.DQN(train_env,
@@ -54,7 +55,7 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=0)
+    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
     if args.snapshot_dir is None:
         raise ValueError(
@@ -65,7 +66,7 @@ def run_showcase(args):
     dqn.update_algorithm_params(**{'test_epsilon': 0.05})
 
     eval_env = build_atari_env(
-        args.env, test=True, seed=200, render=False)
+        args.env, test=True, seed=args.seed + 200, render=False)
     evaluator = EpisodicEvaluator(run_per_evaluation=30)
     returns = evaluator(dqn, eval_env)
     mean = np.mean(returns)
@@ -79,6 +80,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str,
                         default='BreakoutNoFrameskip-v4')
+    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)

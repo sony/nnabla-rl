@@ -29,9 +29,32 @@ class TestFileWriter():
                 os.path.join(test_file_dir, 'evaluation_results_scalar.tsv')
             self._check_same_tsv_file(file_path, test_file_path)
 
+    def test_write_histogram(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_returns = np.arange(5)
+            test_results = {}
+            test_results['returns'] = test_returns
+
+            writer = FileWriter(
+                outdir=tmpdir, file_prefix='evaluation_results')
+            writer.write_histogram(1, test_results)
+
+            file_path = \
+                os.path.join(tmpdir, 'evaluation_results_histogram.tsv')
+            this_file_dir = os.path.dirname(__file__)
+            test_file_dir = this_file_dir.replace('tests', 'test_resources')
+            test_file_path = \
+                os.path.join(test_file_dir, 'evaluation_results_histogram.tsv')
+            self._check_same_tsv_file(file_path, test_file_path)
+
     def _check_same_tsv_file(self, file_path1, file_path2):
         # check each line
         with open(file_path1, mode='rt') as data_1, \
                 open(file_path2, mode='rt') as data_2:
             for d_1, d_2 in zip(data_1, data_2):
                 assert d_1 == d_2
+
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main()

@@ -8,9 +8,11 @@ import numpy as np
 
 import argparse
 
+import nnabla_rl.writers as W
 
-def load_data(path):
-    return np.loadtxt(str(path), delimiter='\t', skiprows=1)
+
+def load_data(path, dtype=float):
+    return np.loadtxt(str(path), delimiter='\t', skiprows=1, dtype=dtype)
 
 
 def rmdir_if_exists(path):
@@ -29,9 +31,147 @@ def list_all_directory_with(rootdir, filename):
     return directories
 
 
-def create_result_plot(eval_result_file, outdir):
-    subprocess.Popen(['plot_result', '--tsvpath',
-                      eval_result_file, '--outdir', outdir])
+def create_result_plot(eval_scalar_result_file, outdir):
+    subprocess.Popen(['plot_result', '--tsvpaths',
+                      eval_scalar_result_file, '--outdir', outdir])
+
+
+def extract_iteration_num_and_returns(histogram_data):
+    iteration_nums = []
+    returns = []
+    for i in range(len(histogram_data)):
+        data_row = histogram_data[i]
+        if 'returns' in data_row[0]:
+            iteration_nums.append(int(data_row[0].split(' ')[0]))
+            returns.append(data_row[1:].astype(float))
+
+    return iteration_nums, returns
+
+
+def create_average_result_file(histograms, file_outdir):
+    iteration_nums = None
+    returns_list = None
+    for histogram in histograms:
+        data = load_data(histogram, dtype=str)
+        iteration_nums, returns = extract_iteration_num_and_returns(data)
+        if returns_list is None:
+            returns_list = returns
+        else:
+            for i, r in enumerate(returns):
+                returns_list[i] = np.concatenate([returns_list[i], r])
+
+    file_prefix = "evaluation_result_average"
+    writer = W.FileWriter(file_outdir, file_prefix=file_prefix)
+    for i, r in zip(iteration_nums, returns):
+        mean = np.mean(r)
+        std_dev = np.std(r)
+        minimum = np.min(r)
+        maximum = np.max(r)
+        median = np.median(r)
+
+        scalar_results = {}
+        scalar_results['mean'] = mean
+        scalar_results['std_dev'] = std_dev
+        scalar_results['min'] = minimum
+        scalar_results['max'] = maximum
+        scalar_results['median'] = median
+
+        writer.write_scalar(i, scalar_results)
+
+    file_name = file_prefix + "_scalar.tsv"
+    return file_outdir/file_name
+
+
+def copy_dir(src_dir, dst_dir):
+    if src_dir.exists():
+        rmdir_if_exists(dst_dir)
+        shutil.copytree(src_dir, dst_dir)
+
+
+def copy_file_to_dir(src_file, dst_dir):
+    if src_file.exists():
+        shutil.copy(src_file, dst_dir)
+
+    out_file = dst_dir / src_file
+    return out_file
+
+
+def create_dir(path):
+    rmdir_if_exists(path)
+    path.mkdir(parents=True)
+
+
+def create_average_result_file_and_plot(histograms, args):
+    for env_name, histograms in histograms.items():
+        file_outdir = pathlib.Path(args.outdir) / pathlib.Path(env_name)
+        average_file = create_average_result_file(histograms, file_outdir)
+        create_result_plot(average_file, file_outdir)
+
+
+def create_best_score_file(best_mean_iteration, best_mean, best_mean_std,
+                           best_median_iteration, best_median, file_outdir):
+    file_prefix = "best_score"
+
+    writer = W.FileWriter(file_outdir, file_prefix=file_prefix)
+
+    scalar_results = {}
+    scalar_results['best_mean_iteration'] = best_mean_iteration
+    scalar_results['mean'] = best_mean
+    scalar_results['std_dev'] = best_mean_std
+    scalar_results['best_median_iteration'] = best_median_iteration
+    scalar_results['median'] = best_median
+
+    writer.write_scalar(1, scalar_results)
+
+
+def compile_results(args):
+    rootdir = pathlib.Path.cwd()
+    directories = list_all_directory_with(rootdir, args.eval_scalar_filename)
+
+    histograms = {}
+    for directory in directories:
+        if args.outdir in str(directory):
+            continue
+        print('directory: ', directory)
+        eval_scalar_result_file = directory / pathlib.Path(args.eval_scalar_filename)
+        eval_histogram_result_file = directory / pathlib.Path(args.eval_histogram_filename)
+        results = load_data(eval_scalar_result_file)
+
+        best_mean_index = np.argmax(results[:, 1])
+        best_mean_iteration = int(results[best_mean_index, 0])
+        best_mean_score = results[best_mean_index, 1]
+        best_mean_std = results[best_mean_index, 2]
+        best_median_index = np.argmax(results[:, 5])
+        best_median_iteration = int(results[best_median_index, 0])
+        best_median_score = results[best_median_index, 5]
+
+        relative_dir = directory.relative_to(rootdir)
+        env_name = str(relative_dir).split('/')[0]
+        outdir = pathlib.Path(args.outdir) / relative_dir
+        create_dir(outdir)
+
+        copy_file_to_dir(eval_scalar_result_file, outdir)
+
+        best_mean_dir = directory / (args.snapshot_dir_prefix + str(best_mean_iteration))
+        out_mean_dir = outdir / 'best_mean-score'
+        copy_dir(best_mean_dir, out_mean_dir)
+
+        best_median_dir = directory / (args.snapshot_dir_prefix + str(best_median_iteration))
+        out_median_dir = outdir / 'best_median-score'
+        copy_dir(best_median_dir, out_median_dir)
+
+        histogram_file = copy_file_to_dir(eval_histogram_result_file, outdir)
+        if histogram_file.exists():
+            if env_name in histograms.keys():
+                histograms[env_name].append(histogram_file)
+            else:
+                histograms[env_name] = [histogram_file]
+
+        create_result_plot(outdir / eval_scalar_result_file.name, outdir)
+        create_best_score_file(best_mean_iteration, best_mean_score, best_mean_std,
+                               best_median_iteration, best_median_score, outdir)
+
+    create_average_result_file_and_plot(histograms, args)
 
 
 if __name__ == '__main__':
@@ -41,10 +181,14 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='output directory')
-    parser.add_argument('--eval-filename',
+    parser.add_argument('--eval-scalar-filename',
                         type=str,
                         default="evaluation_result_scalar.tsv",
-                        help='eval result filename')
+                        help='eval result(scalar) filename')
+    parser.add_argument('--eval-histogram-filename',
+                        type=str,
+                        default="evaluation_result_histogram.tsv",
+                        help='eval result(histogram) filename')
     parser.add_argument('--snapshot-dir-prefix',
                         type=str,
                         default="iteration-",
@@ -52,36 +196,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    rootdir = cwd = pathlib.Path.cwd()
-    directories = list_all_directory_with(rootdir, args.eval_filename)
-
-    for directory in directories:
-        if args.outdir in str(directory):
-            continue
-        print('directory: ', directory)
-        eval_result_file = directory / pathlib.Path(args.eval_filename)
-        results = load_data(eval_result_file)
-
-        best_mean_iteration = int(results[np.argmax(results[:, 1]), 0])
-        best_median_iteration = int(results[np.argmax(results[:, 5]), 0])
-
-        outdir = pathlib.Path(args.outdir) / pathlib.Path(directory.name)
-        rmdir_if_exists(outdir)
-        outdir.mkdir()
-
-        best_mean_dir = directory / \
-            (args.snapshot_dir_prefix + str(best_mean_iteration))
-        best_median_dir = directory / \
-            (args.snapshot_dir_prefix + str(best_median_iteration))
-
-        out_mean_dir = outdir / 'best_mean'
-        out_median_dir = outdir / 'best_median'
-
-        rmdir_if_exists(out_mean_dir)
-        rmdir_if_exists(out_median_dir)
-
-        shutil.copy(eval_result_file, outdir)
-        shutil.copytree(best_mean_dir, out_mean_dir)
-        shutil.copytree(best_median_dir, out_median_dir)
-
-        create_result_plot(outdir / eval_result_file.name, outdir)
+    compile_results(args)
