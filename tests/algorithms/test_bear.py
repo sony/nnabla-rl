@@ -66,15 +66,6 @@ class TestBEAR(object):
 
         assert action.shape == dummy_env.action_space.shape
 
-    def test_target_network_initialization(self):
-        dummy_env = E.DummyContinuous()
-        bear = A.BEAR(dummy_env)
-
-        # Should be initialized to same parameters
-        for q, target_q in zip(bear._q_ensembles, bear._target_q_ensembles):
-            assert self._has_same_parameters(
-                q.get_parameters(), target_q.get_parameters())
-
     def test_update_algorithm_params(self):
         dummy_env = E.DummyContinuous()
         bear = A.BEAR(dummy_env)
@@ -129,86 +120,6 @@ class TestBEAR(object):
             A.BEARParam(warmup_iterations=-100)
         with pytest.raises(ValueError):
             A.BEARParam(start_timesteps=-100)
-
-    def test_compute_gaussian_mmd(self):
-        def gaussian_kernel(x):
-            return x**2
-        dummy_env = E.DummyContinuous()
-        bear = A.BEAR(dummy_env)
-
-        samples1 = np.array([[[1, 1, 1], [2, 2, 2], [3, 3, 3]],
-                             [[2, 2, 2], [2, 2, 2], [3, 3, 3]]], dtype=np.float32)
-        samples2 = np.array([[[0, 0, 0], [1, 1, 1]],
-                             [[1, 2, 3], [1, 1, 1]]], dtype=np.float32)
-        samples1_var = nn.Variable(samples1.shape)
-        samples1_var.d = samples1
-        samples2_var = nn.Variable(samples2.shape)
-        samples2_var.d = samples2
-
-        actual_mmd = bear._compute_gaussian_mmd(
-            samples1=samples1_var, samples2=samples2_var, sigma=20.0)
-        actual_mmd.forward()
-        expected_mmd = self._compute_mmd(
-            samples1, samples2, sigma=20.0, kernel=gaussian_kernel)
-
-        assert actual_mmd.shape == (samples1.shape[0], 1)
-        assert np.all(np.isclose(actual_mmd.d, expected_mmd))
-
-    def test_compute_laplacian_mmd(self):
-        def laplacian_kernel(x):
-            return np.abs(x)
-        dummy_env = E.DummyContinuous()
-        bear = A.BEAR(dummy_env)
-
-        samples1 = np.array([[[1, 1, 1], [2, 2, 2], [3, 3, 3]],
-                             [[2, 2, 2], [2, 2, 2], [3, 3, 3]]], dtype=np.float32)
-        samples2 = np.array([[[0, 0, 0], [1, 1, 1]],
-                             [[1, 2, 3], [1, 1, 1]]], dtype=np.float32)
-        samples1_var = nn.Variable(samples1.shape)
-        samples1_var.d = samples1
-        samples2_var = nn.Variable(samples2.shape)
-        samples2_var.d = samples2
-
-        actual_mmd = bear._compute_laplacian_mmd(
-            samples1=samples1_var, samples2=samples2_var, sigma=20.0)
-        actual_mmd.forward()
-        expected_mmd = self._compute_mmd(
-            samples1, samples2, sigma=20.0, kernel=laplacian_kernel)
-
-        assert actual_mmd.shape == (samples1.shape[0], 1)
-        assert np.all(np.isclose(actual_mmd.d, expected_mmd))
-
-    def _has_same_parameters(self, params1, params2):
-        for key in params1.keys():
-            if not np.allclose(params1[key].data.data, params2[key].data.data):
-                return False
-        return True
-
-    def _compute_mmd(self, samples1, samples2, sigma, kernel):
-        diff_xx = self._compute_kernel_sum(samples1, samples1, sigma, kernel)
-        diff_xy = self._compute_kernel_sum(samples1, samples2, sigma, kernel)
-        diff_yy = self._compute_kernel_sum(samples2, samples2, sigma, kernel)
-        n = samples1.shape[1]
-        m = samples2.shape[1]
-        mmd = (diff_xx / (n*n) -
-               2.0 * diff_xy / (n*m) +
-               diff_yy / (m*m))
-        mmd = np.sqrt(mmd + 1e-6)
-        return mmd
-
-    def _compute_kernel_sum(self, a, b, sigma, kernel):
-        sums = []
-        for index in range(a.shape[0]):
-            kernel_sum = 0.0
-            for i in range(a.shape[1]):
-                for j in range(b.shape[1]):
-                    diff = 0.0
-                    for k in range(a.shape[2]):
-                        # print(f'samples[{i}] - samples[{j}]={samples1[i]-samples1[j]}')
-                        diff += kernel(a[index][i][k]-b[index][j][k])
-                    kernel_sum += np.exp(-diff/(2.0*sigma))
-            sums.append(kernel_sum)
-        return np.reshape(np.array(sums), newshape=(len(sums), 1))
 
 
 if __name__ == "__main__":

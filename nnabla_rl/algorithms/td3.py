@@ -1,5 +1,4 @@
 import nnabla as nn
-import nnabla.functions as NF
 import nnabla.solvers as NS
 
 from dataclasses import dataclass
@@ -10,17 +9,19 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-import nnabla_rl.models as M
-import nnabla_rl.functions as RF
+from nnabla_rl.model_trainers.model_trainer import Training
+from nnabla_rl.models import TD3QFunction, TD3Policy, QFunction, DeterministicPolicy
+import nnabla_rl.model_trainers as MT
 
 
 def default_critic_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return M.TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim)
+    target_policy = kwargs.get('target_policy')
+    return TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim, optimal_policy=target_policy)
 
 
 def default_actor_builder(scope_name, env_info, algorithm_params, **kwargs):
     max_action_value = float(env_info.action_space.high[0])
-    return M.TD3Policy(scope_name, env_info.state_dim, env_info.action_dim, max_action_value=max_action_value)
+    return TD3Policy(scope_name, env_info.state_dim, env_info.action_dim, max_action_value=max_action_value)
 
 
 @dataclass
@@ -57,22 +58,25 @@ class TD3(Algorithm):
                  params=TD3Param()):
         super(TD3, self).__init__(env_or_env_info, params=params)
 
-        self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._q1, M.QFunction)
-        self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._q2, M.QFunction)
+        def policy_solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate)
         self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._pi, M.DeterministicPolicy)
+        self._pi_solver = {self._pi.scope_name: policy_solver_builder()}
+        self._target_pi = self._pi.deepcopy('target_' + self._pi.scope_name)
+        assert isinstance(self._pi, DeterministicPolicy)
+        assert isinstance(self._target_pi, DeterministicPolicy)
 
-        self._target_q1 = critic_builder(
-            scope_name="target_q1", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._target_q1, M.QFunction)
-        self._target_q2 = critic_builder(
-            scope_name="target_q2", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._target_q2, M.QFunction)
-        self._target_pi = actor_builder(
-            scope_name="target_pi", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._target_pi, M.DeterministicPolicy)
+        self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
+        self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
+        assert isinstance(self._q1, QFunction)
+        assert isinstance(self._q2, QFunction)
+        train_q_functions = [self._q1, self._q2]
+
+        def q_function_solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate)
+        self._train_q_functions = train_q_functions
+        self._train_q_solvers = {q.scope_name: q_function_solver_builder() for q in train_q_functions}
+        self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in train_q_functions]
 
         self._state = None
         self._action = None
@@ -80,73 +84,58 @@ class TD3(Algorithm):
         self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
         self._episode_timesteps = None
 
-        # training input/loss variables
-        self._s_current_var = nn.Variable((params.batch_size, self._env_info.state_dim))
-        self._a_current_var = nn.Variable((params.batch_size, self._env_info.action_dim))
-        self._s_next_var = nn.Variable((params.batch_size, self._env_info.state_dim))
-        self._reward_var = nn.Variable((params.batch_size, 1))
-        self._non_terminal_var = nn.Variable((params.batch_size, 1))
-        self._pi_loss = None
-        self._q_loss = None
-
-        # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, self._env_info.state_dim))
-        self._eval_action = None
-
-    def _post_init(self):
-        super(TD3, self)._post_init()
-
-        copy_network_parameters(
-            self._q1.get_parameters(), self._target_q1.get_parameters(), 1.0)
-        copy_network_parameters(
-            self._q2.get_parameters(), self._target_q2.get_parameters(), 1.0)
-        copy_network_parameters(
-            self._pi.get_parameters(), self._target_pi.get_parameters(), 1.0)
-
     def compute_eval_action(self, state):
         return self._compute_greedy_action(state)
 
-    def _build_training_graph(self):
-        # Critic optimization graph
-        a_next_var = self._target_pi.pi(self._s_next_var)
-        epsilon = NF.clip_by_value(NF.randn(sigma=self._params.train_action_noise_sigma,
-                                            shape=a_next_var.shape),
-                                   min=-self._params.train_action_noise_abs,
-                                   max=self._params.train_action_noise_abs)
-        a_tilde_var = a_next_var + epsilon
+    def _before_training_start(self, env_or_buffer):
+        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
+        self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
-        target_q1_var = self._target_q1.q(self._s_next_var, a_tilde_var)
-        target_q2_var = self._target_q2.q(self._s_next_var, a_tilde_var)
-        target_q_var = NF.minimum2(target_q1_var, target_q2_var)
+    def _setup_q_function_training(self, env_or_buffer):
+        # training input/loss variables
+        q_function_trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
+            gamma=self._params.gamma,
+            reduction_method='mean',
+            grad_clip=None)
+        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+            env_info=self._env_info,
+            params=q_function_trainer_params)
 
-        y = self._reward_var + self._params.gamma * \
-            self._non_terminal_var * target_q_var
-        y.need_grad = False
+        training = MT.q_value_trainings.TD3Training(
+            train_functions=self._train_q_functions,
+            target_functions=self._target_q_functions,
+            target_policy=self._target_pi,
+            train_action_noise_sigma=self._params.train_action_noise_sigma,
+            train_action_noise_abs=self._params.train_action_noise_abs)
+        training = MT.common_extensions.PeriodicalTargetUpdate(
+            training,
+            src_models=self._train_q_functions,
+            dst_models=self._target_q_functions,
+            target_update_frequency=self._params.d,
+            tau=self._params.tau)
+        q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
+        for q, target_q in zip(self._train_q_functions, self._target_q_functions):
+            copy_network_parameters(q.get_parameters(), target_q.get_parameters())
+        return q_function_trainer
 
-        current_q1 = self._q1.q(self._s_current_var, self._a_current_var)
-        current_q2 = self._q2.q(self._s_current_var, self._a_current_var)
+    def _setup_policy_training(self, env_or_buffer):
+        policy_trainer_params = MT.policy_trainers.DPGPolicyTrainerParam()
+        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(env_info=self._env_info,
+                                                             params=policy_trainer_params,
+                                                             q_function=self._q1)
 
-        q1_loss = RF.mean_squared_error(y, current_q1)
-        q2_loss = RF.mean_squared_error(y, current_q2)
-        self._q_loss = q1_loss + q2_loss
+        training = Training()
+        # Update policy everytime when train is called. Because train is called every self._params.d iteration
+        training = MT.common_extensions.PeriodicalTargetUpdate(
+            training,
+            src_models=self._pi,
+            dst_models=self._target_pi,
+            target_update_frequency=1,
+            tau=self._params.tau)
+        policy_trainer.setup_training(self._pi, self._pi_solver, training)
+        copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), 1.0)
 
-        # Actor optimization graph
-        action_var = self._pi.pi(self._s_current_var)
-        q1 = self._q1.q(self._s_current_var, action_var)
-        self._pi_loss = -NF.mean(q1)
-
-    def _build_evaluation_graph(self):
-        self._eval_action = self._pi.pi(self._eval_state_var)
-
-    def _setup_solver(self):
-        self._q1_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._q1_solver.set_parameters(self._q1.get_parameters())
-
-        self._q2_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._q2_solver.set_parameters(self._q2.get_parameters())
-
-        self._pi_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._pi_solver.set_parameters(self._pi.get_parameters())
+        return policy_trainer
 
     def _run_online_training_iteration(self, env):
         if self._state is None:
@@ -167,8 +156,7 @@ class TD3(Algorithm):
             non_terminal = 0.0
         else:
             non_terminal = 1.0
-        experience = \
-            (self._state, self._action, [r], [non_terminal], self._next_state)
+        experience = (self._state, self._action, [r], [non_terminal], self._next_state)
         self._replay_buffer.append(experience)
 
         self._state = self._next_state
@@ -184,41 +172,27 @@ class TD3(Algorithm):
         self._td3_training(buffer)
 
     def _td3_training(self, replay_buffer):
-        experiences, *_ = replay_buffer.sample(self._params.batch_size)
-        (s, a, r, non_terminal, s_next) = marshall_experiences(experiences)
-        # Optimize critic
-        self._s_current_var.d = s
-        self._a_current_var.d = a
-        self._s_next_var.d = s_next
-        self._reward_var.d = r
-        self._non_terminal_var.d = non_terminal
+        experiences, info = replay_buffer.sample(self._params.batch_size)
+        marshalled_experiences = marshall_experiences(experiences)
 
-        self._q_loss.forward()
+        kwargs = {}
+        kwargs['weights'] = info['weights']
+        errors = self._q_function_trainer.train(marshalled_experiences, **kwargs)
 
-        self._q1_solver.zero_grad()
-        self._q2_solver.zero_grad()
-        self._q_loss.backward()
-        self._q1_solver.update()
-        self._q2_solver.update()
+        self._policy_trainer.train(marshalled_experiences)
+
+        td_error = np.abs(errors['td_error'])
+        replay_buffer.update_priorities(td_error)
 
         if self.iteration_num % self._params.d == 0:
             # Optimize actor
-            self._pi_loss.forward()
-            self._pi_solver.zero_grad()
-            self._pi_loss.backward()
-            self._pi_solver.update()
-
-            copy_network_parameters(
-                self._q1.get_parameters(), self._target_q1.get_parameters(), self._params.tau)
-            copy_network_parameters(
-                self._q2.get_parameters(), self._target_q2.get_parameters(), self._params.tau)
-            copy_network_parameters(
-                self._pi.get_parameters(), self._target_pi.get_parameters(), self._params.tau)
+            self._policy_trainer.train(marshalled_experiences)
 
     def _compute_greedy_action(self, s):
-        self._eval_state_var.d = np.expand_dims(s, axis=0)
-        self._eval_action.forward(clear_buffer=True)
-        return np.squeeze((self._eval_action.data).data, axis=0)
+        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
+        with nn.auto_forward():
+            eval_action = self._pi.pi(s_eval_var)
+        return np.squeeze(eval_action.d, axis=0)
 
     def _append_noise(self, action, low, high):
         noise = np.random.normal(
@@ -228,16 +202,13 @@ class TD3(Algorithm):
     def _models(self):
         models = {}
         models[self._q1.scope_name] = self._q1
-        models[self._target_q1.scope_name] = self._target_q1
         models[self._q2.scope_name] = self._q2
-        models[self._target_q2.scope_name] = self._target_q2
         models[self._pi.scope_name] = self._pi
         models[self._target_pi.scope_name] = self._target_pi
         return models
 
     def _solvers(self):
         solvers = {}
-        solvers['q1_solver'] = self._q1_solver
-        solvers['q2_solver'] = self._q2_solver
-        solvers['pi_solver'] = self._pi_solver
+        solvers.update(self._pi_solver)
+        solvers.update(self._train_q_solvers)
         return solvers

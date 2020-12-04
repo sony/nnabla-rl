@@ -53,20 +53,7 @@ class TestBCQ(object):
         state = dummy_env.reset()
         state = np.float32(state)
         action = bcq.compute_eval_action(state)
-
         assert action.shape == dummy_env.action_space.shape
-
-    def test_target_network_initialization(self):
-        dummy_env = E.DummyContinuous()
-        bcq = A.BCQ(dummy_env)
-
-        # Should be initialized to same parameters
-        for q, target_q in zip(bcq._q_ensembles, bcq._target_q_ensembles):
-            assert self._has_same_parameters(
-                q.get_parameters(), target_q.get_parameters())
-
-        self._has_same_parameters(
-            bcq._xi.get_parameters(), bcq._target_xi.get_parameters())
 
     def test_update_algorithm_params(self):
         dummy_env = E.DummyContinuous()
@@ -117,12 +104,6 @@ class TestBCQ(object):
             A.BCQParam(num_q_ensembles=-100)
         with pytest.raises(ValueError):
             A.BCQParam(num_action_samples=-100)
-
-    def _has_same_parameters(self, params1, params2):
-        for key in params1.keys():
-            if not np.allclose(params1[key].data.data, params2[key].data.data):
-                return False
-        return True
 
 
 if __name__ == "__main__":

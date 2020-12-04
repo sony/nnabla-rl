@@ -13,10 +13,12 @@ class TD3QFunction(QFunction):
     See: https://arxiv.org/abs/1802.09477
     """
 
-    def __init__(self, scope_name, state_dim, action_dim):
+    def __init__(self, scope_name, state_dim, action_dim, optimal_policy=None):
         super(TD3QFunction, self).__init__(scope_name)
         self._state_dim = state_dim
         self._action_dim = action_dim
+
+        self._optimal_policy = optimal_policy
 
     def q(self, s, a):
         assert s.shape[1] == self._state_dim
@@ -40,6 +42,12 @@ class TD3QFunction(QFunction):
                            w_init=linear3_init, b_init=linear3_init)
         return h
 
+    def max_q(self, s):
+        if self._optimal_policy is None:
+            raise RuntimeError('Optimal policy is not set!')
+        optimal_action = self._optimal_policy(s)
+        return self.q(s, optimal_action)
+
 
 class SACQFunction(QFunction):
     """
@@ -47,10 +55,12 @@ class SACQFunction(QFunction):
     See: https://arxiv.org/pdf/1801.01290.pdf
     """
 
-    def __init__(self, scope_name, state_dim, action_dim):
+    def __init__(self, scope_name, state_dim, action_dim, optimal_policy=None):
         super(SACQFunction, self).__init__(scope_name)
         self._state_dim = state_dim
         self._action_dim = action_dim
+
+        self._optimal_policy = optimal_policy
 
     def q(self, s, a):
         assert s.shape[1] == self._state_dim
@@ -64,3 +74,9 @@ class SACQFunction(QFunction):
             h = NF.relu(x=h)
             h = NPF.affine(h, n_outmaps=1, name="linear3")
         return h
+
+    def max_q(self, s):
+        if self._optimal_policy is None:
+            raise RuntimeError('Optimal policy is not set!')
+        optimal_action = self._optimal_policy(s)
+        return self.q(s, optimal_action)

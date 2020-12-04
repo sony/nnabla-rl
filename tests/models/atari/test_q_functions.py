@@ -65,7 +65,7 @@ class TestDQNQFunction(object):
         assert val.shape == expected.shape
         assert np.allclose(val.d, expected)
 
-    def test_argmax(self):
+    def test_argmax_q(self):
         nn.clear_parameters()
 
         state_shape = (4, 84, 84)
@@ -81,7 +81,7 @@ class TestDQNQFunction(object):
         model._predict_q_values = mock.MagicMock()
         model._predict_q_values.return_value = outputs
 
-        val = model.argmax(inputs)
+        val = model.argmax_q(inputs)
         val.forward()
 
         model._predict_q_values.assert_called_once_with(inputs)
@@ -91,7 +91,7 @@ class TestDQNQFunction(object):
         assert val.shape == expected.shape
         assert np.allclose(val.d, expected)
 
-    def test_maximum(self):
+    def test_max_q(self):
         nn.clear_parameters()
 
         state_shape = (4, 84, 84)
@@ -107,7 +107,7 @@ class TestDQNQFunction(object):
         model._predict_q_values = mock.MagicMock()
         model._predict_q_values.return_value = outputs
 
-        val = model.maximum(inputs)
+        val = model.max_q(inputs)
         val.forward()
 
         model._predict_q_values.assert_called_once_with(inputs)

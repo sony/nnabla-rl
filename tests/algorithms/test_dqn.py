@@ -137,23 +137,11 @@ class TestDQN(object):
         with pytest.raises(ValueError):
             A.DQNParam(max_explore_steps=-100)
 
-    def test_solver_has_correct_parameters(self):
-        dummy_env = E.DummyDiscreteImg()
-        dqn = A.DQN(dummy_env)
-
-        q_solver_parms = dqn._solvers()["q_solver"].get_parameters()
-        q_network_params = dqn._q.get_parameters()
-        target_q_network_params = dqn._target_q.get_parameters()
-
-        assert is_same_parameter_id_and_key(q_network_params, q_solver_parms)
-        assert not is_same_parameter_id_and_key(
-            target_q_network_params, q_solver_parms)
-
 
 if __name__ == "__main__":
     import sys
     sys.path.insert(0, "./")
-    from testing_utils import generate_dummy_experiences, is_same_parameter_id_and_key
+    from testing_utils import generate_dummy_experiences
     pytest.main()
 else:
-    from .testing_utils import generate_dummy_experiences, is_same_parameter_id_and_key
+    from .testing_utils import generate_dummy_experiences

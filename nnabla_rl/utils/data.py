@@ -1,13 +1,28 @@
+from typing import List, TypeVar, Union, Iterable
+
 import numpy as np
+
+T = TypeVar('T')
 
 
 def marshall_experiences(experiences):
     unzipped_experiences = unzip(experiences)
-    return (np.asarray(data) for data in unzipped_experiences)
+    return tuple(np.asarray(data) for data in unzipped_experiences)
 
 
 def unzip(zipped_data):
     return list(zip(*zipped_data))
+
+
+def is_array_like(x):
+    return hasattr(x, "__len__")
+
+
+def convert_to_list_if_not_iterable(value: Union[Iterable[T], T]) -> List[T]:
+    if is_array_like(value):
+        return list(value)
+    else:
+        return [value]
 
 
 class RingBuffer(object):

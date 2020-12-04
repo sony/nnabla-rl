@@ -11,8 +11,8 @@ class QFunction(Model, metaclass=ABCMeta):
     def q(self, s, a):
         raise NotImplementedError
 
-    def maximum(self, s):
+    def max_q(self, s):
         raise NotImplementedError
 
-    def argmax(self, s):
+    def argmax_q(self, s):
         raise NotImplementedError

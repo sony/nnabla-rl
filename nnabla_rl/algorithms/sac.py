@@ -1,5 +1,4 @@
 import nnabla as nn
-import nnabla.functions as NF
 import nnabla.solvers as NS
 
 from dataclasses import dataclass
@@ -10,17 +9,16 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-import nnabla_rl.models as M
-from nnabla_rl.models.model import Model
-import nnabla_rl.functions as RF
+from nnabla_rl.models import SACQFunction, SACPolicy, QFunction, StochasticPolicy
+import nnabla_rl.model_trainers as MT
 
 
 def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return M.SACQFunction(scope_name, env_info.state_dim, env_info.action_dim)
+    return SACQFunction(scope_name, env_info.state_dim, env_info.action_dim)
 
 
 def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return M.SACPolicy(scope_name, env_info.state_dim, env_info.action_dim)
+    return SACPolicy(scope_name, env_info.state_dim, env_info.action_dim)
 
 
 @dataclass
@@ -58,26 +56,6 @@ class SACParam(AlgorithmParam):
             raise ValueError('start_timesteps must not be negative')
 
 
-class AdjustableTemperature(Model):
-    def __init__(self, scope_name, initial_value=None):
-        super(AdjustableTemperature, self).__init__(scope_name=scope_name)
-        if initial_value:
-            initial_value = np.log(initial_value)
-        else:
-            initial_value = np.random.normal()
-
-        initializer = np.reshape(initial_value, newshape=(1, 1))
-        with nn.parameter_scope(scope_name):
-            self._log_temperature = \
-                nn.parameter.get_parameter_or_create(
-                    name='log_temperature', shape=(1, 1), initializer=initializer, )
-        # Dummy call. Just for initializing the parameters
-        self()
-
-    def __call__(self):
-        return NF.exp(self._log_temperature)
-
-
 class SAC(Algorithm):
     '''Soft Actor-Critic (SAC) algorithm implementation.
 
@@ -99,28 +77,32 @@ class SAC(Algorithm):
                  params=SACParam()):
         super(SAC, self).__init__(env_or_env_info, params=params)
 
+        def q_function_solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate)
         self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._q1, M.QFunction)
+        assert isinstance(self._q1, QFunction)
         self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._q2, M.QFunction)
+        assert isinstance(self._q2, QFunction)
+        train_q_functions = [self._q1, self._q2]
+        self._train_q_functions = train_q_functions
+        self._train_q_solvers = {q.scope_name: q_function_solver_builder() for q in train_q_functions}
+        self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in train_q_functions]
+
+        def policy_solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate)
         self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._pi, M.StochasticPolicy)
+        assert isinstance(self._pi, StochasticPolicy)
+        self._pi_solver = {self._pi.scope_name: policy_solver_builder()}
 
-        if self._params.fix_temperature & (self._params.initial_temperature is None):
-            raise ValueError(
-                'please set the initial temperature for fixed temperature training')
-        self._alpha = AdjustableTemperature(
-            scope_name="temperature", initial_value=self._params.initial_temperature)
-
-        self._target_q1 = q_function_builder(
-            scope_name="target_q1", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._target_q1, M.QFunction)
-        self._target_q2 = q_function_builder(
-            scope_name="target_q2", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._target_q2, M.QFunction)
-
-        if self._params.target_entropy is None:
-            self._params.target_entropy = -self._env_info.action_dim
+        def temperature_solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate)
+        self._temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
+            scope_name='temperature',
+            initial_value=self._params.initial_temperature)
+        if not self._params.fix_temperature:
+            self._temperature_solver = temperature_solver_builder()
+        else:
+            self._temperature_solver = None
 
         self._state = None
         self._action = None
@@ -128,79 +110,54 @@ class SAC(Algorithm):
         self._episode_timesteps = None
         self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
 
-        # training input/loss variables
-        self._s_current_var = nn.Variable((params.batch_size, self._env_info.state_dim))
-        self._a_current_var = nn.Variable((params.batch_size, self._env_info.action_dim))
-        self._s_next_var = nn.Variable((params.batch_size, self._env_info.state_dim))
-        self._reward_var = nn.Variable((params.batch_size, 1))
-        self._non_terminal_var = nn.Variable((params.batch_size, 1))
-        self._pi_loss = None
-        self._q_loss = None
-        self._alpha_loss = None
-
-        # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, self._env_info.state_dim))
-        self._eval_distribution = None
-
-    def _post_init(self):
-        super(SAC, self)._post_init()
-
-        copy_network_parameters(
-            self._q1.get_parameters(), self._target_q1.get_parameters(), 1.0)
-        copy_network_parameters(
-            self._q2.get_parameters(), self._target_q2.get_parameters(), 1.0)
-
     def compute_eval_action(self, state):
         return self._compute_greedy_action(state, deterministic=True)
 
-    def _build_training_graph(self):
-        # Critic optimization graph
-        policy_distribution = self._pi.pi(self._s_next_var)
-        sampled_action, log_pi = policy_distribution.sample_and_compute_log_prob()
+    def _before_training_start(self, env_or_buffer):
+        self._policy_trainer = self._setup_policy_training(env_or_buffer)
+        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
 
-        target_q1_var = self._target_q1.q(self._s_next_var, sampled_action)
-        target_q2_var = self._target_q2.q(self._s_next_var, sampled_action)
-        target_q_var = NF.minimum2(target_q1_var, target_q2_var)
+    def _setup_policy_training(self, env_or_buffer):
+        policy_trainer_params = MT.policy_trainers.SoftPolicyTrainerParam(
+            fixed_temperature=self._params.fix_temperature,
+            target_entropy=self._params.target_entropy)
+        policy_trainer = MT.policy_trainers.SoftPolicyTrainer(
+            env_info=self._env_info,
+            params=policy_trainer_params,
+            temperature=self._temperature,
+            temperature_solver=self._temperature_solver,
+            q_functions=[self._q1, self._q2])
 
-        y = self._reward_var + self._params.gamma * \
-            self._non_terminal_var * \
-            (target_q_var - self._temperature * log_pi)
-        y.need_grad = False
+        training = MT.model_trainer.Training()
+        policy_trainer.setup_training(self._pi, self._pi_solver, training)
+        return policy_trainer
 
-        current_q1 = self._q1.q(self._s_current_var, self._a_current_var)
-        current_q2 = self._q2.q(self._s_current_var, self._a_current_var)
+    def _setup_q_function_training(self, env_or_buffer):
+        # training input/loss variables
+        q_function_trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
+            gamma=self._params.gamma,
+            reduction_method='mean',
+            grad_clip=None)
 
-        q1_loss = 0.5 * RF.mean_squared_error(y, current_q1)
-        q2_loss = 0.5 * RF.mean_squared_error(y, current_q2)
-        self._q_loss = q1_loss + q2_loss
+        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+            env_info=self._env_info,
+            params=q_function_trainer_params)
 
-        # Actor optimization graph
-        policy_distribution = self._pi.pi(self._s_current_var)
-        action_var, log_pi = policy_distribution.sample_and_compute_log_prob()
-        q1 = self._q1.q(self._s_current_var, action_var)
-        q2 = self._q2.q(self._s_current_var, action_var)
-        min_q = NF.minimum2(q1, q2)
-        self._pi_loss = NF.mean(self._temperature * log_pi - min_q)
-
-        log_pi_unlinked = log_pi.get_unlinked_variable()
-        self._alpha_loss = -NF.mean(self._temperature *
-                                    (log_pi_unlinked + self._params.target_entropy))
-
-    def _build_evaluation_graph(self):
-        self._eval_distribution = self._pi.pi(self._eval_state_var)
-
-    def _setup_solver(self):
-        self._q1_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._q1_solver.set_parameters(self._q1.get_parameters())
-
-        self._q2_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._q2_solver.set_parameters(self._q2.get_parameters())
-
-        self._pi_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._pi_solver.set_parameters(self._pi.get_parameters())
-
-        self._alpha_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._alpha_solver.set_parameters(self._alpha.get_parameters())
+        training = MT.q_value_trainings.SoftQTraining(
+            train_functions=self._train_q_functions,
+            target_functions=self._target_q_functions,
+            target_policy=self._pi,
+            temperature=self._policy_trainer.get_temperature())
+        training = MT.common_extensions.PeriodicalTargetUpdate(
+            training,
+            src_models=self._train_q_functions,
+            dst_models=self._target_q_functions,
+            target_update_frequency=1,
+            tau=self._params.tau)
+        q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
+        for q, target_q in zip(self._train_q_functions, self._target_q_functions):
+            copy_network_parameters(q.get_parameters(), target_q.get_parameters())
+        return q_function_trainer
 
     def _run_online_training_iteration(self, env):
         for _ in range(self._params.environment_steps):
@@ -242,64 +199,36 @@ class SAC(Algorithm):
             self._sac_training(replay_buffer)
 
     def _sac_training(self, replay_buffer):
-        experiences, *_ = replay_buffer.sample(self._params.batch_size)
-        (s, a, r, non_terminal, s_next) = marshall_experiences(experiences)
-        # Optimize critic
-        self._s_current_var.d = s
-        self._a_current_var.d = a
-        self._s_next_var.d = s_next
-        self._reward_var.d = r
-        self._non_terminal_var.d = non_terminal
+        experiences, info = replay_buffer.sample(self._params.batch_size)
+        marshalled_experiences = marshall_experiences(experiences)
 
-        self._q_loss.forward()
+        kwargs = {}
+        kwargs['weights'] = info['weights']
+        errors = self._q_function_trainer.train(marshalled_experiences, **kwargs)
 
-        self._q1_solver.zero_grad()
-        self._q2_solver.zero_grad()
-        self._q_loss.backward()
-        self._q1_solver.update()
-        self._q2_solver.update()
+        self._policy_trainer.train(marshalled_experiences)
 
-        # Optimize actor
-        self._pi_loss.forward()
-        self._pi_solver.zero_grad()
-        self._pi_loss.backward()
-        self._pi_solver.update()
-
-        # Update temperature if requested
-        if not self._params.fix_temperature:
-            self._alpha_loss.forward()
-            self._alpha_solver.zero_grad()
-            self._alpha_loss.backward()
-            self._alpha_solver.update()
-
-        copy_network_parameters(
-            self._q1.get_parameters(), self._target_q1.get_parameters(), self._params.tau)
-        copy_network_parameters(
-            self._q2.get_parameters(), self._target_q2.get_parameters(), self._params.tau)
+        td_error = np.abs(errors['td_error'])
+        replay_buffer.update_priorities(td_error)
 
     def _compute_greedy_action(self, s, deterministic=False):
-        self._eval_state_var.d = np.expand_dims(s, axis=0)
-        if deterministic:
-            eval_action = self._eval_distribution.choose_probable()
-        else:
-            eval_action = self._eval_distribution.sample()
-        eval_action.forward(clear_buffer=True)
-        return np.squeeze(eval_action.data.data, axis=0)
-
-    @property
-    def _temperature(self):
-        return self._alpha()
+        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
+        with nn.auto_forward():
+            eval_distribution = self._pi.pi(s_eval_var)
+            if deterministic:
+                eval_action = eval_distribution.choose_probable()
+            else:
+                eval_action = eval_distribution.sample()
+        return np.squeeze(eval_action.d, axis=0)
 
     def _models(self):
-        models = [self._q1, self._target_q1, self._q2,
-                  self._target_q2, self._pi, self._alpha]
+        models = [self._q1, self._q2, self._pi]
         return {model.scope_name: model for model in models}
 
     def _solvers(self):
         solvers = {}
-        solvers['q1_solver'] = self._q1_solver
-        solvers['q2_solver'] = self._q2_solver
-        solvers['pi_solver'] = self._pi_solver
-        if not self._params.fix_temperature:
-            solvers['alpha_solver'] = self._alpha_solver
+        solvers.update(self._pi_solver)
+        solvers.update(self._train_q_solvers)
+        if self._temperature_solver is not None:
+            solvers.update({self._temperature.scope_name: self._temperature_solver})
         return solvers

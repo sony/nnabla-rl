@@ -9,11 +9,9 @@ import numpy as np
 
 
 class C51ValueDistributionFunction(ValueDistributionFunction):
-    def __init__(self, scope_name, state_shape, num_actions, num_atoms):
-        super(C51ValueDistributionFunction, self).__init__(scope_name)
+    def __init__(self, scope_name, state_shape, num_actions, num_atoms, v_min, v_max):
+        super(C51ValueDistributionFunction, self).__init__(scope_name, num_actions, num_atoms, v_min, v_max)
         self._state_shape = state_shape
-        self._num_actions = num_actions
-        self._num_atoms = num_atoms
 
     def probabilities(self, s):
         batch_size = s.shape[0]
@@ -44,10 +42,8 @@ class C51ValueDistributionFunction(ValueDistributionFunction):
 
 class QRDQNQuantileDistributionFunction(QuantileDistributionFunction):
     def __init__(self, scope_name, state_shape, num_actions, num_quantiles):
-        super(QRDQNQuantileDistributionFunction, self).__init__(scope_name)
+        super(QRDQNQuantileDistributionFunction, self).__init__(scope_name, num_actions, num_quantiles)
         self._state_shape = state_shape
-        self._num_actions = num_actions
-        self._num_quantiles = num_quantiles
 
     def quantiles(self, s):
         batch_size = s.shape[0]
@@ -72,20 +68,15 @@ class QRDQNQuantileDistributionFunction(QuantileDistributionFunction):
                 h = NPF.affine(h, n_outmaps=self._num_actions * self._num_quantiles)
             quantiles = NF.reshape(
                 h, (-1, self._num_actions, self._num_quantiles))
-        assert quantiles.shape == (
-            batch_size, self._num_actions, self._num_quantiles)
+        assert quantiles.shape == (batch_size, self._num_actions, self._num_quantiles)
         return quantiles
 
 
 class IQNQuantileFunction(StateActionQuantileFunction):
-    def __init__(self, scope_name, state_shape, num_actions, embedding_dim):
-        super(IQNQuantileFunction, self).__init__(scope_name)
+    def __init__(self, scope_name, state_shape, num_actions, embedding_dim, K, risk_measure_function):
+        super(IQNQuantileFunction, self).__init__(scope_name, num_actions, K, risk_measure_function)
         self._state_shape = state_shape
-        self._num_actions = num_actions
         self._embedding_dim = embedding_dim
-
-        self._pi_i = np.pi * nn.Variable.from_numpy_array(
-            np.array([i for i in range(0, embedding_dim)]))
 
     def quantiles(self, s, tau):
         batch_size = s.shape[0]
@@ -147,3 +138,8 @@ class IQNQuantileFunction(StateActionQuantileFunction):
             embedding = NF.relu(x=h)
         assert embedding.shape == (batch_size, sample_size, dimension)
         return embedding
+
+    @property
+    def _pi_i(self):
+        return np.pi * nn.Variable.from_numpy_array(
+            np.array([i for i in range(0, self._embedding_dim)]))

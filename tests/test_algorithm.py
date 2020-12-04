@@ -3,6 +3,8 @@ import pytest
 from unittest.mock import patch
 from unittest.mock import MagicMock
 
+import numpy as np
+
 from nnabla_rl.algorithm import Algorithm
 from nnabla_rl.replay_buffer import ReplayBuffer
 import nnabla_rl.environments as E
@@ -50,12 +52,6 @@ class TestAlgorithm(object):
                 pass
 
             def compute_eval_action(self, x):
-                pass
-
-            def _build_training_graph(self):
-                assert not rl.is_eval_scope()
-
-            def _build_evaluation_graph(self):
                 assert rl.is_eval_scope()
 
             def _setup_solver(self):
@@ -68,8 +64,7 @@ class TestAlgorithm(object):
                 pass
 
         eval_scope_check = EvalScopeCheck()
-        eval_scope_check._build_evaluation_graph()
-        eval_scope_check._build_training_graph()
+        eval_scope_check.compute_eval_action(x=np.empty(shape=(1, 5)))
 
 
 if __name__ == "__main__":

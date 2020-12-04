@@ -117,28 +117,31 @@ def _load_training_info(path):
 
 
 def _save_network_parameters(path, algorithm):
-    for model_name, model in algorithm._models().items():
-        filename = model_name + '.h5'
+    for scope_name, model in algorithm._models().items():
+        filename = scope_name + '.h5'
         filepath = path / filename
         model.save_parameters(filepath)
 
 
 def _load_network_parameters(path, algorithm):
-    for model_name, model in algorithm._models().items():
-        filename = model_name + '.h5'
+    for scope_name, model in algorithm._models().items():
+        filename = scope_name + '.h5'
         filepath = path / filename
         model.load_parameters(filepath)
 
 
 def _save_solver_states(path, algorithm):
-    for solver_name, solver in algorithm._solvers().items():
-        filename = solver_name + '.h5'
+    for scope_name, solver in algorithm._solvers().items():
+        filename = scope_name + '_solver' + '.h5'
         filepath = path / filename
         solver.save_states(filepath)
 
 
 def _load_solver_states(path, algorithm):
-    for solver_name, solver in algorithm._solvers().items():
-        filename = solver_name + '.h5'
+    models = algorithm._models()
+    for scope_name, solver in algorithm._solvers().items():
+        filename = scope_name + '_solver' + '.h5'
         filepath = path / filename
+        model = models[scope_name]
+        solver.set_parameters(model.get_parameters())
         solver.load_states(filepath)

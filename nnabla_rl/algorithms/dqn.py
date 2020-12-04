@@ -1,9 +1,7 @@
 import nnabla as nn
-import nnabla.functions as NF
 import nnabla.solvers as NS
 
 import warnings
-from collections import namedtuple
 from dataclasses import dataclass
 
 import gym
@@ -13,25 +11,25 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-import nnabla_rl.exploration_strategies as ES
 from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_action_selection
-import nnabla_rl.models as M
+from nnabla_rl.models import DQNQFunction, QFunction
+import nnabla_rl.exploration_strategies as ES
+import nnabla_rl.model_trainers as MT
 
 
 def default_q_func_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return M.DQNQFunction(scope_name, env_info.state_shape, env_info.action_dim)
+    return DQNQFunction(scope_name, env_info.state_shape, env_info.action_dim)
 
 
-def default_q_solver_builder(q_func, params):
+def default_q_solver_builder(params):
     try:
-        solver = NS.RMSpropgraves(
+        solver = NS.RMSpropGraves(
             lr=params.learning_rate, decay=params.decay,
             momentum=params.momentum, eps=params.min_squared_gradient)
     except AttributeError:
-        warnings.warn("Instead of RMSpropgraves, use Adam as a Solver, \
+        warnings.warn("Instead of RMSpropGraves, use Adam as a Solver, \
             Please check learning rate. It might be needed to tune it")
         solver = NS.Adam(params.learning_rate)
-    solver.set_parameters(q_func.get_parameters())
     return solver
 
 
@@ -110,62 +108,24 @@ class DQN(Algorithm):
             raise ValueError('Invalid env_info Action space of DQN must be {}'
                              .format(gym.spaces.Discrete))
 
-        self._q = q_func_builder(
-            scope_name='q', env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._q, M.QFunction)
-
-        self._target_q = q_func_builder(
-            scope_name='target_q', env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._target_q, M.QFunction)
+        def solver_builder():
+            return default_q_solver_builder(self._params)
+        self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_params=self._params)
+        self._q_solver = {self._q.scope_name: solver_builder()}
+        self._target_q = self._q.deepcopy('target_' + self._q.scope_name)
+        assert isinstance(self._q, QFunction)
+        assert isinstance(self._target_q, QFunction)
 
         self._state = None
         self._action = None
         self._next_state = None
-        self._replay_buffer = replay_buffer_builder(
-            capacity=params.replay_buffer_size)
+        self._replay_buffer = replay_buffer_builder(capacity=params.replay_buffer_size)
 
         self._exploration_strategy = ES.EpsilonGreedyExplorationStrategy(self._params.initial_epsilon,
                                                                          self._params.final_epsilon,
                                                                          self._params.max_explore_steps,
                                                                          self._greedy_action_selector,
                                                                          self._random_action_selector)
-
-        # Training input variables
-        s_current_var = \
-            nn.Variable((params.batch_size, *self._env_info.state_shape))
-        a_current_var = \
-            nn.Variable((params.batch_size, 1)
-                        )  # discrete (having 1 action dim)
-        s_next_var = nn.Variable((params.batch_size, *self._env_info.state_shape))
-        reward_var = nn.Variable((params.batch_size, 1))
-        non_terminal_var = nn.Variable((params.batch_size, 1))
-        weight_var = nn.Variable((params.batch_size, 1))
-        TrainingVariables = namedtuple(
-            'TrainingVariables',
-            ['s_current', 'a_current', 'reward', 's_next', 'non_terminal', "weight"])
-        self._training_variables = \
-            TrainingVariables(s_current_var, a_current_var, reward_var,
-                              s_next_var, non_terminal_var, weight_var)
-
-        # Training loss/output
-        self._q_var = None
-        self._huber_loss_var = None
-        self._td_error_var = None
-
-        # Evaluation input variables
-        s_eval_var = nn.Variable((1, *self._env_info.state_shape))
-
-        EvaluationVariables = \
-            namedtuple('EvaluationVariables', ['s_eval'])
-        self._evaluation_variables = EvaluationVariables(s_eval_var)
-
-        # Evaluation output
-        self._a_greedy = None
-
-    def _post_init(self):
-        super(DQN, self)._post_init()
-        copy_network_parameters(
-            self._q.get_parameters(), self._target_q.get_parameters(), tau=1.0)
 
     def compute_eval_action(self, s):
         action, _ = epsilon_greedy_action_selection(s,
@@ -174,34 +134,30 @@ class DQN(Algorithm):
                                                     epsilon=self._params.test_epsilon)
         return action
 
-    def _build_training_graph(self):
-        # target q
-        max_q_var = self._target_q.maximum(self._training_variables.s_next)
-        target_q_var = \
-            self._training_variables.reward \
-            + self._params.gamma \
-            * self._training_variables.non_terminal \
-            * max_q_var
+    def _before_training_start(self, env_or_buffer):
+        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
 
-        target_q_var.need_grad = False
+    def _setup_q_function_training(self, env_or_buffer):
+        trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
+            gamma=self._params.gamma,
+            reduction_method='sum',
+            grad_clip=(-1.0, 1.0))
 
-        # predict q
-        self._q_var = self._q.q(self._training_variables.s_current,
-                                self._training_variables.a_current)
+        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+            env_info=self._env_info,
+            params=trainer_params)
 
-        # take loss
-        self._huber_loss_var = NF.sum(0.5
-                                      * NF.huber_loss(self._q_var, target_q_var))
-
-        # compute td_error for prioritized replay buffer
-        self._td_error_var = NF.absolute_error(self._q_var, target_q_var)
-        self._td_error_var.need_grad = False
-
-    def _build_evaluation_graph(self):
-        self._a_greedy = self._q.argmax(self._evaluation_variables.s_eval)
-
-    def _setup_solver(self):
-        self._q_solver = default_q_solver_builder(self._q, self._params)
+        target_update_frequency = self._params.target_update_frequency / self._params.learner_update_frequency
+        training = MT.q_value_trainings.DQNTraining(train_function=self._q, target_function=self._target_q)
+        training = MT.common_extensions.PeriodicalTargetUpdate(
+            training,
+            src_models=self._q,
+            dst_models=self._target_q,
+            target_update_frequency=target_update_frequency,
+            tau=1.0)
+        q_function_trainer.setup_training(self._q, self._q_solver, training)
+        copy_network_parameters(self._q.get_parameters(), self._target_q.get_parameters())
+        return q_function_trainer
 
     def _run_online_training_iteration(self, env):
         if self._state is None:
@@ -225,60 +181,43 @@ class DQN(Algorithm):
             self._state = self._next_state
 
         if self._params.start_timesteps < self.iteration_num:
-            self._dqn_training(self._replay_buffer)
+            if self.iteration_num % self._params.learner_update_frequency == 0:
+                self._dqn_training(self._replay_buffer)
 
     def _run_offline_training_iteration(self, buffer):
         self._dqn_training(buffer)
 
     def _greedy_action_selector(self, s):
-        self._evaluation_variables.s_eval.d = np.expand_dims(s, axis=0)
-        self._a_greedy.forward()
-        return self._a_greedy.d
+        # Evaluation input variables
+        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
+
+        with nn.auto_forward():
+            a_greedy = self._q.argmax_q(s_eval_var)
+        return a_greedy.d
 
     def _random_action_selector(self, s):
         action = self._env_info.action_space.sample()
         return np.asarray(action).reshape((1, ))
 
     def _dqn_training(self, replay_buffer):
-        if self.iteration_num % self._params.learner_update_frequency != 0:
-            return
-
         experiences, info = replay_buffer.sample(self._params.batch_size)
-        (s, a, r, non_terminal, s_next) = marshall_experiences(experiences)
+        marshalled_experiences = marshall_experiences(experiences)
 
-        self._training_variables.s_current.d = s
-        self._training_variables.a_current.d = a
-        self._training_variables.s_next.d = s_next
-        self._training_variables.reward.d = r
-        self._training_variables.non_terminal.d = non_terminal
-        self._training_variables.weight.d = info["weights"]
+        kwargs = {}
+        kwargs['weights'] = info['weights']
+        errors = self._q_function_trainer.train(marshalled_experiences, **kwargs)
 
-        # update priority
-        self._td_error_var.forward(clear_no_need_grad=True)
-        errors = self._td_error_var.d.copy()
-        replay_buffer.update_priorities(errors)
-
-        # update model
-        self._huber_loss_var.forward(clear_no_need_grad=True)
-        self._q_solver.zero_grad()
-        self._huber_loss_var.backward(clear_buffer=True)
-        self._q_solver.update()
-
-        # Update target net
-        if self.iteration_num % self._params.target_update_frequency == 0:
-            copy_network_parameters(
-                self._q.get_parameters(),
-                self._target_q.get_parameters(), tau=1.0)
+        td_error = np.abs(errors['td_error'])
+        replay_buffer.update_priorities(td_error)
 
     def _models(self):
         models = {}
         models[self._q.scope_name] = self._q
-        models[self._target_q.scope_name] = self._target_q
         return models
 
     def _solvers(self):
         solvers = {}
-        solvers['q_solver'] = self._q_solver
+        solvers.update(self._q_solver)
         return solvers
 
     @property
@@ -286,9 +225,4 @@ class DQN(Algorithm):
         latest_iteration_state = {}
         latest_iteration_state['scalar'] = {}
         latest_iteration_state['histogram'] = {}
-
-        latest_iteration_state['scalar']['predicted_q_val'] = self._q_var.d.flatten(
-        )
-        latest_iteration_state['scalar']['td_loss'] = self._huber_loss_var.d.flatten(
-        )
         return latest_iteration_state

@@ -58,7 +58,7 @@ def run_showcase(args):
     iqn = serializers.load_snapshot(args.snapshot_dir)
     if not isinstance(iqn, A.IQN):
         raise ValueError('Loaded snapshot is not trained with IQN!')
-    iqn.update_algorithm_params({'test_epsilon': 0.001})
+    iqn.update_algorithm_params(**{'test_epsilon': 0.001})
 
     eval_env = build_atari_env(
         args.env, test=True, seed=args.seed + 200, render=True)

@@ -4,11 +4,11 @@ import numpy as np
 
 import nnabla as nn
 
-import nnabla_rl.models as M
+from nnabla_rl.models import VFunction
 from nnabla_rl.algorithms.common_utils import compute_v_target_and_advantage
 
 
-class DummyVFunction(M.VFunction):
+class DummyVFunction(VFunction):
     def __init__(self):
         super(DummyVFunction, self).__init__("test_v_function")
         self._state_dim = 1

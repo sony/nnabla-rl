@@ -25,7 +25,9 @@ class TestTD3(object):
         """
 
         dummy_env = E.DummyContinuous()
-        td3 = A.TD3(dummy_env)
+        batch_size = 5
+        params = A.TD3Param(batch_size=batch_size, start_timesteps=5)
+        td3 = A.TD3(dummy_env, params=params)
 
         td3.train_online(dummy_env, total_iterations=10)
 
@@ -53,18 +55,6 @@ class TestTD3(object):
         action = td3.compute_eval_action(state)
 
         assert action.shape == dummy_env.action_space.shape
-
-    def test_target_network_initialization(self):
-        dummy_env = E.DummyContinuous()
-        td3 = A.TD3(dummy_env)
-
-        # Should be initialized to same parameters
-        assert self._has_same_parameters(
-            td3._q1.get_parameters(), td3._target_q1.get_parameters())
-        assert self._has_same_parameters(
-            td3._q2.get_parameters(), td3._target_q2.get_parameters())
-        assert self._has_same_parameters(
-            td3._pi.get_parameters(), td3._target_pi.get_parameters())
 
     def test_params_lie_in_range(self):
         with pytest.raises(ValueError):
@@ -117,12 +107,6 @@ class TestTD3(object):
         assert td3._params.batch_size == batch_size
         assert td3._params.start_timesteps == start_timesteps
         assert td3._params.replay_buffer_size == replay_buffer_size
-
-    def _has_same_parameters(self, params1, params2):
-        for key in params1.keys():
-            if not np.allclose(params1[key].data.data, params2[key].data.data):
-                return False
-        return True
 
 
 if __name__ == "__main__":

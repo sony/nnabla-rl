@@ -1,5 +1,4 @@
 import nnabla as nn
-import nnabla.functions as NF
 import nnabla.solvers as NS
 
 from dataclasses import dataclass
@@ -10,30 +9,30 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-import nnabla_rl.models as M
+from nnabla_rl.models import TD3QFunction, BCQVariationalAutoEncoder, BCQPerturbator, QFunction, DeterministicPolicy
+import nnabla_rl.model_trainers as MT
 import nnabla_rl.functions as RF
-from nnabla_rl.distributions import Gaussian
 
 
 def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return M.TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim)
+    return TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim)
 
 
 def default_vae_builder(scope_name, env_info, algorithm_params, **kwargs):
     max_action_value = float(env_info.action_space.high[0])
-    return M.BCQVariationalAutoEncoder(scope_name,
-                                       env_info.state_dim,
-                                       env_info.action_dim,
-                                       env_info.action_dim*2,
-                                       max_action_value)
+    return BCQVariationalAutoEncoder(scope_name,
+                                     env_info.state_dim,
+                                     env_info.action_dim,
+                                     env_info.action_dim*2,
+                                     max_action_value)
 
 
 def default_perturbator_builder(scope_name, env_info, algorithm_params, **kwargs):
     max_action_value = float(env_info.action_space.high[0])
-    return M.BCQPerturbator(scope_name,
-                            env_info.state_dim,
-                            env_info.action_dim,
-                            max_action_value)
+    return BCQPerturbator(scope_name,
+                          env_info.state_dim,
+                          env_info.action_dim,
+                          max_action_value)
 
 
 @dataclass
@@ -92,23 +91,27 @@ class BCQ(Algorithm):
         super(BCQ, self).__init__(env_or_env_info, params=params)
 
         self._q_ensembles = []
+        self._q_solvers = {}
         self._target_q_ensembles = []
+
+        def solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate)
         for i in range(self._params.num_q_ensembles):
-            q = q_function_builder(scope_name="q{}".format(i),
+            q = q_function_builder(scope_name=f"q{i}",
                                    env_info=self._env_info,
                                    algorithm_params=self._params)
-            assert isinstance(q, M.QFunction)
-            target_q = q_function_builder(scope_name="q{}".format(i),
-                                          env_info=self._env_info,
-                                          algorithm_params=self._params)
+            target_q = q.deepcopy(f'target_q{i}')
+            assert isinstance(q, QFunction)
+            assert isinstance(target_q, QFunction)
             self._q_ensembles.append(q)
+            self._q_solvers[q.scope_name] = solver_builder()
             self._target_q_ensembles.append(target_q)
 
         self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_params=self._params)
+        self._vae_solver = {self._vae.scope_name: solver_builder()}
 
-        self._xi = perturbator_builder(scope_name="xi",
-                                       env_info=self._env_info,
-                                       algorithm_params=self._params)
+        self._xi = perturbator_builder(scope_name="xi", env_info=self._env_info, algorithm_params=self._params)
+        self._xi_solver = {self._xi.scope_name: solver_builder()}
         self._target_xi = perturbator_builder(scope_name="target_xi",
                                               env_info=self._env_info,
                                               algorithm_params=self._params)
@@ -118,69 +121,99 @@ class BCQ(Algorithm):
         self._next_state = None
         self._replay_buffer = ReplayBuffer(capacity=None)
 
-        # training input/loss variables
-        self._s_current_var = nn.Variable((params.batch_size, self._env_info.state_dim))
-        self._a_current_var = nn.Variable((params.batch_size, self._env_info.action_dim))
-        self._s_next_var = nn.Variable((params.batch_size, self._env_info.state_dim))
-        self._reward_var = nn.Variable((params.batch_size, 1))
-        self._non_terminal_var = nn.Variable((params.batch_size, 1))
-        self._vae_loss = None
-        self._q_loss = None
-        self._xi_loss = None
-
-        latent_shape = (self._params.batch_size, self._env_info.action_dim * 2)
-        self._target_latent_distribution = Gaussian(mean=np.zeros(shape=latent_shape, dtype=np.float32),
-                                                    ln_var=np.zeros(shape=latent_shape, dtype=np.float32))
-
-        # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, self._env_info.state_dim))
-        self._eval_action = None
-        self._eval_max_index = None
-
-    def _post_init(self):
-        super(BCQ, self)._post_init()
-        for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
-            copy_network_parameters(
-                q.get_parameters(), target_q.get_parameters(), 1.0)
-        copy_network_parameters(self._xi.get_parameters(),
-                                self._target_xi.get_parameters(),
-                                1.0)
+        self._q_function_trainer = None
+        self._vae_trainer = None
+        self._perturbator_trainer = None
 
     def compute_eval_action(self, state):
-        self._eval_state_var.d = np.expand_dims(state, axis=0)
-        nn.forward_all([self._eval_action, self._eval_max_index])
-        action = self._eval_action.d[self._eval_max_index.d[0]]
-        return action
+        # evaluation input/action variables
+        eval_state_var = nn.Variable((1, *state.shape))
+        eval_state_var.d = np.expand_dims(state, axis=0)
 
-    def _build_training_graph(self):
-        self._build_vae_update_graph()
-        self._build_q_update_graph()
-        self._build_xi_update_graph()
+        with nn.auto_forward():
+            repeat_num = 100
+            state = RF.repeat(x=eval_state_var, repeats=repeat_num, axis=0)
+            assert state.shape == (repeat_num, eval_state_var.shape[1])
+            actions = self._vae.decode(state)
+            noise = self._xi.generate_noise(state, actions, self._params.phi)
+            eval_action = actions + noise
+            q_values = self._q_ensembles[0].q(state, eval_action)
+            eval_max_index = RF.argmax(q_values, axis=0)
 
-    def _build_evaluation_graph(self):
-        repeat_num = 100
-        state = RF.repeat(x=self._eval_state_var,
-                          repeats=repeat_num,
-                          axis=0)
-        assert state.shape == (repeat_num, self._eval_state_var.shape[1])
-        actions = self._vae.decode(state)
-        noise = self._xi.generate_noise(state, actions, self._params.phi)
-        self._eval_action = actions + noise
-        q_values = self._q_ensembles[0].q(state, self._eval_action)
-        self._eval_max_index = RF.argmax(q_values, axis=0)
+        return eval_action.d[eval_max_index.d[0]]
 
-    def _setup_solver(self):
-        self._vae_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._vae_solver.set_parameters(self._vae.get_parameters())
+    def _before_training_start(self, env_or_buffer):
+        self._vae_trainer = self._setup_vae_training(env_or_buffer)
+        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
+        self._perturbator_trainer = self._setup_perturbator_training(env_or_buffer)
 
-        self._q_solvers = []
-        for q in self._q_ensembles:
-            solver = NS.Adam(alpha=self._params.learning_rate)
-            solver.set_parameters(q.get_parameters())
-            self._q_solvers.append(solver)
+    def _setup_vae_training(self, env_or_buffer):
+        trainer_params = MT.vae_trainers.KLDVariationalAutoEncoderTrainerParam()
 
-        self._xi_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._xi_solver.set_parameters(self._xi.get_parameters())
+        vae_trainer = MT.vae_trainers.KLDVariationalAutoEncoderTrainer(
+            env_info=self._env_info,
+            params=trainer_params)
+        training = MT.model_trainer.Training()
+        vae_trainer.setup_training(self._vae, self._vae_solver, training)
+        return vae_trainer
+
+    def _setup_q_function_training(self, env_or_buffer):
+        trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
+            gamma=self._params.gamma,
+            reduction_method='mean')
+
+        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+            env_info=self._env_info,
+            params=trainer_params)
+
+        # This is a wrapper class which outputs the target action for next state in q function training
+        class PerturbedPolicy(DeterministicPolicy):
+            def __init__(self, vae, perturbator, phi):
+                self._vae = vae
+                self._perturbator = perturbator
+                self._phi = phi
+
+            def pi(self, s):
+                a = self._vae.decode(s)
+                noise = self._perturbator.generate_noise(s, a, phi=self._phi)
+                return a + noise
+        target_policy = PerturbedPolicy(self._vae, self._target_xi, self._params.phi)
+        training = MT.q_value_trainings.BCQTraining(train_functions=self._q_ensembles,
+                                                    target_functions=self._target_q_ensembles,
+                                                    target_policy=target_policy,
+                                                    num_action_samples=self._params.num_action_samples,
+                                                    lmb=self._params.lmb)
+        training = MT.common_extensions.PeriodicalTargetUpdate(
+            training,
+            src_models=self._q_ensembles,
+            dst_models=self._target_q_ensembles,
+            target_update_frequency=1,
+            tau=self._params.tau)
+        q_function_trainer.setup_training(self._q_ensembles, self._q_solvers, training)
+        for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
+            copy_network_parameters(q.get_parameters(), target_q.get_parameters(), 1.0)
+        return q_function_trainer
+
+    def _setup_perturbator_training(self, env_or_buffer):
+        trainer_params = MT.perturbator_trainers.BCQPerturbatorTrainerParam(
+            phi=self._params.phi
+        )
+
+        perturbator_trainer = MT.perturbator_trainers.BCQPerturbatorTrainer(
+            env_info=self._env_info,
+            params=trainer_params,
+            q_function=self._q_ensembles[0],
+            vae=self._vae)
+        training = MT.model_trainer.Training()
+        training = MT.common_extensions.PeriodicalTargetUpdate(
+            training,
+            src_models=self._xi,
+            dst_models=self._target_xi,
+            target_update_frequency=1,
+            tau=self._params.tau)
+        perturbator_trainer.setup_training(self._xi, self._xi_solver, training)
+        copy_network_parameters(self._xi.get_parameters(), self._target_xi.get_parameters(), 1.0)
+        return perturbator_trainer
 
     def _run_online_training_iteration(self, env):
         raise NotImplementedError('BCQ does not support online training')
@@ -188,98 +221,20 @@ class BCQ(Algorithm):
     def _run_offline_training_iteration(self, buffer):
         self._bcq_training(buffer)
 
-    def _build_vae_update_graph(self):
-        latent_distribution, reconstructed_action = self._vae(
-            self._s_current_var, self._a_current_var)
-        reconstruction_loss = RF.mean_squared_error(
-            self._a_current_var, reconstructed_action)
-        kl_divergence = \
-            latent_distribution.kl_divergence(self._target_latent_distribution)
-        latent_loss = 0.5 * NF.mean(kl_divergence)
-        self._vae_loss = reconstruction_loss + latent_loss
-
-    def _build_q_update_graph(self):
-        s_next_rep = RF.repeat(
-            x=self._s_next_var, repeats=self._params.num_action_samples, axis=0)
-        assert s_next_rep.shape == (self._params.batch_size * self._params.num_action_samples,
-                                    self._env_info.state_dim)
-        a_next_rep = self._vae.decode(s_next_rep)
-        assert a_next_rep.shape == (self._params.batch_size * self._params.num_action_samples,
-                                    self._env_info.action_dim)
-        noise = self._target_xi.generate_noise(
-            s_next_rep, a_next_rep, phi=self._params.phi)
-        q_values = NF.stack(*(q_target.q(s_next_rep, a_next_rep + noise)
-                              for q_target in self._target_q_ensembles))
-        assert q_values.shape == (self._params.num_q_ensembles,
-                                  self._params.batch_size * self._params.num_action_samples,
-                                  1)
-        weighted_q_minmax = self._params.lmb * NF.min(q_values, axis=0) \
-            + (1.0 - self._params.lmb) * NF.max(q_values, axis=0)
-        assert weighted_q_minmax.shape == (
-            self._params.batch_size * self._params.num_action_samples, 1)
-
-        next_q_value = NF.max(
-            NF.reshape(weighted_q_minmax, shape=(self._params.batch_size, -1)), axis=1, keepdims=True)
-        assert next_q_value.shape == (self._params.batch_size, 1)
-        target_q_value = self._reward_var + self._params.gamma * \
-            self._non_terminal_var * next_q_value
-        target_q_value.need_grad = False
-
-        loss = 0.0
-        for q in self._q_ensembles:
-            loss += RF.mean_squared_error(target_q_value,
-                                          q.q(self._s_current_var, self._a_current_var))
-        self._q_loss = loss
-
-    def _build_xi_update_graph(self):
-        action = self._vae.decode(self._s_current_var)
-        action.need_grad = False
-
-        noise = self._xi.generate_noise(self._s_current_var,
-                                        action,
-                                        phi=self._params.phi)
-
-        q_function = self._q_ensembles[0]
-        xi_loss = -q_function.q(self._s_current_var, action + noise)
-        assert xi_loss.shape == (self._params.batch_size, 1)
-
-        self._xi_loss = NF.mean(xi_loss)
-
     def _bcq_training(self, replay_buffer):
-        experiences, *_ = replay_buffer.sample(self._params.batch_size)
-        (s, a, r, non_terminal, s_next) = marshall_experiences(experiences)
-        # Optimize critic
-        self._s_current_var.d = s
-        self._a_current_var.d = a
-        self._s_next_var.d = s_next
-        self._reward_var.d = r
-        self._non_terminal_var.d = non_terminal
+        experiences, info = replay_buffer.sample(self._params.batch_size)
+        marshalled_experiences = marshall_experiences(experiences)
 
         # Train vae
-        self._vae_loss.forward()
-        self._vae_solver.zero_grad()
-        self._vae_loss.backward()
-        self._vae_solver.update()
+        self._vae_trainer.train(marshalled_experiences)
 
-        # Train q functions
-        self._q_loss.forward()
-        for q_solver in self._q_solvers:
-            q_solver.zero_grad()
-        self._q_loss.backward()
-        for q_solver in self._q_solvers:
-            q_solver.update()
+        kwargs = {}
+        kwargs['weights'] = info['weights']
+        errors = self._q_function_trainer.train(marshalled_experiences, **kwargs)
+        td_error = np.abs(errors['td_error'])
+        replay_buffer.update_priorities(td_error)
 
-        self._xi_loss.forward()
-        self._xi_solver.zero_grad()
-        self._xi_loss.backward()
-        self._xi_solver.update()
-
-        for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
-            copy_network_parameters(
-                q.get_parameters(), target_q.get_parameters(), self._params.tau)
-        copy_network_parameters(self._xi.get_parameters(),
-                                self._target_xi.get_parameters(),
-                                self._params.tau)
+        self._perturbator_trainer.train(marshalled_experiences)
 
     def _models(self):
         models = [*self._q_ensembles, *self._target_q_ensembles,
@@ -288,20 +243,10 @@ class BCQ(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers['vae_solver'] = self._vae_solver
-        for i, solver in enumerate(self._q_solvers):
-            solvers['q{}_solver'.format(i)] = solver
-        solvers['xi_solver'] = self._xi_solver
+        solvers.update(self._vae_solver)
+        solvers.update(self._q_solvers)
+        solvers.update(self._xi_solver)
         return solvers
-
-    @property
-    def latest_iteration_state(self):
-        state = super(BCQ, self).latest_iteration_state
-        state['scalar']['vae_loss'] = self._vae_loss.d
-        state['scalar']['q_loss'] = self._q_loss.d
-        state['scalar']['xi_loss'] = self._xi_loss.d
-
-        return state
 
 
 if __name__ == "__main__":

@@ -1,27 +1,26 @@
 import nnabla as nn
-import nnabla.functions as NF
 import nnabla.solvers as NS
 
 from dataclasses import dataclass
-from collections import namedtuple
 
 import numpy as np
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
-import nnabla_rl.models as M
+from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy
+import nnabla_rl.model_trainers as MT
 
 
 def build_continuous_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return M.REINFORCEContinousPolicy(scope_name,
-                                      env_info.state_dim,
-                                      env_info.action_dim,
-                                      algorithm_params.fixed_ln_var)
+    return REINFORCEContinousPolicy(scope_name,
+                                    env_info.state_dim,
+                                    env_info.action_dim,
+                                    algorithm_params.fixed_ln_var)
 
 
 def build_discrete_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return M.REINFORCEDiscretePolicy(scope_name, env_info.state_dim, env_info.action_dim)
+    return REINFORCEDiscretePolicy(scope_name, env_info.state_dim, env_info.action_dim)
 
 
 @dataclass
@@ -40,8 +39,7 @@ class REINFORCEParam(AlgorithmParam):
 
         '''
         self._assert_positive(self.reward_scale, 'reward_scale')
-        self._assert_positive(
-            self.num_rollouts_per_train_iteration, 'num_rollouts_per_train_iteration')
+        self._assert_positive(self.num_rollouts_per_train_iteration, 'num_rollouts_per_train_iteration')
         self._assert_positive(self.learning_rate, 'learning_rate')
         self._assert_positive(self.clip_grad_norm, 'clip_grad_norm')
 
@@ -59,38 +57,34 @@ class REINFORCE(Algorithm):
                 self._policy = build_discrete_policy("pi", self._env_info, self._params)
             else:
                 self._policy = build_continuous_policy("pi", self._env_info, self._params)
+        assert isinstance(self._policy, StochasticPolicy)
 
-        assert isinstance(self._policy, M.Policy)
+        def policy_solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate)
+        self._policy_solver = {self._policy.scope_name: policy_solver_builder()}
 
         self._state = None
         self._action = None
         self._next_state = None
         self._buffer = None
-        self._training_variables = None
-        self._evaluation_variables = None
-
-        # The graph will be rebuilt when training runs
-        self._create_variables(self._env_info.state_dim, self._env_info.action_dim, batch_size=1)
 
     def compute_eval_action(self, s):
         return self._compute_action(s)
 
-    def _rebuild_computation_graph(self):
-        self._build_computation_graph()
+    def _before_training_start(self, env_or_buffer):
+        self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
-    def _build_training_graph(self):
-        distribution = self._policy.pi(self._training_variables.s_current)
-        log_prob = distribution.log_prob(self._training_variables.a_current)
-        self._policy_loss = NF.sum(-log_prob.reshape((-1, )) * self._training_variables.accumulated_reward) / \
-            self._params.num_rollouts_per_train_iteration
+    def _setup_policy_training(self, env_or_buffer):
+        policy_trainer_params = MT.policy_trainers.SPGPolicyTrainerParam(
+            pi_loss_scalar=1.0/self._params.num_rollouts_per_train_iteration,
+            grad_clip_norm=self._params.clip_grad_norm)
+        policy_trainer = MT.policy_trainers.SPGPolicyTrainer(
+            env_info=self._env_info,
+            params=policy_trainer_params)
 
-    def _build_evaluation_graph(self):
-        distribution = self._policy.pi(self._evaluation_variables.s_eval)
-        self._eval_action = distribution.sample()
-
-    def _setup_solver(self):
-        self._policy_solver = NS.Adam(alpha=self._params.learning_rate)
-        self._policy_solver.set_parameters(self._policy.get_parameters())
+        training = MT.policy_trainings.REINFORCETraining()
+        policy_trainer.setup_training(self._policy, self._policy_solver, training)
+        return policy_trainer
 
     def _run_online_training_iteration(self, env):
         self._buffer = ReplayBuffer(
@@ -118,50 +112,12 @@ class REINFORCE(Algorithm):
     def _run_offline_training_iteration(self, buffer):
         raise NotImplementedError
 
-    def _create_variables(self, state_dim, action_dim, batch_size):
-        # Training input/loss variables
-        Variables = namedtuple('Variables',
-                               ['s_current', 'a_current', 'accumulated_reward'])
-
-        s_current_var = nn.Variable((batch_size, state_dim))
-        accumulated_reward_var = nn.Variable((batch_size, ))
-
-        if self._env_info.is_discrete_action_env():
-            a_current_var = nn.Variable((batch_size, 1))
-        else:
-            a_current_var = nn.Variable((batch_size, action_dim))
-
-        self._training_variables = Variables(
-            s_current_var, a_current_var, accumulated_reward_var)
-        self._policy_loss = None
-
-        # Evaluation input variables
-        s_eval_var = nn.Variable((1, state_dim))
-
-        EvaluationVariables = \
-            namedtuple('EvaluationVariables', ['s_eval'])
-        self._evaluation_variables = EvaluationVariables(s_eval_var)
-
     def _reinforce_training(self, buffer):
         # sample all experience in the buffer
         experiences, *_ = buffer.sample(buffer.capacity)
-        s_batch, a_batch, accumulated_reward_batch = self._align_experiences_and_compute_accumulated_reward(
-            experiences)
+        s_batch, a_batch, accumulated_reward_batch = self._align_experiences_and_compute_accumulated_reward(experiences)
 
-        # rebuild computational graph to fit batch size
-        self._create_variables(
-            s_batch.shape[1], a_batch.shape[1], len(s_batch))
-        self._rebuild_computation_graph()
-
-        self._training_variables.s_current.d = s_batch
-        self._training_variables.a_current.d = a_batch
-        self._training_variables.accumulated_reward.d = accumulated_reward_batch
-
-        self._policy_loss.forward(clear_no_need_grad=True)
-        self._policy_solver.zero_grad()
-        self._policy_loss.backward(clear_buffer=True)
-        self._policy_solver.clip_grad_by_norm(self._params.clip_grad_norm)
-        self._policy_solver.update()
+        self._policy_trainer.train((s_batch, a_batch, accumulated_reward_batch))
 
     def _align_experiences_and_compute_accumulated_reward(self, experiences):
         s_batch = None
@@ -169,8 +125,7 @@ class REINFORCE(Algorithm):
         accumulated_reward_batch = None
 
         for experience in experiences:
-            s_seq, a_seq, r_seq, non_terminal_seq, s_next_seq = marshall_experiences(
-                experience)
+            s_seq, a_seq, r_seq, _, _ = marshall_experiences(experience)
             accumulated_reward = np.cumsum(r_seq[::-1])[::-1]
 
             if s_batch is None:
@@ -186,10 +141,12 @@ class REINFORCE(Algorithm):
 
         return s_batch, a_batch, accumulated_reward_batch
 
-    def _compute_action(self, s, return_log_prob=True):
-        self._evaluation_variables.s_eval.d = np.expand_dims(s, axis=0)
-        self._eval_action.forward()
-        return self._eval_action.d.flatten()
+    def _compute_action(self, s):
+        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
+        with nn.auto_forward():
+            distribution = self._policy.pi(s_eval_var)
+            eval_action = distribution.sample()
+        return eval_action.d.flatten()
 
     def _models(self):
         models = {}
@@ -198,7 +155,7 @@ class REINFORCE(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers['policy_solver'] = self._policy_solver
+        solvers.update(self._policy_solver)
         return solvers
 
     @property
@@ -206,7 +163,4 @@ class REINFORCE(Algorithm):
         latest_iteration_state = {}
         latest_iteration_state['scalar'] = {}
         latest_iteration_state['histogram'] = {}
-
-        latest_iteration_state['scalar']['loss'] = self._policy_loss.d.flatten(
-        )
         return latest_iteration_state

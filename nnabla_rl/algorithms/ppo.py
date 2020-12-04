@@ -1,5 +1,4 @@
 import nnabla as nn
-import nnabla.functions as NF
 import nnabla.solvers as NS
 
 from dataclasses import dataclass
@@ -12,9 +11,13 @@ import multiprocessing as mp
 import os
 import gym
 
-import nnabla_rl.models as M
 import nnabla_rl.preprocessors as RP
-import nnabla_rl.functions as RF
+import nnabla_rl.model_trainers as MT
+import nnabla_rl.utils.context as context
+from nnabla_rl.models import \
+    PPOSharedFunctionHead, PPOAtariPolicy, PPOAtariVFunction, \
+    PPOMujocoPolicy, PPOMujocoVFunction, \
+    StochasticPolicy, VFunction
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
@@ -22,26 +25,25 @@ from nnabla_rl.utils.data import marshall_experiences, unzip
 from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
                                           mp_array_from_np_array, new_mp_arrays_from_params,
                                           copy_mp_arrays_to_params, copy_params_to_mp_arrays)
-import nnabla_rl.utils.context as context
 
 
 def build_shared_policy(scope_name, env_info, algorithm_params, head, **kwargs):
-    return M.PPOAtariPolicy(scope_name=scope_name,
-                            state_shape=env_info.state_shape,
-                            action_dim=env_info.action_dim,
-                            head=head)
+    return PPOAtariPolicy(scope_name=scope_name,
+                          state_shape=env_info.state_shape,
+                          action_dim=env_info.action_dim,
+                          head=head)
 
 
 def build_shared_v_function(scope_name, env_info, algorithm_params, head,  **kwargs):
-    return M.PPOAtariVFunction(scope_name=scope_name, state_shape=env_info.state_shape, head=head)
+    return PPOAtariVFunction(scope_name=scope_name, state_shape=env_info.state_shape, head=head)
 
 
 def build_mujoco_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return M.PPOMujocoPolicy(scope_name=scope_name, state_dim=env_info.state_dim, action_dim=env_info.action_dim)
+    return PPOMujocoPolicy(scope_name=scope_name, state_dim=env_info.state_dim, action_dim=env_info.action_dim)
 
 
 def build_mujoco_v_function(scope_name, env_info, algorithm_params, **kwargs):
-    return M.PPOMujocoVFunction(scope_name=scope_name, state_shape=env_info.state_shape)
+    return PPOMujocoVFunction(scope_name=scope_name, state_shape=env_info.state_shape)
 
 
 def build_mujoco_state_preprocessor(scope_name, env_info, algorithm_params, **kwargs):
@@ -50,9 +52,9 @@ def build_mujoco_state_preprocessor(scope_name, env_info, algorithm_params, **kw
 
 def build_discrete_env_policy_and_v_function(policy_builder, value_function_builder,
                                              env_info, algorithm_params, **kwargs):
-    shared_function_head = M.PPOSharedFunctionHead(scope_name="value_and_pi",
-                                                   state_shape=env_info.state_shape,
-                                                   action_dim=env_info.action_dim)
+    shared_function_head = PPOSharedFunctionHead(scope_name="value_and_pi",
+                                                 state_shape=env_info.state_shape,
+                                                 action_dim=env_info.action_dim)
     kwargs['head'] = shared_function_head
 
     pi_builder = build_shared_policy if policy_builder is None else policy_builder
@@ -147,40 +149,20 @@ class PPO(Algorithm):
             self._v_function.set_state_preprocessor(self._state_preprocessor)
         if self._state_preprocessor is not None:
             assert isinstance(self._state_preprocessor, RP.Preprocessor)
-        assert isinstance(self._policy, M.StochasticPolicy)
-        assert isinstance(self._v_function, M.VFunction)
+        assert isinstance(self._policy, StochasticPolicy)
+        assert isinstance(self._v_function, VFunction)
 
-        self._v_solver = None
-        self._policy_solver = None
+        def policy_solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate, eps=1e-5)
+        self._policy_solver = {self._policy.scope_name: policy_solver_builder()}
+
+        def v_function_solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate, eps=1e-5)
+        self._v_function_solver = {self._v_function.scope_name: v_function_solver_builder()}
 
         self._state = None
         self._action = None
         self._next_state = None
-
-        # training input/loss variables
-        Variables = namedtuple('Variables',
-                               ['s_current', 'a_current', 'log_prob', 'v_target', 'advantage', 'alpha'])
-        if self._env_info.is_discrete_action_env():
-            self._variables = Variables(
-                nn.Variable((params.batch_size, *self._env_info.state_shape)),
-                nn.Variable((params.batch_size, 1)),
-                nn.Variable((params.batch_size, 1)),
-                nn.Variable((params.batch_size, 1)),
-                nn.Variable((params.batch_size, 1)),
-                nn.Variable((1, 1)))
-        else:
-            self._variables = Variables(
-                nn.Variable((params.batch_size, *self._env_info.state_shape)),
-                nn.Variable((params.batch_size, self._env_info.action_dim)),
-                nn.Variable((params.batch_size, 1)),
-                nn.Variable((params.batch_size, 1)),
-                nn.Variable((params.batch_size, 1)),
-                nn.Variable((1, 1)))
-        self._loss = None
-
-        # evaluation input/action variables
-        self._eval_state_var = nn.Variable((1, *self._env_info.state_shape))
-        self._eval_action = None
 
         self._actors = None
         self._actor_processes = []
@@ -191,54 +173,51 @@ class PPO(Algorithm):
             context._set_nnabla_context()
         return self._compute_action(state)
 
-    def _build_training_graph(self):
-        distribution = self._policy.pi(self._variables.s_current)
-        log_prob_new = distribution.log_prob(self._variables.a_current)
-        log_prob_old = self._variables.log_prob
-        probability_ratio = NF.exp(log_prob_new - log_prob_old)
-        clipped_ratio = NF.clip_by_value(probability_ratio,
-                                         1 - self._params.epsilon * self._variables.alpha,
-                                         1 + self._params.epsilon * self._variables.alpha)
-        lower_bounds = NF.minimum2(probability_ratio * self._variables.advantage,
-                                   clipped_ratio * self._variables.advantage)
-        clip_loss = NF.mean(lower_bounds)
-
-        value = self._v_function.v(self._variables.s_current)
-        value_loss = self._params.value_coefficient * \
-            RF.mean_squared_error(value, self._variables.v_target)
-
-        entropy = distribution.entropy()
-        entropy_loss = NF.mean(entropy)
-
-        policy_loss = -clip_loss - self._params.entropy_coefficient * entropy_loss
-        self._loss = value_loss + policy_loss
-
-    def _build_evaluation_graph(self):
-        distribution = self._policy.pi(self._eval_state_var)
-        self._eval_action = distribution.sample()
-
-    def _setup_solver(self):
-        self._v_solver = NS.Adam(self._params.learning_rate, eps=1e-5)
-        self._v_solver.set_parameters(self._v_function.get_parameters())
-        self._policy_solver = NS.Adam(self._params.learning_rate, eps=1e-5)
-        self._policy_solver.set_parameters(self._policy.get_parameters())
-
     def _before_training_start(self, env_or_buffer):
         if not self._is_env(env_or_buffer):
             raise ValueError('PPO only supports online training')
         context._gpu_id = self._gpu_id
         env = env_or_buffer
-        self._actors, self._actor_processes = \
-            self._launch_actor_processes(env)
-        context._set_nnabla_context()
-        # FIXME: Workaround to enable computing on gpu
-        self._rebuild_computation_graph()
 
-        old_v_solver = self._v_solver
-        old_policy_solver = self._policy_solver
-        self._setup_solver()
-        self._v_solver.set_states(old_v_solver.get_states())
-        self._policy_solver.set_states(old_policy_solver.get_states())
+        # FIXME: This setup is a workaround for creating underliying model parameters
+        # If the parameter is not created, the multiprocessable array (created in launch_actor_processes)
+        # will be empty and the agent does not learn anything
+        self._setup_policy_training(env_or_buffer)
+        self._setup_v_function_training(env_or_buffer)
+
+        self._actors, self._actor_processes = self._launch_actor_processes(env)
+        context._set_nnabla_context()
+
+        # Setup again here to use gpu (if it is set)
+        self._policy_trainer = self._setup_policy_training(env_or_buffer)
+        self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
+
+    def _setup_policy_training(self, env_or_buffer):
+        policy_trainer_params = MT.policy_trainers.PPOPolicyTrainerParam(
+            entropy_coefficient=self._params.entropy_coefficient
+        )
+        policy_trainer = MT.policy_trainers.PPOPolicyTrainer(
+            env_info=self._env_info,
+            params=policy_trainer_params)
+
+        training = MT.model_trainer.Training()
+        policy_trainer.setup_training(self._policy, self._policy_solver, training)
+        return policy_trainer
+
+    def _setup_v_function_training(self, env_or_buffer):
+        # training input/loss variables
+        v_function_trainer_params = MT.v_value_trainers.SquaredTDVFunctionTrainerParam(
+            reduction_method='mean',
+            v_loss_scalar=self._params.value_coefficient
+        )
+
+        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+            env_info=self._env_info,
+            params=v_function_trainer_params)
+
+        training = MT.v_value_trainings.MonteCarloVValueTraining()
+        v_function_trainer.setup_training(self._v_function, self._v_function_solver, training)
+        return v_function_trainer
 
     def _after_training_finish(self, env_or_buffer):
         for actor in self._actors:
@@ -261,13 +240,11 @@ class PPO(Algorithm):
             self._state_preprocessor.update(s)
 
         advantages = normalize(advantages)
-        data = list(zip(s, a, r, non_terminal, s_next,
-                        log_prob, v_targets, advantages))
+        data = list(zip(s, a, r, non_terminal, s_next, log_prob, v_targets, advantages))
         replay_buffer = ReplayBuffer()
         replay_buffer.append_all(data)
 
-        buffer_iterator = BufferIterator(
-            replay_buffer, batch_size=self._params.batch_size)
+        buffer_iterator = BufferIterator(replay_buffer, batch_size=self._params.batch_size)
         for _ in range(self._params.epochs):
             for experiences, *_ in buffer_iterator:
                 self._ppo_training(experiences)
@@ -309,37 +286,27 @@ class PPO(Algorithm):
         return (np.concatenate(item, axis=0) for item in unzip(results))
 
     def _ppo_training(self, experiences):
-        (s, a, _, _, _, log_prob, v_target, advantage) = \
-            marshall_experiences(experiences)
+        if self._params.decrease_alpha:
+            alpha = (1.0 - self.iteration_num / self._params.total_timesteps)
+            alpha = np.maximum(alpha, 0.0)
+        else:
+            alpha = 1.0
 
-        alpha = (1.0 - self.iteration_num / self._params.total_timesteps) \
-            if self._params.decrease_alpha else 1.0
-        alpha = np.maximum(alpha, 0.0)
+        (s, a, _, _, _, log_prob, v_target, advantage) = marshall_experiences(experiences)
+        policy_experience = (s, a, log_prob, advantage, alpha)
+        v_function_experience = (s, v_target)
 
-        # Optimize critic
-        self._variables.s_current.d = s
-        self._variables.a_current.d = a
-        self._variables.log_prob.d = log_prob
-        self._variables.v_target.d = v_target
-        self._variables.advantage.d = advantage
-        self._variables.alpha.d = alpha
-        self._v_solver.set_learning_rate(
-            self._params.learning_rate * alpha)
-        self._policy_solver.set_learning_rate(
-            self._params.learning_rate * alpha)
-
-        # Optimize actor and value function
-        self._v_solver.zero_grad()
-        self._policy_solver.zero_grad()
-        self._loss.forward()
-        self._loss.backward()
-        self._v_solver.update()
-        self._policy_solver.update()
+        self._policy_trainer.set_learning_rate(self._params.learning_rate * alpha)
+        self._policy_trainer.train(policy_experience)
+        self._v_function_trainer.set_learning_rate(self._params.learning_rate * alpha)
+        self._v_function_trainer.train(v_function_experience)
 
     def _compute_action(self, s):
-        self._eval_state_var.d = np.expand_dims(s, axis=0)
-        self._eval_action.forward(clear_buffer=True)
-        action = np.squeeze(self._eval_action.d, axis=0)
+        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
+        with nn.auto_forward():
+            distribution = self._policy.pi(s_eval_var)
+            eval_action = distribution.sample()
+        action = np.squeeze(eval_action.d, axis=0)
         if self._env_info.is_discrete_action_env():
             return np.int(action)
         else:
@@ -355,8 +322,8 @@ class PPO(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers['v_solver'] = self._v_solver
-        solvers['policy_solver'] = self._policy_solver
+        solvers.update(self._policy_solver)
+        solvers.update(self._v_function_solver)
         return solvers
 
     def _build_ppo_actors(self, env, v_function, policy, state_preprocessor):

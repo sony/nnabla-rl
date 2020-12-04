@@ -1,60 +1,12 @@
 import pytest
 
 import nnabla as nn
-import nnabla.functions as NF
 
 import numpy as np
 
 from nnabla_rl.replay_buffer import ReplayBuffer
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
-from nnabla_rl.algorithms.sac import AdjustableTemperature
-
-
-class TestAdjustableTemperature(object):
-    def setup_method(self, method):
-        nn.clear_parameters()
-
-    def test_initial_temperature(self):
-        initial_value = 5.0
-        temperature = AdjustableTemperature(
-            scope_name='test', initial_value=initial_value)
-        actual_value = temperature()
-        actual_value.forward(clear_no_need_grad=True)
-
-        assert actual_value.data.data == initial_value
-
-        # Create tempearture with random initial value
-        nn.clear_parameters()
-        temperature = AdjustableTemperature(scope_name='test')
-        actual_value = temperature()
-        actual_value.forward(clear_no_need_grad=True)
-
-        # No error occurs -> pass
-
-    def test_temperature_is_adjustable(self):
-        initial_value = 5.0
-        temperature = AdjustableTemperature(
-            scope_name='test', initial_value=initial_value)
-        solver = nn.solvers.Adam(alpha=1.0)
-        solver.set_parameters(temperature.get_parameters())
-
-        value = temperature()
-
-        loss = 0.5 * NF.mean(value ** 2)
-        loss.forward()
-
-        solver.zero_grad()
-        loss.backward()
-
-        solver.update()
-
-        updated_value = temperature()
-        updated_value.forward(clear_no_need_grad=True)
-
-        new_value = updated_value.data.data
-        assert not np.isclose(new_value, initial_value)
-        assert new_value < initial_value
 
 
 class TestSAC(object):
@@ -101,16 +53,6 @@ class TestSAC(object):
         action = sac.compute_eval_action(state)
 
         assert action.shape == dummy_env.action_space.shape
-
-    def test_target_network_initialization(self):
-        dummy_env = E.DummyContinuous()
-        sac = A.SAC(dummy_env)
-
-        # Should be initialized to same parameters
-        assert self._has_same_parameters(
-            sac._q1.get_parameters(), sac._target_q1.get_parameters())
-        assert self._has_same_parameters(
-            sac._q2.get_parameters(), sac._target_q2.get_parameters())
 
     def test_update_algorithm_params(self):
         dummy_env = E.DummyContinuous()
@@ -168,12 +110,6 @@ class TestSAC(object):
             A.SACParam(gradient_steps=-100)
         with pytest.raises(ValueError):
             A.SACParam(initial_temperature=-100)
-
-    def _has_same_parameters(self, params1, params2):
-        for key in params1.keys():
-            if not np.allclose(params1[key].data.data, params2[key].data.data):
-                return False
-        return True
 
 
 if __name__ == "__main__":

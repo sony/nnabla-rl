@@ -94,3 +94,17 @@ def quantile_huber_loss(x0, x1, kappa, tau):
 
 def mean_squared_error(x0, x1):
     return NF.mean(NF.squared_error(x0, x1))
+
+
+def minimum_n(variables):
+    if len(variables) < 1:
+        raise ValueError('Variables must have at least 1 variable')
+    if len(variables) == 1:
+        return variables[0]
+    if len(variables) == 2:
+        return NF.minimum2(variables[0], variables[1])
+
+    minimum = NF.minimum2(variables[0], variables[1])
+    for variable in variables[2:]:
+        minimum = NF.minimum2(minimum, variable)
+    return minimum

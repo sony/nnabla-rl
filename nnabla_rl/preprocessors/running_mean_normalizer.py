@@ -17,20 +17,10 @@ class RunningMeanNormalizer(Preprocessor, Model):
                 f'Unexpected clipping value range: {value_clip[0]} > {value_clip[1]}')
         self._value_clip = value_clip
         self._epsilon = epsilon
-
-        with nn.parameter_scope(scope_name):
-            self._mean = \
-                nn.parameter.get_parameter_or_create(name='mean',
-                                                     shape=(1, *shape),
-                                                     initializer=NI.ConstantInitializer(0.0))
-            self._var = nn.parameter.get_parameter_or_create(name='var',
-                                                             shape=(1, *shape),
-                                                             initializer=NI.ConstantInitializer(1.0))
-            self._count = nn.parameter.get_parameter_or_create(name='count',
-                                                               shape=(1, 1),
-                                                               initializer=NI.ConstantInitializer(1e-4))
+        self._shape = shape
 
     def process(self, x):
+        assert 0 < self._count.d
         std = (self._var + self._epsilon) ** 0.5
         normalized = (x - self._mean) / std
         if self._value_clip is not None:
@@ -57,3 +47,21 @@ class RunningMeanNormalizer(Preprocessor, Model):
         M2 = m_a + m_b + np.square(delta) * n_a * n_b / n_ab
         self._var.d = M2 / n_ab
         self._count.d = n_ab
+
+    @property
+    def _mean(self):
+        with nn.parameter_scope(self.scope_name):
+            return nn.parameter.get_parameter_or_create(name='mean', shape=(1, *self._shape),
+                                                        initializer=NI.ConstantInitializer(0.0))
+
+    @property
+    def _var(self):
+        with nn.parameter_scope(self.scope_name):
+            return nn.parameter.get_parameter_or_create(name='var', shape=(1, *self._shape),
+                                                             initializer=NI.ConstantInitializer(1.0))
+
+    @property
+    def _count(self):
+        with nn.parameter_scope(self.scope_name):
+            return nn.parameter.get_parameter_or_create(name='count', shape=(1, 1),
+                                                        initializer=NI.ConstantInitializer(1e-4))

@@ -1,29 +1,26 @@
 import nnabla as nn
 
-import nnabla.functions as NF
-import nnabla.solvers as NS
-
 import numpy as np
 
-from collections import namedtuple
 from dataclasses import dataclass
+
+import nnabla.solvers as NS
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_action_selection
 from nnabla_rl.replay_buffer import ReplayBuffer
-from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.logger import logger
+from nnabla_rl.utils.copy import copy_network_parameters
+from nnabla_rl.models import QRDQNQuantileDistributionFunction
 import nnabla_rl.exploration_strategies as ES
-import nnabla_rl.models as M
-import nnabla_rl.functions as RF
+import nnabla_rl.model_trainers as MT
 
 
 def default_quantile_dist_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return M.QRDQNQuantileDistributionFunction(scope_name,
-                                               env_info.state_shape,
-                                               env_info.action_dim,
-                                               algorithm_params.num_quantiles)
+    return QRDQNQuantileDistributionFunction(scope_name,
+                                             env_info.state_shape,
+                                             env_info.action_dim,
+                                             algorithm_params.num_quantiles)
 
 
 def default_replay_buffer_builder(capacity):
@@ -55,10 +52,8 @@ class QRDQNParam(AlgorithmParam):
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.batch_size, 'batch_size')
         self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
-        self._assert_positive(self.learner_update_frequency,
-                              'learner_update_frequency')
-        self._assert_positive(self.target_update_frequency,
-                              'target_update_frequency')
+        self._assert_positive(self.learner_update_frequency, 'learner_update_frequency')
+        self._assert_positive(self.target_update_frequency, 'target_update_frequency')
         self._assert_positive(self.max_explore_steps, 'max_explore_steps')
         self._assert_positive(self.learning_rate, 'learning_rate')
         self._assert_positive(self.initial_epsilon, 'initial_epsilon')
@@ -82,27 +77,14 @@ class QRDQN(Algorithm):
                  replay_buffer_builder=default_replay_buffer_builder):
         super(QRDQN, self).__init__(env_or_env_info, params=params)
 
-        if self._params.kappa == 0.0:
-            logger.info(
-                "kappa is set to 0.0. {} will use quantile regression loss".format(self.__name__))
-        else:
-            logger.info(
-                "kappa is non 0.0. {} will use quantile huber loss".format(self.__name__))
-
         if not self._env_info.is_discrete_action_env():
             raise ValueError('{} only supports discrete action environment'.format(self.__name__))
-        self._qj = 1 / self._params.num_quantiles
 
-        self._quantile_dist = quantile_dist_function_builder(
-            'quantile_dist_train', self._env_info, self._params)
-        assert isinstance(self._quantile_dist, M.QuantileDistributionFunction)
-
-        self._target_quantile_dist = quantile_dist_function_builder(
-            'quantile_dist_target', self._env_info, self._params)
-        assert isinstance(self._target_quantile_dist, M.QuantileDistributionFunction)
-
-        tau_hat = self._precompute_tau_hat(self._params.num_quantiles)
-        self._tau_hat_var = nn.Variable.from_numpy_array(tau_hat)
+        def solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate, eps=1e-2 / self._params.batch_size)
+        self._quantile_dist = quantile_dist_function_builder('quantile_dist_train', self._env_info, self._params)
+        self._quantile_dist_solver = {self._quantile_dist.scope_name: solver_builder()}
+        self._target_quantile_dist = self._quantile_dist.deepcopy('quantile_dist_target')
 
         self._state = None
         self._action = None
@@ -116,41 +98,6 @@ class QRDQN(Algorithm):
                                                                          self._greedy_action_selector,
                                                                          self._random_action_selector)
 
-        # Training input variables
-        s_current_var = \
-            nn.Variable((params.batch_size, *self._env_info.state_shape))
-        a_current_var = \
-            nn.Variable((params.batch_size, 1))
-        reward_var = nn.Variable((params.batch_size, 1))
-        non_terminal_var = nn.Variable((params.batch_size, 1))
-        s_next_var = nn.Variable((params.batch_size, *self._env_info.state_shape))
-        TrainingVariables = namedtuple(
-            'TrainingVariables', ['s_current', 'a_current', 'reward', 'non_terminal', 's_next'])
-        self._training_variables = \
-            TrainingVariables(s_current_var, a_current_var, reward_var,
-                              non_terminal_var, s_next_var)
-
-        # Training loss/output
-        self._quantile_huber_loss = None
-
-        # Evaluation input variables
-        s_eval_var = nn.Variable((1, *self._env_info.state_shape))
-
-        EvaluationVariables = \
-            namedtuple('EvaluationVariables', ['s_eval'])
-        self._evaluation_variables = EvaluationVariables(s_eval_var)
-
-        # Evaluation output
-        self._a_greedy = None
-
-    def _post_init(self):
-        super(QRDQN, self)._post_init()
-
-        copy_network_parameters(
-            self._quantile_dist.get_parameters(),
-            self._target_quantile_dist.get_parameters(),
-            tau=1.0)
-
     def compute_eval_action(self, state):
         action, _ = epsilon_greedy_action_selection(state,
                                                     self._greedy_action_selector,
@@ -158,53 +105,37 @@ class QRDQN(Algorithm):
                                                     epsilon=self._params.test_epsilon)
         return action
 
-    def _build_training_graph(self):
-        target_quantiles = self._target_quantile_dist.quantiles(
-            self._training_variables.s_next)
-        a_star = self._compute_argmax_q(target_quantiles)
+    def _before_training_start(self, env_or_buffer):
+        self._quantile_dist_trainer = self._setup_quantile_function_training(env_or_buffer)
 
-        theta_j = self._quantiles_of(target_quantiles, a_star)
-        Ttheta_j = self._training_variables.reward + \
-            self._training_variables.non_terminal * self._params.gamma * theta_j
-        Ttheta_j = RF.expand_dims(Ttheta_j, axis=1)
-        Ttheta_j.need_grad = False
-        assert Ttheta_j.shape == (
-            self._params.batch_size, 1, self._params.num_quantiles)
+    def _setup_quantile_function_training(self, env_or_buffer):
+        trainer_params = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerParam(
+            gamma=self._params.gamma,
+            num_quantiles=self._params.num_quantiles,
+            kappa=self._params.kappa)
 
-        Ttheta_i = self._quantile_dist.quantiles(
-            s=self._training_variables.s_current)
-        Ttheta_i = self._quantiles_of(Ttheta_i,
-                                      self._training_variables.a_current)
-        Ttheta_i = RF.expand_dims(Ttheta_i, axis=2)
-        assert Ttheta_i.shape == (self._params.batch_size,
-                                  self._params.num_quantiles,
-                                  1)
+        quantile_dist_trainer = \
+            MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(
+                self._env_info,
+                params=trainer_params)
 
-        tau_hat = RF.expand_dims(self._tau_hat_var, axis=0)
-        tau_hat = RF.repeat(tau_hat, repeats=self._params.batch_size, axis=0)
-        tau_hat = RF.expand_dims(tau_hat, axis=2)
-        assert tau_hat.shape == Ttheta_i.shape
+        target_update_frequency = self._params.target_update_frequency / self._params.learner_update_frequency
+        training = MT.q_value_trainings.DQNTraining(
+            train_function=self._quantile_dist,
+            target_function=self._target_quantile_dist)
+        training = MT.common_extensions.PeriodicalTargetUpdate(
+            training,
+            src_models=self._quantile_dist,
+            dst_models=self._target_quantile_dist,
+            target_update_frequency=target_update_frequency,
+            tau=1.0)
+        quantile_dist_trainer.setup_training(self._quantile_dist, self._quantile_dist_solver, training)
 
-        quantile_huber_loss = RF.quantile_huber_loss(
-            Ttheta_j, Ttheta_i, self._params.kappa, tau_hat)
-        assert quantile_huber_loss.shape == (self._params.batch_size,
-                                             self._params.num_quantiles,
-                                             self._params.num_quantiles)
-
-        quantile_huber_loss = NF.mean(quantile_huber_loss, axis=2)
-        quantile_huber_loss = NF.sum(quantile_huber_loss, axis=1)
-        self._quantile_huber_loss = NF.mean(quantile_huber_loss)
-
-    def _build_evaluation_graph(self):
-        quantiles = self._quantile_dist.quantiles(
-            self._evaluation_variables.s_eval)
-        self._a_greedy = self._compute_argmax_q(quantiles)
-
-    def _setup_solver(self):
-        self._quantile_dist_solver = NS.Adam(
-            alpha=self._params.learning_rate, eps=1e-2 / self._params.batch_size)
-        self._quantile_dist_solver.set_parameters(
-            self._quantile_dist.get_parameters())
+        # NOTE: Copy initial parameters after setting up the training
+        # Because the parameter is created after training graph construction
+        copy_network_parameters(self._quantile_dist.get_parameters(),
+                                self._target_quantile_dist.get_parameters())
+        return quantile_dist_trainer
 
     def _run_online_training_iteration(self, env):
         if self._state is None:
@@ -227,88 +158,35 @@ class QRDQN(Algorithm):
             self._state = self._next_state
 
         if self._params.start_timesteps < self.iteration_num:
-            self._qrdqn_training(self._replay_buffer)
+            if self.iteration_num % self._params.learner_update_frequency == 0:
+                self._qrdqn_training(self._replay_buffer)
 
     def _run_offline_training_iteration(self, buffer):
         self._qrdqn_training(buffer)
 
     def _qrdqn_training(self, replay_buffer):
-        if self.iteration_num % self._params.learner_update_frequency != 0:
-            return
-
         experiences, *_ = replay_buffer.sample(self._params.batch_size)
-        (s, a, r, non_terminal, s_next) = marshall_experiences(experiences)
+        marshalled_experiences = marshall_experiences(experiences)
 
-        self._training_variables.s_current.d = s
-        self._training_variables.a_current.d = a
-        self._training_variables.reward.d = r
-        self._training_variables.non_terminal.d = non_terminal
-        self._training_variables.s_next.d = s_next
-
-        self._quantile_dist_solver.zero_grad()
-        self._quantile_huber_loss.forward()
-        self._quantile_huber_loss.backward()
-        self._quantile_dist_solver.update()
-
-        # Update target net
-        if self.iteration_num % self._params.target_update_frequency == 0:
-            copy_network_parameters(
-                self._quantile_dist.get_parameters(),
-                self._target_quantile_dist.get_parameters(),
-                tau=1.0)
+        self._quantile_dist_trainer.train(marshalled_experiences)
 
     def _greedy_action_selector(self, s):
-        self._evaluation_variables.s_eval.d = np.expand_dims(s, axis=0)
-        self._a_greedy.forward()
-        return self._a_greedy.d
+        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
+        with nn.auto_forward():
+            q_function = self._quantile_dist.as_q_function()
+            a_greedy = q_function.argmax_q(s_eval_var)
+        return a_greedy.d
 
     def _random_action_selector(self, s):
         action = self._env_info.action_space.sample()
         return np.asarray(action).reshape((1, ))
 
-    def _precompute_tau_hat(self, num_quantiles):
-        tau_hat = [(tau_prev + tau_i) / num_quantiles / 2.0
-                   for tau_prev, tau_i in zip(range(0, num_quantiles), range(1, num_quantiles+1))]
-        return np.array(tau_hat, dtype=np.float32)
-
-    def _compute_argmax_q(self, quantiles):
-        q_values = self._compute_q_values(quantiles)
-        return RF.argmax(q_values, axis=1)
-
-    def _compute_q_values(self, quantiles):
-        batch_size = quantiles.shape[0]
-        assert quantiles.shape == (
-            batch_size, self._env_info.action_dim, self._params.num_quantiles)
-        q_values = NF.sum(quantiles * self._qj, axis=2)
-        assert q_values.shape == (batch_size, self._env_info.action_dim)
-        return q_values
-
-    def _quantiles_of(self, quantiles, a):
-        batch_size = quantiles.shape[0]
-        quantiles = NF.transpose(quantiles, axes=(0, 2, 1))
-        one_hot = self._to_one_hot(a)
-        quantiles = quantiles * one_hot
-        quantiles = NF.sum(quantiles, axis=2)
-        assert quantiles.shape == (batch_size, self._params.num_quantiles)
-
-        return quantiles
-
-    def _to_one_hot(self, a):
-        batch_size = a.shape[0]
-        a = NF.reshape(a, (-1, 1))
-        assert a.shape[0] == batch_size
-        one_hot = NF.one_hot(a, (self._env_info.action_dim,))
-        one_hot = RF.expand_dims(one_hot, axis=1)
-        one_hot = NF.broadcast(one_hot, shape=(batch_size, self._params.num_quantiles, self._env_info.action_dim))
-        return one_hot
-
     def _models(self):
         models = {}
         models[self._quantile_dist.scope_name] = self._quantile_dist
-        models[self._target_quantile_dist.scope_name] = self._target_quantile_dist
         return models
 
     def _solvers(self):
         solvers = {}
-        solvers['quantile_dist_solver'] = self._quantile_dist_solver
+        solvers.update(self._quantile_dist_solver)
         return solvers

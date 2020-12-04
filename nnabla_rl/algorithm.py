@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
-from dataclasses import dataclass, asdict, replace
+from dataclasses import dataclass, replace
 
+from nnabla_rl.parameter import Parameter
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedTrainingException
 from nnabla_rl.replay_buffer import ReplayBuffer
@@ -14,33 +15,16 @@ import gym
 def wrap_with_eval_scope(f):
     def wrapped_with_eval_scope(*args, **kwargs):
         with rl.eval_scope():
-            f(*args, **kwargs)
+            return f(*args, **kwargs)
     return wrapped_with_eval_scope
 
 
 @dataclass
-class AlgorithmParam(object):
-    def to_dict(self):
-        return asdict(self)
-
-    def _assert_positive(self, param, var_name):
-        if param < 0:
-            raise ValueError('{} must be positive'.format(var_name))
-
-    def _assert_between(self, param, low, high, var_name):
-        if not (low <= param and param <= high):
-            raise ValueError(
-                '{} must lie between [{}, {}]'.format(var_name, low, high))
+class AlgorithmParam(Parameter):
+    pass
 
 
-class PostProcessableABCMeta(ABCMeta):
-    def __call__(cls, *args, **kwargs):
-        obj = ABCMeta.__call__(cls, *args, **kwargs)
-        obj._post_init()
-        return obj
-
-
-class Algorithm(metaclass=PostProcessableABCMeta):
+class Algorithm(metaclass=ABCMeta):
     def __init__(self, env_info, params=AlgorithmParam()):
         if isinstance(env_info, gym.Env):
             env_info = EnvironmentInfo.from_env(env_info)
@@ -51,13 +35,8 @@ class Algorithm(metaclass=PostProcessableABCMeta):
         self._hooks = []
         context._set_nnabla_context()
 
-    def _post_init(self):
-        self._build_computation_graph()
-        self._setup_solver()
-
     def __new__(cls, *args, **kwargs):
-        cls._build_evaluation_graph = wrap_with_eval_scope(
-            cls._build_evaluation_graph)
+        cls.compute_eval_action = wrap_with_eval_scope(cls.compute_eval_action)
         return super().__new__(cls)
 
     @property
@@ -192,36 +171,6 @@ class Algorithm(metaclass=PostProcessableABCMeta):
         raise NotImplementedError
 
     def _after_training_finish(self, env_or_buffer):
-        pass
-
-    def _build_computation_graph(self):
-        self._build_training_graph()
-        self._build_evaluation_graph()
-
-    def _rebuild_computation_graph(self):
-        self._build_computation_graph()
-
-    @abstractmethod
-    def _build_training_graph(self):
-        pass
-
-    @abstractmethod
-    def _build_evaluation_graph(self):
-        """
-        Build computation graph used during evaluation of trained model.
-
-        nnabla_rl.scopes.eval_scope is active inside this method.
-        You can use this to switch BatchNormalization's (or any other layer's) behavior.
-        """
-        pass
-
-    @abstractmethod
-    def _setup_solver(self):
-        """
-        Setup the solver to update the network parameters here.
-
-        This is called on initialization process right after _build_computation_graph() is executed.
-        """
         pass
 
     @abstractmethod

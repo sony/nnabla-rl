@@ -5,7 +5,6 @@ import nnabla as nn
 import numpy as np
 
 from nnabla_rl.replay_buffer import ReplayBuffer
-from nnabla_rl.models.atari.distributional_functions import QRDQNQuantileDistributionFunction
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
 
@@ -60,75 +59,6 @@ class TestQRDQN(object):
         action = qrdqn.compute_eval_action(state)
 
         assert action.shape == (1,)
-
-    def test_quantiles_of(self):
-        dummy_env = E.DummyDiscreteImg()
-        n_quantiles = 10
-        n_action = dummy_env.action_space.n
-        params = A.QRDQNParam(num_quantiles=n_quantiles)
-
-        qrdqn = A.QRDQN(dummy_env, params=params)
-
-        state_shape = (4, 84, 84)
-        scope_name = "test"
-        model = QRDQNQuantileDistributionFunction(scope_name=scope_name,
-                                                  state_shape=state_shape,
-                                                  num_actions=n_action,
-                                                  num_quantiles=n_quantiles)
-
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
-        quantiles = model.quantiles(input_state)
-
-        actions = nn.Variable.from_numpy_array(np.asarray([[3]]))
-        action_quantiles = qrdqn._quantiles_of(
-            quantiles, actions)
-        action_quantiles.forward()
-
-        assert action_quantiles.shape == (1, n_quantiles)
-        assert np.allclose(quantiles.d[0][3], action_quantiles.d[0])
-
-    def test_to_one_hot(self):
-        dummy_env = E.DummyDiscreteImg()
-        n_action = dummy_env.action_space.n
-        n_quantiles = 10
-        params = A.QRDQNParam(num_quantiles=n_quantiles)
-
-        qrdqn = A.QRDQN(dummy_env, params=params)
-
-        actions = nn.Variable.from_numpy_array(
-            np.asarray([[0], [1], [2], [3]]))
-
-        assert actions.shape == (4, 1)
-
-        val = qrdqn._to_one_hot(actions)
-        val.forward()
-
-        expected = np.array(
-            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        expected = np.expand_dims(expected, axis=1)
-        expected = np.broadcast_to(expected, shape=(4, n_quantiles, n_action))
-
-        assert val.shape == expected.shape
-        assert np.allclose(val.d, expected)
-
-    def test_precompute_tau_hat(self):
-        dummy_env = E.DummyDiscreteImg()
-        qrdqn = A.QRDQN(dummy_env)
-
-        num_quantiles = 100
-
-        expected = np.empty(shape=(num_quantiles,))
-        prev_tau = 0.0
-
-        for i in range(0, num_quantiles):
-            tau = (i + 1) / num_quantiles
-            expected[i] = (prev_tau + tau) / 2.0
-            prev_tau = tau
-
-        actual = qrdqn._precompute_tau_hat(num_quantiles)
-
-        assert np.allclose(expected, actual)
 
     def test_update_algorithm_params(self):
         dummy_env = E.DummyDiscreteImg()

@@ -21,7 +21,7 @@ from nnabla_rl.models.atari.policies import ICML2015TRPOPolicy as ICML2015TRPOAt
 from nnabla_rl.models.classic_control.policies import REINFORCEContinousPolicy, REINFORCEDiscretePolicy  # noqa
 from nnabla_rl.models.model import Model  # noqa
 from nnabla_rl.models.perturbator import Perturbator  # noqa
-from nnabla_rl.models.q_function import QFunction  # noqa
 from nnabla_rl.models.policy import Policy, DeterministicPolicy, StochasticPolicy  # noqa
+from nnabla_rl.models.q_function import QFunction  # noqa
 from nnabla_rl.models.v_function import VFunction  # noqa
 from nnabla_rl.models.variational_auto_encoder import VariationalAutoEncoder  # noqa

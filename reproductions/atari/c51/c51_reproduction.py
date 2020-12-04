@@ -57,7 +57,7 @@ def run_showcase(args):
     categorical_dqn = serializers.load_snapshot(args.snapshot_dir)
     if not isinstance(categorical_dqn, A.CategoricalDQN):
         raise ValueError('Loaded snapshot is not trained with CategoricalDQN!')
-    categorical_dqn.update_algorithm_params({'test_epsilon': 0.001})
+    categorical_dqn.update_algorithm_params(**{'test_epsilon': 0.001})
 
     eval_env = build_atari_env(
         args.env, test=True, seed=args.seed + 200, render=True)

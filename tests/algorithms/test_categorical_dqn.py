@@ -1,15 +1,21 @@
 import pytest
 
+from packaging import version
+
 import nnabla as nn
 
 import numpy as np
 
-from nnabla_rl.models.atari.distributional_functions import C51ValueDistributionFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
 
 
+SupportedNNablaVersion = '1.14.0'
+
+
+@pytest.mark.skipif(version.parse(nn.__version__) < version.parse(SupportedNNablaVersion),
+                    reason='Unsupported nnabla version')
 class TestCategoricalDQN(object):
     def setup_method(self, method):
         nn.clear_parameters()
@@ -59,56 +65,6 @@ class TestCategoricalDQN(object):
         action = categorical_dqn.compute_eval_action(state)
 
         assert action.shape == (1,)
-
-    def test_probabilities_of(self):
-        dummy_env = E.DummyDiscreteImg()
-        n_atoms = 10
-        n_action = dummy_env.action_space.n
-        params = A.CategoricalDQNParam(num_atoms=n_atoms)
-        categorical_dqn = A.CategoricalDQN(dummy_env, params=params)
-
-        state_shape = (4, 84, 84)
-        scope_name = "test"
-        model = C51ValueDistributionFunction(scope_name=scope_name,
-                                             state_shape=state_shape,
-                                             num_actions=n_action,
-                                             num_atoms=n_atoms)
-
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
-        probabilities = model.probabilities(input_state)
-
-        actions = nn.Variable.from_numpy_array(
-            np.asarray([[3]]))
-        action_probabilities = categorical_dqn._probabilities_of(
-            probabilities, actions)
-        action_probabilities.forward()
-
-        assert action_probabilities.shape == (1, n_atoms)
-        assert np.allclose(probabilities.d[0][3], action_probabilities.d[0])
-
-    def test_to_one_hot(self):
-        dummy_env = E.DummyDiscreteImg()
-        n_action = dummy_env.action_space.n
-        n_atoms = 10
-        params = A.CategoricalDQNParam(num_atoms=n_atoms)
-        categorical_dqn = A.CategoricalDQN(dummy_env, params=params)
-
-        actions = nn.Variable.from_numpy_array(
-            np.asarray([[0], [1], [2], [3]]))
-
-        assert actions.shape == (4, 1)
-
-        val = categorical_dqn._to_one_hot(actions)
-        val.forward()
-
-        expected = np.array(
-            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-        expected = np.expand_dims(expected, axis=1)
-        expected = np.broadcast_to(expected, shape=(4, n_atoms, n_action))
-
-        assert val.shape == expected.shape
-        assert np.allclose(val.d, expected)
 
 
 if __name__ == "__main__":

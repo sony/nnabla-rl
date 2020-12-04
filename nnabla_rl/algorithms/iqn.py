@@ -1,33 +1,37 @@
 import nnabla as nn
 
-import nnabla.functions as NF
-import nnabla.solvers as NS
-
 import numpy as np
 
-from collections import namedtuple
 from dataclasses import dataclass
+
+import nnabla.solvers as NS
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_action_selection
 from nnabla_rl.replay_buffer import ReplayBuffer
-from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.utils.copy import copy_network_parameters
+from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction
 import nnabla_rl.exploration_strategies as ES
-import nnabla_rl.models as M
-import nnabla_rl.functions as RF
-
-
-def default_quantile_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return M.IQNQuantileFunction(scope_name, env_info.state_shape, env_info.action_dim, algorithm_params.embedding_dim)
-
-
-def default_replay_buffer_builder(capacity):
-    return ReplayBuffer(capacity=capacity)
+import nnabla_rl.model_trainers as MT
 
 
 def risk_neutral_measure(tau):
     return tau
+
+
+def default_quantile_function_builder(scope_name, env_info, algorithm_params, **kwargs):
+    risk_measure_function = kwargs['risk_measure_function']
+    return IQNQuantileFunction(scope_name,
+                               env_info.state_shape,
+                               env_info.action_dim,
+                               algorithm_params.embedding_dim,
+                               K=algorithm_params.K,
+                               risk_measure_function=risk_measure_function)
+
+
+def default_replay_buffer_builder(capacity):
+    return ReplayBuffer(capacity=capacity)
 
 
 @dataclass
@@ -91,15 +95,17 @@ class IQN(Algorithm):
 
         if not self._env_info.is_discrete_action_env():
             raise ValueError('{} only supports discrete action environment'.format(self.__name__))
-        self._quantile_function = quantile_function_builder(
-            'quantile_function', self._env_info, self._params)
-        assert isinstance(self._quantile_function, M.StateActionQuantileFunction)
 
-        self._target_quantile_function = quantile_function_builder(
-            'target_quantile_function',  self._env_info, self._params)
-        assert isinstance(self._target_quantile_function, M.StateActionQuantileFunction)
+        kwargs = {}
+        kwargs['risk_measure_function'] = risk_measure_function
+        self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._params, **kwargs)
+        self._target_quantile_function = self._quantile_function.deepcopy('target_quantile_function')
+        assert isinstance(self._quantile_function, StateActionQuantileFunction)
+        assert isinstance(self._target_quantile_function, StateActionQuantileFunction)
 
-        self._risk_measure_function = risk_measure_function
+        def solver_builder():
+            return NS.Adam(alpha=self._params.learning_rate, eps=1e-2 / self._params.batch_size)
+        self._quantile_function_solver = {self._quantile_function.scope_name: solver_builder()}
 
         self._state = None
         self._action = None
@@ -112,40 +118,39 @@ class IQN(Algorithm):
                                                                          self._greedy_action_selector,
                                                                          self._random_action_selector)
 
-        # Training input variables
-        s_current_var = \
-            nn.Variable((params.batch_size, *self._env_info.state_shape))
-        a_current_var = \
-            nn.Variable((params.batch_size, 1))
-        reward_var = nn.Variable((params.batch_size, 1))
-        non_terminal_var = nn.Variable((params.batch_size, 1))
-        s_next_var = nn.Variable((params.batch_size, *self._env_info.state_shape))
+    def _before_training_start(self, env_or_buffer):
+        self._quantile_function_trainer = self._setup_quantile_function_training(env_or_buffer)
 
-        TrainingVariables = namedtuple(
-            'TrainingVariables', ['s_current', 'a_current', 'reward', 'non_terminal', 's_next'])
-        self._training_variables = \
-            TrainingVariables(s_current_var, a_current_var, reward_var,
-                              non_terminal_var, s_next_var)
+    def _setup_quantile_function_training(self, env_or_buffer):
+        trainer_params = MT.q_value_trainers.IQNQuantileFunctionTrainerParam(
+            gamma=self._params.gamma,
+            N=self._params.N,
+            N_prime=self._params.N_prime,
+            K=self._params.K,
+            kappa=self._params.kappa)
 
-        # Training loss/output
-        self._quantile_huber_loss = None
+        quantile_function_trainer = MT.q_value_trainers.IQNQuantileFunctionTrainer(
+            self._env_info,
+            params=trainer_params)
 
-        # Evaluation input variables
-        s_eval_var = nn.Variable((1, *self._env_info.state_shape))
-
-        EvaluationVariables = \
-            namedtuple('EvaluationVariables', ['s_eval'])
-        self._evaluation_variables = EvaluationVariables(s_eval_var)
-
-        # Evaluation output
-        self._a_greedy = None
-
-    def _post_init(self):
-        super(IQN, self)._post_init()
-        copy_network_parameters(
-            self._quantile_function.get_parameters(),
-            self._target_quantile_function.get_parameters(),
+        target_update_frequency = self._params.target_update_frequency / self._params.learner_update_frequency
+        training = MT.q_value_trainings.DQNTraining(
+            train_function=self._quantile_function,
+            target_function=self._target_quantile_function)
+        training = MT.common_extensions.PeriodicalTargetUpdate(
+            training,
+            src_models=self._quantile_function,
+            dst_models=self._target_quantile_function,
+            target_update_frequency=target_update_frequency,
             tau=1.0)
+        quantile_function_trainer.setup_training(self._quantile_function, self._quantile_function_solver, training)
+
+        # NOTE: Copy initial parameters after setting up the training
+        # Because the parameter is created after training graph construction
+        copy_network_parameters(self._quantile_function.get_parameters(),
+                                self._target_quantile_function.get_parameters())
+
+        return quantile_function_trainer
 
     def compute_eval_action(self, state):
         action, _ = epsilon_greedy_action_selection(state,
@@ -153,63 +158,6 @@ class IQN(Algorithm):
                                                     self._random_action_selector,
                                                     epsilon=self._params.test_epsilon)
         return action
-
-    def _build_training_graph(self):
-        tau_k = self._risk_measure_function(
-            self._sample_tau(shape=(self._params.batch_size, self._params.K)))
-        policy_quantiles = self._target_quantile_function.quantiles(
-            self._training_variables.s_next, tau_k)
-        a_star = self._compute_argmax_q(policy_quantiles)
-
-        tau_j = self._sample_tau(
-            shape=(self._params.batch_size, self._params.N_prime))
-        target_quantiles = self._target_quantile_function.quantiles(
-            self._training_variables.s_next, tau_j)
-        Z_tau_j = self._quantiles_of(target_quantiles, a_star)
-        assert Z_tau_j.shape == (self._params.batch_size,
-                                 self._params.N_prime)
-        target = self._training_variables.reward + \
-            self._training_variables.non_terminal * self._params.gamma * Z_tau_j
-        target = RF.expand_dims(target, axis=1)
-        target.need_grad = False
-        assert target.shape == (self._params.batch_size,
-                                1,
-                                self._params.N_prime)
-
-        tau_i = self._sample_tau(
-            shape=(self._params.batch_size, self._params.N))
-        quantiles = self._quantile_function.quantiles(
-            self._training_variables.s_current, tau_i)
-        Z_tau_i = self._quantiles_of(
-            quantiles, self._training_variables.a_current)
-        Z_tau_i = RF.expand_dims(Z_tau_i, axis=2)
-        tau_i = RF.expand_dims(tau_i, axis=2)
-        assert Z_tau_i.shape == (self._params.batch_size,
-                                 self._params.N,
-                                 1)
-        assert tau_i.shape == Z_tau_i.shape
-
-        quantile_huber_loss = RF.quantile_huber_loss(
-            target, Z_tau_i, self._params.kappa, tau_i)
-        assert quantile_huber_loss.shape == (self._params.batch_size,
-                                             self._params.N,
-                                             self._params.N_prime)
-        quantile_huber_loss = NF.mean(quantile_huber_loss, axis=2)
-        quantile_huber_loss = NF.sum(quantile_huber_loss, axis=1)
-        self._quantile_huber_loss = NF.mean(quantile_huber_loss)
-
-    def _build_evaluation_graph(self):
-        tau = self._risk_measure_function(
-            self._sample_tau(shape=(1, self._params.K)))
-        quantiles = self._quantile_function.quantiles(
-            self._evaluation_variables.s_eval, tau)
-        self._a_greedy = self._compute_argmax_q(quantiles)
-
-    def _setup_solver(self):
-        self._quantile_function_solver = NS.Adam(
-            alpha=self._params.learning_rate, eps=1e-2 / self._params.batch_size)
-        self._quantile_function_solver.set_parameters(
-            self._quantile_function.get_parameters())
 
     def _run_online_training_iteration(self, env):
         if self._state is None:
@@ -222,8 +170,7 @@ class IQN(Algorithm):
                 self.iteration_num, self._state)
         self._next_state, r, done, _ = env.step(self._action)
         non_terminal = np.float32(0.0 if done else 1.0)
-        experience = \
-            (self._state, self._action, [r], [non_terminal], self._next_state)
+        experience = (self._state, self._action, [r], [non_terminal], self._next_state)
         self._replay_buffer.append(experience)
 
         if done:
@@ -232,85 +179,35 @@ class IQN(Algorithm):
             self._state = self._next_state
 
         if self._params.start_timesteps < self.iteration_num:
-            self._iqn_training(self._replay_buffer)
+            if self.iteration_num % self._params.learner_update_frequency == 0:
+                self._iqn_training(self._replay_buffer)
 
     def _run_offline_training_iteration(self, buffer):
         self._iqn_training(buffer)
 
     def _iqn_training(self, replay_buffer):
-        if self.iteration_num % self._params.learner_update_frequency != 0:
-            return
-
         experiences, *_ = replay_buffer.sample(self._params.batch_size)
-        (s, a, r, non_terminal, s_next) = marshall_experiences(experiences)
+        marshalled_experiences = marshall_experiences(experiences)
 
-        self._training_variables.s_current.d = s
-        self._training_variables.a_current.d = a
-        self._training_variables.reward.d = r
-        self._training_variables.non_terminal.d = non_terminal
-        self._training_variables.s_next.d = s_next
-
-        self._quantile_function_solver.zero_grad()
-        self._quantile_huber_loss.forward()
-        self._quantile_huber_loss.backward()
-        self._quantile_function_solver.update()
-
-        # Update target net
-        if self.iteration_num % self._params.target_update_frequency == 0:
-            copy_network_parameters(
-                self._quantile_function.get_parameters(),
-                self._target_quantile_function.get_parameters(),
-                tau=1.0)
+        self._quantile_function_trainer.train(marshalled_experiences)
 
     def _greedy_action_selector(self, s):
-        self._evaluation_variables.s_eval.d = np.expand_dims(s, axis=0)
-        self._a_greedy.forward()
-        return self._a_greedy.d
+        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
+        with nn.auto_forward():
+            q_function = self._quantile_function.as_q_function()
+            a_greedy = q_function.argmax_q(s_eval_var)
+        return a_greedy.d
 
     def _random_action_selector(self, s):
         action = self._env_info.action_space.sample()
         return np.asarray(action).reshape((1, ))
 
-    def _compute_argmax_q(self, quantiles):
-        q_values = self._compute_q_values(quantiles)
-        return RF.argmax(q_values, axis=1)
-
-    def _compute_q_values(self, quantiles):
-        batch_size = quantiles.shape[0]
-        assert len(quantiles.shape) == 3
-        assert quantiles.shape[2] == self._env_info.action_dim
-        quantiles = NF.transpose(quantiles, axes=(0, 2, 1))
-        q_values = NF.mean(quantiles, axis=2)
-        assert q_values.shape == (batch_size, self._env_info.action_dim)
-        return q_values
-
-    def _quantiles_of(self, quantiles, a):
-        one_hot = self._to_one_hot(a, shape=quantiles.shape)
-        quantiles = quantiles * one_hot
-        quantiles = NF.sum(quantiles, axis=2)
-        assert len(quantiles.shape) == 2
-
-        return quantiles
-
-    def _sample_tau(self, shape):
-        return NF.rand(low=0.0, high=1.0, shape=shape)
-
-    def _to_one_hot(self, a, shape):
-        batch_size = a.shape[0]
-        a = NF.reshape(a, (-1, 1))
-        assert a.shape[0] == batch_size
-        one_hot = NF.one_hot(a, (self._env_info.action_dim,))
-        one_hot = RF.expand_dims(one_hot, axis=1)
-        one_hot = NF.broadcast(one_hot, shape=shape)
-        return one_hot
-
     def _models(self):
         models = {}
         models[self._quantile_function.scope_name] = self._quantile_function
-        models[self._target_quantile_function.scope_name] = self._target_quantile_function
         return models
 
     def _solvers(self):
         solvers = {}
-        solvers['quantile_function_solver'] = self._quantile_function_solver
+        solvers.update(self._quantile_function_solver)
         return solvers

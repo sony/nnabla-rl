@@ -68,10 +68,10 @@ class DQNQFunction(QFunction):
 
         return q_value
 
-    def maximum(self, s):
+    def max_q(self, s):
         q_values = self._predict_q_values(s)
         return NF.max(q_values, axis=1, keepdims=True)
 
-    def argmax(self, s):
+    def argmax_q(self, s):
         q_values = self._predict_q_values(s)
         return RF.argmax(q_values, axis=1)
