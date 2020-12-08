@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
@@ -126,6 +126,7 @@ class DDPG(Algorithm):
 
         return policy_trainer
 
+    @eval_api
     def compute_eval_action(self, state):
         action, _ = self._compute_greedy_action(state)
         return action

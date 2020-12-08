@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import TD3QFunction, BEARPolicy, UnsquashedVariationalAutoEncoder, \
@@ -145,6 +145,7 @@ class BEAR(Algorithm):
         self._vae_trainer = None
         self._policy_trainer = None
 
+    @eval_api
     def compute_eval_action(self, state):
         # evaluation input/action variables
         eval_state_var = nn.Variable((1, *state.shape))

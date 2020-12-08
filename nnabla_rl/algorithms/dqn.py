@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import gym
 import numpy as np
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
@@ -117,6 +117,7 @@ class DQN(Algorithm):
 
         self._replay_buffer = replay_buffer_builder(capacity=params.replay_buffer_size)
 
+    @eval_api
     def compute_eval_action(self, s):
         (action, _), _ = epsilon_greedy_action_selection(s,
                                                          self._greedy_action_selector,

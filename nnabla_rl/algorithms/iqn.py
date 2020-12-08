@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import nnabla.solvers as NS
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
@@ -159,6 +159,7 @@ class IQN(Algorithm):
 
         return quantile_function_trainer
 
+    @eval_api
     def compute_eval_action(self, state):
         (action, _), _ = epsilon_greedy_action_selection(state,
                                                          self._greedy_action_selector,

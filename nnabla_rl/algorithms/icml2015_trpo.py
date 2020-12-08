@@ -4,7 +4,7 @@ import numpy as np
 
 from dataclasses import dataclass
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, StochasticPolicy
@@ -61,6 +61,7 @@ class ICML2015TRPO(Algorithm):
 
         assert isinstance(self._policy, StochasticPolicy)
 
+    @eval_api
     def compute_eval_action(self, s):
         action, _ = self._compute_action(s)
         return action

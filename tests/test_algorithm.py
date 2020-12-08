@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
-from nnabla_rl.algorithm import Algorithm
+from nnabla_rl.algorithm import Algorithm, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 import nnabla_rl.environments as E
 import nnabla_rl as rl
@@ -51,6 +51,7 @@ class TestAlgorithm(object):
             def _run_offline_training_iteration(self, buffer):
                 pass
 
+            @eval_api
             def compute_eval_action(self, x):
                 assert rl.is_eval_scope()
 

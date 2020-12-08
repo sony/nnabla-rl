@@ -18,7 +18,7 @@ from nnabla_rl.models import \
     PPOSharedFunctionHead, PPOAtariPolicy, PPOAtariVFunction, \
     PPOMujocoPolicy, PPOMujocoVFunction, \
     StochasticPolicy, VFunction
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences, unzip
@@ -163,6 +163,7 @@ class PPO(Algorithm):
         self._actors = None
         self._actor_processes = []
 
+    @eval_api
     def compute_eval_action(self, state):
         if context._gpu_id < 0 and 0 <= self._gpu_id:
             context._gpu_id = self._gpu_id

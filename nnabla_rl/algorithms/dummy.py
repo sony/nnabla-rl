@@ -1,4 +1,4 @@
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 
 from nnabla_rl.logger import logger
 import nnabla_rl as rl
@@ -17,6 +17,7 @@ class Dummy(Algorithm):
         super(Dummy, self).__init__(env_or_env_info, params=params)
         self._action_space = self._env_info.action_space
 
+    @eval_api
     def compute_eval_action(self, state):
         return self._action_space.sample()
 

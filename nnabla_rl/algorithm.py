@@ -12,7 +12,7 @@ import nnabla_rl as rl
 import gym
 
 
-def wrap_with_eval_scope(f):
+def eval_api(f):
     def wrapped_with_eval_scope(*args, **kwargs):
         with rl.eval_scope():
             return f(*args, **kwargs)
@@ -34,10 +34,6 @@ class Algorithm(metaclass=ABCMeta):
         self._max_iterations = 0
         self._hooks = []
         context._set_nnabla_context()
-
-    def __new__(cls, *args, **kwargs):
-        cls.compute_eval_action = wrap_with_eval_scope(cls.compute_eval_action)
-        return super().__new__(cls)
 
     @property
     def __name__(self):

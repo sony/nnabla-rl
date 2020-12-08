@@ -6,7 +6,7 @@ import numpy as np
 
 from dataclasses import dataclass
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.algorithms.common_utils import compute_v_target_and_advantage
@@ -148,6 +148,7 @@ class TRPO(Algorithm):
 
         return policy_trainer
 
+    @eval_api
     def compute_eval_action(self, s):
         action, _ = self._compute_action(s)
         return action
