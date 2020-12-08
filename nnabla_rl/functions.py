@@ -68,8 +68,8 @@ def std(x, axis=None, keepdims=False):
     return sqrt(variance)
 
 
-def argmax(x, axis=None):
-    return NF.max(x=x, axis=axis, with_index=True, only_index=True)
+def argmax(x, axis=None, keepdims=False):
+    return NF.max(x=x, axis=axis, keepdims=keepdims, with_index=True, only_index=True)
 
 
 def quantile_huber_loss(x0, x1, kappa, tau):

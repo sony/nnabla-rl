@@ -23,12 +23,12 @@ class Parameter():
             raise ValueError(f'{var_name} is not available. Available choices: {choices}')
 
     def _assert_ascending_order(self, param, var_name):
-        ascending = all(param[i] < param[i+1] for i in range(len(param)-1))
+        ascending = all(param[i] <= param[i+1] for i in range(len(param)-1))
         if not ascending:
             raise ValueError(f'{var_name} is not in ascending order!: {param}')
 
     def _assert_descending_order(self, param, var_name):
-        descending = all(param[i] > param[i+1] for i in range(len(param)-1))
+        descending = all(param[i] >= param[i+1] for i in range(len(param)-1))
         if not descending:
             raise ValueError(f'{var_name} is not in descending order!: {param}')
 

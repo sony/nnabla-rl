@@ -37,7 +37,7 @@ class QRDQNQuantileDistributionFunctionTrainer(ModelTrainer):
         self._quantile_huber_loss = None
 
     def train(self, experience, **kwargs) -> Dict:
-        (s, a, r, non_terminal, s_next) = experience
+        (s, a, r, non_terminal, s_next, *_) = experience
         return super().train((s, a, r, self._params.gamma, non_terminal, s_next), **kwargs)
 
     def _update_model(self,

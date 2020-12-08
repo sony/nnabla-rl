@@ -11,9 +11,9 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_action_selection
 from nnabla_rl.models import DQNQFunction, QFunction
-import nnabla_rl.exploration_strategies as ES
+from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
+import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
@@ -105,8 +105,7 @@ class DQN(Algorithm):
         super(DQN, self).__init__(env_or_env_info, params=params)
 
         if not self._env_info.is_discrete_action_env():
-            raise ValueError('Invalid env_info Action space of DQN must be {}'
-                             .format(gym.spaces.Discrete))
+            raise ValueError('Invalid env_info. Action space of DQN must be {}' .format(gym.spaces.Discrete))
 
         def solver_builder():
             return default_q_solver_builder(self._params)
@@ -116,26 +115,36 @@ class DQN(Algorithm):
         assert isinstance(self._q, QFunction)
         assert isinstance(self._target_q, QFunction)
 
-        self._state = None
-        self._action = None
-        self._next_state = None
         self._replay_buffer = replay_buffer_builder(capacity=params.replay_buffer_size)
 
-        self._exploration_strategy = ES.EpsilonGreedyExplorationStrategy(self._params.initial_epsilon,
-                                                                         self._params.final_epsilon,
-                                                                         self._params.max_explore_steps,
-                                                                         self._greedy_action_selector,
-                                                                         self._random_action_selector)
-
     def compute_eval_action(self, s):
-        action, _ = epsilon_greedy_action_selection(s,
-                                                    self._greedy_action_selector,
-                                                    self._random_action_selector,
-                                                    epsilon=self._params.test_epsilon)
+        (action, _), _ = epsilon_greedy_action_selection(s,
+                                                         self._greedy_action_selector,
+                                                         self._random_action_selector,
+                                                         epsilon=self._params.test_epsilon)
         return action
 
     def _before_training_start(self, env_or_buffer):
+        self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
+
+    def _setup_environment_explorer(self, env_or_buffer):
+        if self._is_buffer(env_or_buffer):
+            return None
+
+        explorer_params = EE.LinearDecayEpsilonGreedyExplorerParam(
+            warmup_random_steps=self._params.start_timesteps,
+            initial_step_num=self.iteration_num,
+            initial_epsilon=self._params.initial_epsilon,
+            final_epsilon=self._params.final_epsilon,
+            max_explore_steps=self._params.max_explore_steps
+        )
+        explorer = EE.LinearDecayEpsilonGreedyExplorer(
+            greedy_action_selector=self._greedy_action_selector,
+            random_action_selector=self._random_action_selector,
+            env_info=self._env_info,
+            params=explorer_params)
+        return explorer
 
     def _setup_q_function_training(self, env_or_buffer):
         trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
@@ -160,26 +169,8 @@ class DQN(Algorithm):
         return q_function_trainer
 
     def _run_online_training_iteration(self, env):
-        if self._state is None:
-            self._state = env.reset()
-
-        if self.iteration_num < self._params.start_timesteps:
-            self._action = self._random_action_selector(self._state)
-        else:
-            self._action = self._exploration_strategy.select_action(
-                self.iteration_num, self._state)
-
-        self._next_state, r, done, _ = env.step(self._action)
-        non_terminal = np.float32(0.0 if done else 1.0)
-        experience = \
-            (self._state, self._action, [r], [non_terminal], self._next_state)
-        self._replay_buffer.append(experience)
-
-        if done:
-            self._state = env.reset()
-        else:
-            self._state = self._next_state
-
+        experiences = self._environment_explorer.step(env)
+        self._replay_buffer.append_all(experiences)
         if self._params.start_timesteps < self.iteration_num:
             if self.iteration_num % self._params.learner_update_frequency == 0:
                 self._dqn_training(self._replay_buffer)
@@ -193,11 +184,11 @@ class DQN(Algorithm):
 
         with nn.auto_forward():
             a_greedy = self._q.argmax_q(s_eval_var)
-        return a_greedy.d
+        return np.squeeze(a_greedy.d, axis=0), {}
 
     def _random_action_selector(self, s):
         action = self._env_info.action_space.sample()
-        return np.asarray(action).reshape((1, ))
+        return np.asarray(action).reshape((1, )), {}
 
     def _dqn_training(self, replay_buffer):
         experiences, info = replay_buffer.sample(self._params.batch_size)

@@ -30,8 +30,7 @@ class TestDQNQFunction(object):
                              n_action=n_action)
 
         # Fake input to initialize parameters
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         input_action = nn.Variable.from_numpy_array(np.ones((1, 1)))
         model.q(input_state, input_action)
 
@@ -88,7 +87,7 @@ class TestDQNQFunction(object):
 
         expected = np.argmax(outputs.d, axis=1)
 
-        assert val.shape == expected.shape
+        assert val.shape == (1, 1)
         assert np.allclose(val.d, expected)
 
     def test_max_q(self):

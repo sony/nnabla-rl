@@ -9,10 +9,10 @@ import numpy as np
 import multiprocessing as mp
 
 import os
-import gym
 
 import nnabla_rl.preprocessors as RP
 import nnabla_rl.model_trainers as MT
+import nnabla_rl.environment_explorers as EE
 import nnabla_rl.utils.context as context
 from nnabla_rl.models import \
     PPOSharedFunctionHead, PPOAtariPolicy, PPOAtariVFunction, \
@@ -99,7 +99,7 @@ class PPOParam(AlgorithmParam):
     actor_timesteps: int = 128
     total_timesteps: int = 10000
     decrease_alpha: bool = True
-    only_reset_if_truncated: bool = True
+    timelimit_as_terminal: bool = False
 
     def __post_init__(self):
         '''__post_init__
@@ -131,7 +131,7 @@ class PPO(Algorithm):
                  state_preprocessor_builder=None,
                  params=PPOParam()):
         self._gpu_id = context._gpu_id
-        # Disable setting context by the Algorithm class
+        # Prevent setting context by the Algorithm class
         if 0 <= self._gpu_id:
             context._gpu_id = -1
         super(PPO, self).__init__(env_or_env_info, params=params)
@@ -159,10 +159,6 @@ class PPO(Algorithm):
         def v_function_solver_builder():
             return NS.Adam(alpha=self._params.learning_rate, eps=1e-5)
         self._v_function_solver = {self._v_function.scope_name: v_function_solver_builder()}
-
-        self._state = None
-        self._action = None
-        self._next_state = None
 
         self._actors = None
         self._actor_processes = []
@@ -358,14 +354,17 @@ class _PPOActor(object):
         self._task_finish_event = mp.Event()
 
         if state_preprocessor is not None:
-            self._state_preprocessor_mp_arrays = new_mp_arrays_from_params(
-                state_preprocessor.get_parameters())
-        self._v_mp_arrays = new_mp_arrays_from_params(
-            v_function.get_parameters())
-        self._policy_mp_arrays = new_mp_arrays_from_params(
-            policy.get_parameters())
+            self._state_preprocessor_mp_arrays = new_mp_arrays_from_params(state_preprocessor.get_parameters())
+        self._v_mp_arrays = new_mp_arrays_from_params(v_function.get_parameters())
+        self._policy_mp_arrays = new_mp_arrays_from_params(policy.get_parameters())
 
-        self._state = None
+        explorer_params = EE.RawPolicyExplorerParam(
+            initial_step_num=0,
+            timelimit_as_terminal=self._params.timelimit_as_terminal
+        )
+        self._environment_explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
+                                                          env_info=self._env_info,
+                                                          params=explorer_params)
 
         obs_space = self._env.observation_space
         action_space = self._env.action_space
@@ -427,8 +426,7 @@ class _PPOActor(object):
         return (mp_to_np_array(mp_array, shape, dtype) for (mp_array, shape, dtype) in self._mp_arrays)
 
     def update_preprocessor_params(self, params):
-        self._update_params(
-            src=params, dest=self._state_preprocessor_mp_arrays)
+        self._update_params(src=params, dest=self._state_preprocessor_mp_arrays)
 
     def update_v_params(self, params):
         self._update_params(src=params, dest=self._v_mp_arrays)
@@ -445,8 +443,7 @@ class _PPOActor(object):
                 break
 
             if self._state_preprocessor is not None:
-                self._synchronize_preprocessor_params(
-                    self._state_preprocessor.get_parameters())
+                self._synchronize_preprocessor_params(self._state_preprocessor.get_parameters())
             self._synchronize_v_params(self._v_function.get_parameters())
             self._synchronize_policy_params(self._policy.get_parameters())
 
@@ -457,45 +454,28 @@ class _PPOActor(object):
             self._task_finish_event.set()
 
     def _run_data_collection(self):
-        experiences = []
-        if self._state is None:
-            state = self._env.reset()
-        else:
-            state = self._state
-        state_var = nn.Variable((1, *state.shape))
-        distribution = self._policy.pi(state_var)
-        action_var, log_prob_var = distribution.sample_and_compute_log_prob()
-        is_discrete_action = isinstance(
-            self._env.action_space, gym.spaces.Discrete)
-        for _ in range(self._timesteps):
-            state_var.d = state
-            nn.forward_all((action_var, log_prob_var))
-            action = np.squeeze(action_var.d, axis=0).copy()
-            if is_discrete_action:
-                action = np.int(action)
-            log_prob = np.squeeze(log_prob_var.d).copy()
-            s_next, reward, done, info = self._env.step(action)
-            # We don't treat done at max_episode_length as False.
-            # In Swimmer, done must be treated as done even if max_episode_length is reached
-            truncated = info.get('TimeLimit.truncated',
-                                 False) and self._params.only_reset_if_truncated
-            if done and not truncated:
-                non_terminal = 0.0
-            else:
-                non_terminal = 1.0
-            non_terminal = 0.0 if done else 1.0
-            experience = (state, [action], reward,
-                          non_terminal, s_next, [log_prob])
-            experiences.append(experience)
-
-            if done:
-                state = self._env.reset()
-            else:
-                state = s_next
-        self._state = state
-        v_targets, advantages = self._compute_v_target_and_advantage(
-            self._v_function, experiences)
+        experiences = self._environment_explorer.step(self._env, n=self._timesteps)
+        experiences = [(s, a, r, non_terminal, s_next, info['log_prob'])
+                       for (s, a, r, non_terminal, s_next, info) in experiences]
+        v_targets, advantages = self._compute_v_target_and_advantage(self._v_function, experiences)
         return experiences, v_targets, advantages
+
+    def _compute_action(self, s):
+        # evaluation input/action variables
+        eval_state_var = nn.Variable((1, *s.shape))
+        eval_state_var.d = np.expand_dims(s, axis=0)
+
+        with nn.auto_forward():
+            distribution = self._policy.pi(eval_state_var)
+            eval_action, log_prob = distribution.sample_and_compute_log_prob()
+        action = np.squeeze(eval_action.d, axis=0)
+        log_prob = np.squeeze(log_prob.d, axis=0)
+        info = {}
+        info['log_prob'] = log_prob
+        if self._env_info.is_discrete_action_env():
+            return np.int(action), info
+        else:
+            return action, info
 
     def _fill_result(self, experiences, v_targets, advantages):
         def array_and_dtype(mp_arrays_item):
@@ -504,8 +484,7 @@ class _PPOActor(object):
         np_to_mp_array(s, *array_and_dtype(self._mp_arrays.state))
         np_to_mp_array(a, *array_and_dtype(self._mp_arrays.action))
         np_to_mp_array(r, *array_and_dtype(self._mp_arrays.reward))
-        np_to_mp_array(
-            non_terminal, *array_and_dtype(self._mp_arrays.non_terminal))
+        np_to_mp_array(non_terminal, *array_and_dtype(self._mp_arrays.non_terminal))
         np_to_mp_array(s_next, *array_and_dtype(self._mp_arrays.next_state))
         np_to_mp_array(log_prob, *array_and_dtype(self._mp_arrays.log_prob))
         np_to_mp_array(v_targets, *array_and_dtype(self._mp_arrays.v_target))

@@ -41,10 +41,11 @@ class MemoryEfficientAtariBuffer(ReplayBuffer):
         removed = self._buffer.append_with_removed_item_check(experience)
         if removed is not None:
             self._sub_buffer.append(removed)
-        self._reset = (0 == non_terminal[0])
+        self._reset = (0 == non_terminal)
 
     def append_all(self, experiences):
-        raise NotImplementedError
+        for experience in experiences:
+            self.append(experience)
 
     def __getitem__(self, index):
         (_, a, r, non_terminal, s_next, _) = self._buffer[index]

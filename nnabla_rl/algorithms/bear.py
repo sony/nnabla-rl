@@ -9,7 +9,6 @@ from dataclasses import dataclass
 import numpy as np
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
-from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import TD3QFunction, BEARPolicy, UnsquashedVariationalAutoEncoder, \
@@ -142,11 +141,6 @@ class BEAR(Algorithm):
             initial_value=self._params.initial_lagrange_multiplier)
         self._lagrange_solver = solver_builder()
 
-        self._state = None
-        self._action = None
-        self._next_state = None
-        self._replay_buffer = ReplayBuffer(capacity=None)
-
         self._q_function_trainer = None
         self._vae_trainer = None
         self._policy_trainer = None
@@ -277,29 +271,7 @@ class BEAR(Algorithm):
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
-        if self._params.start_timesteps is None:
-            raise ValueError('Start timesteps must be set')
-        if self._state is None:
-            self._state = env.reset()
-
-        if self.iteration_num < self._params.start_timesteps:
-            self._action = env.action_space.sample()
-        else:
-            self._action = self._compute_exploration_action(self._state)
-
-        self._next_state, r, done, _ = env.step(self._action)
-        non_terminal = np.float32(0.0 if done else 1.0)
-        experience = \
-            (self._state, self._action, [r], [non_terminal], self._next_state)
-        self._replay_buffer.append(experience)
-
-        if done:
-            self._state = env.reset()
-        else:
-            self._state = self._next_state
-
-        if self._params.start_timesteps < self.iteration_num:
-            self._bear_training(self._replay_buffer)
+        raise NotImplementedError
 
     def _run_offline_training_iteration(self, buffer):
         self._bear_training(buffer)
@@ -316,14 +288,6 @@ class BEAR(Algorithm):
 
         self._vae_trainer.train(marshalled_experiences)
         self._policy_trainer.train(marshalled_experiences)
-
-    def _compute_exploration_action(self, s):
-        exploration_state_var = nn.Variable((1, s.shape))
-        exploration_state_var.d = np.expand_dims(s, axis=0)
-        with nn.auto_forward():
-            exploration_distribution = self._pi.pi(exploration_state_var)
-            exploration_action = NF.tanh(exploration_distribution.sample())
-        return np.squeeze(exploration_action.d, axis=0)
 
     def _models(self):
         models = [*self._q_ensembles, *self._target_q_ensembles,

@@ -1,16 +1,16 @@
-import nnabla as nn
-import nnabla.solvers as NS
-
 from dataclasses import dataclass
 
 import numpy as np
 
+import nnabla_rl.model_trainers as MT
+import nnabla_rl.environment_explorers as EE
+import nnabla as nn
+import nnabla.solvers as NS
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import SACVFunction, SACQFunction, SACPolicy, VFunction, QFunction, StochasticPolicy
-import nnabla_rl.model_trainers as MT
 
 
 def default_v_function_builder(scope_name, env_info, algorithm_params, **kwargs):
@@ -98,18 +98,30 @@ class ICML2018SAC(Algorithm):
         self._pi_solver = {self._pi.scope_name: policy_solver_builder()}
         assert isinstance(self._pi, StochasticPolicy)
 
-        self._state = None
-        self._action = None
-        self._next_state = None
-        self._episode_timesteps = None
         self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
 
-    def _before_training_start(self, env_or_env_info):
-        self._policy_trainer = self._setup_policy_training(env_or_env_info)
-        self._q_function_trainer = self._setup_q_function_training(env_or_env_info)
-        self._v_function_trainer = self._setup_v_function_training(env_or_env_info)
+    def _before_training_start(self, env_or_buffer):
+        self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
+        self._policy_trainer = self._setup_policy_training(env_or_buffer)
+        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
+        self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
 
-    def _setup_policy_training(self, env_or_env_info):
+    def _setup_environment_explorer(self, env_or_buffer):
+        if self._is_buffer(env_or_buffer):
+            return None
+
+        explorer_params = EE.RawPolicyExplorerParam(
+            warmup_random_steps=self._params.start_timesteps,
+            reward_scalar=self._params.reward_scalar,
+            initial_step_num=self.iteration_num,
+            timelimit_as_terminal=False
+        )
+        explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_greedy_action,
+                                        env_info=self._env_info,
+                                        params=explorer_params)
+        return explorer
+
+    def _setup_policy_training(self, env_or_buffer):
         # NOTE: Fix temperature to 1.0. Because This version of SAC adjusts it by scaling the reward
         policy_trainer_params = MT.policy_trainers.SoftPolicyTrainerParam(fixed_temperature=True)
         temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
@@ -147,7 +159,7 @@ class ICML2018SAC(Algorithm):
         q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
         return q_function_trainer
 
-    def _setup_v_function_training(self, env_or_env_info):
+    def _setup_v_function_training(self, env_or_buffer):
         v_function_trainer_params = MT.v_value_trainers.SquaredTDVFunctionTrainerParam(
             reduction_method='mean',
             v_loss_scalar=0.5
@@ -166,7 +178,8 @@ class ICML2018SAC(Algorithm):
         return v_function_trainer
 
     def compute_eval_action(self, state):
-        return self._compute_greedy_action(state, deterministic=True)
+        action, _ = self._compute_greedy_action(state, deterministic=True)
+        return action
 
     def _run_online_training_iteration(self, env):
         for _ in range(self._params.environment_steps):
@@ -178,31 +191,8 @@ class ICML2018SAC(Algorithm):
         self._sac_training(buffer)
 
     def _run_environment_step(self, env):
-        if self._state is None:
-            self._state = env.reset()
-            self._episode_timesteps = 0
-        self._episode_timesteps += 1
-
-        if self.iteration_num < self._params.start_timesteps:
-            self._action = env.action_space.sample()
-        else:
-            self._action = self._compute_greedy_action(self._state)
-
-        self._next_state, r, done, _ = env.step(self._action)
-        r = np.float32(r * self._params.reward_scalar)
-        if done and self._episode_timesteps < self._env_info.max_episode_steps:
-            non_terminal = 0.0
-        else:
-            non_terminal = 1.0
-        experience = \
-            (self._state, self._action, [r], [non_terminal], self._next_state)
-        self._replay_buffer.append(experience)
-
-        if done:
-            self._state = env.reset()
-            self._episode_timesteps = 0
-        else:
-            self._state = self._next_state
+        experiences = self._environment_explorer.step(env)
+        self._replay_buffer.append_all(experiences)
 
     def _run_gradient_step(self, replay_buffer):
         if self._params.start_timesteps < self.iteration_num:
@@ -231,7 +221,7 @@ class ICML2018SAC(Algorithm):
                 eval_action = eval_distribution.choose_probable()
             else:
                 eval_action = eval_distribution.sample()
-        return np.squeeze(eval_action.d, axis=0)
+        return np.squeeze(eval_action.d, axis=0), {}
 
     def _models(self):
         models = [self._v, self._target_v, self._q1, self._q2, self._pi]

@@ -33,7 +33,7 @@ def compute_v_target_and_advantage(v_function, experiences, gamma=0.99, lmb=0.97
     v = v_function.v(s_var)  # build graph
 
     for t in reversed(range(T)):
-        s_current, _, r, non_terminal, s_next = experiences[t]
+        s_current, _, r, non_terminal, s_next, *_ = experiences[t]
 
         # predict current v
         s_var.d = s_current

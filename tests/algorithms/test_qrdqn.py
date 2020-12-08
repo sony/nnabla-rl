@@ -58,7 +58,7 @@ class TestQRDQN(object):
         state = np.float32(state)
         action = qrdqn.compute_eval_action(state)
 
-        assert action.shape == (1,)
+        assert action.shape == ()
 
     def test_update_algorithm_params(self):
         dummy_env = E.DummyDiscreteImg()

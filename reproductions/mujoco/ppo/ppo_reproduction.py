@@ -9,12 +9,12 @@ from nnabla_rl.utils.reproductions import build_mujoco_env
 from nnabla_rl.utils import serializers
 
 
-def select_only_reset_if_truncated(env_name):
+def select_timelimit_as_terminal(env_name):
     if 'Swimmer' in env_name:
-        reset_if_truncated = False
+        timelimit_as_terminal = True
     else:
-        reset_if_truncated = True
-    return reset_if_truncated
+        timelimit_as_terminal = False
+    return timelimit_as_terminal
 
 
 def run_training(args):
@@ -38,7 +38,7 @@ def run_training(args):
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
-        only_reset_if_truncated = select_only_reset_if_truncated(args.env)
+        timelimit_as_terminal = select_timelimit_as_terminal(args.env)
         params = A.PPOParam(epsilon=0.2,
                             entropy_coefficient=0.0,
                             actor_timesteps=2048,
@@ -47,7 +47,7 @@ def run_training(args):
                             learning_rate=3.0*1e-4,
                             actor_num=1,
                             decrease_alpha=False,
-                            only_reset_if_truncated=only_reset_if_truncated)
+                            timelimit_as_terminal=timelimit_as_terminal)
         ppo = A.PPO(train_env, params=params)
     else:
         ppo = serializers.load_snapshot(args.snapshot_dir)

@@ -89,7 +89,7 @@ class TestMemoryEfficientAtariBuffer(object):
         for _ in range(num_mocks):
             action = env.action_space.sample()
             s_next, reward, done, _ = env.step(action)
-            experience = (state, action, [reward], [1.0 - done], s_next)
+            experience = (state, action, reward, 1.0 - done, s_next)
             experiences.append(experience)
             if done:
                 state = env.reset()

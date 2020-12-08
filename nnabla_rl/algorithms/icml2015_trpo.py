@@ -8,6 +8,7 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, StochasticPolicy
+import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
@@ -61,10 +62,20 @@ class ICML2015TRPO(Algorithm):
         assert isinstance(self._policy, StochasticPolicy)
 
     def compute_eval_action(self, s):
-        return self._compute_action(s)
+        action, _ = self._compute_action(s)
+        return action
 
     def _before_training_start(self, env_or_buffer):
+        self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
+
+    def _setup_environment_explorer(self, env_or_buffer):
+        if self._is_buffer(env_or_buffer):
+            return None
+        explorer_params = EE.RawPolicyExplorerParam(initial_step_num=self.iteration_num, timelimit_as_terminal=False)
+        explorer = EE.RawPolicyExplorer(
+            policy_action_selector=self._compute_action, env_info=self._env_info, params=explorer_params)
+        return explorer
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_params = MT.policy_trainers.TRPOPolicyTrainerParam(
@@ -87,27 +98,11 @@ class ICML2015TRPO(Algorithm):
 
         num_steps = 0
         while num_steps <= self._params.num_steps_per_iteration:
-            experience = self._run_one_episode(env)
+            experience = self._environment_explorer.rollout(env)
             self._buffer.append(experience)
             num_steps += len(experience)
 
         self._trpo_training(self._buffer)
-
-    def _run_one_episode(self, env):
-        self._state = env.reset()
-        done = False
-        experience = []
-
-        while not done:
-            self._action = self._compute_action(self._state)
-            self._next_state, r, done, _ = env.step(self._action)
-            non_terminal = np.float32(0.0 if done else 1.0)
-
-            experience.append((self._state, self._action,
-                               r, non_terminal, self._next_state))
-            self._state = self._next_state
-
-        return experience
 
     def _run_offline_training_iteration(self, buffer):
         raise NotImplementedError
@@ -125,7 +120,7 @@ class ICML2015TRPO(Algorithm):
         accumulated_reward_batch = []
 
         for experience in experiences:
-            s_seq, a_seq, r_seq, _, _ = marshall_experiences(experience)
+            s_seq, a_seq, r_seq, *_ = marshall_experiences(experience)
             accumulated_reward = self._compute_accumulated_reward(r_seq, self._params.gamma)
             s_batch.append(s_seq)
             a_batch.append(a_seq)
@@ -133,8 +128,7 @@ class ICML2015TRPO(Algorithm):
 
         s_batch = np.concatenate(s_batch, axis=0)
         a_batch = np.concatenate(a_batch, axis=0)
-        accumulated_reward_batch = np.concatenate(
-            accumulated_reward_batch, axis=0)
+        accumulated_reward_batch = np.concatenate(accumulated_reward_batch, axis=0)
 
         assert len(s_batch) >= self._params.num_steps_per_iteration
         return s_batch[:self._params.num_steps_per_iteration], \
@@ -151,8 +145,7 @@ class ICML2015TRPO(Algorithm):
         mask = left_justified_gamma_seqs != 0.
 
         gamma_seqs = np.zeros((episode_length, episode_length))
-        gamma_seqs[np.triu_indices(episode_length)
-                   ] = left_justified_gamma_seqs[mask]
+        gamma_seqs[np.triu_indices(episode_length)] = left_justified_gamma_seqs[mask]
 
         return np.sum(reward_sequence*gamma_seqs, axis=1, keepdims=True)
 
@@ -161,7 +154,7 @@ class ICML2015TRPO(Algorithm):
         with nn.auto_forward():
             distribution = self._policy.pi(s_eval_var)
             eval_action = distribution.sample()
-        return eval_action.d.flatten()
+        return np.squeeze(eval_action.d, axis=0), {}
 
     def _models(self):
         models = {}

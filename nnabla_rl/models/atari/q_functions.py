@@ -74,4 +74,4 @@ class DQNQFunction(QFunction):
 
     def argmax_q(self, s):
         q_values = self._predict_q_values(s)
-        return RF.argmax(q_values, axis=1)
+        return RF.argmax(q_values, axis=1, keepdims=True)

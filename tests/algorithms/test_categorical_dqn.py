@@ -64,7 +64,7 @@ class TestCategoricalDQN(object):
         state = np.float32(state)
         action = categorical_dqn.compute_eval_action(state)
 
-        assert action.shape == (1,)
+        assert action.shape == ()
 
 
 if __name__ == "__main__":

@@ -7,12 +7,12 @@ from dataclasses import dataclass
 import nnabla.solvers as NS
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
-from nnabla_rl.exploration_strategies.epsilon_greedy import epsilon_greedy_action_selection
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import QRDQNQuantileDistributionFunction
-import nnabla_rl.exploration_strategies as ES
+from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
+import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
@@ -86,27 +86,35 @@ class QRDQN(Algorithm):
         self._quantile_dist_solver = {self._quantile_dist.scope_name: solver_builder()}
         self._target_quantile_dist = self._quantile_dist.deepcopy('quantile_dist_target')
 
-        self._state = None
-        self._action = None
-        self._next_state = None
-        self._replay_buffer = replay_buffer_builder(
-            capacity=params.replay_buffer_size)
-
-        self._exploration_strategy = ES.EpsilonGreedyExplorationStrategy(self._params.initial_epsilon,
-                                                                         self._params.final_epsilon,
-                                                                         self._params.max_explore_steps,
-                                                                         self._greedy_action_selector,
-                                                                         self._random_action_selector)
+        self._replay_buffer = replay_buffer_builder(capacity=params.replay_buffer_size)
 
     def compute_eval_action(self, state):
-        action, _ = epsilon_greedy_action_selection(state,
-                                                    self._greedy_action_selector,
-                                                    self._random_action_selector,
-                                                    epsilon=self._params.test_epsilon)
+        (action, _), _ = epsilon_greedy_action_selection(state,
+                                                         self._greedy_action_selector,
+                                                         self._random_action_selector,
+                                                         epsilon=self._params.test_epsilon)
         return action
 
     def _before_training_start(self, env_or_buffer):
+        self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._quantile_dist_trainer = self._setup_quantile_function_training(env_or_buffer)
+
+    def _setup_environment_explorer(self, env_or_buffer):
+        if self._is_buffer(env_or_buffer):
+            return None
+        explorer_params = EE.LinearDecayEpsilonGreedyExplorerParam(
+            warmup_random_steps=self._params.start_timesteps,
+            initial_step_num=self.iteration_num,
+            initial_epsilon=self._params.initial_epsilon,
+            final_epsilon=self._params.final_epsilon,
+            max_explore_steps=self._params.max_explore_steps
+        )
+        explorer = EE.LinearDecayEpsilonGreedyExplorer(
+            greedy_action_selector=self._greedy_action_selector,
+            random_action_selector=self._random_action_selector,
+            env_info=self._env_info,
+            params=explorer_params)
+        return explorer
 
     def _setup_quantile_function_training(self, env_or_buffer):
         trainer_params = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerParam(
@@ -138,25 +146,8 @@ class QRDQN(Algorithm):
         return quantile_dist_trainer
 
     def _run_online_training_iteration(self, env):
-        if self._state is None:
-            self._state = env.reset()
-
-        if self.iteration_num < self._params.start_timesteps:
-            self._action = self._random_action_selector(self._state)
-        else:
-            self._action = self._exploration_strategy.select_action(
-                self.iteration_num, self._state)
-        self._next_state, r, done, _ = env.step(self._action)
-        non_terminal = np.float32(0.0 if done else 1.0)
-        experience = \
-            (self._state, self._action, [r], [non_terminal], self._next_state)
-        self._replay_buffer.append(experience)
-
-        if done:
-            self._state = env.reset()
-        else:
-            self._state = self._next_state
-
+        experiences = self._environment_explorer.step(env)
+        self._replay_buffer.append_all(experiences)
         if self._params.start_timesteps < self.iteration_num:
             if self.iteration_num % self._params.learner_update_frequency == 0:
                 self._qrdqn_training(self._replay_buffer)
@@ -175,11 +166,11 @@ class QRDQN(Algorithm):
         with nn.auto_forward():
             q_function = self._quantile_dist.as_q_function()
             a_greedy = q_function.argmax_q(s_eval_var)
-        return a_greedy.d
+        return np.squeeze(a_greedy.d, axis=0), {}
 
     def _random_action_selector(self, s):
         action = self._env_info.action_space.sample()
-        return np.asarray(action).reshape((1, ))
+        return np.asarray(action).reshape((1, )), {}
 
     def _models(self):
         models = {}

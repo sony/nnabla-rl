@@ -22,10 +22,12 @@ class TestPPO(object):
         """
 
         dummy_env = E.DummyDiscreteImg()
-        params = A.PPOParam(batch_size=5, actor_timesteps=10, actor_num=2)
+        actor_timesteps = 10
+        actor_num = 2
+        params = A.PPOParam(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
         ppo = A.PPO(dummy_env, params=params)
 
-        ppo.train_online(dummy_env, total_iterations=2)
+        ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
 
     def test_run_online_continuous_env_training(self):
         """
@@ -33,10 +35,12 @@ class TestPPO(object):
         """
 
         dummy_env = E.DummyContinuous()
-        params = A.PPOParam(batch_size=5, actor_timesteps=10, actor_num=2)
+        actor_timesteps = 10
+        actor_num = 2
+        params = A.PPOParam(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
         ppo = A.PPO(dummy_env, params=params)
 
-        ppo.train_online(dummy_env, total_iterations=2)
+        ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
     def test_run_offline_training(self):
         """

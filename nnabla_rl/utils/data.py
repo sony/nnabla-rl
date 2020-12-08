@@ -5,9 +5,16 @@ import numpy as np
 T = TypeVar('T')
 
 
+def add_axis_if_single_dim(data):
+    if data.ndim == 1:
+        return np.expand_dims(data, axis=-1)
+    else:
+        return data
+
+
 def marshall_experiences(experiences):
     unzipped_experiences = unzip(experiences)
-    return tuple(np.asarray(data) for data in unzipped_experiences)
+    return tuple(add_axis_if_single_dim(np.asarray(data)) for data in unzipped_experiences)
 
 
 def unzip(zipped_data):

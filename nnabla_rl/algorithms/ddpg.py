@@ -11,6 +11,7 @@ from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.model_trainers.model_trainer import Training
 from nnabla_rl.models import TD3QFunction, TD3Policy, QFunction, DeterministicPolicy
+import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
@@ -32,6 +33,7 @@ class DDPGParam(AlgorithmParam):
     batch_size: int = 100
     start_timesteps: int = 10000
     replay_buffer_size: int = 1000000
+    exploration_noise_sigma: float = 0.1
 
 
 class DDPG(Algorithm):
@@ -57,15 +59,29 @@ class DDPG(Algorithm):
         assert isinstance(self._pi, DeterministicPolicy)
         assert isinstance(self._target_pi, DeterministicPolicy)
 
-        self._state = None
-        self._action = None
-        self._next_state = None
         self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
-        self._episode_timesteps = None
 
     def _before_training_start(self, env_or_buffer):
+        self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
+
+    def _setup_environment_explorer(self, env_or_buffer):
+        if self._is_buffer(env_or_buffer):
+            return None
+
+        explorer_params = EE.GaussianExplorerParam(
+            warmup_random_steps=self._params.start_timesteps,
+            initial_step_num=self.iteration_num,
+            timelimit_as_terminal=False,
+            action_clip_low=self._env_info.action_space.low,
+            action_clip_high=self._env_info.action_space.high,
+            sigma=self._params.exploration_noise_sigma
+        )
+        explorer = EE.GaussianExplorer(policy_action_selector=self._compute_greedy_action,
+                                       env_info=self._env_info,
+                                       params=explorer_params)
+        return explorer
 
     def _setup_q_function_training(self, env_or_buffer):
         q_function_trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
@@ -111,39 +127,14 @@ class DDPG(Algorithm):
         return policy_trainer
 
     def compute_eval_action(self, state):
-        return self._compute_greedy_action(state)
+        action, _ = self._compute_greedy_action(state)
+        return action
 
     def _run_online_training_iteration(self, env):
-        if self._state is None:
-            self._state = env.reset()
-            self._episode_timesteps = 0
-        self._episode_timesteps += 1
-
-        if self.iteration_num < self._params.start_timesteps:
-            self._action = env.action_space.sample()
-        else:
-            self._action = self._compute_greedy_action(self._state)
-            self._action = self._append_noise(
-                self._action, env.action_space.low, env.action_space.high)
-
-        self._next_state, r, done, _ = env.step(self._action)
-
-        if done and self._episode_timesteps < self._env_info.max_episode_steps:
-            non_terminal = 0.0
-        else:
-            non_terminal = 1.0
-        experience = \
-            (self._state, self._action, [r], [non_terminal], self._next_state)
-        self._replay_buffer.append(experience)
-
-        self._state = self._next_state
-
+        experiences = self._environment_explorer.step(env)
+        self._replay_buffer.append_all(experiences)
         if self._params.start_timesteps < self.iteration_num:
             self._ddpg_training(self._replay_buffer)
-
-        if done:
-            self._state = env.reset()
-            self._episode_timesteps = 0
 
     def _run_offline_training_iteration(self, buffer):
         self._ddpg_training(buffer)
@@ -166,12 +157,7 @@ class DDPG(Algorithm):
         s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
         with nn.auto_forward():
             eval_action = self._pi.pi(s_eval_var)
-        return np.squeeze(eval_action.d, axis=0)
-
-    def _append_noise(self, action, low, high):
-        noise = np.random.normal(
-            loc=0.0, scale=0.1, size=action.shape).astype(np.float32)
-        return np.clip(action + noise, low, high)
+        return np.squeeze(eval_action.d, axis=0), {}
 
     def _models(self):
         models = {}

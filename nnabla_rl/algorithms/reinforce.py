@@ -9,6 +9,7 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy
+import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
@@ -21,6 +22,14 @@ def build_continuous_policy(scope_name, env_info, algorithm_params, **kwargs):
 
 def build_discrete_policy(scope_name, env_info, algorithm_params, **kwargs):
     return REINFORCEDiscretePolicy(scope_name, env_info.state_dim, env_info.action_dim)
+
+
+def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
+    if env_info.is_discrete_action_env():
+        policy = build_discrete_policy("pi", env_info, algorithm_params)
+    else:
+        policy = build_continuous_policy("pi", env_info, algorithm_params)
+    return policy
 
 
 @dataclass
@@ -46,33 +55,37 @@ class REINFORCEParam(AlgorithmParam):
 
 class REINFORCE(Algorithm):
     def __init__(self, env_info,
-                 policy_builder=None,
+                 policy_builder=default_policy_builder,
                  params=REINFORCEParam()):
         super(REINFORCE, self).__init__(env_info, params=params)
 
-        if policy_builder is not None:
-            self._policy = policy_builder()
-        else:
-            if self._env_info.is_discrete_action_env():
-                self._policy = build_discrete_policy("pi", self._env_info, self._params)
-            else:
-                self._policy = build_continuous_policy("pi", self._env_info, self._params)
+        self._policy = policy_builder("pi", self._env_info, self._params)
         assert isinstance(self._policy, StochasticPolicy)
 
         def policy_solver_builder():
             return NS.Adam(alpha=self._params.learning_rate)
         self._policy_solver = {self._policy.scope_name: policy_solver_builder()}
 
-        self._state = None
-        self._action = None
-        self._next_state = None
-        self._buffer = None
-
     def compute_eval_action(self, s):
-        return self._compute_action(s)
+        action, _ = self._compute_action(s)
+        return action
 
     def _before_training_start(self, env_or_buffer):
+        self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
+
+    def _setup_environment_explorer(self, env_or_buffer):
+        if self._is_buffer(env_or_buffer):
+            return None
+        explorer_params = EE.RawPolicyExplorerParam(
+            reward_scalar=self._params.reward_scale,
+            initial_step_num=self.iteration_num,
+            timelimit_as_terminal=False
+        )
+        explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
+                                        env_info=self._env_info,
+                                        params=explorer_params)
+        return explorer
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_params = MT.policy_trainers.SPGPolicyTrainerParam(
@@ -87,27 +100,13 @@ class REINFORCE(Algorithm):
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
-        self._buffer = ReplayBuffer(
-            capacity=self._params.num_rollouts_per_train_iteration)
+        buffer = ReplayBuffer(capacity=self._params.num_rollouts_per_train_iteration)
 
         for _ in range(self._params.num_rollouts_per_train_iteration):
-            self._state = env.reset()
-            done = False
-            experience = []
+            experience = self._environment_explorer.rollout(env)
+            buffer.append(experience)
 
-            while not done:
-                self._action = self._compute_action(self._state)
-                self._next_state, r, done, _ = env.step(self._action)
-                non_terminal = np.float32(0.0 if done else 1.0)
-                r *= self._params.reward_scale
-
-                experience.append((self._state, self._action,
-                                   r, non_terminal, self._next_state))
-                self._state = self._next_state
-
-            self._buffer.append(experience)
-
-        self._reinforce_training(self._buffer)
+        self._reinforce_training(buffer)
 
     def _run_offline_training_iteration(self, buffer):
         raise NotImplementedError
@@ -125,7 +124,7 @@ class REINFORCE(Algorithm):
         accumulated_reward_batch = None
 
         for experience in experiences:
-            s_seq, a_seq, r_seq, _, _ = marshall_experiences(experience)
+            s_seq, a_seq, r_seq, *_ = marshall_experiences(experience)
             accumulated_reward = np.cumsum(r_seq[::-1])[::-1]
 
             if s_batch is None:
@@ -146,7 +145,7 @@ class REINFORCE(Algorithm):
         with nn.auto_forward():
             distribution = self._policy.pi(s_eval_var)
             eval_action = distribution.sample()
-        return eval_action.d.flatten()
+        return np.squeeze(eval_action.d, axis=0), {}
 
     def _models(self):
         models = {}

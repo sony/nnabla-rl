@@ -21,24 +21,14 @@ class TestBEAR(object):
 
     def test_run_online_training(self):
         """
-        Check that no error occurs when calling online training
+        Check that error occurs when calling online training
         """
 
         dummy_env = E.DummyContinuous()
         params = A.BEARParam(start_timesteps=100)
         bear = A.BEAR(dummy_env, params=params)
 
-        bear.train_online(dummy_env, total_iterations=10)
-
-    def test_run_online_training_with_default_param(self):
-        """
-        Check that error occurs when calling online training
-        """
-
-        dummy_env = E.DummyContinuous()
-        bear = A.BEAR(dummy_env)
-
-        with pytest.raises(ValueError):
+        with pytest.raises(NotImplementedError):
             bear.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):

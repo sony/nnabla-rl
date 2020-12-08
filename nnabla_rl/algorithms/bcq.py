@@ -116,9 +116,6 @@ class BCQ(Algorithm):
                                               env_info=self._env_info,
                                               algorithm_params=self._params)
 
-        self._state = None
-        self._action = None
-        self._next_state = None
         self._replay_buffer = ReplayBuffer(capacity=None)
 
         self._q_function_trainer = None
