@@ -180,16 +180,14 @@ class TestFunctions(object):
             tau_var = nn.Variable.from_numpy_array(tau)
             x0_var = nn.Variable.from_numpy_array(x0)
             x1_var = nn.Variable.from_numpy_array(x1)
-            loss = RF.quantile_huber_loss(
-                x0=x0_var, x1=x1_var, kappa=kappa, tau=tau_var)
+            loss = RF.quantile_huber_loss(x0=x0_var, x1=x1_var, kappa=kappa, tau=tau_var)
             loss.forward()
 
             actual = loss.d
-            expected = quantile_huber_loss(
-                x0=x0, x1=x1, kappa=kappa, tau=tau)
+            expected = quantile_huber_loss(x0=x0, x1=x1, kappa=kappa, tau=tau)
 
             assert actual.shape == expected.shape
-            assert np.allclose(actual, expected)
+            assert np.allclose(actual, expected, atol=1e-7)
 
     def test_mean_squared_error(self):
         num_samples = 100

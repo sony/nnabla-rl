@@ -45,7 +45,7 @@ class TestSquashedGaussian(object):
         probable_action.forward(clear_no_need_grad=True)
         probable_action = probable_action.data.data
         assert np.alltrue((-1.0 <= probable_action) & (probable_action <= 1.0))
-        assert np.all(np.isclose(probable_action, np.tanh(mean), atol=1e-5))
+        assert np.allclose(probable_action, np.tanh(mean), atol=1e-5)
 
     def test_mean(self):
         batch_size = 10
@@ -82,8 +82,8 @@ class TestSquashedGaussian(object):
         actual = actual.data.data
         assert np.isclose(expected, actual)
 
-    @pytest.mark.parametrize("mean", np.arange(start=-1.0, stop=1.0, step=0.25))
-    @pytest.mark.parametrize("var", np.arange(start=1.0, stop=2.0, step=0.25))
+    @pytest.mark.parametrize("mean", np.arange(start=-1.0, stop=0.5, step=0.25))
+    @pytest.mark.parametrize("var", np.arange(start=0.5, stop=1.5, step=0.25))
     def test_sample_and_compute_log_prob(self, mean, var):
         mean = np.array(mean).reshape((1, 1))
         ln_var = np.array(np.log(var)).reshape((1, 1))
@@ -101,11 +101,10 @@ class TestSquashedGaussian(object):
             np.log(2.0 * np.pi) - 0.5 * ln_var - \
             (x - mean) ** 2 / (2.0 * var)
         log_det_jacobian = np.log(1 - np.tanh(x) ** 2)
-        expected = np.sum(gaussian_log_prob -
-                          log_det_jacobian, axis=-1, keepdims=True)
+        expected = np.sum(gaussian_log_prob - log_det_jacobian, axis=-1, keepdims=True)
 
         actual = actual.data.data
-        assert np.isclose(expected, actual, atol=1e-3)
+        assert np.isclose(expected, actual, atol=1e-3, rtol=1e-2)
 
     def test_sample_and_compute_log_prob_shape(self):
         batch_size = 10
@@ -156,7 +155,7 @@ class TestSquashedGaussian(object):
                           keepdims=True)
         actual = log_probs.d
         assert expected.shape == (batch_size, 1)
-        assert np.allclose(expected, actual[:, 0, :], atol=1e-3)
+        assert np.allclose(expected, actual[:, 0, :], atol=1e-3, rtol=1e-2)
 
         # Check all the samples
         mu = np.reshape(mu, newshape=(batch_size, 1, output_dim))
@@ -170,7 +169,7 @@ class TestSquashedGaussian(object):
                           axis=-1,
                           keepdims=True)
         actual = log_probs.d
-        assert np.allclose(expected, actual, atol=1e-3)
+        assert np.allclose(expected, actual, atol=1e-3, rtol=1e-2)
 
     def test_sample_multiple_and_compute_log_prob_shape(self):
         batch_size = 10
