@@ -72,8 +72,8 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             self._action, action_info = self.action(self._steps, self._state)
 
         self._next_state, r, done, step_info = env.step(self._action)
-        truncated = step_info.get('TimeLimit.truncated', False) and self._params.timelimit_as_terminal
-        if done and not truncated:
+        timelimit = step_info.get('TimeLimit.truncated', False)
+        if _is_end_of_episode(done, timelimit, self._params.timelimit_as_terminal):
             non_terminal = 0.0
         else:
             non_terminal = 1.0
@@ -90,3 +90,10 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             self._state = self._next_state
 
         return experience, done
+
+
+def _is_end_of_episode(done, timelimit, timelimit_as_terminal):
+    if not done:
+        return False
+    else:
+        return (not timelimit) or (timelimit and timelimit_as_terminal)
