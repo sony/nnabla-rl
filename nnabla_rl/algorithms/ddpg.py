@@ -155,10 +155,13 @@ class DDPG(Algorithm):
 
     def _compute_greedy_action(self, s):
         # evaluation input/action variables
-        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
-        with nn.auto_forward():
-            eval_action = self._pi.pi(s_eval_var)
-        return np.squeeze(eval_action.d, axis=0), {}
+        s = np.expand_dims(s, axis=0)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = nn.Variable(s.shape)
+            self._eval_action = self._pi.pi(self._eval_state_var)
+        self._eval_state_var.d = s
+        self._eval_action.forward()
+        return np.squeeze(self._eval_action.d, axis=0), {}
 
     def _models(self):
         models = {}

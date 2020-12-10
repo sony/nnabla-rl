@@ -180,12 +180,13 @@ class DQN(Algorithm):
         self._dqn_training(buffer)
 
     def _greedy_action_selector(self, s):
-        # Evaluation input variables
-        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
-
-        with nn.auto_forward():
-            a_greedy = self._q.argmax_q(s_eval_var)
-        return np.squeeze(a_greedy.d, axis=0), {}
+        s = np.expand_dims(s, axis=0)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = nn.Variable(s.shape)
+            self._a_greedy = self._q.argmax_q(self._eval_state_var)
+        self._eval_state_var.d = s
+        self._a_greedy.forward()
+        return np.squeeze(self._a_greedy.d, axis=0), {}
 
     def _random_action_selector(self, s):
         action = self._env_info.action_space.sample()

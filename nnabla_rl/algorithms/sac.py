@@ -203,14 +203,17 @@ class SAC(Algorithm):
         replay_buffer.update_priorities(td_error)
 
     def _compute_greedy_action(self, s, deterministic=False):
-        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
-        with nn.auto_forward():
-            eval_distribution = self._pi.pi(s_eval_var)
+        s = np.expand_dims(s, axis=0)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = nn.Variable(s.shape)
+            distribution = self._pi.pi(self._eval_state_var)
             if deterministic:
-                eval_action = eval_distribution.choose_probable()
+                self._eval_action = distribution.choose_probable()
             else:
-                eval_action = eval_distribution.sample()
-        return np.squeeze(eval_action.d, axis=0), {}
+                self._eval_action = distribution.sample()
+        self._eval_state_var.d = s
+        self._eval_action.forward()
+        return np.squeeze(self._eval_action.d, axis=0), {}
 
     def _models(self):
         models = [self._q1, self._q2, self._pi]

@@ -142,11 +142,14 @@ class REINFORCE(Algorithm):
         return s_batch, a_batch, accumulated_reward_batch
 
     def _compute_action(self, s):
-        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
-        with nn.auto_forward():
-            distribution = self._policy.pi(s_eval_var)
-            eval_action = distribution.sample()
-        return np.squeeze(eval_action.d, axis=0), {}
+        s = np.expand_dims(s, axis=0)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = nn.Variable(s.shape)
+            distribution = self._policy.pi(self._eval_state_var)
+            self._eval_action = distribution.sample()
+        self._eval_state_var.d = s
+        self._eval_action.forward()
+        return np.squeeze(self._eval_action.d, axis=0), {}
 
     def _models(self):
         models = {}

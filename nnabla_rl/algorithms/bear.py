@@ -146,26 +146,28 @@ class BEAR(Algorithm):
         self._policy_trainer = None
 
     @eval_api
-    def compute_eval_action(self, state):
-        # evaluation input/action variables
-        eval_state_var = nn.Variable((1, *state.shape))
-        eval_state_var.d = np.expand_dims(state, axis=0)
-
-        if self._params.use_mean_for_eval:
-            with nn.auto_forward():
-                eval_distribution = self._pi.pi(eval_state_var)
-                eval_action = NF.tanh(eval_distribution.mean())
-            return np.squeeze(eval_action.d, axis=0)
-        else:
-            with nn.auto_forward():
-                repeat_num = 10
-                state = RF.repeat(x=eval_state_var, repeats=repeat_num, axis=0)
-                assert state.shape == (repeat_num, eval_state_var.shape[1])
+    def compute_eval_action(self, s):
+        s = np.expand_dims(s, axis=0)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = nn.Variable(s.shape)
+            if self._params.use_mean_for_eval:
+                eval_distribution = self._pi.pi(self._eval_state_var)
+                self._eval_action = NF.tanh(eval_distribution.mean())
+            else:
+                repeat_num = 100
+                state = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
+                assert state.shape == (repeat_num, self._eval_state_var.shape[1])
                 eval_distribution = self._pi.pi(state)
-                eval_action = NF.tanh(eval_distribution.sample())
-                q_values = self._q_ensembles[0].q(state, eval_action)
-                eval_max_index = RF.argmax(q_values, axis=0)
-            return eval_action.d[eval_max_index.d[0]]
+                self._eval_action = NF.tanh(eval_distribution.sample())
+                q_values = self._q_ensembles[0].q(state, self._eval_action)
+                self._eval_max_index = RF.argmax(q_values, axis=0)
+        self._eval_state_var.d = s
+        if self._params.use_mean_for_eval:
+            self._eval_action.forward()
+            return np.squeeze(self._eval_action.d, axis=0)
+        else:
+            nn.forward_all([self._eval_action, self._eval_max_index])
+            return self._eval_action.d[self._eval_max_index.d[0]]
 
     def _before_training_start(self, env_or_buffer):
         self._vae_trainer = self._setup_vae_training(env_or_buffer)

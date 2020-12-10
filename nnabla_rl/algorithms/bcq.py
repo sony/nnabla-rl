@@ -123,22 +123,21 @@ class BCQ(Algorithm):
         self._perturbator_trainer = None
 
     @eval_api
-    def compute_eval_action(self, state):
-        # evaluation input/action variables
-        eval_state_var = nn.Variable((1, *state.shape))
-        eval_state_var.d = np.expand_dims(state, axis=0)
-
-        with nn.auto_forward():
+    def compute_eval_action(self, s):
+        s = np.expand_dims(s, axis=0)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = nn.Variable(s.shape)
             repeat_num = 100
-            state = RF.repeat(x=eval_state_var, repeats=repeat_num, axis=0)
-            assert state.shape == (repeat_num, eval_state_var.shape[1])
+            state = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
+            assert state.shape == (repeat_num, self._eval_state_var.shape[1])
             actions = self._vae.decode(state)
             noise = self._xi.generate_noise(state, actions, self._params.phi)
-            eval_action = actions + noise
-            q_values = self._q_ensembles[0].q(state, eval_action)
-            eval_max_index = RF.argmax(q_values, axis=0)
-
-        return eval_action.d[eval_max_index.d[0]]
+            self._eval_action = actions + noise
+            q_values = self._q_ensembles[0].q(state, self._eval_action)
+            self._eval_max_index = RF.argmax(q_values, axis=0)
+        self._eval_state_var.d = s
+        nn.forward_all([self._eval_action, self._eval_max_index])
+        return self._eval_action.d[self._eval_max_index.d[0]]
 
     def _before_training_start(self, env_or_buffer):
         self._vae_trainer = self._setup_vae_training(env_or_buffer)

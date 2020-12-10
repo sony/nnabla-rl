@@ -299,11 +299,14 @@ class PPO(Algorithm):
         self._v_function_trainer.train(v_function_experience)
 
     def _compute_action(self, s):
-        s_eval_var = nn.Variable.from_numpy_array(np.expand_dims(s, axis=0))
-        with nn.auto_forward():
-            distribution = self._policy.pi(s_eval_var)
-            eval_action = distribution.sample()
-        action = np.squeeze(eval_action.d, axis=0)
+        s = np.expand_dims(s, axis=0)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = nn.Variable(s.shape)
+            distribution = self._policy.pi(self._eval_state_var)
+            self._eval_action = distribution.sample()
+        self._eval_state_var.d = s
+        self._eval_action.forward()
+        action = np.squeeze(self._eval_action.d, axis=0)
         if self._env_info.is_discrete_action_env():
             return np.int(action)
         else:
@@ -462,15 +465,15 @@ class _PPOActor(object):
         return experiences, v_targets, advantages
 
     def _compute_action(self, s):
-        # evaluation input/action variables
-        eval_state_var = nn.Variable((1, *s.shape))
-        eval_state_var.d = np.expand_dims(s, axis=0)
-
-        with nn.auto_forward():
-            distribution = self._policy.pi(eval_state_var)
-            eval_action, log_prob = distribution.sample_and_compute_log_prob()
-        action = np.squeeze(eval_action.d, axis=0)
-        log_prob = np.squeeze(log_prob.d, axis=0)
+        s = np.expand_dims(s, axis=0)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = nn.Variable(s.shape)
+            distribution = self._policy.pi(self._eval_state_var)
+            self._eval_action, self._eval_log_prob = distribution.sample_and_compute_log_prob()
+        self._eval_state_var.d = s
+        nn.forward_all([self._eval_action, self._eval_log_prob])
+        action = np.squeeze(self._eval_action.d, axis=0)
+        log_prob = np.squeeze(self._eval_log_prob.d, axis=0)
         info = {}
         info['log_prob'] = log_prob
         if self._env_info.is_discrete_action_env():
