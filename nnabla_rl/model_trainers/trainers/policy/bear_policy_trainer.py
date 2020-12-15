@@ -8,7 +8,8 @@ import nnabla.functions as NF
 from dataclasses import dataclass
 
 import nnabla_rl.functions as RF
-from nnabla_rl.model_trainers.model_trainer import TrainerParam, Training, TrainingVariables, ModelTrainer
+from nnabla_rl.model_trainers.model_trainer import \
+    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy, QFunction, VariationalAutoEncoder
 
 
@@ -79,12 +80,10 @@ class BEARPolicyTrainer(ModelTrainer):
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
-                      experience,
+                      batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs):
-        (s, *_) = experience
-
-        training_variables.s_current.d = s
+        training_variables.s_current.d = batch.s_current
 
         # Optimize actor
         # Always forward pi loss to update the graph
@@ -161,7 +160,7 @@ class BEARPolicyTrainer(ModelTrainer):
     def _setup_training_variables(self, batch_size):
         # Training input variables
         s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        return TrainingVariables(s_current_var)
+        return TrainingVariables(batch_size, s_current_var)
 
     def _setup_solver(self):
         super()._setup_solver()

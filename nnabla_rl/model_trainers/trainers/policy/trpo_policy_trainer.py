@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, Dict
+from typing import Iterable, Dict
 
 import numpy as np
 
@@ -7,7 +7,8 @@ import nnabla.functions as NF
 
 from dataclasses import dataclass
 
-from nnabla_rl.model_trainers.model_trainer import TrainerParam, Training, TrainingVariables, ModelTrainer
+from nnabla_rl.model_trainers.model_trainer import \
+    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.utils.optimization import conjugate_gradient
@@ -75,11 +76,6 @@ def _update_network_params_by_flat_params(params, new_flat_params):
 
 
 @dataclass
-class TRPOTrainingVariables(TrainingVariables):
-    advantage: Optional[nn.Variable] = None
-
-
-@dataclass
 class TRPOPolicyTrainerParam(TrainerParam):
     batch_size: int = 5000
     num_steps_per_iteration: int = 5000
@@ -123,10 +119,12 @@ class TRPOPolicyTrainer(ModelTrainer):
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
-                      experience,
+                      batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs):
-        (s, a, advantage, * _) = experience
+        s = batch.s_current
+        a = batch.a_current
+        advantage = batch.extra['advantage']
 
         policy = models[0]
         old_policy = self._old_policy
@@ -167,7 +165,8 @@ class TRPOPolicyTrainer(ModelTrainer):
         old_log_prob = old_distribution.log_prob(training_variables.a_current)
 
         prob_ratio = NF.exp(log_prob - old_log_prob)
-        self._approximate_return = NF.mean(prob_ratio*training_variables.advantage)
+        advantage = training_variables.extra['advantage']
+        self._approximate_return = NF.mean(prob_ratio*advantage)
 
         _approximate_return_grads = nn.grad([self._approximate_return], policy.get_parameters().values())
 
@@ -259,7 +258,7 @@ class TRPOPolicyTrainer(ModelTrainer):
             start_idx = block_index * batch_size
             training_variables.s_current.d = s_batch[start_idx:start_idx+batch_size]
             training_variables.a_current.d = a_batch[start_idx:start_idx+batch_size]
-            training_variables.advantage.d = adv_batch[start_idx:start_idx+batch_size]
+            training_variables.extra['advantage'].d = adv_batch[start_idx:start_idx+batch_size]
 
             nn.forward_all([self._approximate_return,
                             self._kl_divergence,
@@ -284,4 +283,6 @@ class TRPOPolicyTrainer(ModelTrainer):
         else:
             a_current_var = nn.Variable((batch_size, self._env_info.action_dim))
         advantage_var = nn.Variable((batch_size, 1))
-        return TRPOTrainingVariables(s_current_var, a_current_var, advantage=advantage_var)
+        extra = {}
+        extra['advantage'] = advantage_var
+        return TrainingVariables(batch_size, s_current_var, a_current_var, extra=extra)

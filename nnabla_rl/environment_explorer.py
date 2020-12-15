@@ -78,11 +78,11 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         else:
             non_terminal = 1.0
 
-        additional_info = {}
-        additional_info.update(action_info)
-        additional_info.update(step_info)
+        extra_info = {}
+        extra_info.update(action_info)
+        extra_info.update(step_info)
         experience = (self._state, self._action, r * self._params.reward_scalar,
-                      non_terminal, self._next_state, additional_info)
+                      non_terminal, self._next_state, extra_info)
 
         if done:
             self._state = env.reset()

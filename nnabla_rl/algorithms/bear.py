@@ -13,6 +13,7 @@ from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import TD3QFunction, BEARPolicy, UnsquashedVariationalAutoEncoder, \
     DeterministicPolicy, StochasticPolicy, QFunction, VariationalAutoEncoder
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.functions as RF
 
@@ -203,7 +204,6 @@ class BEAR(Algorithm):
 
     def _setup_q_function_training(self, env_or_buffer):
         trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
-            gamma=self._params.gamma,
             reduction_method='mean')
 
         q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
@@ -281,16 +281,22 @@ class BEAR(Algorithm):
 
     def _bear_training(self, replay_buffer):
         experiences, info = replay_buffer.sample(self._params.batch_size)
-        marshalled_experiences = marshall_experiences(experiences)
+        (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
+        batch = TrainingBatch(batch_size=self._params.batch_size,
+                              s_current=s,
+                              a_current=a,
+                              gamma=self._params.gamma,
+                              reward=r,
+                              non_terminal=non_terminal,
+                              s_next=s_next,
+                              weight=info['weights'])
 
-        kwargs = {}
-        kwargs['weights'] = info['weights']
-        errors = self._q_function_trainer.train(marshalled_experiences, **kwargs)
+        errors = self._q_function_trainer.train(batch)
         td_error = np.abs(errors['td_error'])
         replay_buffer.update_priorities(td_error)
 
-        self._vae_trainer.train(marshalled_experiences)
-        self._policy_trainer.train(marshalled_experiences)
+        self._vae_trainer.train(batch)
+        self._policy_trainer.train(batch)
 
     def _models(self):
         models = [*self._q_ensembles, *self._target_q_ensembles,

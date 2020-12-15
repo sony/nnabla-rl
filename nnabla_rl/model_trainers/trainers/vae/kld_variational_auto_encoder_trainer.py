@@ -9,7 +9,8 @@ from dataclasses import dataclass
 
 import nnabla_rl.functions as RNF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import TrainerParam, Training, TrainingVariables, ModelTrainer
+from nnabla_rl.model_trainers.model_trainer import \
+    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import VariationalAutoEncoder, Model
 from nnabla_rl.distributions import Gaussian
 
@@ -30,13 +31,11 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
-                      experience,
+                      batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict:
-        (s, a, *_) = experience
-
-        training_variables.s_current.d = s
-        training_variables.a_current.d = a
+        training_variables.s_current.d = batch.s_current
+        training_variables.a_current.d = batch.a_current
 
         # update model
         for solver in solvers.values():
@@ -75,5 +74,5 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
         s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
         a_current_var = nn.Variable((batch_size, self._env_info.action_dim))
 
-        training_variables = TrainingVariables(s_current_var, a_current_var)
+        training_variables = TrainingVariables(batch_size, s_current_var, a_current_var)
         return training_variables

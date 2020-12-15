@@ -14,6 +14,7 @@ import nnabla_rl.preprocessors as RP
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.utils.context as context
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 from nnabla_rl.models import \
     PPOSharedFunctionHead, PPOAtariPolicy, PPOAtariVFunction, \
     PPOMujocoPolicy, PPOMujocoVFunction, \
@@ -290,13 +291,21 @@ class PPO(Algorithm):
             alpha = 1.0
 
         (s, a, _, _, _, log_prob, v_target, advantage) = marshall_experiences(experiences)
-        policy_experience = (s, a, log_prob, advantage, alpha)
-        v_function_experience = (s, v_target)
+
+        extra = {}
+        extra['log_prob'] = log_prob
+        extra['advantage'] = advantage
+        extra['alpha'] = alpha
+        extra['v_target'] = v_target
+        batch = TrainingBatch(batch_size=len(experiences),
+                              s_current=s,
+                              a_current=a,
+                              extra=extra)
 
         self._policy_trainer.set_learning_rate(self._params.learning_rate * alpha)
-        self._policy_trainer.train(policy_experience)
+        self._policy_trainer.train(batch)
         self._v_function_trainer.set_learning_rate(self._params.learning_rate * alpha)
-        self._v_function_trainer.train(v_function_experience)
+        self._v_function_trainer.train(batch)
 
     def _compute_action(self, s):
         s = np.expand_dims(s, axis=0)

@@ -8,19 +8,18 @@ import nnabla.functions as NF
 from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import TrainerParam, Training, TrainingVariables, ModelTrainer
+from nnabla_rl.model_trainers.model_trainer import \
+    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import QFunction, Model
 
 
 @dataclass
 class SquaredTDQFunctionTrainerParam(TrainerParam):
-    gamma: float = 0.99
     reduction_method: str = 'mean'
     grad_clip: tuple = None
     q_loss_scalar: float = 1.0
 
     def __post_init__(self):
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
         if self.grad_clip is not None:
             self._assert_ascending_order(self.grad_clip, 'grad_clip')
@@ -33,31 +32,23 @@ class SquaredTDQFunctionTrainer(ModelTrainer):
                  params: SquaredTDQFunctionTrainerParam):
         super(SquaredTDQFunctionTrainer, self).__init__(env_info, params)
 
-        self._weight_var = None
-
         # Training loss/output
         self._td_error = None
         self._q_loss = None
 
-    def train(self, experience, **kwargs) -> Dict:
-        (s, a, r, non_terminal, s_next, *_) = experience
-        return super().train((s, a, r, self._params.gamma, non_terminal, s_next), **kwargs)
-
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
-                      experience,
+                      batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict:
-        (s, a, r, gamma, non_terminal, s_next) = experience
-
-        training_variables.s_current.d = s
-        training_variables.a_current.d = a
-        training_variables.reward.d = r
-        training_variables.gamma.d = gamma
-        training_variables.non_terminal.d = non_terminal
-        training_variables.s_next.d = s_next
-        self._weight_var.d = kwargs['weights']
+        training_variables.s_current.d = batch.s_current
+        training_variables.a_current.d = batch.a_current
+        training_variables.reward.d = batch.reward
+        training_variables.gamma.d = batch.gamma
+        training_variables.non_terminal.d = batch.non_terminal
+        training_variables.s_next.d = batch.s_next
+        training_variables.weight.d = batch.weight
 
         # update model
         for q_solver in solvers.values():
@@ -96,7 +87,7 @@ class SquaredTDQFunctionTrainer(ModelTrainer):
                 minimum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_min))
                 maximum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_max))
                 td_error = NF.clip_grad_by_value(td_error, minimum, maximum)
-            squared_td_error = self._weight_var * NF.pow_scalar(td_error, 2.0)
+            squared_td_error = training_variables.weight * NF.pow_scalar(td_error, 2.0)
             if self._params.reduction_method == 'mean':
                 q_loss += self._params.q_loss_scalar * NF.mean(squared_td_error)
             elif self._params.reduction_method == 'sum':
@@ -121,8 +112,14 @@ class SquaredTDQFunctionTrainer(ModelTrainer):
         gamma_var = nn.Variable((1, 1))
         non_terminal_var = nn.Variable((batch_size, 1))
         s_next_var = nn.Variable((batch_size, *self._env_info.state_shape))
+        weight_var = nn.Variable((batch_size, 1))
 
-        training_variables = \
-            TrainingVariables(s_current_var, a_current_var, reward_var, gamma_var, non_terminal_var, s_next_var)
-        self._weight_var = nn.Variable((batch_size, 1))
+        training_variables = TrainingVariables(batch_size=batch_size,
+                                               s_current=s_current_var,
+                                               a_current=a_current_var,
+                                               reward=reward_var,
+                                               gamma=gamma_var,
+                                               non_terminal=non_terminal_var,
+                                               s_next=s_next_var,
+                                               weight=weight_var)
         return training_variables

@@ -1,19 +1,13 @@
-from typing import Optional, Iterable, Dict
+from typing import Iterable, Dict
 
 import nnabla as nn
 import nnabla.functions as NF
 
 from dataclasses import dataclass
 
-from nnabla_rl.model_trainers.model_trainer import TrainerParam, Training, TrainingVariables, ModelTrainer
+from nnabla_rl.model_trainers.model_trainer import \
+    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy
-
-
-@dataclass
-class PPOTrainingVariables(TrainingVariables):
-    log_prob: Optional[nn.Variable] = None
-    advantage: Optional[nn.Variable] = None
-    alpha: Optional[nn.Variable] = None
 
 
 @dataclass
@@ -33,16 +27,14 @@ class PPOPolicyTrainer(ModelTrainer):
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
-                      experience,
+                      batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs):
-        (s, a, log_prob, advantage, alpha) = experience
-
-        training_variables.s_current.d = s
-        training_variables.a_current.d = a
-        training_variables.log_prob.d = log_prob
-        training_variables.advantage.d = advantage
-        training_variables.alpha.d = alpha
+        training_variables.s_current.d = batch.s_current
+        training_variables.a_current.d = batch.a_current
+        training_variables.extra['log_prob'].d = batch.extra['log_prob']
+        training_variables.extra['advantage'].d = batch.extra['advantage']
+        training_variables.extra['alpha'].d = batch.extra['alpha']
 
         # update model
         for solver in solvers.values():
@@ -64,13 +56,14 @@ class PPOPolicyTrainer(ModelTrainer):
         for policy in models:
             distribution = policy.pi(training_variables.s_current)
             log_prob_new = distribution.log_prob(training_variables.a_current)
-            log_prob_old = training_variables.log_prob
+            log_prob_old = training_variables.extra['log_prob']
             probability_ratio = NF.exp(log_prob_new - log_prob_old)
+            alpha = training_variables.extra['alpha']
             clipped_ratio = NF.clip_by_value(probability_ratio,
-                                             1 - self._params.epsilon * training_variables.alpha,
-                                             1 + self._params.epsilon * training_variables.alpha)
-            lower_bounds = NF.minimum2(probability_ratio * training_variables.advantage,
-                                       clipped_ratio * training_variables.advantage)
+                                             1 - self._params.epsilon * alpha,
+                                             1 + self._params.epsilon * alpha)
+            advantage = training_variables.extra['advantage']
+            lower_bounds = NF.minimum2(probability_ratio * advantage, clipped_ratio * advantage)
             clip_loss = NF.mean(lower_bounds)
 
             entropy = distribution.entropy()
@@ -90,8 +83,8 @@ class PPOPolicyTrainer(ModelTrainer):
         advantage_var = nn.Variable((batch_size, 1))
         alpha_var = nn.Variable((batch_size, 1))
 
-        return PPOTrainingVariables(s_current_var,
-                                    a_current_var,
-                                    log_prob=log_prob_var,
-                                    advantage=advantage_var,
-                                    alpha=alpha_var)
+        extra = {}
+        extra['log_prob'] = log_prob_var
+        extra['advantage'] = advantage_var
+        extra['alpha'] = alpha_var
+        return TrainingVariables(batch_size, s_current_var, a_current_var, extra=extra)

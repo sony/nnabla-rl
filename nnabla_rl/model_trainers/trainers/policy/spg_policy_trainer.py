@@ -5,7 +5,8 @@ import nnabla.functions as NF
 
 from dataclasses import dataclass
 
-from nnabla_rl.model_trainers.model_trainer import TrainerParam, Training, TrainingVariables, ModelTrainer
+from nnabla_rl.model_trainers.model_trainer import \
+    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy
 
 
@@ -27,13 +28,11 @@ class SPGPolicyTrainer(ModelTrainer):
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
-                      experience,
+                      batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs):
-        (s, a, *_) = experience
-
-        training_variables.s_current.d = s
-        training_variables.a_current.d = a
+        training_variables.s_current.d = batch.s_current
+        training_variables.a_current.d = batch.a_current
 
         # update model
         for solver in solvers.values():
@@ -71,4 +70,4 @@ class SPGPolicyTrainer(ModelTrainer):
         else:
             action_shape = (batch_size, self._env_info.action_dim)
         a_current_var = nn.Variable(action_shape)
-        return TrainingVariables(s_current_var, a_current_var)
+        return TrainingVariables(batch_size, s_current_var, a_current_var)

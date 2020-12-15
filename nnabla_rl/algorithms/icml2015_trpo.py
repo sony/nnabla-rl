@@ -8,6 +8,7 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, StochasticPolicy
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
@@ -111,9 +112,15 @@ class ICML2015TRPO(Algorithm):
     def _trpo_training(self, buffer):
         # sample all experience in the buffer
         experiences, *_ = buffer.sample(len(buffer))
-        s_batch, a_batch, accumulated_reward_batch = self._align_experiences(experiences)
-        experience = (s_batch, a_batch, accumulated_reward_batch)
-        self._policy_trainer.train(experience)
+        s_batch, a_batch, advantage = self._align_experiences(experiences)
+        extra = {}
+        extra['advantage'] = advantage
+        batch = TrainingBatch(batch_size=self._params.batch_size,
+                              s_current=s_batch,
+                              a_current=a_batch,
+                              extra=extra)
+
+        self._policy_trainer.train(batch)
 
     def _align_experiences(self, experiences):
         s_batch = []

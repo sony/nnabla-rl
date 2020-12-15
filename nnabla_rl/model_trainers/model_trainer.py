@@ -2,7 +2,9 @@ from abc import ABCMeta, abstractmethod
 
 from typing import Optional, Iterable, Union, Dict
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+import numpy as np
 
 import nnabla as nn
 
@@ -19,17 +21,32 @@ class TrainerParam(Parameter):
 
 
 @dataclass
+class TrainingBatch():
+    batch_size: int = -1
+    s_current: Optional[np.array] = None
+    a_current: Optional[np.array] = None
+    reward: Optional[np.array] = None
+    gamma: Optional[float] = None
+    non_terminal: Optional[np.array] = None
+    s_next: Optional[np.array] = None
+    weight: Optional[np.array] = None
+    extra: Dict[str, np.array] = field(default_factory=dict)
+
+    # Used in n-step learning
+    next_step_batch: Optional['TrainingBatch'] = None
+
+
+@dataclass
 class TrainingVariables():
+    batch_size: int = -1
     s_current: Optional[nn.Variable] = None
     a_current: Optional[nn.Variable] = None
     reward: Optional[nn.Variable] = None
     gamma: Optional[nn.Variable] = None
     non_terminal: Optional[nn.Variable] = None
     s_next: Optional[nn.Variable] = None
-
-    @property
-    def batch_size(self):
-        return self.s_current.shape[0]
+    weight: Optional[nn.Variable] = None
+    extra: Dict[str, nn.Variable] = field(default_factory=dict)
 
 
 class ModelTrainer(metaclass=ABCMeta):
@@ -43,22 +60,20 @@ class ModelTrainer(metaclass=ABCMeta):
         self._training: 'Training' = None
         self._training_variables: TrainingVariables = None
 
-    def train(self, experience, **kwargs) -> Dict:
+    def train(self, batch: TrainingBatch, **kwargs) -> Dict:
         if self._models is None:
             raise RuntimeError('Call setup_training() first. Model is not set!')
         self._train_count += 1
 
-        experience = self._training.setup_experience(experience)
-        (s, *_) = experience
-
-        new_batch_size = s.shape[0]
+        batch = self._training.setup_batch(batch)
+        new_batch_size = batch.batch_size
         prev_batch_size = self._training_variables.batch_size
         if new_batch_size != prev_batch_size:
             self._training_variables = self._setup_training_variables(new_batch_size)
             self._build_training_graph(self._models, self._training, self._training_variables)
 
         self._training.before_update(self._train_count)
-        error_info = self._update_model(self._models, self._solvers, experience, self._training_variables, **kwargs)
+        error_info = self._update_model(self._models, self._solvers, batch, self._training_variables, **kwargs)
         self._training.after_update(self._train_count)
 
         return error_info
@@ -87,7 +102,7 @@ class ModelTrainer(metaclass=ABCMeta):
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
-                      experience,
+                      batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict:
         raise NotImplementedError
@@ -115,8 +130,8 @@ class Training():
     def __init__(self):
         pass
 
-    def setup_experience(self, experience):
-        return experience
+    def setup_batch(self, batch: TrainingBatch):
+        return batch
 
     def before_update(self, train_count: int):
         pass
@@ -132,8 +147,8 @@ class TrainingExtension(Training):
     def __init__(self, training):
         self._training = training
 
-    def setup_experience(self, experience):
-        return self._training.setup_experience(experience)
+    def setup_batch(self, batch: TrainingBatch):
+        return self._training.setup_batch(batch)
 
     def before_update(self, train_count: int):
         self._training.before_update(train_count)

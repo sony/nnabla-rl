@@ -12,6 +12,7 @@ from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import C51ValueDistributionFunction, ValueDistributionFunction
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
@@ -104,7 +105,6 @@ class CategoricalDQN(Algorithm):
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
         trainer_params = MT.q_value_trainers.C51ValueDistributionFunctionTrainerParam(
-            gamma=self._params.gamma,
             v_min=self._params.v_min,
             v_max=self._params.v_max,
             num_atoms=self._params.num_atoms)
@@ -143,11 +143,17 @@ class CategoricalDQN(Algorithm):
 
     def _categorical_dqn_training(self, replay_buffer):
         experiences, info = replay_buffer.sample(self._params.batch_size)
-        marshalled_experiences = marshall_experiences(experiences)
+        (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
+        batch = TrainingBatch(batch_size=self._params.batch_size,
+                              s_current=s,
+                              a_current=a,
+                              gamma=self._params.gamma,
+                              reward=r,
+                              non_terminal=non_terminal,
+                              s_next=s_next,
+                              weight=info['weights'])
 
-        kwargs = {}
-        kwargs['weights'] = info['weights']
-        errors = self._model_trainer.train(marshalled_experiences, **kwargs)
+        errors = self._model_trainer.train(batch)
 
         td_error = np.abs(errors['td_error'])
         replay_buffer.update_priorities(td_error)

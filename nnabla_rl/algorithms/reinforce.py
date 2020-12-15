@@ -9,6 +9,7 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
@@ -115,9 +116,15 @@ class REINFORCE(Algorithm):
     def _reinforce_training(self, buffer):
         # sample all experience in the buffer
         experiences, *_ = buffer.sample(buffer.capacity)
-        s_batch, a_batch, accumulated_reward_batch = self._align_experiences_and_compute_accumulated_reward(experiences)
+        s_batch, a_batch, target_return = self._align_experiences_and_compute_accumulated_reward(experiences)
+        extra = {}
+        extra['target_return'] = target_return
+        batch = TrainingBatch(batch_size=len(s_batch),
+                              s_current=s_batch,
+                              a_current=a_batch,
+                              extra=extra)
 
-        self._policy_trainer.train((s_batch, a_batch, accumulated_reward_batch))
+        self._policy_trainer.train(batch)
 
     def _align_experiences_and_compute_accumulated_reward(self, experiences):
         s_batch = None

@@ -12,6 +12,7 @@ from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import QRDQNQuantileDistributionFunction
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
@@ -119,14 +120,11 @@ class QRDQN(Algorithm):
 
     def _setup_quantile_function_training(self, env_or_buffer):
         trainer_params = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerParam(
-            gamma=self._params.gamma,
             num_quantiles=self._params.num_quantiles,
             kappa=self._params.kappa)
 
         quantile_dist_trainer = \
-            MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(
-                self._env_info,
-                params=trainer_params)
+            MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(self._env_info, params=trainer_params)
 
         target_update_frequency = self._params.target_update_frequency / self._params.learner_update_frequency
         training = MT.q_value_trainings.DQNTraining(
@@ -157,10 +155,18 @@ class QRDQN(Algorithm):
         self._qrdqn_training(buffer)
 
     def _qrdqn_training(self, replay_buffer):
-        experiences, *_ = replay_buffer.sample(self._params.batch_size)
-        marshalled_experiences = marshall_experiences(experiences)
+        experiences, info = replay_buffer.sample(self._params.batch_size)
+        (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
+        batch = TrainingBatch(batch_size=self._params.batch_size,
+                              s_current=s,
+                              a_current=a,
+                              gamma=self._params.gamma,
+                              reward=r,
+                              non_terminal=non_terminal,
+                              s_next=s_next,
+                              weight=info['weights'])
 
-        self._quantile_dist_trainer.train(marshalled_experiences)
+        self._quantile_dist_trainer.train(batch)
 
     def _greedy_action_selector(self, s):
         s = np.expand_dims(s, axis=0)

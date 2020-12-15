@@ -6,13 +6,13 @@ import nnabla.functions as NF
 from dataclasses import dataclass
 
 import nnabla_rl.functions as RF
-from nnabla_rl.model_trainers.model_trainer import TrainerParam, Training, TrainingVariables, ModelTrainer
+from nnabla_rl.model_trainers.model_trainer import \
+    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import StateActionQuantileFunction, Model
 
 
 @dataclass
 class IQNQuantileFunctionTrainerParam(TrainerParam):
-    gamma: float = 0.99
     N: int = 64
     N_prime: int = 64
     K: int = 32
@@ -28,24 +28,18 @@ class IQNQuantileFunctionTrainer(ModelTrainer):
         # Training loss/output
         self._quantile_huber_loss = None
 
-    def train(self, experience, **kwargs) -> Dict:
-        (s, a, r, non_terminal, s_next, *_) = experience
-        return super().train((s, a, r, self._params.gamma, non_terminal, s_next), **kwargs)
-
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
-                      experience,
+                      batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict:
-        (s, a, r, gamma, non_terminal, s_next) = experience
-
-        training_variables.s_current.d = s
-        training_variables.a_current.d = a
-        training_variables.reward.d = r
-        training_variables.gamma.d = gamma
-        training_variables.non_terminal.d = non_terminal
-        training_variables.s_next.d = s_next
+        training_variables.s_current.d = batch.s_current
+        training_variables.a_current.d = batch.a_current
+        training_variables.reward.d = batch.reward
+        training_variables.gamma.d = batch.gamma
+        training_variables.non_terminal.d = batch.non_terminal
+        training_variables.s_next.d = batch.s_next
 
         for solver in solvers.values():
             solver.zero_grad()
@@ -90,7 +84,6 @@ class IQNQuantileFunctionTrainer(ModelTrainer):
             self._quantile_huber_loss += NF.mean(quantile_huber_loss)
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
-        # Training input variables
         s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
         a_current_var = nn.Variable((batch_size, 1))
         s_next_var = nn.Variable((batch_size, *self._env_info.state_shape))
@@ -99,6 +92,11 @@ class IQNQuantileFunctionTrainer(ModelTrainer):
         non_terminal_var = nn.Variable((batch_size, 1))
         s_next_var = nn.Variable((batch_size, *self._env_info.state_shape))
 
-        training_variables = \
-            TrainingVariables(s_current_var, a_current_var, reward_var, gamma_var, non_terminal_var, s_next_var)
+        training_variables = TrainingVariables(batch_size=batch_size,
+                                               s_current=s_current_var,
+                                               a_current=a_current_var,
+                                               reward=reward_var,
+                                               gamma=gamma_var,
+                                               non_terminal=non_terminal_var,
+                                               s_next=s_next_var)
         return training_variables

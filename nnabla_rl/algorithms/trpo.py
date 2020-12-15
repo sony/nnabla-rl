@@ -11,6 +11,7 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.algorithms.common_utils import compute_v_target_and_advantage
 from nnabla_rl.models import TRPOPolicy, TRPOVFunction, StochasticPolicy, VFunction
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
@@ -173,16 +174,24 @@ class TRPO(Algorithm):
     def _trpo_training(self, buffer):
         # sample all experience in the buffer
         experiences, *_ = buffer.sample(len(buffer))
-        s_batch, a_batch, v_target_batch, adv_batch = self._align_experiences(experiences)
+        batch_size = len(experiences)
+        s_batch, a_batch, v_target, advantage = self._align_experiences(experiences)
+        extra = {}
+        extra['v_target'] = v_target
+        extra['advantage'] = advantage
+        batch = TrainingBatch(batch_size=batch_size,
+                              s_current=s_batch,
+                              a_current=a_batch,
+                              extra=extra)
 
         if self._state_preprocessor is not None:
             self._state_preprocessor.update(s_batch)
 
         # v function training
-        self._v_function_training(s_batch, v_target_batch)
+        self._v_function_training(batch)
 
         # policy training
-        self._policy_training(s_batch, a_batch, adv_batch)
+        self._policy_training(batch)
 
     def _align_experiences(self, experiences):
         v_target_batch, adv_batch = self._compute_v_target_and_advantage(experiences)
@@ -224,17 +233,20 @@ class TRPO(Algorithm):
         a_batch = np.concatenate(a_batch, axis=0)
         return s_batch, a_batch
 
-    def _v_function_training(self, s_batch, v_target_batch):
-        data_size = len(s_batch)
+    def _v_function_training(self, batch: TrainingBatch):
+        data_size = batch.batch_size
+        s_batch = batch.s_current
+        v_target_batch = batch.extra['v_target']
         num_iterations_per_epoch = data_size // self._params.vf_batch_size
         for _ in range(self._params.vf_epochs * num_iterations_per_epoch):
-            idx = np.random.randint(0, data_size, size=self._params.vf_batch_size)
-            experience = (s_batch[idx], v_target_batch[idx])
-            self._v_function_trainer.train(experience)
+            indices = np.random.randint(0, data_size, size=self._params.vf_batch_size)
+            mini_batch = TrainingBatch(batch_size=self._params.vf_batch_size,
+                                       s_current=s_batch[indices],
+                                       extra={'v_target': v_target_batch[indices]})
+            self._v_function_trainer.train(mini_batch)
 
-    def _policy_training(self, s_batch, a_batch, adv_batch):
-        experience = (s_batch, a_batch, adv_batch)
-        self._policy_trainer.train(experience)
+    def _policy_training(self, batch: TrainingBatch):
+        self._policy_trainer.train(batch)
 
     def _compute_action(self, s):
         s = np.expand_dims(s, axis=0)
