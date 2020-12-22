@@ -4,7 +4,6 @@ import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 
 import nnabla_rl.initializers as RI
-import nnabla_rl.functions as RF
 from nnabla_rl.models.q_function import QFunction
 
 

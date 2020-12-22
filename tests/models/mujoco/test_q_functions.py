@@ -10,8 +10,6 @@ class TestTD3QFunction(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_dim = 5
-        action_dim = 5
         scope_name = "test"
         model = TD3QFunction(scope_name=scope_name)
 

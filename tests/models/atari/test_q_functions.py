@@ -10,7 +10,6 @@ class TestDQNQFunction(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_shape = (4, 84, 84)
         n_action = 4
         scope_name = "test"
         model = DQNQFunction(scope_name=scope_name, n_action=n_action)
