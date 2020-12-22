@@ -1,4 +1,5 @@
 import copy
+from typing import Dict
 
 import nnabla as nn
 
@@ -8,11 +9,14 @@ import pathlib
 
 
 class Model(object):
-    def __init__(self, scope_name):
+
+    _scope_name: str
+
+    def __init__(self, scope_name: str):
         self._scope_name = scope_name
 
     @property
-    def scope_name(self):
+    def scope_name(self) -> str:
         '''scope_name
         Get scope name of this model.
 
@@ -21,7 +25,7 @@ class Model(object):
         '''
         return self._scope_name
 
-    def get_parameters(self, grad_only=True):
+    def get_parameters(self, grad_only: bool = True) -> Dict[str, nn.Variable]:
         '''get_parameters
         Retrive parameters associated with this model
 
@@ -34,7 +38,7 @@ class Model(object):
         with nn.parameter_scope(self.scope_name):
             return nn.get_parameters(grad_only=grad_only)
 
-    def save_parameters(self, filepath):
+    def save_parameters(self, filepath: str) -> None:
         '''save_parameters
         Save model parameters to given filepath.
 
@@ -46,7 +50,7 @@ class Model(object):
         with nn.parameter_scope(self.scope_name):
             nn.save_parameters(path=filepath)
 
-    def load_parameters(self, filepath):
+    def load_parameters(self, filepath: str) -> None:
         '''load_parameters
         Load model parameters from given filepath.
 
@@ -58,7 +62,7 @@ class Model(object):
         with nn.parameter_scope(self.scope_name):
             nn.load_parameters(path=filepath)
 
-    def deepcopy(self, new_scope_name):
+    def deepcopy(self, new_scope_name: str) -> 'Model':
         '''deepcopy
         Create a copy of the model. All the model parameter's (if exist) associated with will be copied.
 
@@ -71,9 +75,7 @@ class Model(object):
         Raises:
             ValueError: Given scope name is same as the model or already exists.
         '''
-
-        if new_scope_name == self._scope_name:
-            raise ValueError('Can not use same scope_name!')
+        assert new_scope_name != self._scope_name, 'Can not use same scope_name!'
         copied = copy.deepcopy(self)
         copied._scope_name = new_scope_name
         # copy current parameter if is already created

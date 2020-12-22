@@ -19,7 +19,7 @@ import nnabla_rl.model_trainers as MT
 
 
 def default_q_func_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return DQNQFunction(scope_name, env_info.state_shape, env_info.action_dim)
+    return DQNQFunction(scope_name, env_info.action_dim)
 
 
 def default_q_solver_builder(params):
@@ -183,7 +183,7 @@ class DQN(Algorithm):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = nn.Variable(s.shape)
-            self._a_greedy = self._q.argmax_q(self._eval_state_var)
+            self._a_greedy = self._q.max_q(self._eval_state_var)
         self._eval_state_var.d = s
         self._a_greedy.forward()
         return np.squeeze(self._a_greedy.d, axis=0), {}

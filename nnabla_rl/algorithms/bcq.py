@@ -16,7 +16,7 @@ import nnabla_rl.functions as RF
 
 
 def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim)
+    return TD3QFunction(scope_name)
 
 
 def default_vae_builder(scope_name, env_info, algorithm_params, **kwargs):
