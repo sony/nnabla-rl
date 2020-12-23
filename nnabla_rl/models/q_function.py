@@ -12,3 +12,6 @@ class QFunction(Model, metaclass=ABCMeta):
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError
+
+    def argmax_q(self, s: nn.Variable) -> nn.Variable:
+        raise NotImplementedError

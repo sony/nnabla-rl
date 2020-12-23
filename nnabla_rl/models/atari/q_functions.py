@@ -4,6 +4,7 @@ import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 
 import nnabla_rl.initializers as RI
+import nnabla_rl.functions as RF
 from nnabla_rl.models.q_function import QFunction
 
 
@@ -71,3 +72,7 @@ class DQNQFunction(QFunction):
     def max_q(self, s: nn.Variable) -> nn.Variable:
         q_values = self._predict_q_values(s)
         return NF.max(q_values, axis=1, keepdims=True)
+
+    def argmax_q(self, s: nn.Variable) -> nn.Variable:
+        q_values = self._predict_q_values(s)
+        return RF.argmax(q_values, axis=1, keepdims=True)

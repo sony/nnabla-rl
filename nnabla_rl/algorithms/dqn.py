@@ -183,7 +183,7 @@ class DQN(Algorithm):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = nn.Variable(s.shape)
-            self._a_greedy = self._q.max_q(self._eval_state_var)
+            self._a_greedy = self._q.argmax_q(self._eval_state_var)
         self._eval_state_var.d = s
         self._a_greedy.forward()
         return np.squeeze(self._a_greedy.d, axis=0), {}
