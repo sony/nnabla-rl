@@ -1,10 +1,19 @@
-from nnabla_rl.logger import logger
-from nnabla_rl.replay_buffer import ReplayBuffer
 import gym
 
 import numpy as np
 
+from nnabla import random
+
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
+from nnabla_rl.logger import logger
+from nnabla_rl.replay_buffer import ReplayBuffer
+
+
+def set_global_seed(seed: int, env: gym.Env = None):
+    np.random.seed(seed=seed)
+    random.prng = np.random.RandomState(seed=seed)
+    if env is not None:
+        env.seed(seed)
 
 
 def build_atari_env(id_or_env, test=False, seed=None, render=False):
