@@ -111,7 +111,7 @@ class TestModel(object):
         # Call once to create params
         model(x)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(AssertionError):
             model.deepcopy(scope_name)
 
     def test_deepcopy_cannot_create_with_existing_scope_name(self):

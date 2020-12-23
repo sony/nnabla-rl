@@ -14,12 +14,13 @@ class DQNQFunction(QFunction):
     See: https://deepmind.com/research/publications/human-level-control-through-deep-reinforcement-learning
     """
 
-    def __init__(self, scope_name, state_shape, n_action):
+    _n_action: int
+
+    def __init__(self, scope_name: str, n_action: int):
         super(DQNQFunction, self).__init__(scope_name)
-        self._state_shape = state_shape
         self._n_action = n_action
 
-    def _predict_q_values(self, s):
+    def _predict_q_values(self, s: nn.Variable) -> nn.Variable:
         """ Predict all q values of the given state
         """
         with nn.parameter_scope(self.scope_name):
@@ -58,7 +59,7 @@ class DQNQFunction(QFunction):
                                )
         return h
 
-    def q(self, s, a):
+    def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         q_values = self._predict_q_values(s)
 
         q_value = NF.sum(q_values
@@ -68,10 +69,10 @@ class DQNQFunction(QFunction):
 
         return q_value
 
-    def max_q(self, s):
+    def max_q(self, s: nn.Variable) -> nn.Variable:
         q_values = self._predict_q_values(s)
         return NF.max(q_values, axis=1, keepdims=True)
 
-    def argmax_q(self, s):
+    def argmax_q(self, s: nn.Variable) -> nn.Variable:
         q_values = self._predict_q_values(s)
         return RF.argmax(q_values, axis=1, keepdims=True)

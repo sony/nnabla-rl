@@ -1,3 +1,5 @@
+from typing import Optional
+
 import nnabla as nn
 
 import nnabla.functions as NF
@@ -5,6 +7,7 @@ import nnabla.parametric_functions as NPF
 
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.q_function import QFunction
+from nnabla_rl.models.policy import Policy
 
 
 class TD3QFunction(QFunction):
@@ -13,17 +16,13 @@ class TD3QFunction(QFunction):
     See: https://arxiv.org/abs/1802.09477
     """
 
-    def __init__(self, scope_name, state_dim, action_dim, optimal_policy=None):
-        super(TD3QFunction, self).__init__(scope_name)
-        self._state_dim = state_dim
-        self._action_dim = action_dim
+    _optimal_policy: Optional[Policy]
 
+    def __init__(self, scope_name: str, optimal_policy: Optional[Policy] = None):
+        super(TD3QFunction, self).__init__(scope_name)
         self._optimal_policy = optimal_policy
 
-    def q(self, s, a):
-        assert s.shape[1] == self._state_dim
-        assert a.shape[1] == self._action_dim
-
+    def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NF.concatenate(s, a)
             linear1_init = RI.HeUniform(
@@ -42,9 +41,8 @@ class TD3QFunction(QFunction):
                            w_init=linear3_init, b_init=linear3_init)
         return h
 
-    def max_q(self, s):
-        if self._optimal_policy is None:
-            raise RuntimeError('Optimal policy is not set!')
+    def max_q(self, s: nn.Variable) -> nn.Variable:
+        assert self._optimal_policy, 'Optimal policy is not set!'
         optimal_action = self._optimal_policy(s)
         return self.q(s, optimal_action)
 
@@ -55,17 +53,13 @@ class SACQFunction(QFunction):
     See: https://arxiv.org/pdf/1801.01290.pdf
     """
 
-    def __init__(self, scope_name, state_dim, action_dim, optimal_policy=None):
-        super(SACQFunction, self).__init__(scope_name)
-        self._state_dim = state_dim
-        self._action_dim = action_dim
+    _optimal_policy: Optional[Policy]
 
+    def __init__(self, scope_name, optimal_policy: Optional[Policy] = None):
+        super(SACQFunction, self).__init__(scope_name)
         self._optimal_policy = optimal_policy
 
-    def q(self, s, a):
-        assert s.shape[1] == self._state_dim
-        assert a.shape[1] == self._action_dim
-
+    def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NF.concatenate(s, a)
             h = NPF.affine(h, n_outmaps=256, name="linear1")
@@ -75,8 +69,7 @@ class SACQFunction(QFunction):
             h = NPF.affine(h, n_outmaps=1, name="linear3")
         return h
 
-    def max_q(self, s):
-        if self._optimal_policy is None:
-            raise RuntimeError('Optimal policy is not set!')
+    def max_q(self, s: nn.Variable) -> nn.Variable:
+        assert self._optimal_policy, 'Optimal policy is not set!'
         optimal_action = self._optimal_policy(s)
         return self.q(s, optimal_action)

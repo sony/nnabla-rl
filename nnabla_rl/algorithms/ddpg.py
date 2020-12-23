@@ -18,7 +18,7 @@ import nnabla_rl.model_trainers as MT
 
 def default_critic_builder(scope_name, env_info, algorithm_params, **kwargs):
     target_policy = kwargs.get('target_policy')
-    return TD3QFunction(scope_name, env_info.state_dim, env_info.action_dim, optimal_policy=target_policy)
+    return TD3QFunction(scope_name, optimal_policy=target_policy)
 
 
 def default_actor_builder(scope_name, env_info, algorithm_params, **kwargs):
