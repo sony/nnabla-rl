@@ -10,12 +10,9 @@ class TestDQNQFunction(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_shape = (4, 84, 84)
         n_action = 4
         scope_name = "test"
-        model = DQNQFunction(scope_name=scope_name,
-                             state_shape=state_shape,
-                             n_action=n_action)
+        model = DQNQFunction(scope_name=scope_name, n_action=n_action)
 
         assert scope_name == model.scope_name
 
@@ -25,9 +22,7 @@ class TestDQNQFunction(object):
         state_shape = (4, 84, 84)
         n_action = 4
         scope_name = "test"
-        model = DQNQFunction(scope_name=scope_name,
-                             state_shape=state_shape,
-                             n_action=n_action)
+        model = DQNQFunction(scope_name=scope_name, n_action=n_action)
 
         # Fake input to initialize parameters
         input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
@@ -42,9 +37,7 @@ class TestDQNQFunction(object):
         state_shape = (4, 84, 84)
         n_action = 4
         scope_name = "test"
-        model = DQNQFunction(scope_name=scope_name,
-                             state_shape=state_shape,
-                             n_action=n_action)
+        model = DQNQFunction(scope_name=scope_name, n_action=n_action)
 
         input_state = nn.Variable.from_numpy_array(
             np.random.rand(1, *state_shape))
@@ -70,9 +63,7 @@ class TestDQNQFunction(object):
         state_shape = (4, 84, 84)
         n_action = 4
         scope_name = "test"
-        model = DQNQFunction(scope_name=scope_name,
-                             state_shape=state_shape,
-                             n_action=n_action)
+        model = DQNQFunction(scope_name=scope_name, n_action=n_action)
 
         inputs = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         outputs = nn.Variable.from_numpy_array(np.random.rand(1, n_action))
@@ -96,9 +87,7 @@ class TestDQNQFunction(object):
         state_shape = (4, 84, 84)
         n_action = 4
         scope_name = "test"
-        model = DQNQFunction(scope_name=scope_name,
-                             state_shape=state_shape,
-                             n_action=n_action)
+        model = DQNQFunction(scope_name=scope_name, n_action=n_action)
 
         inputs = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         outputs = nn.Variable.from_numpy_array(np.random.rand(1, n_action))

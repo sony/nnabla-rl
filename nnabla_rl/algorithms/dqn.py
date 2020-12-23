@@ -19,7 +19,7 @@ import nnabla_rl.model_trainers as MT
 
 
 def default_q_func_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return DQNQFunction(scope_name, env_info.state_shape, env_info.action_dim)
+    return DQNQFunction(scope_name, env_info.action_dim)
 
 
 def default_q_solver_builder(params):

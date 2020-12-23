@@ -10,12 +10,8 @@ class TestTD3QFunction(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_dim = 5
-        action_dim = 5
         scope_name = "test"
-        model = TD3QFunction(scope_name=scope_name,
-                             state_dim=state_dim,
-                             action_dim=action_dim)
+        model = TD3QFunction(scope_name=scope_name)
 
         assert scope_name == model.scope_name
 
@@ -25,9 +21,7 @@ class TestTD3QFunction(object):
         state_dim = 5
         action_dim = 5
         scope_name = "test"
-        model = TD3QFunction(scope_name=scope_name,
-                             state_dim=state_dim,
-                             action_dim=action_dim)
+        model = TD3QFunction(scope_name=scope_name)
 
         # Fake input to initialize parameters
         input_state = nn.Variable.from_numpy_array(
