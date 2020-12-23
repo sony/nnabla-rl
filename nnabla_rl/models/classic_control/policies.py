@@ -16,17 +16,13 @@ class REINFORCEDiscretePolicy(StochasticPolicy):
     See: http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-5.pdf
     """
 
-    def __init__(self, scope_name, state_dim, action_dim):
+    _action_dim: int
+
+    def __init__(self, scope_name: str, action_dim: int):
         super(REINFORCEDiscretePolicy, self).__init__(scope_name=scope_name)
-        self._state_dim = state_dim
         self._action_dim = action_dim
 
-        dummy_state = nn.Variable((1, state_dim))
-
-        # Dummy call. Just for initializing the parameters
-        self.pi(dummy_state)
-
-    def pi(self, s):
+    def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=200, name="linear1",
                            w_init=RI.HeNormal(s.shape[1], 200))
@@ -47,21 +43,18 @@ class REINFORCEContinousPolicy(StochasticPolicy):
     See: http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-5.pdf
     """
 
-    def __init__(self, scope_name, state_dim, action_dim, fixed_ln_var):
+    _action_dim: int
+    _fixed_ln_var: np.ndarray
+
+    def __init__(self, scope_name: str, action_dim: int, fixed_ln_var: np.ndarray):
         super(REINFORCEContinousPolicy, self).__init__(scope_name=scope_name)
-        self._state_shape = state_dim
         self._action_dim = action_dim
         if np.isscalar(fixed_ln_var):
             self._fixed_ln_var = np.full(self._action_dim, fixed_ln_var)
         else:
             self._fixed_ln_var = fixed_ln_var
 
-        dummy_state = nn.Variable((1, state_dim))
-
-        # Dummy call. Just for initializing the parameters
-        self.pi(dummy_state)
-
-    def pi(self, s):
+    def pi(self, s: nn.Variable) -> nn.Variable:
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=200, name="linear1",

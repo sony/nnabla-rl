@@ -8,13 +8,11 @@ class TestREINFORCEContinousPolicy(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_dim = 5
         action_dim = 5
         scope_name = "test"
         fixed_ln_var = np.exp(0.1)
 
-        model = REINFORCEContinousPolicy(
-            scope_name, state_dim, action_dim, fixed_ln_var)
+        model = REINFORCEContinousPolicy(scope_name, action_dim, fixed_ln_var)
 
         assert scope_name == model.scope_name
 
@@ -26,8 +24,11 @@ class TestREINFORCEContinousPolicy(object):
         scope_name = "test"
         fixed_ln_var = np.exp(0.1)
 
-        model = REINFORCEContinousPolicy(
-            scope_name, state_dim, action_dim, fixed_ln_var)
+        model = REINFORCEContinousPolicy(scope_name, action_dim, fixed_ln_var)
+
+        # Fake input to initialize parameters
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, state_dim))
+        model.pi(input_state)
 
         assert scope_name == model.scope_name
 
@@ -38,12 +39,10 @@ class TestREINFORCEDiscretePolicy(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_dim = 5
         action_dim = 5
         scope_name = "test"
 
-        model = REINFORCEDiscretePolicy(
-            scope_name, state_dim, action_dim)
+        model = REINFORCEDiscretePolicy(scope_name, action_dim)
 
         assert scope_name == model.scope_name
 
@@ -54,8 +53,11 @@ class TestREINFORCEDiscretePolicy(object):
         action_dim = 5
         scope_name = "test"
 
-        model = REINFORCEDiscretePolicy(
-            scope_name, state_dim, action_dim)
+        model = REINFORCEDiscretePolicy(scope_name, action_dim)
+
+        # Fake input to initialize parameters
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, state_dim))
+        model.pi(input_state)
 
         assert scope_name == model.scope_name
 

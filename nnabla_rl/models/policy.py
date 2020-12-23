@@ -1,10 +1,14 @@
 from abc import ABCMeta, abstractmethod
+from typing import Optional, Callable
+
+import nnabla as nn
 
 from nnabla_rl.models.model import Model
+from nnabla_rl.preprocessors import Preprocessor
 
 
-def preprocess_state(function):
-    def wrapped(self, s):
+def preprocess_state(function: Callable[[nn.Variable], nn.Variable]) -> Callable[[nn.Variable], nn.Variable]:
+    def wrapped(self, s: nn.Variable) -> nn.Variable:
         if self._state_preprocessor is not None:
             processed = self._state_preprocessor.process(s)
             return function(self, processed)
@@ -14,11 +18,14 @@ def preprocess_state(function):
 
 
 class Policy(Model, metaclass=ABCMeta):
-    def __init__(self, scope_name):
+
+    _state_preprocessor: Optional[Preprocessor]
+
+    def __init__(self, scope_name: str):
         super(Policy, self).__init__(scope_name)
         self._state_preprocessor = None
 
-    def set_state_preprocessor(self, preprocessor):
+    def set_state_preprocessor(self, preprocessor: Preprocessor) -> None:
         self._state_preprocessor = preprocessor
 
 
@@ -29,7 +36,7 @@ class DeterministicPolicy(Policy, metaclass=ABCMeta):
     By calling this policy, it will return an action for the given state.
     """
 
-    def __call__(self, s):
+    def __call__(self, s: nn.Variable) -> nn.Variable:
         '''__call__
 
         Args:
@@ -41,7 +48,7 @@ class DeterministicPolicy(Policy, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def pi(self, s):
+    def pi(self, s: nn.Variable) -> nn.Variable:
         '''pi
 
         Args:
@@ -60,7 +67,7 @@ class StochasticPolicy(Policy, metaclass=ABCMeta):
     By calling this policy, it will return a probability distribution of action for the given state.
     '''
 
-    def __call__(self, s):
+    def __call__(self, s: nn.Variable) -> nn.Variable:
         '''__call__
 
         Args:
@@ -72,7 +79,7 @@ class StochasticPolicy(Policy, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def pi(self, s):
+    def pi(self, s: nn.Variable) -> nn.Variable:
         '''pi
 
         Args:

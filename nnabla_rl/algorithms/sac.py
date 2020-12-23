@@ -20,7 +20,7 @@ def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs)
 
 
 def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return SACPolicy(scope_name, env_info.state_dim, env_info.action_dim)
+    return SACPolicy(scope_name, env_info.action_dim)
 
 
 @dataclass

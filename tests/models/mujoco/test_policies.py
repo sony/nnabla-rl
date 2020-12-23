@@ -11,11 +11,9 @@ class TestTD3Policy(object):
         nn.clear_parameters()
 
     def test_scope_name(self):
-        state_dim = 5
         action_dim = 5
         scope_name = "test"
         model = TD3Policy(scope_name=scope_name,
-                          state_dim=state_dim,
                           action_dim=action_dim,
                           max_action_value=1.0)
 
@@ -26,7 +24,6 @@ class TestTD3Policy(object):
         action_dim = 5
         scope_name = "test"
         model = TD3Policy(scope_name=scope_name,
-                          state_dim=state_dim,
                           action_dim=action_dim,
                           max_action_value=1.0)
         # Fake input to initialize parameters
@@ -42,11 +39,9 @@ class TestSACPolicy(object):
         nn.clear_parameters()
 
     def test_scope_name(self):
-        state_dim = 5
         action_dim = 5
         scope_name = "test"
         model = SACPolicy(scope_name=scope_name,
-                          state_dim=state_dim,
                           action_dim=action_dim)
 
         assert scope_name == model.scope_name
@@ -56,7 +51,6 @@ class TestSACPolicy(object):
         action_dim = 5
         scope_name = "test"
         model = SACPolicy(scope_name=scope_name,
-                          state_dim=state_dim,
                           action_dim=action_dim)
 
         # Fake input to initialize parameters

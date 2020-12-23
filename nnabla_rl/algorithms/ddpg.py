@@ -23,7 +23,7 @@ def default_critic_builder(scope_name, env_info, algorithm_params, **kwargs):
 
 def default_actor_builder(scope_name, env_info, algorithm_params, **kwargs):
     max_action_value = float(env_info.action_space.high[0])
-    return TD3Policy(scope_name, env_info.state_dim, env_info.action_dim, max_action_value=max_action_value)
+    return TD3Policy(scope_name, env_info.action_dim, max_action_value=max_action_value)
 
 
 @dataclass

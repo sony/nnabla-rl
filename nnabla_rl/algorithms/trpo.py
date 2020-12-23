@@ -58,7 +58,7 @@ def build_state_preprocessor(preprocessor_builder, scope_name, env_info, algorit
 
 
 def build_default_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return TRPOPolicy(scope_name, env_info.state_dim, env_info.action_dim)
+    return TRPOPolicy(scope_name, env_info.action_dim)
 
 
 def build_default_v_function(scope_name, env_info, algorithm_params, **kwargs):

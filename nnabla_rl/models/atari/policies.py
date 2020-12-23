@@ -6,6 +6,7 @@ import nnabla.parametric_functions as NPF
 import nnabla_rl.distributions as D
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.policy import StochasticPolicy
+from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead
 
 
 class PPOPolicy(StochasticPolicy):
@@ -14,14 +15,15 @@ class PPOPolicy(StochasticPolicy):
     This network outputs the policy distribution.
     See: https://arxiv.org/pdf/1707.06347.pdf
     """
+    _head: PPOSharedFunctionHead
+    _action_dim: int
 
-    def __init__(self, head, scope_name, state_shape, action_dim):
+    def __init__(self, head: PPOSharedFunctionHead, scope_name: str, action_dim: int):
         super(PPOPolicy, self).__init__(scope_name=scope_name)
-        self._state_shape = state_shape
         self._action_dim = action_dim
         self._head = head
 
-    def pi(self, s):
+    def pi(self, s: nn.Variable) -> nn.Variable:
         h = self._hidden(s)
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("linear_pi"):
@@ -29,8 +31,7 @@ class PPOPolicy(StochasticPolicy):
                                w_init=RI.NormcInitializer(std=0.01))
         return D.Softmax(z=z)
 
-    def _hidden(self, s):
-        assert s.shape[1:] == self._state_shape
+    def _hidden(self, s: nn.Variable) -> nn.Variable:
         return self._head(s)
 
 
@@ -41,12 +42,13 @@ class ICML2015TRPOPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1502.05477.pdf
     """
 
-    def __init__(self, scope_name, state_shape, action_dim):
+    _action_dim: int
+
+    def __init__(self, scope_name: str, action_dim: int):
         super(ICML2015TRPOPolicy, self).__init__(scope_name=scope_name)
-        self._state_shape = state_shape
         self._action_dim = action_dim
 
-    def pi(self, s):
+    def pi(self, s: nn.Variable) -> nn.Variable:
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("conv1"):

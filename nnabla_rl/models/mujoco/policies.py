@@ -18,18 +18,18 @@ class TD3Policy(DeterministicPolicy):
     See: https://arxiv.org/abs/1802.09477
     """
 
-    def __init__(self, scope_name, state_dim, action_dim, max_action_value):
+    _action_dim: int
+    _max_action_value: float
+
+    def __init__(self, scope_name: str, action_dim: int, max_action_value: float):
         super(TD3Policy, self).__init__(scope_name)
-        self._state_dim = state_dim
         self._action_dim = action_dim
         self._max_action_value = max_action_value
 
-    def pi(self, s):
-        assert s.shape[1] == self._state_dim
-
+    def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             linear1_init = RI.HeUniform(
-                inmaps=self._state_dim, outmaps=400, factor=1/3)
+                inmaps=s.shape[1], outmaps=400, factor=1/3)
             h = NPF.affine(s, n_outmaps=400, name="linear1",
                            w_init=linear1_init, b_init=linear1_init)
             h = NF.relu(x=h)
@@ -51,18 +51,24 @@ class SACPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1801.01290.pdf
     """
 
-    def __init__(self, scope_name, state_dim, action_dim,
-                 clip_log_sigma=True, min_log_sigma=-20.0, max_log_sigma=2):
+    _action_dim: int
+    _clip_log_sigma: bool
+    _min_log_sigma: float
+    _max_log_sigma: float
+
+    def __init__(self,
+                 scope_name: str,
+                 action_dim: int,
+                 clip_log_sigma: bool = True,
+                 min_log_sigma: float = -20.0,
+                 max_log_sigma: float = 2.0):
         super(SACPolicy, self).__init__(scope_name)
-        self._state_dim = state_dim
         self._action_dim = action_dim
         self._clip_log_sigma = clip_log_sigma
         self._min_log_sigma = min_log_sigma
         self._max_log_sigma = max_log_sigma
 
-    def pi(self, s):
-        assert s.shape[1] == self._state_dim
-
+    def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=256, name="linear1")
             h = NF.relu(x=h)
@@ -86,17 +92,16 @@ class BEARPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1906.00949.pdf
     """
 
-    def __init__(self, scope_name, state_dim, action_dim):
+    _action_dim: int
+
+    def __init__(self, scope_name: str, action_dim: int):
         super(BEARPolicy, self).__init__(scope_name)
-        self._state_dim = state_dim
         self._action_dim = action_dim
 
-    def pi(self, s):
-        assert s.shape[1] == self._state_dim
-
+    def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             linear1_init = RI.HeUniform(
-                inmaps=self._state_dim, outmaps=400, factor=1/3)
+                inmaps=s.shape[1], outmaps=400, factor=1/3)
             h = NPF.affine(s, n_outmaps=400, name="linear1",
                            w_init=linear1_init, b_init=linear1_init)
             h = NF.relu(x=h)
@@ -123,15 +128,14 @@ class PPOPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1707.06347.pdf
     """
 
-    def __init__(self, scope_name, state_dim, action_dim):
+    _action_dim: int
+
+    def __init__(self, scope_name: str, action_dim: int):
         super(PPOPolicy, self).__init__(scope_name)
-        self._state_dim = state_dim
         self._action_dim = action_dim
 
     @preprocess_state
-    def pi(self, s):
-        assert s.shape[1] == self._state_dim
-
+    def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=64, name="linear1",
                            w_init=RI.NormcInitializer(std=1.0))
@@ -156,14 +160,13 @@ class ICML2015TRPOPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1502.05477.pdf (Original paper)
     """
 
-    def __init__(self, scope_name, state_dim, action_dim):
+    _action_dim: int
+
+    def __init__(self, scope_name: str, action_dim: int):
         super(ICML2015TRPOPolicy, self).__init__(scope_name)
-        self._state_dim = state_dim
         self._action_dim = action_dim
 
-    def pi(self, s):
-        assert s.shape[1] == self._state_dim
-
+    def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=30, name="linear1")
             h = NF.tanh(x=h)
@@ -184,15 +187,14 @@ class TRPOPolicy(StochasticPolicy):
     See: https://arxiv.org/abs/1709.06560.pdf
     """
 
-    def __init__(self, scope_name, state_dim, action_dim):
+    _action_dim: int
+
+    def __init__(self, scope_name: str, action_dim: int):
         super(TRPOPolicy, self).__init__(scope_name)
-        self._state_dim = state_dim
         self._action_dim = action_dim
 
     @preprocess_state
-    def pi(self, s):
-        assert s.shape[1] == self._state_dim
-
+    def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=64, name="linear1",
                            w_init=NI.OrthogonalInitializer(np.sqrt(2.)))

@@ -38,11 +38,11 @@ class ICML2015TRPOParam(AlgorithmParam):
 
 
 def build_default_continuous_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return ICML2015TRPOMujocoPolicy(scope_name, env_info.state_dim, env_info.action_dim)
+    return ICML2015TRPOMujocoPolicy(scope_name, env_info.action_dim)
 
 
 def build_default_discrete_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return ICML2015TRPOAtariPolicy(scope_name, env_info.state_shape, env_info.action_dim)
+    return ICML2015TRPOAtariPolicy(scope_name, env_info.action_dim)
 
 
 class ICML2015TRPO(Algorithm):
