@@ -9,7 +9,7 @@ from nnabla_rl.logger import logger
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
-def set_global_seed(seed, env=None):
+def set_global_seed(seed: int, env: gym.Env = None):
     np.random.seed(seed=seed)
     random.prng = np.random.RandomState(seed=seed)
     if env is not None:
