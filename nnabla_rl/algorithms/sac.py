@@ -16,7 +16,7 @@ import nnabla_rl.model_trainers as MT
 
 
 def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return SACQFunction(scope_name, env_info.state_dim, env_info.action_dim)
+    return SACQFunction(scope_name)
 
 
 def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
