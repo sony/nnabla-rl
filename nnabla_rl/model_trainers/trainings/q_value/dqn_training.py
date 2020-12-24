@@ -33,7 +33,7 @@ class _ValueDistributionFunctionDQNTraining(Training):
         non_terminal = training_variables.non_terminal
         s_next = training_variables.s_next
 
-        N = self._target_function._num_atoms
+        N = self._target_function._n_atom
         v_max = self._target_function._v_max
         v_min = self._target_function._v_min
 

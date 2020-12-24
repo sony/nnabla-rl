@@ -24,7 +24,6 @@ def risk_neutral_measure(tau):
 def default_quantile_function_builder(scope_name, env_info, algorithm_params, **kwargs):
     risk_measure_function = kwargs['risk_measure_function']
     return IQNQuantileFunction(scope_name,
-                               env_info.state_shape,
                                env_info.action_dim,
                                algorithm_params.embedding_dim,
                                K=algorithm_params.K,

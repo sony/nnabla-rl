@@ -13,16 +13,14 @@ class TestC51ValueDistributionFunction(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_shape = (4, 84, 84)
         n_action = 4
-        n_atoms = 10
+        n_atom = 10
         scope_name = "test"
         v_min = 0
         v_max = 10
         model = C51ValueDistributionFunction(scope_name=scope_name,
-                                             state_shape=state_shape,
-                                             num_actions=n_action,
-                                             num_atoms=n_atoms,
+                                             n_action=n_action,
+                                             n_atom=n_atom,
                                              v_max=v_max,
                                              v_min=v_min)
 
@@ -33,14 +31,13 @@ class TestC51ValueDistributionFunction(object):
 
         state_shape = (4, 84, 84)
         n_action = 4
-        n_atoms = 10
+        n_atom = 10
         scope_name = "test"
         v_min = 0
         v_max = 10
         model = C51ValueDistributionFunction(scope_name=scope_name,
-                                             state_shape=state_shape,
-                                             num_actions=n_action,
-                                             num_atoms=n_atoms,
+                                             n_action=n_action,
+                                             n_atom=n_atom,
                                              v_max=v_max,
                                              v_min=v_min)
 
@@ -55,14 +52,13 @@ class TestC51ValueDistributionFunction(object):
 
         state_shape = (4, 84, 84)
         n_action = 4
-        n_atoms = 10
+        n_atom = 10
         scope_name = "test"
         v_min = 0
         v_max = 10
         model = C51ValueDistributionFunction(scope_name=scope_name,
-                                             state_shape=state_shape,
-                                             num_actions=n_action,
-                                             num_atoms=n_atoms,
+                                             n_action=n_action,
+                                             n_atom=n_atom,
                                              v_max=v_max,
                                              v_min=v_min)
 
@@ -71,7 +67,7 @@ class TestC51ValueDistributionFunction(object):
         val = model.probabilities(input_state)
         val.forward()
 
-        assert val.shape == (1, n_action, n_atoms)
+        assert val.shape == (1, n_action, n_atom)
         assert np.alltrue(0.0 <= val.d) and np.alltrue(val.d <= 1.0)
 
 
@@ -79,14 +75,12 @@ class TestQRDQNQuantileDistributionFunction(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_shape = (4, 84, 84)
         n_action = 4
-        n_quantiles = 10
+        n_quantile = 10
         scope_name = "test"
         model = QRDQNQuantileDistributionFunction(scope_name=scope_name,
-                                                  state_shape=state_shape,
-                                                  num_actions=n_action,
-                                                  num_quantiles=n_quantiles)
+                                                  n_action=n_action,
+                                                  n_quantile=n_quantile)
 
         assert scope_name == model.scope_name
 
@@ -95,12 +89,11 @@ class TestQRDQNQuantileDistributionFunction(object):
 
         state_shape = (4, 84, 84)
         n_action = 4
-        n_quantiles = 10
+        n_quantile = 10
         scope_name = "test"
         model = QRDQNQuantileDistributionFunction(scope_name=scope_name,
-                                                  state_shape=state_shape,
-                                                  num_actions=n_action,
-                                                  num_quantiles=n_quantiles)
+                                                  n_action=n_action,
+                                                  n_quantile=n_quantile)
         # Fake input to initialize parameters
         input_state = nn.Variable.from_numpy_array(
             np.random.rand(1, *state_shape))
@@ -112,19 +105,18 @@ class TestQRDQNQuantileDistributionFunction(object):
 
         state_shape = (4, 84, 84)
         n_action = 4
-        n_quantiles = 10
+        n_quantile = 10
         scope_name = "test"
         model = QRDQNQuantileDistributionFunction(scope_name=scope_name,
-                                                  state_shape=state_shape,
-                                                  num_actions=n_action,
-                                                  num_quantiles=n_quantiles)
+                                                  n_action=n_action,
+                                                  n_quantile=n_quantile)
 
         input_state = nn.Variable.from_numpy_array(
             np.random.rand(1, *state_shape))
         val = model.quantiles(input_state)
         val.forward()
 
-        assert val.shape == (1, n_action, n_quantiles)
+        assert val.shape == (1, n_action, n_quantile)
 
 
 def risk_measure_function(tau):
@@ -135,14 +127,12 @@ class TestIQNQuantileFunction(object):
     def test_scope_name(self):
         nn.clear_parameters()
 
-        state_shape = (4, 84, 84)
         n_action = 4
         embedding_dim = 10
         scope_name = "test"
         K = 10
         model = IQNQuantileFunction(scope_name=scope_name,
-                                    state_shape=state_shape,
-                                    num_actions=n_action,
+                                    n_action=n_action,
                                     embedding_dim=embedding_dim,
                                     K=K,
                                     risk_measure_function=risk_measure_function)
@@ -158,8 +148,7 @@ class TestIQNQuantileFunction(object):
         scope_name = "test"
         K = 10
         model = IQNQuantileFunction(scope_name=scope_name,
-                                    state_shape=state_shape,
-                                    num_actions=n_action,
+                                    n_action=n_action,
                                     embedding_dim=embedding_dim,
                                     K=K,
                                     risk_measure_function=risk_measure_function)
@@ -180,21 +169,20 @@ class TestIQNQuantileFunction(object):
         scope_name = "test"
         K = 10
         model = IQNQuantileFunction(scope_name=scope_name,
-                                    state_shape=state_shape,
-                                    num_actions=n_action,
+                                    n_action=n_action,
                                     embedding_dim=embedding_dim,
                                     K=K,
                                     risk_measure_function=risk_measure_function)
 
         # Initialize parameters
-        num_samples = 5
+        n_sample = 5
         input_state = nn.Variable.from_numpy_array(
             np.random.rand(1, *state_shape))
-        tau = nn.Variable.from_numpy_array(np.random.rand(1, num_samples))
+        tau = nn.Variable.from_numpy_array(np.random.rand(1, n_sample))
         quantiles = model.quantiles(input_state, tau)
         quantiles.forward()
 
-        assert quantiles.shape == (1, num_samples, n_action)
+        assert quantiles.shape == (1, n_sample, n_action)
 
     def test_encode(self):
         nn.clear_parameters()
@@ -205,43 +193,40 @@ class TestIQNQuantileFunction(object):
         scope_name = "test"
         K = 10
         model = IQNQuantileFunction(scope_name=scope_name,
-                                    state_shape=state_shape,
-                                    num_actions=n_action,
+                                    n_action=n_action,
                                     embedding_dim=embedding_dim,
                                     K=K,
                                     risk_measure_function=risk_measure_function)
 
         # Initialize parameters
-        num_samples = 5
+        n_sample = 5
         input_state = nn.Variable.from_numpy_array(
             np.random.rand(1, *state_shape))
-        encoded = model._encode(input_state, num_samples=num_samples)
+        encoded = model._encode(input_state, n_sample=n_sample)
         encoded.forward()
         encoded = encoded.d
 
-        assert encoded.shape == (1, num_samples, 3136)
+        assert encoded.shape == (1, n_sample, 3136)
         assert np.alltrue(encoded[:, 1:, :] == encoded[:, 0, :])
         print('encoded: ', encoded)
 
     def test_compute_embeddings(self):
         nn.clear_parameters()
 
-        state_shape = (4, 84, 84)
         n_action = 4
         embedding_dim = 64
         scope_name = "test"
         K = 10
         model = IQNQuantileFunction(scope_name=scope_name,
-                                    state_shape=state_shape,
-                                    num_actions=n_action,
+                                    n_action=n_action,
                                     embedding_dim=embedding_dim,
                                     K=K,
                                     risk_measure_function=risk_measure_function)
 
         # Initialize parameters
-        num_samples = 5
+        n_sample = 5
         encode_dim = 3
-        tau = np.random.rand(1, num_samples)
+        tau = np.random.rand(1, n_sample)
         tau_var = nn.Variable.from_numpy_array(tau)
         embedding = model._compute_embedding(tau_var, dimension=encode_dim)
 
@@ -257,12 +242,12 @@ class TestIQNQuantileFunction(object):
         for t in tau[0]:
             for _ in range(encode_dim):
                 embedding = np.sum(
-                    [np.cos(np.pi * i * t) for i in range(embedding_dim)])
+                    [np.cos(np.pi * (i + 1) * t) for i in range(embedding_dim)])
                 embedding += 1  # Add bias
                 embedding = np.maximum(0.0, embedding)
                 expected.append(embedding)
 
-        expected = np.array(expected).reshape((1, num_samples, encode_dim))
+        expected = np.array(expected).reshape((1, n_sample, encode_dim))
 
         assert np.allclose(expected, actual, atol=1e-4, rtol=1e-4)
 
