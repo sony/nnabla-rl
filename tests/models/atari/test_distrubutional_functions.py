@@ -213,7 +213,6 @@ class TestIQNQuantileFunction(object):
     def test_compute_embeddings(self):
         nn.clear_parameters()
 
-        state_shape = (4, 84, 84)
         n_action = 4
         embedding_dim = 64
         scope_name = "test"
