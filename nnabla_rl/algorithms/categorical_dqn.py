@@ -19,7 +19,6 @@ import nnabla_rl.model_trainers as MT
 
 def default_value_distribution_builder(scope_name, env_info, algorithm_params, **kwargs):
     return C51ValueDistributionFunction(scope_name,
-                                        env_info.state_shape,
                                         env_info.action_dim,
                                         algorithm_params.num_atoms,
                                         algorithm_params.v_min,

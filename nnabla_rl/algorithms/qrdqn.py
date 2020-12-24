@@ -19,7 +19,6 @@ import nnabla_rl.model_trainers as MT
 
 def default_quantile_dist_function_builder(scope_name, env_info, algorithm_params, **kwargs):
     return QRDQNQuantileDistributionFunction(scope_name,
-                                             env_info.state_shape,
                                              env_info.action_dim,
                                              algorithm_params.num_quantiles)
 

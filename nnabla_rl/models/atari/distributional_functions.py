@@ -1,3 +1,5 @@
+from typing import Callable
+
 import nnabla as nn
 
 import nnabla.functions as NF
@@ -9,16 +11,9 @@ import numpy as np
 
 
 class C51ValueDistributionFunction(ValueDistributionFunction):
-    def __init__(self, scope_name, state_shape, num_actions, num_atoms, v_min, v_max):
-        super(C51ValueDistributionFunction, self).__init__(scope_name, num_actions, num_atoms, v_min, v_max)
-        self._state_shape = state_shape
-
-    def probabilities(self, s):
+    def probabilities(self, s: nn.Variable) -> nn.Variable:
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
-            assert s.shape[1:] == self._state_shape
-            batch_size = s.shape[0]
-
             with nn.parameter_scope("conv1"):
                 h = NPF.convolution(s, outmaps=32, stride=(4, 4), kernel=(8, 8))
             h = NF.relu(x=h)
@@ -34,23 +29,16 @@ class C51ValueDistributionFunction(ValueDistributionFunction):
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
                 h = NPF.affine(
-                    h, n_outmaps=self._num_actions * self._num_atoms)
-            h = NF.reshape(h, (-1, self._num_actions, self._num_atoms))
-        assert h.shape == (batch_size, self._num_actions, self._num_atoms)
+                    h, n_outmaps=self._n_action * self._n_atom)
+            h = NF.reshape(h, (-1, self._n_action, self._n_atom))
+        assert h.shape == (batch_size, self._n_action, self._n_atom)
         return NF.softmax(h, axis=2)
 
 
 class QRDQNQuantileDistributionFunction(QuantileDistributionFunction):
-    def __init__(self, scope_name, state_shape, num_actions, num_quantiles):
-        super(QRDQNQuantileDistributionFunction, self).__init__(scope_name, num_actions, num_quantiles)
-        self._state_shape = state_shape
-
-    def quantiles(self, s):
+    def quantiles(self, s: nn.Variable) -> nn.Variable:
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
-            assert s.shape[1:] == self._state_shape
-            batch_size = s.shape[0]
-
             with nn.parameter_scope("conv1"):
                 h = NPF.convolution(s, outmaps=32, stride=(4, 4), kernel=(8, 8))
             h = NF.relu(x=h)
@@ -65,22 +53,23 @@ class QRDQNQuantileDistributionFunction(QuantileDistributionFunction):
                 h = NPF.affine(h, n_outmaps=512)
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
-                h = NPF.affine(h, n_outmaps=self._num_actions * self._num_quantiles)
+                h = NPF.affine(h, n_outmaps=self._n_action * self._n_quantile)
             quantiles = NF.reshape(
-                h, (-1, self._num_actions, self._num_quantiles))
-        assert quantiles.shape == (batch_size, self._num_actions, self._num_quantiles)
+                h, (-1, self._n_action, self._n_quantile))
+        assert quantiles.shape == (batch_size, self._n_action, self._n_quantile)
         return quantiles
 
 
 class IQNQuantileFunction(StateActionQuantileFunction):
-    def __init__(self, scope_name, state_shape, num_actions, embedding_dim, K, risk_measure_function):
-        super(IQNQuantileFunction, self).__init__(scope_name, num_actions, K, risk_measure_function)
-        self._state_shape = state_shape
+
+    _embedding_dim: int
+
+    def __init__(self, scope_name: str, n_action: int, embedding_dim: int, K: float,
+                 risk_measure_function: Callable[[nn.Variable], nn.Variable]):
+        super(IQNQuantileFunction, self).__init__(scope_name, n_action, K, risk_measure_function)
         self._embedding_dim = embedding_dim
 
-    def quantiles(self, s, tau):
-        batch_size = s.shape[0]
-
+    def quantiles(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
         encoded = self._encode(s, tau.shape[-1])
         embedding = self._compute_embedding(tau, encoded.shape[-1])
 
@@ -93,16 +82,12 @@ class IQNQuantileFunction(StateActionQuantileFunction):
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
                 quantile = NPF.affine(
-                    h, n_outmaps=self._num_actions, base_axis=2)
-        assert quantile.shape == (
-            batch_size, tau.shape[-1], self._num_actions)
+                    h, n_outmaps=self._n_action, base_axis=2)
+        assert quantile.shape == (s.shape[0], tau.shape[-1], self._n_action)
         return quantile
 
-    def _encode(self, s, num_samples):
+    def _encode(self, s: nn.Variable, n_sample: int) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
-            assert s.shape[1:] == self._state_shape
-            batch_size = s.shape[0]
-
             with nn.parameter_scope("conv1"):
                 h = NPF.convolution(s, outmaps=32, stride=(4, 4), kernel=(8, 8))
             h = NF.relu(x=h)
@@ -112,12 +97,12 @@ class IQNQuantileFunction(StateActionQuantileFunction):
             with nn.parameter_scope("conv3"):
                 h = NPF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1))
             h = NF.relu(x=h)
-            h = NF.reshape(h, shape=(batch_size, -1))
+            h = NF.reshape(h, shape=(s.shape[0], -1))
         encoded = RF.expand_dims(h, axis=1)
-        encoded = RF.repeat(encoded, repeats=num_samples, axis=1)
+        encoded = RF.repeat(encoded, repeats=n_sample, axis=1)
         return encoded
 
-    def _compute_embedding(self, tau, dimension):
+    def _compute_embedding(self, tau: nn.Variable, dimension: int) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             batch_size = tau.shape[0]
             sample_size = tau.shape[1]
@@ -140,6 +125,5 @@ class IQNQuantileFunction(StateActionQuantileFunction):
         return embedding
 
     @property
-    def _pi_i(self):
-        return np.pi * nn.Variable.from_numpy_array(
-            np.array([i for i in range(0, self._embedding_dim)]))
+    def _pi_i(self) -> nn.Variable:
+        return np.pi * NF.arange(1, self._embedding_dim + 1)
