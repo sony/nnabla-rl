@@ -1,10 +1,14 @@
 from abc import ABCMeta, abstractmethod
+from typing import Callable, Optional
+
+import nnabla as nn
 
 from nnabla_rl.models.model import Model
+from nnabla_rl.preprocessors import Preprocessor
 
 
-def preprocess_state(function):
-    def wrapped(self, s):
+def preprocess_state(function: Callable[[nn.Variable], nn.Variable]) -> Callable[[nn.Variable], nn.Variable]:
+    def wrapped(self, s: nn.Variable) -> nn.Variable:
         if self._state_preprocessor is not None:
             processed = self._state_preprocessor.process(s)
             return function(self, processed)
@@ -14,16 +18,16 @@ def preprocess_state(function):
 
 
 class VFunction(Model, metaclass=ABCMeta):
-    def __init__(self, scope_name):
+
+    _state_preprocessor: Optional[Preprocessor]
+
+    def __init__(self, scope_name: str):
         super(VFunction, self).__init__(scope_name)
         self._state_preprocessor = None
 
-    def set_state_preprocessor(self, preprocessor):
+    def set_state_preprocessor(self, preprocessor: Preprocessor) -> None:
         self._state_preprocessor = preprocessor
 
-    def __call__(self, s):
-        raise NotImplementedError
-
     @abstractmethod
-    def v(self, s):
+    def v(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError

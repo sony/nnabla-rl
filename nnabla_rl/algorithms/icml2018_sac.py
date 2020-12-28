@@ -15,7 +15,7 @@ from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 
 
 def default_v_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return SACVFunction(scope_name, env_info.state_dim)
+    return SACVFunction(scope_name)
 
 
 def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):

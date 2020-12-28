@@ -35,18 +35,6 @@ class DeterministicPolicy(Policy, metaclass=ABCMeta):
 
     By calling this policy, it will return an action for the given state.
     """
-
-    def __call__(self, s: nn.Variable) -> nn.Variable:
-        '''__call__
-
-        Args:
-            state (nnabla.Variable): State variable
-
-        Returns:
-            nnabla.Variable : Action for the given state
-        '''
-        raise NotImplementedError
-
     @abstractmethod
     def pi(self, s: nn.Variable) -> nn.Variable:
         '''pi
@@ -66,18 +54,6 @@ class StochasticPolicy(Policy, metaclass=ABCMeta):
 
     By calling this policy, it will return a probability distribution of action for the given state.
     '''
-
-    def __call__(self, s: nn.Variable) -> nn.Variable:
-        '''__call__
-
-        Args:
-            state (nnabla.Variable): State variable
-
-        Returns:
-            nnabla_rl.distributions.Distribution: Probability distribution of the action for the given state
-        '''
-        raise NotImplementedError
-
     @abstractmethod
     def pi(self, s: nn.Variable) -> nn.Variable:
         '''pi

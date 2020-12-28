@@ -62,7 +62,7 @@ def build_default_policy(scope_name, env_info, algorithm_params, **kwargs):
 
 
 def build_default_v_function(scope_name, env_info, algorithm_params, **kwargs):
-    return TRPOVFunction(scope_name, env_info.state_dim)
+    return TRPOVFunction(scope_name)
 
 
 class TRPO(Algorithm):

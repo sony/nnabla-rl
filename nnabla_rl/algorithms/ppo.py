@@ -35,7 +35,7 @@ def build_shared_policy(scope_name, env_info, algorithm_params, head, **kwargs):
 
 
 def build_shared_v_function(scope_name, env_info, algorithm_params, head,  **kwargs):
-    return PPOAtariVFunction(scope_name=scope_name, state_shape=env_info.state_shape, head=head)
+    return PPOAtariVFunction(scope_name=scope_name, head=head)
 
 
 def build_mujoco_policy(scope_name, env_info, algorithm_params, **kwargs):
@@ -43,7 +43,7 @@ def build_mujoco_policy(scope_name, env_info, algorithm_params, **kwargs):
 
 
 def build_mujoco_v_function(scope_name, env_info, algorithm_params, **kwargs):
-    return PPOMujocoVFunction(scope_name=scope_name, state_shape=env_info.state_shape)
+    return PPOMujocoVFunction(scope_name=scope_name)
 
 
 def build_mujoco_state_preprocessor(scope_name, env_info, algorithm_params, **kwargs):
