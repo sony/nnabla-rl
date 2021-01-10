@@ -4,7 +4,7 @@ import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
-from nnabla_rl.utils.reproductions import build_atari_env
+from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
 from nnabla_rl.utils.evaluator import TimestepEvaluator, EpisodicEvaluator
 from nnabla_rl.hook import as_hook
 from nnabla_rl.utils import serializers
@@ -19,9 +19,9 @@ def run_training(args):
     nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
     outdir = f'{args.env}_results/seed-{args.seed}'
+    set_global_seed(args.seed)
 
-    eval_env = build_atari_env(
-        args.env, test=True, seed=args.seed + 100, render=args.render)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render)
     evaluator = TimestepEvaluator(num_timesteps=125000)
     evaluation_hook = H.EvaluationHook(
         eval_env, evaluator, timing=250000, writer=W.FileWriter(outdir=outdir,
@@ -36,7 +36,8 @@ def run_training(args):
     if args.snapshot_dir is None:
         params = A.PPOParam(actor_num=actor_num,
                             total_timesteps=total_timesteps,
-                            timelimit_as_terminal=True)
+                            timelimit_as_terminal=True,
+                            seed=args.seed)
         ppo = A.PPO(train_env, params=params)
     else:
         ppo = serializers.load_snapshot(args.snapshot_dir)

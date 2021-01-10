@@ -3,7 +3,7 @@ from typing import Union, Iterable
 import nnabla as nn
 import nnabla.functions as NF
 
-import nnabla_rl.functions as RNF
+import nnabla_rl.functions as RF
 from nnabla_rl.model_trainers.model_trainer import Training, TrainingVariables
 from nnabla_rl.models import QFunction, DeterministicPolicy, Model
 from nnabla_rl.utils.data import convert_to_list_if_not_iterable
@@ -33,12 +33,12 @@ class _QFunctionTD3Training(Training):
             q_value = target_q_function.q(s_next, a_next)
             q_values.append(q_value)
         # Use the minimum among computed q_values by default
-        target_q = RNF.minimum_n(q_values)
+        target_q = RF.minimum_n(q_values)
         return reward + gamma * non_terminal * target_q
 
     def _compute_noisy_action(self, state):
         a_next_var = self._target_policy.pi(state)
-        epsilon = NF.clip_by_value(NF.randn(sigma=self._train_action_noise_sigma,
+        epsilon = NF.clip_by_value(RF.randn(sigma=self._train_action_noise_sigma,
                                             shape=a_next_var.shape),
                                    min=-self._train_action_noise_abs,
                                    max=self._train_action_noise_abs)

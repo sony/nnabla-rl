@@ -7,7 +7,7 @@ import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
-from nnabla_rl.utils.reproductions import build_mujoco_env
+from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed
 from nnabla_rl.logger import logger
 from nnabla_rl.utils import serializers
 
@@ -16,9 +16,9 @@ def run_training(args):
     nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
     outdir = f'{args.env}_results/seed-{args.seed}'
+    set_global_seed(args.seed)
 
-    eval_env = build_mujoco_env(
-        args.env, test=True, seed=args.seed + 100)
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
@@ -53,15 +53,13 @@ def run_showcase(args):
     if not isinstance(trpo, A.TRPO):
         raise ValueError('Loaded snapshot is not trained with TRPO!')
 
-    eval_env = build_mujoco_env(
-        args.env, test=True, seed=args.seed + 200, render=False)
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=False)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     returns = evaluator(trpo, eval_env)
     mean = np.mean(returns)
     std_dev = np.std(returns)
     median = np.median(returns)
-    logger.info('Evaluation results. mean: {} +/- std: {}, median: {}'.format(
-        mean, std_dev, median))
+    logger.info('Evaluation results. mean: {} +/- std: {}, median: {}'.format(mean, std_dev, median))
 
 
 def main():

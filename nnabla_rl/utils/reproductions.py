@@ -2,18 +2,24 @@ import gym
 
 import numpy as np
 
-from nnabla import random
+import random as py_random
 
+from nnabla import random as nn_random
+
+import nnabla_rl as rl
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 from nnabla_rl.logger import logger
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
-def set_global_seed(seed: int, env: gym.Env = None):
+def set_global_seed(seed: int):
     np.random.seed(seed=seed)
-    random.prng = np.random.RandomState(seed=seed)
-    if env is not None:
-        env.seed(seed)
+    py_random.seed(seed)
+
+    # FIXME: nnabla's random functions such as F.rand will not be seeded with this
+    nn_random.prng = np.random.RandomState(seed=seed)
+
+    rl.seed(seed)
 
 
 def build_atari_env(id_or_env, test=False, seed=None, render=False):
@@ -23,9 +29,7 @@ def build_atari_env(id_or_env, test=False, seed=None, render=False):
         env = make_atari(id_or_env)
     print_env_info(env)
 
-    env = wrap_deepmind(env,
-                        episode_life=not test,
-                        clip_rewards=not test)
+    env = wrap_deepmind(env, episode_life=not test, clip_rewards=not test)
     env = NumpyFloat32Env(env)
 
     if render:

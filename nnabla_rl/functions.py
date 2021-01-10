@@ -1,6 +1,8 @@
 import nnabla as nn
 import nnabla.functions as NF
 
+import nnabla_rl.random as rl_random
+
 
 def sample_gaussian(mean, ln_var, noise_clip=None):
     assert isinstance(mean, nn.Variable)
@@ -8,7 +10,7 @@ def sample_gaussian(mean, ln_var, noise_clip=None):
     if not (mean.shape == ln_var.shape):
         raise ValueError('mean and ln_var has different shape')
 
-    noise = NF.randn(shape=mean.shape)
+    noise = randn(shape=mean.shape)
     stddev = NF.exp(ln_var * 0.5)
     if noise_clip is not None:
         noise = NF.clip_by_value(noise, min=noise_clip[0], max=noise_clip[1])
@@ -30,7 +32,7 @@ def sample_gaussian_multiple(mean, ln_var, num_samples, noise_clip=None):
 
     output_shape = (batch_size, num_samples, *data_shape)
 
-    noise = NF.randn(shape=output_shape)
+    noise = randn(shape=output_shape)
     if noise_clip is not None:
         noise = NF.clip_by_value(noise, min=noise_clip[0], max=noise_clip[1])
     sample = mean + stddev * noise
@@ -108,3 +110,29 @@ def minimum_n(variables):
     for variable in variables[2:]:
         minimum = NF.minimum2(minimum, variable)
     return minimum
+
+
+def rand(low=0, high=1, shape=[], n_outputs=-1, outputs=None):
+    '''Wrapper function of rand to fix the seed
+    '''
+    seed = _sample_seed()
+    return NF.rand(low=low, high=high, shape=shape, seed=seed, n_outputs=n_outputs, outputs=outputs)
+
+
+def randn(mu=0, sigma=1, shape=[], n_outputs=-1, outputs=None):
+    '''Wrapper function of randn to fix the seed
+    '''
+    seed = _sample_seed()
+    return NF.randn(mu=mu, sigma=sigma, shape=shape, seed=seed, n_outputs=n_outputs, outputs=outputs)
+
+
+def random_choice(x, w, shape=[], replace=True, n_outputs=- 1, outputs=None):
+    '''Wrapper function random_choice to fix the seed
+    '''
+    seed = _sample_seed()
+    return NF.random_choice(x=x, w=w, shape=shape, seed=seed, replace=replace, n_outputs=n_outputs, outputs=outputs)
+
+
+def _sample_seed():
+    max_32bit_int = 2**31 - 1
+    return rl_random.prng.randint(max_32bit_int)

@@ -54,7 +54,7 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
         assert (len(args) == 1) or (len(args) == 2)
         if len(args) == 1:
             s, *_ = args
-            z = NF.randn(shape=(s.shape[0], self._latent_dim))
+            z = RF.randn(shape=(s.shape[0], self._latent_dim))
             z = NF.clip_by_value(z, -0.5, 0.5)
         else:
             (s, z) = args
@@ -71,7 +71,7 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
         assert (len(args) == 1) or (len(args) == 2)
         if len(args) == 1:
             (s, ) = args
-            z = NF.randn(shape=(s.shape[0], decode_num, self._latent_dim))
+            z = RF.randn(shape=(s.shape[0], decode_num, self._latent_dim))
             z = NF.clip_by_value(z, -0.5, 0.5)
         else:
             (s, z) = args

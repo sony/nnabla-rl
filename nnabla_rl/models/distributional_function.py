@@ -260,7 +260,7 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
         return one_hot
 
     def _sample_tau(self, shape: Optional[List] = None) -> nn.Variable:
-        return NF.rand(low=0.0, high=1.0, shape=shape)
+        return RF.rand(low=0.0, high=1.0, shape=shape)
 
     def _sample_risk_measured_tau(self, shape: Optional[List]) -> nn.Variable:
         tau = self._sample_tau(shape)

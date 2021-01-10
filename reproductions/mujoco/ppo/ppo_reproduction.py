@@ -5,7 +5,7 @@ import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
-from nnabla_rl.utils.reproductions import build_mujoco_env
+from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed
 from nnabla_rl.utils import serializers
 
 
@@ -21,9 +21,9 @@ def run_training(args):
     nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
     outdir = f'{args.env}_results/seed-{args.seed}'
+    set_global_seed(args.seed)
 
-    eval_env = build_mujoco_env(
-        args.env, test=True, seed=args.seed + 100)
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
@@ -47,7 +47,8 @@ def run_training(args):
                             learning_rate=3.0*1e-4,
                             actor_num=1,
                             decrease_alpha=False,
-                            timelimit_as_terminal=timelimit_as_terminal)
+                            timelimit_as_terminal=timelimit_as_terminal,
+                            seed=args.seed)
         ppo = A.PPO(train_env, params=params)
     else:
         ppo = serializers.load_snapshot(args.snapshot_dir)

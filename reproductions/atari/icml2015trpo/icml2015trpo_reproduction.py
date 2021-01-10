@@ -6,7 +6,7 @@ import nnabla_rl.hooks as H
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
 from nnabla_rl.hook import as_hook
 from nnabla_rl.utils import serializers
-from nnabla_rl.utils.reproductions import build_atari_env
+from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
 from nnabla_rl.writers import FileWriter
 
 
@@ -18,15 +18,13 @@ def print_iteration_number(algorithm):
 def run_training(args):
     nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
-    eval_env = build_atari_env(
-        args.env, test=True, seed=args.seed + 100, render=args.render)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
+    set_global_seed(args.seed)
 
     writer = FileWriter(outdir, "evaluation_result")
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render)
     evaluator = EpisodicEvaluator()
-    evaluation_hook = H.EvaluationHook(
-        eval_env, evaluator, timing=2, writer=writer)
+    evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=2, writer=writer)
 
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=100)
 
@@ -48,14 +46,12 @@ def run_showcase(args):
     nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
 
     if args.snapshot_dir is None:
-        raise ValueError(
-            'Please specify the snapshot dir for showcasing')
+        raise ValueError('Please specify the snapshot dir for showcasing')
     trpo = serializers.load_snapshot(args.snapshot_dir)
     if not isinstance(trpo, A.ICML2015TRPO):
         raise ValueError('Loaded snapshot is not trained with ICML2015TRPO')
 
-    eval_env = build_atari_env(
-        args.env, test=True, seed=args.seed + 200, render=True)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=True)
     evaluator = EpisodicEvaluator()
     evaluator(trpo, eval_env)
 

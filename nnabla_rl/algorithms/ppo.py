@@ -26,6 +26,7 @@ from nnabla_rl.utils.data import marshall_experiences, unzip
 from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
                                           mp_array_from_np_array, new_mp_arrays_from_params,
                                           copy_mp_arrays_to_params, copy_params_to_mp_arrays)
+from nnabla_rl.utils.reproductions import set_global_seed
 
 
 def build_shared_policy(scope_name, env_info, algorithm_params, head, **kwargs):
@@ -100,6 +101,7 @@ class PPOParam(AlgorithmParam):
     total_timesteps: int = 10000
     decrease_alpha: bool = True
     timelimit_as_terminal: bool = False
+    seed: int = -1
 
     def __post_init__(self):
         '''__post_init__
@@ -337,19 +339,22 @@ class PPO(Algorithm):
     def _build_ppo_actors(self, env, v_function, policy, state_preprocessor):
         actors = []
         for i in range(self._params.actor_num):
-            actor = _PPOActor(env=env,
-                              env_info=self._env_info,
-                              state_preprocessor=state_preprocessor,
-                              v_function=v_function,
-                              policy=policy,
-                              params=self._params)
+            actor = _PPOActor(
+                actor_num=i,
+                env=env,
+                env_info=self._env_info,
+                state_preprocessor=state_preprocessor,
+                v_function=v_function,
+                policy=policy,
+                params=self._params)
             actors.append(actor)
         return actors
 
 
 class _PPOActor(object):
-    def __init__(self, env, env_info, state_preprocessor, v_function, policy, params):
+    def __init__(self, actor_num, env, env_info, state_preprocessor, v_function, policy, params):
         # These variables will be copied when process is created
+        self._actor_num = actor_num
         self._env = env
         self._env_info = env_info
         self._state_preprocessor = state_preprocessor
@@ -448,7 +453,13 @@ class _PPOActor(object):
 
     def _run_actor_loop(self):
         context._set_nnabla_context()
-        self._env.seed(os.getpid())
+        if self._params.seed >= 0:
+            seed = self._actor_num + self._params.seed
+        else:
+            seed = os.getpid()
+
+        set_global_seed(seed)
+        self._env.seed(seed)
         while (True):
             self._task_start_event.wait()
             if self._disposed.get_obj():

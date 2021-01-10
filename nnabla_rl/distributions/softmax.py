@@ -4,6 +4,7 @@ import nnabla.functions as NF
 import numpy as np
 
 from nnabla_rl.distributions import Distribution
+import nnabla_rl.functions as RF
 
 
 class Softmax(Distribution):
@@ -27,13 +28,13 @@ class Softmax(Distribution):
             *[self._labels for _ in range(self._batch_size)])
 
     def sample(self, noise_clip=None):
-        return NF.random_choice(self._actions, w=self._distribution)
+        return RF.random_choice(self._actions, w=self._distribution)
 
     def sample_multiple(self, num_samples, noise_clip=None):
         raise NotImplementedError
 
     def sample_and_compute_log_prob(self, noise_clip=None):
-        sample = NF.random_choice(self._actions, w=self._distribution)
+        sample = RF.random_choice(self._actions, w=self._distribution)
         log_prob = self.log_prob(sample)
         return sample, log_prob
 
