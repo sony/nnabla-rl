@@ -1,8 +1,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-install_requires = ['nnabla', 'gym',
-                    'dataclasses;python_version=="3.6"', 'opencv-python']
+install_requires = ['nnabla>=1.14', 'gym', 'dataclasses;python_version=="3.6"', 'opencv-python']
 
 tests_require = ['pytest', 'pytest-cov', 'mock']
 # pytest-runner is required to run tests with

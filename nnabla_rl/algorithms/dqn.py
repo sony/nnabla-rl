@@ -1,7 +1,6 @@
 import nnabla as nn
 import nnabla.solvers as NS
 
-import warnings
 from dataclasses import dataclass
 
 import gym
@@ -23,14 +22,9 @@ def default_q_func_builder(scope_name, env_info, algorithm_params, **kwargs):
 
 
 def default_q_solver_builder(params):
-    try:
-        solver = NS.RMSpropGraves(
-            lr=params.learning_rate, decay=params.decay,
-            momentum=params.momentum, eps=params.min_squared_gradient)
-    except AttributeError:
-        warnings.warn("Instead of RMSpropGraves, use Adam as a Solver, \
-            Please check learning rate. It might be needed to tune it")
-        solver = NS.Adam(params.learning_rate)
+    solver = NS.RMSpropGraves(
+        lr=params.learning_rate, decay=params.decay,
+        momentum=params.momentum, eps=params.min_squared_gradient)
     return solver
 
 

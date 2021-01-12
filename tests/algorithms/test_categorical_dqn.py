@@ -1,7 +1,5 @@
 import pytest
 
-from packaging import version
-
 import nnabla as nn
 
 import numpy as np
@@ -11,11 +9,6 @@ import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
 
 
-SupportedNNablaVersion = '1.14.0'
-
-
-@pytest.mark.skipif(version.parse(nn.__version__) < version.parse(SupportedNNablaVersion),
-                    reason='Unsupported nnabla version')
 class TestCategoricalDQN(object):
     def setup_method(self, method):
         nn.clear_parameters()
