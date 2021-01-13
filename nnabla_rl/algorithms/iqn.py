@@ -6,11 +6,16 @@ from dataclasses import dataclass
 
 import nnabla.solvers as NS
 
+import gym
+from typing import Union
+
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction
+from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction, Model
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
@@ -21,17 +26,33 @@ def risk_neutral_measure(tau):
     return tau
 
 
-def default_quantile_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    risk_measure_function = kwargs['risk_measure_function']
-    return IQNQuantileFunction(scope_name,
-                               env_info.action_dim,
-                               algorithm_params.embedding_dim,
-                               K=algorithm_params.K,
-                               risk_measure_function=risk_measure_function)
+class DefaultQuantileFunctionBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return IQNQuantileFunction(scope_name,
+                                   env_info.action_dim,
+                                   algorithm_params.embedding_dim,
+                                   K=algorithm_params.K,
+                                   risk_measure_function=risk_neutral_measure)
 
 
-def default_replay_buffer_builder(capacity):
-    return ReplayBuffer(capacity=capacity)
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,
+                     env_info: EnvironmentInfo,
+                     algorithm_params: AlgorithmParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate, eps=1e-2 / algorithm_params.batch_size)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,
+                            env_info: EnvironmentInfo,
+                            algorithm_params: AlgorithmParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -84,28 +105,25 @@ class IQN(Algorithm):
     For detail see: https://arxiv.org/pdf/1806.06923.pdf
     '''
 
-    def __init__(self, env_or_env_info,
-                 quantile_function_builder=default_quantile_function_builder,
-                 risk_measure_function=risk_neutral_measure,
-                 params=IQNParam(),
-                 replay_buffer_builder=default_replay_buffer_builder):
+    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: IQNParam = IQNParam(),
+                 quantile_function_builder: ModelBuilder = DefaultQuantileFunctionBuilder(),
+                 quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(IQN, self).__init__(env_or_env_info, params=params)
 
         if not self._env_info.is_discrete_action_env():
             raise ValueError('{} only supports discrete action environment'.format(self.__name__))
 
-        kwargs = {}
-        kwargs['risk_measure_function'] = risk_measure_function
-        self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._params, **kwargs)
+        self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._params)
         self._target_quantile_function = self._quantile_function.deepcopy('target_quantile_function')
         assert isinstance(self._quantile_function, StateActionQuantileFunction)
         assert isinstance(self._target_quantile_function, StateActionQuantileFunction)
 
-        def solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate, eps=1e-2 / self._params.batch_size)
-        self._quantile_function_solver = {self._quantile_function.scope_name: solver_builder()}
+        self._quantile_function_solver = {
+            self._quantile_function.scope_name: quantile_solver_builder(self._env_info, self._params)}
 
-        self._replay_buffer = replay_buffer_builder(capacity=params.replay_buffer_size)
+        self._replay_buffer = replay_buffer_builder(self._env_info, self._params)
 
     def _before_training_start(self, env_or_buffer):
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)

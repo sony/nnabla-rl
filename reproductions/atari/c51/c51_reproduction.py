@@ -5,6 +5,7 @@ import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
 import nnabla_rl.replay_buffers as RB
+from nnabla_rl.builders import ReplayBufferBuilder
 from nnabla_rl.utils.evaluator import TimestepEvaluator, EpisodicEvaluator
 from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
 from nnabla_rl.hook import as_hook
@@ -16,8 +17,9 @@ def print_iteration_number(algorithm):
     print('Current iteration: {}'.format(algorithm.iteration_num))
 
 
-def memory_efficient_buffer_builder(capacity):
-    return RB.MemoryEfficientAtariBuffer(capacity=capacity)
+class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
+    def __call__(self, env_info, algorithm_params, **kwargs):
+        return RB.MemoryEfficientAtariBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 def run_training(args):
@@ -36,7 +38,7 @@ def run_training(args):
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
         categorical_dqn = A.CategoricalDQN(train_env,
-                                           replay_buffer_builder=memory_efficient_buffer_builder)
+                                           replay_buffer_builder=MemoryEfficientBufferBuilder())
     else:
         categorical_dqn = serializers.load_snapshot(args.snapshot_dir)
     hooks = [print_iteration_number, save_snapshot_hook, evaluation_hook]

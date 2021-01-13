@@ -5,25 +5,56 @@ from dataclasses import dataclass
 
 import numpy as np
 
+import gym
+from typing import Union
+
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.model_trainers.model_trainer import Training
-from nnabla_rl.models import TD3QFunction, TD3Policy, QFunction, DeterministicPolicy
+from nnabla_rl.models import TD3QFunction, TD3Policy, QFunction, DeterministicPolicy, Model
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
-def default_critic_builder(scope_name, env_info, algorithm_params, **kwargs):
-    target_policy = kwargs.get('target_policy')
-    return TD3QFunction(scope_name, optimal_policy=target_policy)
+class DefaultCriticBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        target_policy = kwargs.get('target_policy')
+        return TD3QFunction(scope_name, optimal_policy=target_policy)
 
 
-def default_actor_builder(scope_name, env_info, algorithm_params, **kwargs):
-    max_action_value = float(env_info.action_space.high[0])
-    return TD3Policy(scope_name, env_info.action_dim, max_action_value=max_action_value)
+class DefaultActorBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        max_action_value = float(env_info.action_space.high[0])
+        return TD3Policy(scope_name, env_info.action_dim, max_action_value=max_action_value)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,
+                     env_info: EnvironmentInfo,
+                     algorithm_params: AlgorithmParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,
+                            env_info: EnvironmentInfo,
+                            algorithm_params: AlgorithmParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -54,19 +85,14 @@ class TD3Param(AlgorithmParam):
 
 
 class TD3(Algorithm):
-    def __init__(self, env_or_env_info,
-                 critic_builder=default_critic_builder,
-                 actor_builder=default_actor_builder,
-                 params=TD3Param()):
+    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: TD3Param = TD3Param(),
+                 critic_builder: ModelBuilder = DefaultCriticBuilder(),
+                 critic_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 actor_builder: ModelBuilder = DefaultActorBuilder(),
+                 actor_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(TD3, self).__init__(env_or_env_info, params=params)
-
-        def policy_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
-        self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        self._pi_solver = {self._pi.scope_name: policy_solver_builder()}
-        self._target_pi = self._pi.deepcopy('target_' + self._pi.scope_name)
-        assert isinstance(self._pi, DeterministicPolicy)
-        assert isinstance(self._target_pi, DeterministicPolicy)
 
         self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
         self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
@@ -74,13 +100,19 @@ class TD3(Algorithm):
         assert isinstance(self._q2, QFunction)
         train_q_functions = [self._q1, self._q2]
 
-        def q_function_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         self._train_q_functions = train_q_functions
-        self._train_q_solvers = {q.scope_name: q_function_solver_builder() for q in train_q_functions}
+        self._train_q_solvers = {q.scope_name: critic_solver_builder(
+            env_info=self._env_info, algorithm_params=self._params) for q in train_q_functions}
         self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in train_q_functions]
 
-        self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
+        self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
+        self._pi_solver = {self._pi.scope_name: actor_solver_builder(
+            env_info=self._env_info, algorithm_params=self._params)}
+        self._target_pi = self._pi.deepcopy('target_' + self._pi.scope_name)
+        assert isinstance(self._pi, DeterministicPolicy)
+        assert isinstance(self._target_pi, DeterministicPolicy)
+
+        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_params=self._params)
 
     @eval_api
     def compute_eval_action(self, state):

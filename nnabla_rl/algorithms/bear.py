@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -6,31 +6,58 @@ import nnabla.solvers as NS
 
 from dataclasses import dataclass
 
+import gym
+
 import numpy as np
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import TD3QFunction, BEARPolicy, UnsquashedVariationalAutoEncoder, \
-    DeterministicPolicy, StochasticPolicy, QFunction, VariationalAutoEncoder
+    DeterministicPolicy, StochasticPolicy, QFunction, VariationalAutoEncoder, Model
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.functions as RF
 
 
-def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return TD3QFunction(scope_name)
+class DefaultQFunctionBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return TD3QFunction(scope_name)
 
 
-def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return BEARPolicy(scope_name, env_info.action_dim)
+class DefaultPolicyBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return BEARPolicy(scope_name, env_info.action_dim)
 
 
-def default_vae_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return UnsquashedVariationalAutoEncoder(scope_name,
-                                            env_info.state_dim,
-                                            env_info.action_dim,
-                                            env_info.action_dim*2)
+class DefaultVAEBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return UnsquashedVariationalAutoEncoder(scope_name,
+                                                env_info.state_dim,
+                                                env_info.action_dim,
+                                                env_info.action_dim*2)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,
+                     env_info: EnvironmentInfo,
+                     algorithm_params: AlgorithmParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
 
 
 @dataclass
@@ -107,40 +134,43 @@ class BEAR(Algorithm):
 
     '''
 
-    def __init__(self, env_or_env_info,
-                 q_function_builder=default_q_function_builder,
-                 policy_builder=default_policy_builder,
-                 vae_builder=default_vae_builder,
-                 params=BEARParam()):
+    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: BEARParam = BEARParam(),
+                 q_function_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 pi_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 pi_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 vae_builder: ModelBuilder = DefaultVAEBuilder(),
+                 vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 lagrange_solver_builder: SolverBuilder = DefaultSolverBuilder()):
         super(BEAR, self).__init__(env_or_env_info, params=params)
 
-        def solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         self._q_ensembles = []
         self._q_solvers = {}
         self._target_q_ensembles = []
         for i in range(self._params.num_q_ensembles):
-            q = q_function_builder(
-                scope_name="q{}".format(i), env_info=self._env_info, algorithm_params=self._params)
+            q = q_function_builder(scope_name="q{}".format(i), env_info=self._env_info, algorithm_params=self._params)
             assert isinstance(q, QFunction)
             target_q = q_function_builder(
                 scope_name="target_q{}".format(i), env_info=self._env_info, algorithm_params=self._params)
             self._q_ensembles.append(q)
-            self._q_solvers[q.scope_name] = solver_builder()
+            self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_params=self._params)
             self._target_q_ensembles.append(target_q)
 
-        self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        self._pi_solver = {self._pi.scope_name: solver_builder()}
+        self._pi = pi_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
+        self._pi_solver = {self._pi.scope_name: pi_solver_builder(
+            env_info=self._env_info, algorithm_params=self._params)}
         assert isinstance(self._pi, StochasticPolicy)
-        self._target_pi = policy_builder(scope_name="target_pi", env_info=self._env_info, algorithm_params=self._params)
+        self._target_pi = pi_builder(scope_name="target_pi", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._target_pi, StochasticPolicy)
 
         self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_params=self._params)
-        self._vae_solver = {self._vae.scope_name: solver_builder()}
+        self._vae_solver = {self._vae.scope_name: vae_solver_builder(
+            env_info=self._env_info, algorithm_params=self._params)}
         self._lagrange = MT.policy_trainers.bear_policy_trainer.AdjustableLagrangeMultiplier(
             scope_name="alpha",
             initial_value=self._params.initial_lagrange_multiplier)
-        self._lagrange_solver = solver_builder()
+        self._lagrange_solver = lagrange_solver_builder(env_info=self._env_info, algorithm_params=self._params)
 
         self._q_function_trainer = None
         self._vae_trainer = None

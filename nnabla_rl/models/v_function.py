@@ -28,6 +28,9 @@ class VFunction(Model, metaclass=ABCMeta):
     def set_state_preprocessor(self, preprocessor: Preprocessor) -> None:
         self._state_preprocessor = preprocessor
 
+    def has_preprocessor(self) -> bool:
+        return self._state_preprocessor is not None
+
     @abstractmethod
     def v(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError

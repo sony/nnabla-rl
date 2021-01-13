@@ -6,30 +6,44 @@ from dataclasses import dataclass
 import gym
 import numpy as np
 
+from typing import Union
+
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import DQNQFunction, QFunction
+from nnabla_rl.models import DQNQFunction, QFunction, Model
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
-def default_q_func_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return DQNQFunction(scope_name, env_info.action_dim)
+class DefaultQFunctionBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return DQNQFunction(scope_name, env_info.action_dim)
 
 
-def default_q_solver_builder(params):
-    solver = NS.RMSpropGraves(
-        lr=params.learning_rate, decay=params.decay,
-        momentum=params.momentum, eps=params.min_squared_gradient)
-    return solver
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self, env_info, algorithm_params, **kwargs):
+        solver = NS.RMSpropGraves(
+            lr=algorithm_params.learning_rate, decay=algorithm_params.decay,
+            momentum=algorithm_params.momentum, eps=algorithm_params.min_squared_gradient)
+        return solver
 
 
-def default_replay_buffer_builder(capacity):
-    return ReplayBuffer(capacity=capacity)
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,
+                            env_info: EnvironmentInfo,
+                            algorithm_params: AlgorithmParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -93,24 +107,23 @@ class DQNParam(AlgorithmParam):
 
 
 class DQN(Algorithm):
-    def __init__(self, env_or_env_info,
-                 q_func_builder=default_q_func_builder,
-                 params=DQNParam(),
-                 replay_buffer_builder=default_replay_buffer_builder):
+    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: DQNParam = DQNParam(),
+                 q_func_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(DQN, self).__init__(env_or_env_info, params=params)
 
         if not self._env_info.is_discrete_action_env():
             raise ValueError('Invalid env_info. Action space of DQN must be {}' .format(gym.spaces.Discrete))
 
-        def solver_builder():
-            return default_q_solver_builder(self._params)
         self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_params=self._params)
-        self._q_solver = {self._q.scope_name: solver_builder()}
+        self._q_solver = {self._q.scope_name: q_solver_builder(env_info=self._env_info, algorithm_params=self._params)}
         self._target_q = self._q.deepcopy('target_' + self._q.scope_name)
         assert isinstance(self._q, QFunction)
         assert isinstance(self._target_q, QFunction)
 
-        self._replay_buffer = replay_buffer_builder(capacity=params.replay_buffer_size)
+        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_params=self._params)
 
     @eval_api
     def compute_eval_action(self, s):

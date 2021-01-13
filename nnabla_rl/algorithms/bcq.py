@@ -1,3 +1,7 @@
+from typing import Union
+
+import gym
+
 import nnabla as nn
 import nnabla.solvers as NS
 
@@ -6,34 +10,56 @@ from dataclasses import dataclass
 import numpy as np
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.builders import ModelBuilder, SolverBuilder
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import TD3QFunction, BCQVariationalAutoEncoder, BCQPerturbator, QFunction, DeterministicPolicy
+from nnabla_rl.models import Model, TD3QFunction, BCQVariationalAutoEncoder, BCQPerturbator, \
+    QFunction, VariationalAutoEncoder, DeterministicPolicy, Perturbator
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.functions as RF
 
 
-def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return TD3QFunction(scope_name)
+class DefaultQFunctionBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return TD3QFunction(scope_name)
 
 
-def default_vae_builder(scope_name, env_info, algorithm_params, **kwargs):
-    max_action_value = float(env_info.action_space.high[0])
-    return BCQVariationalAutoEncoder(scope_name,
-                                     env_info.state_dim,
-                                     env_info.action_dim,
-                                     env_info.action_dim*2,
-                                     max_action_value)
+class DefaultVAEBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        max_action_value = float(env_info.action_space.high[0])
+        return BCQVariationalAutoEncoder(scope_name,
+                                         env_info.state_dim,
+                                         env_info.action_dim,
+                                         env_info.action_dim*2,
+                                         max_action_value)
 
 
-def default_perturbator_builder(scope_name, env_info, algorithm_params, **kwargs):
-    max_action_value = float(env_info.action_space.high[0])
-    return BCQPerturbator(scope_name,
-                          env_info.state_dim,
-                          env_info.action_dim,
-                          max_action_value)
+class DefaultPerturbatorBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        max_action_value = float(env_info.action_space.high[0])
+        return BCQPerturbator(scope_name,
+                              env_info.state_dim,
+                              env_info.action_dim,
+                              max_action_value)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self, env_info, algorithm_params, **kwargs):
+        return NS.Adam(alpha=algorithm_params.learning_rate)
 
 
 @dataclass
@@ -84,19 +110,21 @@ class BCQ(Algorithm):
 
     '''
 
-    def __init__(self, env_or_env_info,
-                 q_function_builder=default_q_function_builder,
-                 vae_builder=default_vae_builder,
-                 perturbator_builder=default_perturbator_builder,
-                 params=BCQParam()):
+    def __init__(self,
+                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: BCQParam = BCQParam(),
+                 q_function_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 vae_builder: ModelBuilder = DefaultVAEBuilder(),
+                 vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 perturbator_builder: ModelBuilder = DefaultPerturbatorBuilder(),
+                 perturbator_solver_builder: SolverBuilder = DefaultSolverBuilder()):
         super(BCQ, self).__init__(env_or_env_info, params=params)
 
         self._q_ensembles = []
         self._q_solvers = {}
         self._target_q_ensembles = []
 
-        def solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         for i in range(self._params.num_q_ensembles):
             q = q_function_builder(scope_name=f"q{i}",
                                    env_info=self._env_info,
@@ -105,19 +133,20 @@ class BCQ(Algorithm):
             assert isinstance(q, QFunction)
             assert isinstance(target_q, QFunction)
             self._q_ensembles.append(q)
-            self._q_solvers[q.scope_name] = solver_builder()
+            self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_params=self._params)
             self._target_q_ensembles.append(target_q)
 
         self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_params=self._params)
-        self._vae_solver = {self._vae.scope_name: solver_builder()}
+        assert isinstance(self._vae, VariationalAutoEncoder)
+        self._vae_solver = {self._vae.scope_name: vae_solver_builder(
+            env_info=self._env_info, algorithm_params=self._params)}
 
         self._xi = perturbator_builder(scope_name="xi", env_info=self._env_info, algorithm_params=self._params)
-        self._xi_solver = {self._xi.scope_name: solver_builder()}
-        self._target_xi = perturbator_builder(scope_name="target_xi",
-                                              env_info=self._env_info,
-                                              algorithm_params=self._params)
-
-        self._replay_buffer = ReplayBuffer(capacity=None)
+        assert isinstance(self._xi, Perturbator)
+        self._xi_solver = {self._xi.scope_name: perturbator_solver_builder(
+            env_info=self._env_info, algorithm_params=self._params)}
+        self._target_xi = perturbator_builder(
+            scope_name="target_xi", env_info=self._env_info, algorithm_params=self._params)
 
         self._q_function_trainer = None
         self._vae_trainer = None

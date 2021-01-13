@@ -6,25 +6,45 @@ from dataclasses import dataclass
 
 import nnabla.solvers as NS
 
+import gym
+from typing import Union
+
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import QRDQNQuantileDistributionFunction
+from nnabla_rl.models import QRDQNQuantileDistributionFunction, QuantileDistributionFunction, Model
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
-def default_quantile_dist_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return QRDQNQuantileDistributionFunction(scope_name,
-                                             env_info.action_dim,
-                                             algorithm_params.num_quantiles)
+class DefaultQuantileBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return QRDQNQuantileDistributionFunction(scope_name, env_info.action_dim, algorithm_params.num_quantiles)
 
 
-def default_replay_buffer_builder(capacity):
-    return ReplayBuffer(capacity=capacity)
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,
+                     env_info: EnvironmentInfo,
+                     algorithm_params: AlgorithmParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate, eps=1e-2 / algorithm_params.batch_size)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,
+                            env_info: EnvironmentInfo,
+                            algorithm_params: AlgorithmParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -71,22 +91,23 @@ class QRDQN(Algorithm):
     For detail see: https://arxiv.org/pdf/1710.10044.pdf
     '''
 
-    def __init__(self, env_or_env_info,
-                 quantile_dist_function_builder=default_quantile_dist_function_builder,
-                 params=QRDQNParam(),
-                 replay_buffer_builder=default_replay_buffer_builder):
+    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: QRDQNParam = QRDQNParam(),
+                 quantile_dist_function_builder: ModelBuilder = DefaultQuantileBuilder(),
+                 quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(QRDQN, self).__init__(env_or_env_info, params=params)
 
         if not self._env_info.is_discrete_action_env():
             raise ValueError('{} only supports discrete action environment'.format(self.__name__))
 
-        def solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate, eps=1e-2 / self._params.batch_size)
         self._quantile_dist = quantile_dist_function_builder('quantile_dist_train', self._env_info, self._params)
-        self._quantile_dist_solver = {self._quantile_dist.scope_name: solver_builder()}
+        assert isinstance(self._quantile_dist, QuantileDistributionFunction)
+        self._quantile_dist_solver = {
+            self._quantile_dist.scope_name: quantile_solver_builder(self._env_info, self._params)}
         self._target_quantile_dist = self._quantile_dist.deepcopy('quantile_dist_target')
 
-        self._replay_buffer = replay_buffer_builder(capacity=params.replay_buffer_size)
+        self._replay_buffer = replay_buffer_builder(self._env_info, self._params)
 
     @eval_api
     def compute_eval_action(self, state):

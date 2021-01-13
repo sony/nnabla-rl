@@ -1,5 +1,4 @@
 import nnabla as nn
-
 import nnabla.parametric_functions as NPF
 
 import nnabla_rl.initializers as RI

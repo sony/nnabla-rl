@@ -5,31 +5,45 @@ from dataclasses import dataclass
 
 import numpy as np
 
+import gym
+from typing import Union
+
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy
+from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy, Model
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
-def build_continuous_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return REINFORCEContinousPolicy(scope_name,
-                                    env_info.action_dim,
-                                    algorithm_params.fixed_ln_var)
+class DefaultPolicyBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        if env_info.is_discrete_action_env():
+            policy = self._build_discrete_policy(scope_name, env_info, algorithm_params)
+        else:
+            policy = self._build_continuous_policy(scope_name, env_info, algorithm_params)
+        return policy
+
+    def _build_continuous_policy(self, scope_name, env_info, algorithm_params, **kwargs):
+        return REINFORCEContinousPolicy(scope_name, env_info.action_dim, algorithm_params.fixed_ln_var)
+
+    def _build_discrete_policy(self, scope_name, env_info, algorithm_params, **kwargs):
+        return REINFORCEDiscretePolicy(scope_name, env_info.action_dim)
 
 
-def build_discrete_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return REINFORCEDiscretePolicy(scope_name, env_info.action_dim)
-
-
-def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
-    if env_info.is_discrete_action_env():
-        policy = build_discrete_policy("pi", env_info, algorithm_params)
-    else:
-        policy = build_continuous_policy("pi", env_info, algorithm_params)
-    return policy
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,
+                     env_info: EnvironmentInfo,
+                     algorithm_params: AlgorithmParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
 
 
 @dataclass
@@ -54,17 +68,15 @@ class REINFORCEParam(AlgorithmParam):
 
 
 class REINFORCE(Algorithm):
-    def __init__(self, env_info,
-                 policy_builder=default_policy_builder,
-                 params=REINFORCEParam()):
-        super(REINFORCE, self).__init__(env_info, params=params)
-
+    def __init__(self,
+                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: REINFORCEParam = REINFORCEParam(),
+                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder()):
+        super(REINFORCE, self).__init__(env_or_env_info, params=params)
         self._policy = policy_builder("pi", self._env_info, self._params)
         assert isinstance(self._policy, StochasticPolicy)
-
-        def policy_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
-        self._policy_solver = {self._policy.scope_name: policy_solver_builder()}
+        self._policy_solver = {self._policy.scope_name: policy_solver_builder(self._env_info, self._params)}
 
     @eval_api
     def compute_eval_action(self, s):

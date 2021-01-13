@@ -6,15 +6,60 @@ import numpy as np
 
 from dataclasses import dataclass
 
+import gym
+from typing import Union
+
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.algorithms.common_utils import compute_v_target_and_advantage
-from nnabla_rl.models import TRPOPolicy, TRPOVFunction, StochasticPolicy, VFunction
+from nnabla_rl.models import TRPOPolicy, TRPOVFunction, StochasticPolicy, VFunction, Model
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
+
+
+def build_mujoco_state_preprocessor(scope_name, env_info, algorithm_params, **kwargs):
+    return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
+
+
+class DefaultPolicyBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        state_preprocessor = build_mujoco_state_preprocessor(scope_name=scope_name + '_preprocessor',
+                                                             env_info=env_info,
+                                                             algorithm_params=algorithm_params)
+        policy = TRPOPolicy(scope_name, env_info.action_dim)
+        policy.set_state_preprocessor(state_preprocessor)
+        return policy
+
+
+class DefaultVFunctionBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        state_preprocessor = build_mujoco_state_preprocessor(scope_name=scope_name + '_preprocessor',
+                                                             env_info=env_info,
+                                                             algorithm_params=algorithm_params)
+        v_function = TRPOVFunction(scope_name)
+        v_function.set_state_preprocessor(state_preprocessor)
+        return v_function
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,
+                     env_info: EnvironmentInfo,
+                     algorithm_params: AlgorithmParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.vf_learning_rate)
 
 
 @dataclass
@@ -48,23 +93,6 @@ class TRPOParam(AlgorithmParam):
         self._assert_positive(self.vf_learning_rate, 'vf_learning_rate')
 
 
-def build_mujoco_state_preprocessor(scope_name, env_info, algorithm_params, **kwargs):
-    return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
-
-
-def build_state_preprocessor(preprocessor_builder, scope_name, env_info, algorithm_params, **kwargs):
-    builder = build_mujoco_state_preprocessor if preprocessor_builder is None else preprocessor_builder
-    return builder(scope_name, env_info, algorithm_params, **kwargs)
-
-
-def build_default_policy(scope_name, env_info, algorithm_params, **kwargs):
-    return TRPOPolicy(scope_name, env_info.action_dim)
-
-
-def build_default_v_function(scope_name, env_info, algorithm_params, **kwargs):
-    return TRPOVFunction(scope_name)
-
-
 class TRPO(Algorithm):
     """ Trust Region Policy Optimiation method
         with Generalized Advantage Estimation (GAE)
@@ -72,37 +100,22 @@ class TRPO(Algorithm):
             https://arxiv.org/pdf/1506.02438.pdf
     """
 
-    def __init__(self, env_or_env_info,
-                 value_function_builder=build_default_v_function,
-                 policy_builder=build_default_policy,
-                 state_preprocessor_builder=None,
-                 params=TRPOParam()):
+    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: TRPOParam = TRPOParam(),
+                 v_function_builder: ModelBuilder = DefaultVFunctionBuilder(),
+                 v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 policy_builder: ModelBuilder = DefaultPolicyBuilder()):
         super(TRPO, self).__init__(env_or_env_info, params=params)
-
-        if self._env_info.is_discrete_action_env():
-            self._state_preprocessor = None
-        else:
-            self._state_preprocessor = build_state_preprocessor(state_preprocessor_builder,
-                                                                scope_name="preprocessor",
-                                                                env_info=self._env_info,
-                                                                algorithm_params=self._params)
-
         if self._env_info.is_discrete_action_env():
             raise NotImplementedError
-        else:
-            self._policy = policy_builder("pi", self._env_info, self._params)
-            self._policy.set_state_preprocessor(self._state_preprocessor)
 
-            self._v_function = value_function_builder("v", self._env_info, self._params)
-            self._v_function.set_state_preprocessor(self._state_preprocessor)
-
+        self._policy = policy_builder("pi", self._env_info, self._params)
         assert isinstance(self._policy, StochasticPolicy)
-        assert isinstance(self._v_function, VFunction)
-        assert isinstance(self._state_preprocessor, RP.Preprocessor)
 
-        def v_function_solver():
-            return NS.Adam(alpha=self._params.vf_learning_rate)
-        self._v_function_solver = {self._v_function.scope_name: v_function_solver()}
+        self._v_function = v_function_builder("v", self._env_info, self._params)
+        assert isinstance(self._v_function, VFunction)
+
+        self._v_function_solver = {self._v_function.scope_name: v_solver_builder(self._env_info, self._params)}
 
     def _before_training_start(self, env_or_buffer):
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
@@ -184,8 +197,10 @@ class TRPO(Algorithm):
                               a_current=a_batch,
                               extra=extra)
 
-        if self._state_preprocessor is not None:
-            self._state_preprocessor.update(s_batch)
+        if self._policy.has_preprocessor():
+            self._policy._state_preprocessor.update(s_batch)
+        if self._v_function.has_preprocessor():
+            self._v_function._state_preprocessor.update(s_batch)
 
         # v function training
         self._v_function_training(batch)
@@ -261,8 +276,9 @@ class TRPO(Algorithm):
     def _models(self):
         models = {}
         models[self._policy.scope_name] = self._policy
+        models[self._policy._state_preprocessor.scope_name] = self._policy._state_preprocessor
         models[self._v_function.scope_name] = self._v_function
-        models[self._state_preprocessor.scope_name] = self._state_preprocessor
+        models[self._v_function._state_preprocessor.scope_name] = self._v_function._state_preprocessor
         return models
 
     def _solvers(self):

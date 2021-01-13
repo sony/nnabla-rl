@@ -2,28 +2,64 @@ from dataclasses import dataclass
 
 import numpy as np
 
+import gym
+from typing import Union
+
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.environment_explorers as EE
 import nnabla as nn
 import nnabla.solvers as NS
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, SolverBuilder, ReplayBufferBuilder
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import SACVFunction, SACQFunction, SACPolicy, VFunction, QFunction, StochasticPolicy
+from nnabla_rl.models import SACVFunction, SACQFunction, SACPolicy, VFunction, QFunction, StochasticPolicy, Model
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 
 
-def default_v_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return SACVFunction(scope_name)
+class DefaultVFunctionBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return SACVFunction(scope_name)
 
 
-def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return SACQFunction(scope_name)
+class DefaultQFunctionBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return SACQFunction(scope_name)
 
 
-def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return SACPolicy(scope_name, env_info.action_dim)
+class DefaultPolicyBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return SACPolicy(scope_name, env_info.action_dim)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,
+                     env_info: EnvironmentInfo,
+                     algorithm_params: AlgorithmParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,
+                            env_info: EnvironmentInfo,
+                            algorithm_params: AlgorithmParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -67,23 +103,24 @@ class ICML2018SAC(Algorithm):
     You will need to scale the reward received from the environment properly to get the algorithm work.
     '''
 
-    def __init__(self, env_or_env_info,
-                 v_function_builder=default_v_function_builder,
-                 q_function_builder=default_q_function_builder,
-                 policy_builder=default_policy_builder,
-                 params=ICML2018SACParam()):
+    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: ICML2018SACParam = ICML2018SACParam(),
+                 v_function_builder: ModelBuilder = DefaultVFunctionBuilder(),
+                 v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 q_function_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
+
         super(ICML2018SAC, self).__init__(env_or_env_info, params=params)
 
-        def v_function_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_params=self._params)
-        self._v_solver = {self._v.scope_name: v_function_solver_builder()}
+        self._v_solver = {self._v.scope_name: v_solver_builder(env_info=self._env_info, algorithm_params=self._params)}
         self._target_v = self._v.deepcopy('target_' + self._v.scope_name)
         assert isinstance(self._v, VFunction)
         assert isinstance(self._target_v, VFunction)
 
-        def q_function_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
         self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q1, QFunction)
@@ -91,15 +128,15 @@ class ICML2018SAC(Algorithm):
         self._train_q_functions = [self._q1, self._q2]
         self._train_q_solvers = {}
         for q in self._train_q_functions:
-            self._train_q_solvers[q.scope_name] = q_function_solver_builder()
+            self._train_q_solvers[q.scope_name] = q_solver_builder(
+                env_info=self._env_info, algorithm_params=self._params)
 
-        def policy_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        self._pi_solver = {self._pi.scope_name: policy_solver_builder()}
+        self._pi_solver = {self._pi.scope_name: policy_solver_builder(
+            env_info=self._env_info, algorithm_params=self._params)}
         assert isinstance(self._pi, StochasticPolicy)
 
-        self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
+        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_params=self._params)
 
     def _before_training_start(self, env_or_buffer):
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)

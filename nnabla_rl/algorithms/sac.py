@@ -5,22 +5,53 @@ from dataclasses import dataclass
 
 import numpy as np
 
+import gym
+from typing import Union
+
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import ModelBuilder, SolverBuilder, ReplayBufferBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import SACQFunction, SACPolicy, QFunction, StochasticPolicy
+from nnabla_rl.models import SACQFunction, SACPolicy, QFunction, StochasticPolicy, Model
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
-def default_q_function_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return SACQFunction(scope_name)
+class DefaultQFunctionBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return SACQFunction(scope_name)
 
 
-def default_policy_builder(scope_name, env_info, algorithm_params, **kwargs):
-    return SACPolicy(scope_name, env_info.action_dim)
+class DefaultPolicyBuilder(ModelBuilder):
+    def build_model(self,
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: AlgorithmParam,
+                    **kwargs) -> Model:
+        return SACPolicy(scope_name, env_info.action_dim)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,
+                     env_info: EnvironmentInfo,
+                     algorithm_params: AlgorithmParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,
+                            env_info: EnvironmentInfo,
+                            algorithm_params: AlgorithmParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -73,40 +104,39 @@ class SAC(Algorithm):
 
     '''
 
-    def __init__(self, env_or_env_info,
-                 q_function_builder=default_q_function_builder,
-                 policy_builder=default_policy_builder,
-                 params=SACParam()):
+    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
+                 params: SACParam = SACParam(),
+                 q_function_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(SAC, self).__init__(env_or_env_info, params=params)
 
-        def q_function_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q1, QFunction)
         self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._q2, QFunction)
         train_q_functions = [self._q1, self._q2]
         self._train_q_functions = train_q_functions
-        self._train_q_solvers = {q.scope_name: q_function_solver_builder() for q in train_q_functions}
+        self._train_q_solvers = {q.scope_name: q_solver_builder(
+            self._env_info, self._params) for q in train_q_functions}
         self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in train_q_functions]
 
-        def policy_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
         assert isinstance(self._pi, StochasticPolicy)
-        self._pi_solver = {self._pi.scope_name: policy_solver_builder()}
+        self._pi_solver = {self._pi.scope_name: policy_solver_builder(self._env_info, self._params)}
 
-        def temperature_solver_builder():
-            return NS.Adam(alpha=self._params.learning_rate)
         self._temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
             scope_name='temperature',
             initial_value=self._params.initial_temperature)
         if not self._params.fix_temperature:
-            self._temperature_solver = temperature_solver_builder()
+            self._temperature_solver = temperature_solver_builder(self._env_info, self._params)
         else:
             self._temperature_solver = None
 
-        self._replay_buffer = ReplayBuffer(capacity=params.replay_buffer_size)
+        self._replay_buffer = replay_buffer_builder(self._env_info, self._params)
 
     @eval_api
     def compute_eval_action(self, state):
