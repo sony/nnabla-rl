@@ -9,15 +9,15 @@ import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
 
 
-class TestIQN(object):
+class TestMunchausenIQN(object):
     def setup_method(self, method):
         nn.clear_parameters()
 
     def test_algorithm_name(self):
         dummy_env = E.DummyDiscreteImg()
-        iqn = A.IQN(dummy_env)
+        m_iqn = A.MunchausenIQN(dummy_env)
 
-        assert iqn.__name__ == 'IQN'
+        assert m_iqn.__name__ == 'MunchausenIQN'
 
     def test_run_online_training(self):
         """
@@ -25,43 +25,43 @@ class TestIQN(object):
         """
 
         dummy_env = E.DummyDiscreteImg()
-        params = A.IQNParam()
+        params = A.MunchausenIQNParam()
         params.start_timesteps = 5
         params.batch_size = 5
         params.learner_update_frequency = 1
         params.target_update_frequency = 1
-        iqn = A.IQN(dummy_env, params=params)
+        m_iqn = A.MunchausenIQN(dummy_env, params=params)
 
-        iqn.train_online(dummy_env, total_iterations=5)
+        m_iqn.train_online(dummy_env, total_iterations=5)
 
     def test_run_offline_training(self):
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
-        params = A.IQNParam()
+        params = A.MunchausenIQNParam()
         params.batch_size = batch_size
         params.learner_update_frequency = 1
         params.target_update_frequency = 1
 
-        iqn = A.IQN(dummy_env, params=params)
+        m_iqn = A.MunchausenIQN(dummy_env, params=params)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
         buffer.append_all(experiences)
-        iqn.train_offline(buffer, total_iterations=5)
+        m_iqn.train_offline(buffer, total_iterations=5)
 
     def test_compute_eval_action(self):
         dummy_env = E.DummyDiscreteImg()
-        iqn = A.IQN(dummy_env)
+        m_iqn = A.MunchausenIQN(dummy_env)
 
         state = dummy_env.reset()
         state = np.float32(state)
-        action = iqn.compute_eval_action(state)
+        action = m_iqn.compute_eval_action(state)
 
         assert action.shape == (1, )
 
     def test_update_algorithm_params(self):
         dummy_env = E.DummyDiscreteImg()
-        iqn = A.IQN(dummy_env)
+        m_iqn = A.MunchausenIQN(dummy_env)
 
         gamma = 0.5
         learning_rate = 1e-5
@@ -70,43 +70,45 @@ class TestIQN(object):
                  'learning_rate': learning_rate,
                  'batch_size': batch_size}
 
-        iqn.update_algorithm_params(**param)
+        m_iqn.update_algorithm_params(**param)
 
-        assert iqn._params.gamma == gamma
-        assert iqn._params.learning_rate == learning_rate
-        assert iqn._params.batch_size == batch_size
+        assert m_iqn._params.gamma == gamma
+        assert m_iqn._params.learning_rate == learning_rate
+        assert m_iqn._params.batch_size == batch_size
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.IQNParam(gamma=1.1)
+            A.MunchausenIQNParam(gamma=1.1)
         with pytest.raises(ValueError):
-            A.IQNParam(gamma=-0.1)
+            A.MunchausenIQNParam(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.IQNParam(batch_size=-1)
+            A.MunchausenIQNParam(batch_size=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(replay_buffer_size=-1)
+            A.MunchausenIQNParam(replay_buffer_size=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(learner_update_frequency=-1)
+            A.MunchausenIQNParam(learner_update_frequency=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(max_explore_steps=-1)
+            A.MunchausenIQNParam(max_explore_steps=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(learning_rate=-1)
+            A.MunchausenIQNParam(learning_rate=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(initial_epsilon=-1)
+            A.MunchausenIQNParam(initial_epsilon=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(final_epsilon=-1)
+            A.MunchausenIQNParam(final_epsilon=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(test_epsilon=-1)
+            A.MunchausenIQNParam(test_epsilon=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(K=-1)
+            A.MunchausenIQNParam(K=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(N=-1)
+            A.MunchausenIQNParam(N=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(N_prime=-1)
+            A.MunchausenIQNParam(N_prime=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(kappa=-1)
+            A.MunchausenIQNParam(kappa=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(embedding_dim=-1)
+            A.MunchausenIQNParam(embedding_dim=-1)
+        with pytest.raises(ValueError):
+            A.MunchausenIQNParam(clipping_value=100)
 
 
 if __name__ == "__main__":

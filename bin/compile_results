@@ -8,11 +8,24 @@ import numpy as np
 
 import argparse
 
+from csv import reader
+
 import nnabla_rl.writers as W
 
 
-def load_data(path, dtype=float):
+def load_scalar_data(path, dtype=float):
     return np.loadtxt(str(path), delimiter='\t', skiprows=1, dtype=dtype)
+
+
+def load_histogram_data(path, dtype=float):
+    histogram = []
+    with open(path) as f:
+        tsv_reader = reader(f, delimiter='\t')
+        for i, row in enumerate(tsv_reader):
+            if i == 0:
+                continue
+            histogram.append([row[0], np.asarray(row[1:])])
+    return histogram
 
 
 def rmdir_if_exists(path):
@@ -43,7 +56,8 @@ def extract_iteration_num_and_returns(histogram_data):
         data_row = histogram_data[i]
         if 'returns' in data_row[0]:
             iteration_nums.append(int(data_row[0].split(' ')[0]))
-            returns.append(data_row[1:].astype(float))
+            scores = data_row[1][0:].astype(float)
+            returns.append(scores)
 
     return iteration_nums, returns
 
@@ -52,7 +66,7 @@ def create_average_result_file(histograms, file_outdir):
     iteration_nums = None
     returns_list = None
     for histogram in histograms:
-        data = load_data(histogram, dtype=str)
+        data = load_histogram_data(histogram, dtype=str)
         iteration_nums, returns = extract_iteration_num_and_returns(data)
         if returns_list is None:
             returns_list = returns
@@ -135,7 +149,7 @@ def compile_results(args):
         print('directory: ', directory)
         eval_scalar_result_file = directory / pathlib.Path(args.eval_scalar_filename)
         eval_histogram_result_file = directory / pathlib.Path(args.eval_histogram_filename)
-        results = load_data(eval_scalar_result_file)
+        results = load_scalar_data(eval_scalar_result_file)
 
         best_mean_index = np.argmax(results[:, 1])
         best_mean_iteration = int(results[best_mean_index, 0])

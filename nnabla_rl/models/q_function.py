@@ -10,6 +10,9 @@ class QFunction(Model, metaclass=ABCMeta):
     def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         raise NotImplementedError
 
+    def all_q(self, s: nn.Variable) -> nn.Variable:
+        raise NotImplementedError
+
     def max_q(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError
 

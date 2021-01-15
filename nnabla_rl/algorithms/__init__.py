@@ -7,6 +7,8 @@ from nnabla_rl.algorithms.dqn import DQN, DQNParam
 from nnabla_rl.algorithms.dummy import Dummy, DummyParam
 from nnabla_rl.algorithms.icml2018_sac import ICML2018SAC, ICML2018SACParam
 from nnabla_rl.algorithms.iqn import IQN, IQNParam
+from nnabla_rl.algorithms.munchausen_dqn import MunchausenDQN, MunchausenDQNParam
+from nnabla_rl.algorithms.munchausen_iqn import MunchausenIQN, MunchausenIQNParam
 from nnabla_rl.algorithms.ppo import PPO, PPOParam
 from nnabla_rl.algorithms.qrdqn import QRDQN, QRDQNParam
 from nnabla_rl.algorithms.reinforce import REINFORCE, REINFORCEParam
@@ -50,6 +52,8 @@ register_algorithm(DQN, DQNParam)
 register_algorithm(Dummy, DummyParam)
 register_algorithm(ICML2018SAC, ICML2018SACParam)
 register_algorithm(IQN, IQNParam)
+register_algorithm(MunchausenDQN, MunchausenDQNParam)
+register_algorithm(MunchausenIQN, MunchausenIQNParam)
 register_algorithm(PPO, PPOParam)
 register_algorithm(QRDQN, QRDQNParam)
 register_algorithm(REINFORCE, REINFORCEParam)

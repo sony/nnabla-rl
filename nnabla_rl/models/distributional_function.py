@@ -40,7 +40,7 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
 
     def argmax_q_from_probabilities(self, atom_probabilities: nn.Variable) -> nn.Variable:
         q_values = self.probabilities_to_q_values(atom_probabilities)
-        return RF.argmax(q_values, axis=1)
+        return RF.argmax(q_values, axis=1, keepdims=True)
 
     def probabilities_to_q_values(self, atom_probabilities: nn.Variable) -> nn.Variable:
         batch_size = atom_probabilities.shape[0]
@@ -123,7 +123,7 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
 
     def argmax_q_from_quantiles(self, quantiles: nn.Variable) -> nn.Variable:
         q_values = self.quantiles_to_q_values(quantiles)
-        return RF.argmax(q_values, axis=1)
+        return RF.argmax(q_values, axis=1, keepdims=True)
 
     def quantiles_to_q_values(self, quantiles: nn.Variable) -> nn.Variable:
         return NF.sum(quantiles * self._qj, axis=2)
@@ -204,7 +204,7 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
 
     def argmax_q_from_quantiles(self, quantiles: nn.Variable) -> nn.Variable:
         q_values = self.quantiles_to_q_values(quantiles)
-        return RF.argmax(q_values, axis=1)
+        return RF.argmax(q_values, axis=1, keepdims=True)
 
     def quantiles_to_q_values(self, quantiles: nn.Variable) -> nn.Variable:
         quantiles = NF.transpose(quantiles, axes=(0, 2, 1))
@@ -221,10 +221,13 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
                 self._quantile_function = quantile_function
 
             def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
-                q_values = self._quantile_function._state_to_q_values(s)
+                q_values = self.all_q(s)
                 one_hot = NF.one_hot(NF.reshape(a, (-1, 1), inplace=False), (q_values.shape[1],))
                 q_value = NF.sum(q_values * one_hot, axis=1, keepdims=True)  # get q value of a
                 return q_value
+
+            def all_q(self, s: nn.Variable) -> nn.Variable:
+                return self._quantile_function._state_to_q_values(s)
 
             def max_q(self, s: nn.Variable) -> nn.Variable:
                 q_values = self._quantile_function._state_to_q_values(s)
