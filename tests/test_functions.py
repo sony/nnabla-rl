@@ -3,7 +3,6 @@ import pytest
 import numpy as np
 
 import nnabla as nn
-import nnabla.functions as NF
 
 import nnabla_rl as rl
 import nnabla_rl.functions as RF
