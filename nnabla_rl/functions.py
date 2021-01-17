@@ -158,7 +158,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
         >>> def objective_function(x): return -((x - 3.)**2)
 
         >>> batch_size = 1
-        >>> state_size = 1
+        >>> variable_size = 1
 
         >>> init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, state_size)))
         >>> init_var = nn.Variable.from_numpy_array(np.ones((batch_size, state_size)))
@@ -166,7 +166,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
 
         >>> optimal_x.forward()
         >>> optimal_x.shape
-        (1, 1)  # (batch_size, state_size)
+        (1, 1)  # (batch_size, variable_size)
         >>> optimal_x.d
         array([[3.]], dtype=float32)
 
