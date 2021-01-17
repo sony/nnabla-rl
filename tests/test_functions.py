@@ -278,10 +278,10 @@ class TestFunctions(object):
             return -((x - 3.)**2)
 
         batch_size = 1
-        state_size = 1
+        var_size = 1
 
-        init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, state_size)))
-        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, state_size)))
+        init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, var_size)))
+        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, var_size)))
         optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(objective_function, init_mean, init_var, alpha=0)
 
         nn.forward_all([optimal_mean, optimal_top])
