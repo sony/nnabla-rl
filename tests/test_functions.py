@@ -286,8 +286,8 @@ class TestFunctions(object):
 
         nn.forward_all([optimal_mean, optimal_top])
 
-        assert np.allclose(optimal_mean.d, np.array([[3.]]))
-        assert np.allclose(optimal_top.d, np.array([[3.]]))
+        assert np.allclose(optimal_mean.d, np.array([[3.]]), atol=1e-3)
+        assert np.allclose(optimal_top.d, np.array([[3.]]), atol=1e-3)
 
     def test_gaussian_cross_entropy_method_with_complicated_objective_function(self):
 
@@ -311,8 +311,8 @@ class TestFunctions(object):
 
         nn.forward_all([optimal_mean, optimal_top])
 
-        assert np.allclose(optimal_mean.d, np.array([[0.], [1.], [2.], [3.], [4.]]))
-        assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]))
+        assert np.allclose(optimal_mean.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-3)
+        assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-3)
 
 
 if __name__ == "__main__":
