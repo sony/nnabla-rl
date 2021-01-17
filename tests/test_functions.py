@@ -297,6 +297,7 @@ class TestFunctions(object):
         batch_size = 5
         pop_size = 500
         state_size = 1
+        action_size = 1
 
         s = np.arange(batch_size*state_size).reshape(batch_size, state_size)
         s = np.tile(s, (pop_size, 1, 1))
@@ -304,8 +305,8 @@ class TestFunctions(object):
         s_var = nn.Variable.from_numpy_array(s.reshape(batch_size*pop_size, state_size))
         def objective_function(x): return dummy_q_function(s_var, x)
 
-        init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, state_size)))
-        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, state_size))*2)
+        init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, action_size)))
+        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, action_size))*2)
         optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(
             objective_function, init_mean, init_var, pop_size, alpha=0)
 
