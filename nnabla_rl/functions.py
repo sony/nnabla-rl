@@ -180,7 +180,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
         alpha (float): parameter of soft update
 
     Returns:
-        Tuple[nn.Variable, nn.Variable]: optimal solutions, mean of elites samples and top of elites samples
+        Tuple[nn.Variable, nn.Variable]: mean of elites samples and top of elites samples
     """
     mean = init_mean
     var = init_var
