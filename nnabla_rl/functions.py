@@ -1,3 +1,7 @@
+from typing import Callable, Tuple
+
+import numpy as np
+
 import nnabla as nn
 import nnabla.functions as NF
 
@@ -136,3 +140,83 @@ def random_choice(x, w, shape=[], replace=True, n_outputs=- 1, outputs=None):
 def _sample_seed():
     max_32bit_int = 2**31 - 1
     return rl_random.prng.randint(max_32bit_int)
+
+
+def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn.Variable],
+                                  init_mean: nn.Variable, init_var: nn.Variable,
+                                  pop_size: int = 500, num_elites: int = 10,
+                                  num_iterations: int = 5, alpha: float = 0.25) -> Tuple[nn.Variable, nn.Variable]:
+    """ Cross Entropy Method using gaussian distribution.
+        This function optimized objective function J(x), where x is variable.
+
+    Examples:
+        >>> import nnabla as nn
+        >>> import nnabla.functions as NF
+        >>> import numpy as np
+        >>> import nnabla_rl.functions as RF
+
+        >>> def objective_function(x): return -((x - 3.)**2)
+
+        >>> batch_size = 1
+        >>> variable_size = 1
+
+        >>> init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, state_size)))
+        >>> init_var = nn.Variable.from_numpy_array(np.ones((batch_size, state_size)))
+        >>> optimal_x, _ = RF.gaussian_cross_entropy_method(objective_function, init_mean, init_var, alpha=0)
+
+        >>> optimal_x.forward()
+        >>> optimal_x.shape
+        (1, 1)  # (batch_size, variable_size)
+        >>> optimal_x.d
+        array([[3.]], dtype=float32)
+
+    Args:
+        objective_function (Callable[[nn.Variable], nn.Variable]): objective function
+        init_mean (nn.Variable): initial mean
+        init_var (nn.Variable): initial variance
+        pop_size (int): pop size
+        num_elites (int): number of elites
+        num_iterations (int): number of iterations
+        alpha (float): parameter of soft update
+
+    Returns:
+        Tuple[nn.Variable, nn.Variable]: mean of elites samples and top of elites samples
+    """
+    mean = init_mean
+    var = init_var
+    batch_size, gaussian_dimension = mean.shape
+
+    elite_arange_index = np.tile(np.arange(batch_size)[:, np.newaxis], (1, num_elites))[np.newaxis, :, :]
+    elite_arange_index = nn.Variable.from_numpy_array(elite_arange_index)
+    top_arange_index = np.tile(np.arange(batch_size)[:, np.newaxis], (1, 1))[np.newaxis, :, :]
+    top_arange_index = nn.Variable.from_numpy_array(top_arange_index)
+
+    for _ in range(num_iterations):
+        # samples.shape = (batch_size, pop_size, gaussian_dimension)
+        samples = sample_gaussian_multiple(mean, NF.log(var), pop_size)
+        # values.shape = (batch_size*pop_size, 1)
+        values = objective_function(samples.reshape((-1, gaussian_dimension)))
+        values = values.reshape((batch_size, pop_size, 1))
+
+        elites_index = NF.sort(values, axis=1, reverse=True, with_index=True, only_index=True)[:, :num_elites, :]
+        elites_index = elites_index.reshape((1, batch_size, num_elites))
+        elites_index = NF.concatenate(elite_arange_index, elites_index, axis=0)
+
+        top_index = NF.max(values, axis=1, with_index=True, only_index=True, keepdims=True)
+        top_index = top_index.reshape((1, batch_size, 1))
+        top_index = NF.concatenate(top_arange_index, top_index, axis=0)
+
+        # elite.shape = (batch_size, num_elites, gaussian_dimension)
+        elites = NF.gather_nd(samples, elites_index)
+        # top.shape = (batch_size, gaussian_dimension)
+        top = NF.gather_nd(samples, top_index).reshape((batch_size, gaussian_dimension))
+
+        # new_mean.shape = (batch_size, 1, gaussian_dimension)
+        new_mean = NF.mean(elites, axis=1, keepdims=True)
+        # new_var.shape = (batch_size, 1, gaussian_dimension)
+        new_var = NF.mean((elites - new_mean)**2, axis=1, keepdims=True)
+
+        mean = alpha * mean + (1 - alpha) * new_mean.reshape((batch_size, gaussian_dimension))
+        var = alpha * var + (1 - alpha) * new_var.reshape((batch_size, gaussian_dimension))
+
+    return mean, top

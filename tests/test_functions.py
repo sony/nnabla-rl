@@ -272,6 +272,49 @@ class TestFunctions(object):
 
         assert np.allclose(random_value1.d, random_value2.d)
 
+    def test_gaussian_cross_entropy_method(self):
+
+        def objective_function(x):
+            return -((x - 3.)**2)
+
+        batch_size = 1
+        var_size = 1
+
+        init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, var_size)))
+        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, var_size)))
+        optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(objective_function, init_mean, init_var, alpha=0)
+
+        nn.forward_all([optimal_mean, optimal_top])
+
+        assert np.allclose(optimal_mean.d, np.array([[3.]]), atol=1e-3)
+        assert np.allclose(optimal_top.d, np.array([[3.]]), atol=1e-3)
+
+    def test_gaussian_cross_entropy_method_with_complicated_objective_function(self):
+
+        def dummy_q_function(s, a):
+            return -((a - s)**2)
+
+        batch_size = 5
+        pop_size = 500
+        state_size = 1
+        action_size = 1
+
+        s = np.arange(batch_size*state_size).reshape(batch_size, state_size)
+        s = np.tile(s, (pop_size, 1, 1))
+        s = np.transpose(s, (1, 0, 2))
+        s_var = nn.Variable.from_numpy_array(s.reshape(batch_size*pop_size, state_size))
+        def objective_function(x): return dummy_q_function(s_var, x)
+
+        init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, action_size)))
+        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, action_size))*2)
+        optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(
+            objective_function, init_mean, init_var, pop_size, alpha=0)
+
+        nn.forward_all([optimal_mean, optimal_top])
+
+        assert np.allclose(optimal_mean.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-3)
+        assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-3)
+
 
 if __name__ == "__main__":
     pytest.main()
