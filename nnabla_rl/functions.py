@@ -192,7 +192,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
     top_arange_index = nn.Variable.from_numpy_array(top_arange_index)
 
     for _ in range(num_iterations):
-        # samples.shape = (batch_size, pop_size, var_size)
+        # samples.shape = (batch_size, pop_size, gaussian_dimension)
         samples = sample_gaussian_multiple(mean, NF.log(var), pop_size)
         # values.shape = (batch_size*pop_size, 1)
         values = objective_function(samples.reshape((-1, gaussian_dimension)))
@@ -206,14 +206,14 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
         top_index = top_index.reshape((1, batch_size, 1))
         top_index = NF.concatenate(top_arange_index, top_index, axis=0)
 
-        # elite.shape = (batch_size, num_elites, var_size)
+        # elite.shape = (batch_size, num_elites, gaussian_dimension)
         elites = NF.gather_nd(samples, elites_index)
-        # top.shape = (batch_size, var_size)
+        # top.shape = (batch_size, gaussian_dimension)
         top = NF.gather_nd(samples, top_index).reshape((batch_size, gaussian_dimension))
 
-        # new_mean.shape = (batch_size, 1, var_size)
+        # new_mean.shape = (batch_size, 1, gaussian_dimension)
         new_mean = NF.mean(elites, axis=1, keepdims=True)
-        # new_var.shape = (batch_size, 1, var_size)
+        # new_var.shape = (batch_size, 1, gaussian_dimension)
         new_var = NF.mean((elites - new_mean)**2, axis=1, keepdims=True)
 
         mean = alpha * mean + (1 - alpha) * new_mean.reshape((batch_size, gaussian_dimension))
