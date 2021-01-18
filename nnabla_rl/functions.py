@@ -186,6 +186,11 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
     var = init_var
     batch_size, gaussian_dimension = mean.shape
 
+    elite_arange_index = np.tile(np.arange(batch_size)[:, np.newaxis], (1, num_elites))[np.newaxis, :, :]
+    elite_arange_index = nn.Variable.from_numpy_array(elite_arange_index)
+    top_arange_index = np.tile(np.arange(batch_size)[:, np.newaxis], (1, 1))[np.newaxis, :, :]
+    top_arange_index = nn.Variable.from_numpy_array(top_arange_index)
+
     for _ in range(num_iterations):
         # samples.shape = (batch_size, pop_size, var_size)
         samples = sample_gaussian_multiple(mean, NF.log(var), pop_size)
@@ -195,14 +200,10 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
 
         elites_index = NF.sort(values, axis=1, reverse=True, with_index=True, only_index=True)[:, :num_elites, :]
         elites_index = elites_index.reshape((1, batch_size, num_elites))
-        elite_arange_index = np.tile(np.arange(batch_size)[:, np.newaxis], (1, num_elites))[np.newaxis, :, :]
-        elite_arange_index = nn.Variable.from_numpy_array(elite_arange_index)
         elites_index = NF.concatenate(elite_arange_index, elites_index, axis=0)
 
         top_index = NF.max(values, axis=1, with_index=True, only_index=True, keepdims=True)
         top_index = top_index.reshape((1, batch_size, 1))
-        top_arange_index = np.tile(np.arange(batch_size)[:, np.newaxis], (1, 1))[np.newaxis, :, :]
-        top_arange_index = nn.Variable.from_numpy_array(top_arange_index)
         top_index = NF.concatenate(top_arange_index, top_index, axis=0)
 
         # elite.shape = (batch_size, num_elites, var_size)
