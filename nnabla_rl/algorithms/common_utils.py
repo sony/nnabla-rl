@@ -1,7 +1,8 @@
 import nnabla as nn
 import numpy as np
 
-from .. import models as M
+from nnabla_rl.models import VFunction, StochasticPolicy, Model
+from nnabla_rl.preprocessors import Preprocessor
 
 
 def compute_v_target_and_advantage(v_function, experiences, gamma=0.99, lmb=0.97):
@@ -20,7 +21,7 @@ def compute_v_target_and_advantage(v_function, experiences, gamma=0.99, lmb=0.97
     Ref:
         https://arxiv.org/pdf/1506.02438.pdf
     """
-    assert isinstance(v_function, M.VFunction), "Invalid v_function"
+    assert isinstance(v_function, VFunction), "Invalid v_function"
     T = len(experiences)
     v_targets = []
     advantages = []
@@ -57,3 +58,41 @@ def compute_v_target_and_advantage(v_function, experiences, gamma=0.99, lmb=0.97
         v_next = v_current
 
     return np.array(v_targets, dtype=np.float32), np.array(advantages, dtype=np.float32)
+
+
+class _StatePreprocessedVFunction(VFunction):
+    _v_function: VFunction
+    _preprocessor: Preprocessor
+
+    def __init__(self, v_function: VFunction, preprocessor: Preprocessor):
+        super(_StatePreprocessedVFunction, self).__init__(v_function.scope_name)
+        self._v_function = v_function
+        self._preprocessor = preprocessor
+
+    def v(self, s: nn.Variable):
+        preprocessed_state = self._preprocessor.process(s)
+        return self._v_function.v(preprocessed_state)
+
+    def deepcopy(self, new_scope_name: str) -> Model:
+        copied = super().deepcopy(new_scope_name=new_scope_name)
+        copied._v_function._scope_name = new_scope_name
+        return copied
+
+
+class _StatePreprocessedPolicy(StochasticPolicy):
+    _policy: StochasticPolicy
+    _preprocessor: Preprocessor
+
+    def __init__(self, policy: StochasticPolicy, preprocessor: Preprocessor):
+        super(_StatePreprocessedPolicy, self).__init__(policy.scope_name)
+        self._policy = policy
+        self._preprocessor = preprocessor
+
+    def pi(self, s: nn.Variable):
+        preprocessed_state = self._preprocessor.process(s)
+        return self._policy.pi(preprocessed_state)
+
+    def deepcopy(self, new_scope_name: str) -> Model:
+        copied = super().deepcopy(new_scope_name=new_scope_name)
+        copied._policy._scope_name = new_scope_name
+        return copied

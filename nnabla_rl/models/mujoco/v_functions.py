@@ -6,7 +6,7 @@ import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 import nnabla.initializer as NI
 
-from nnabla_rl.models.v_function import VFunction, preprocess_state
+from nnabla_rl.models.v_function import VFunction
 import nnabla_rl.initializers as RI
 
 
@@ -15,6 +15,7 @@ class SACVFunction(VFunction):
     VFunciton model proposed by T. Haarnoja in SAC paper for mujoco environment.
     See: https://arxiv.org/pdf/1801.01290.pdf
     """
+
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=256, name="linear1")
@@ -31,7 +32,7 @@ class TRPOVFunction(VFunction):
     in Deep Reinforcement Learning that Matters paper for mujoco environment.
     See: https://arxiv.org/abs/1709.06560.pdf
     """
-    @preprocess_state
+
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=64, name="linear1",
@@ -51,7 +52,7 @@ class PPOVFunction(VFunction):
     This network outputs the state value
     See: https://arxiv.org/pdf/1707.06347.pdf
     """
-    @preprocess_state
+
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("linear1"):

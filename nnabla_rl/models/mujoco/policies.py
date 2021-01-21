@@ -9,7 +9,7 @@ from nnabla.parameter import get_parameter_or_create
 
 import nnabla_rl.distributions as D
 import nnabla_rl.initializers as RI
-from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy, preprocess_state
+from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy
 
 
 class TD3Policy(DeterministicPolicy):
@@ -134,7 +134,6 @@ class PPOPolicy(StochasticPolicy):
         super(PPOPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
 
-    @preprocess_state
     def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=64, name="linear1",
@@ -193,7 +192,6 @@ class TRPOPolicy(StochasticPolicy):
         super(TRPOPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
 
-    @preprocess_state
     def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=64, name="linear1",

@@ -5,7 +5,8 @@ import numpy as np
 import nnabla as nn
 
 from nnabla_rl.models import VFunction
-from nnabla_rl.algorithms.common_utils import compute_v_target_and_advantage
+from nnabla_rl.algorithms.common_utils import \
+    compute_v_target_and_advantage, _StatePreprocessedVFunction, _StatePreprocessedPolicy
 
 
 class DummyVFunction(VFunction):
@@ -19,7 +20,7 @@ class DummyVFunction(VFunction):
         return h
 
 
-class TestComputeVtargetandAdvantage():
+class TestCommonUtils():
     def setup_method(self, method):
         nn.clear_parameters()
 
@@ -51,3 +52,54 @@ class TestComputeVtargetandAdvantage():
 
         assert np.allclose(actual_adv, expected)
         assert np.allclose(actual_vtarg, expected + 2.)
+
+    def test_state_preprocessed_v_function(self):
+        state_shape = (5, )
+
+        from nnabla_rl.models import TRPOVFunction
+        v_scope_name = 'old_v'
+        v_function = TRPOVFunction(v_scope_name)
+
+        import nnabla_rl.preprocessors as RP
+        preprocessor_scope_name = 'test_preprocessor'
+        preprocessor = RP.RunningMeanNormalizer(preprocessor_scope_name, shape=state_shape)
+
+        v_function_old = _StatePreprocessedVFunction(v_function=v_function, preprocessor=preprocessor)
+
+        s = nn.Variable.from_numpy_array(np.empty(shape=(1, *state_shape)))
+        _ = v_function_old.v(s)
+
+        v_new_scope_name = 'new_v'
+        v_function_new = v_function_old.deepcopy(v_new_scope_name)
+
+        assert v_function_old.scope_name != v_function_new.scope_name
+        assert v_function_old._preprocessor.scope_name == v_function_new._preprocessor.scope_name
+
+    def test_state_preprocessed_policy(self):
+        state_shape = (5, )
+        action_dim = 10
+
+        from nnabla_rl.models import TRPOPolicy
+        pi_scope_name = 'old_pi'
+        pi = TRPOPolicy(pi_scope_name, action_dim=action_dim)
+
+        import nnabla_rl.preprocessors as RP
+        preprocessor_scope_name = 'test_preprocessor'
+        preprocessor = RP.RunningMeanNormalizer(preprocessor_scope_name, shape=state_shape)
+
+        pi_old = _StatePreprocessedPolicy(policy=pi, preprocessor=preprocessor)
+
+        s = nn.Variable.from_numpy_array(np.empty(shape=(1, *state_shape)))
+        _ = pi_old.pi(s)
+
+        pi_new_scope_name = 'new_v'
+        pi_new = pi_old.deepcopy(pi_new_scope_name)
+
+        assert pi_old.scope_name != pi_new.scope_name
+        assert pi_old._preprocessor.scope_name == pi_new._preprocessor.scope_name
+
+
+if __name__ == "__main__":
+    import sys
+    sys.path.insert(0, "./")
+    pytest.main()

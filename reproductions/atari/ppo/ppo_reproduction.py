@@ -37,7 +37,8 @@ def run_training(args):
         params = A.PPOParam(actor_num=actor_num,
                             total_timesteps=total_timesteps,
                             timelimit_as_terminal=True,
-                            seed=args.seed)
+                            seed=args.seed,
+                            preprocess_state=False)
         ppo = A.PPO(train_env, params=params)
     else:
         ppo = serializers.load_snapshot(args.snapshot_dir)
