@@ -8,9 +8,11 @@ from nnabla_rl.models.mujoco.perturbators import BCQPerturbator  # noqa
 from nnabla_rl.models.mujoco.policies import ICML2015TRPOPolicy as ICML2015TRPOMujocoPolicy  # noqa
 from nnabla_rl.models.mujoco.policies import PPOPolicy as PPOMujocoPolicy  # noqa
 from nnabla_rl.models.atari.policies import PPOPolicy as PPOAtariPolicy  # noqa
+from nnabla_rl.models.atari.policies import A3CPolicy  # noqa
 from nnabla_rl.models.atari.q_functions import DQNQFunction  # noqa
 from nnabla_rl.models.atari.v_functions import PPOVFunction as PPOAtariVFunction  # noqa
-from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead  # noqa
+from nnabla_rl.models.atari.v_functions import A3CVFunction  # noqa
+from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead, A3CSharedFunctionHead  # noqa
 from nnabla_rl.models.distributional_function import ValueDistributionFunction, \
                                                      QuantileDistributionFunction, \
                                                      StateActionQuantileFunction  # noqa

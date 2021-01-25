@@ -1,4 +1,5 @@
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam
+from nnabla_rl.algorithms.a2c import A2C, A2CParam
 from nnabla_rl.algorithms.bcq import BCQ, BCQParam
 from nnabla_rl.algorithms.bear import BEAR, BEARParam
 from nnabla_rl.algorithms.categorical_dqn import CategoricalDQN, CategoricalDQNParam
@@ -44,6 +45,7 @@ def get_class_of(name):
     return _ALGORITHMS[name]
 
 
+register_algorithm(A2C, A2CParam)
 register_algorithm(BCQ, BCQParam)
 register_algorithm(BEAR, BEARParam)
 register_algorithm(CategoricalDQN, CategoricalDQNParam)

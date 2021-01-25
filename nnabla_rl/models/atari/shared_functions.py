@@ -36,3 +36,29 @@ class PPOSharedFunctionHead(Model):
                                w_init=RI.NormcInitializer(std=1.0))
             h = NF.relu(x=h)
         return h
+
+
+class A3CSharedFunctionHead(Model):
+    def __init__(self, scope_name, state_shape):
+        super(A3CSharedFunctionHead, self).__init__(scope_name=scope_name)
+        self._state_shape = state_shape
+
+    def __call__(self, s):
+        assert s.shape[1:] == self._state_shape
+        batch_size = s.shape[0]
+
+        with nn.parameter_scope(self.scope_name):
+            with nn.parameter_scope("conv1"):
+                h = NPF.convolution(s, outmaps=16, kernel=(8, 8), stride=(4, 4),
+                                    w_init=RI.NormcInitializer(std=1.0))
+            h = NF.relu(x=h)
+            with nn.parameter_scope("conv2"):
+                h = NPF.convolution(h, outmaps=32, kernel=(4, 4), stride=(2, 2),
+                                    w_init=RI.NormcInitializer(std=1.0))
+            h = NF.relu(x=h)
+            h = NF.reshape(h, shape=(batch_size, -1))
+            with nn.parameter_scope("linear1"):
+                h = NPF.affine(h, n_outmaps=256,
+                               w_init=RI.NormcInitializer(std=1.0))
+            h = NF.relu(x=h)
+        return h

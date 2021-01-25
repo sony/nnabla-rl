@@ -1,5 +1,6 @@
 import nnabla as nn
 import nnabla.functions as NF
+import nnabla_rl.functions as NRF
 
 import numpy as np
 
@@ -18,6 +19,7 @@ class Softmax(Distribution):
             z = nn.Variable.from_numpy_array(z)
 
         self._distribution = NF.softmax(x=z, axis=1)
+        self._log_distribution = NF.log_softmax(x=z, axis=1)
         self._batch_size = z.shape[0]
         self._num_class = z.shape[-1]
 
@@ -39,23 +41,23 @@ class Softmax(Distribution):
         return sample, log_prob
 
     def choose_probable(self):
-        raise NotImplementedError
+        return NRF.argmax(self._distribution, axis=1)
 
     def mean(self):
         raise NotImplementedError
 
     def log_prob(self, x):
-        log_pi = NF.log(self._distribution)
+        log_pi = self._log_distribution
         one_hot_action = NF.one_hot(x, shape=(self._num_class, ))
         return NF.sum(log_pi * one_hot_action, axis=1, keepdims=True)
 
     def entropy(self):
-        plogp = self._distribution * NF.log(self._distribution)
+        plogp = self._distribution * self._log_distribution
         return -NF.sum(plogp, axis=1, keepdims=True)
 
     def kl_divergence(self, q):
         if not isinstance(q, Softmax):
             raise ValueError("Invalid q to compute kl divergence")
-        return NF.sum(self._distribution * (NF.log(self._distribution) - NF.log(q._distribution)),
+        return NF.sum(self._distribution * (self._log_distribution - q._log_distribution),
                       axis=1,
                       keepdims=True)

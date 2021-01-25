@@ -37,15 +37,18 @@ class EnvironmentExplorer(metaclass=ABCMeta):
     def action(self, steps, state):
         raise NotImplementedError
 
-    def step(self, env: Env, n: int = 1) -> List:
+    def step(self, env: Env, n: int = 1, break_if_done: bool = False) -> List:
         assert 0 < n
         experiences = []
         if self._state is None:
             self._state = env.reset()
 
         for _ in range(n):
-            experience, _ = self._step_once(env)
+            experience, done = self._step_once(env)
             experiences.append(experience)
+
+            if done and break_if_done:
+                break
         return experiences
 
     def rollout(self, env) -> List:

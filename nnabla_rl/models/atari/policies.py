@@ -64,3 +64,27 @@ class ICML2015TRPOPolicy(StochasticPolicy):
                 z = NPF.affine(h, self._action_dim)
 
         return D.Softmax(z=z)
+
+
+class A3CPolicy(StochasticPolicy):
+    """
+    Shared parameter function used in A3C paper for atari environment.
+    See: https://arxiv.org/pdf/1602.01783.pdf
+    """
+
+    def __init__(self, head, scope_name, state_shape, action_dim):
+        super(A3CPolicy, self).__init__(scope_name=scope_name)
+        self._state_shape = state_shape
+        self._action_dim = action_dim
+        self._head = head
+
+    def pi(self, s):
+        h = self._hidden(s)
+        with nn.parameter_scope(self.scope_name):
+            with nn.parameter_scope("linear_pi"):
+                z = NPF.affine(h, n_outmaps=self._action_dim)
+        return D.Softmax(z=z)
+
+    def _hidden(self, s):
+        assert s.shape[1:] == self._state_shape
+        return self._head(s)
