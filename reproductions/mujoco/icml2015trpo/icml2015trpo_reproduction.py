@@ -6,13 +6,7 @@ import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
 from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed
-from nnabla_rl.hook import as_hook
 from nnabla_rl.utils import serializers
-
-
-@as_hook(timing=100)
-def print_iteration_number(algorithm):
-    print('Current iteration: {}'.format(algorithm.iteration_num))
 
 
 def run_training(args):
@@ -25,21 +19,24 @@ def run_training(args):
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
-                                       timing=5000,
+                                       timing=int(1e6),
                                        writer=W.FileWriter(outdir=outdir,
                                                            file_prefix='evaluation_result'))
 
-    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=5000)
+    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=int(1e6))
+    iteration_num_hook = H.IterationNumHook(timing=int(1e6))
+
+    params = A.ICML2015TRPOParam(num_steps_per_iteration=int(1e6), batch_size=int(1e6), gpu_batch_size=int(1e5))
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
-        trpo = A.ICML2015TRPO(train_env)
+        trpo = A.ICML2015TRPO(train_env, params=params)
     else:
         trpo = serializers.load_snapshot(args.snapshot_dir)
-    hooks = [print_iteration_number, save_snapshot_hook, evaluation_hook]
+    hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     trpo.set_hooks(hooks)
 
-    trpo.train_online(train_env, total_iterations=1000000)
+    trpo.train_online(train_env, total_iterations=int(200*1e6))
 
     eval_env.close()
     train_env.close()
@@ -63,7 +60,7 @@ def run_showcase(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='Ant-v2')
+    parser.add_argument('--env', type=str, default='Hopper-v2')
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--render', action='store_true')

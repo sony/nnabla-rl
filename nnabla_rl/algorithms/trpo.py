@@ -14,6 +14,7 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.builders import ModelBuilder, SolverBuilder, PreprocessorBuilder
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.algorithms.common_utils import \
     compute_v_target_and_advantage, _StatePreprocessedPolicy, _StatePreprocessedVFunction
@@ -61,8 +62,10 @@ class DefaultSolverBuilder(SolverBuilder):
 
 @dataclass
 class TRPOParam(AlgorithmParam):
+    gpu_batch_size: Optional[int] = None
     gamma: float = 0.995
     lmb: float = 0.97
+    pi_batch_size: int = 5000
     num_steps_per_iteration: int = 5000
     sigma_kl_divergence_constraint: float = 0.01
     maximum_backtrack_numbers: int = 10
@@ -79,9 +82,11 @@ class TRPOParam(AlgorithmParam):
         Check the values are in valid range.
 
         '''
+        self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, 'pi_batch_size')
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_between(self.lmb, 0.0, 1.0, 'lmb')
         self._assert_positive(self.num_steps_per_iteration, 'num_steps_per_iteration')
+        self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, 'pi_batch_size')
         self._assert_positive(self.sigma_kl_divergence_constraint, 'sigma_kl_divergence_constraint')
         self._assert_positive(self.maximum_backtrack_numbers, 'maximum_backtrack_numbers')
         self._assert_positive(self.conjugate_gradient_damping, 'conjugate_gradient_damping')
@@ -156,8 +161,7 @@ class TRPO(Algorithm):
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_params = MT.policy_trainers.TRPOPolicyTrainerParam(
-            batch_size=self._params.num_steps_per_iteration,
-            num_steps_per_iteration=self._params.num_steps_per_iteration,
+            gpu_batch_size=self._params.gpu_batch_size,
             sigma_kl_divergence_constraint=self._params.sigma_kl_divergence_constraint,
             maximum_backtrack_numbers=self._params.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._params.conjugate_gradient_damping,
@@ -192,43 +196,36 @@ class TRPO(Algorithm):
         raise NotImplementedError
 
     def _trpo_training(self, buffer):
-        # sample all experience in the buffer
-        experiences, *_ = buffer.sample(len(buffer))
-        batch_size = len(experiences)
-        s_batch, a_batch, v_target, advantage = self._align_experiences(experiences)
-        extra = {}
-        extra['v_target'] = v_target
-        extra['advantage'] = advantage
-        batch = TrainingBatch(batch_size=batch_size,
-                              s_current=s_batch,
-                              a_current=a_batch,
-                              extra=extra)
+        buffer_iterator = BufferIterator(buffer, 1, shuffle=False, repeat=False)
+        s, a, v_target, advantage = self._align_experiences(buffer_iterator)
 
         if self._params.preprocess_state:
-            self._state_preprocessor.update(s_batch)
+            self._state_preprocessor.update(s)
 
         # v function training
-        self._v_function_training(batch)
+        self._v_function_training(s, v_target)
 
         # policy training
-        self._policy_training(batch)
+        self._policy_training(s, a, v_target, advantage)
 
-    def _align_experiences(self, experiences):
-        v_target_batch, adv_batch = self._compute_v_target_and_advantage(experiences)
+    def _align_experiences(self, buffer_iterator):
+        v_target_batch, adv_batch = self._compute_v_target_and_advantage(buffer_iterator)
 
-        s_batch, a_batch = self._align_state_and_action(experiences)
+        s_batch, a_batch = self._align_state_and_action(buffer_iterator)
 
         return s_batch[:self._params.num_steps_per_iteration], \
             a_batch[:self._params.num_steps_per_iteration], \
             v_target_batch[:self._params.num_steps_per_iteration], \
             adv_batch[:self._params.num_steps_per_iteration]
 
-    def _compute_v_target_and_advantage(self, experiences):
+    def _compute_v_target_and_advantage(self, buffer_iterator):
         v_target_batch = []
         adv_batch = []
-        for experience in experiences:
+        buffer_iterator.reset()
+        for experiences, _ in buffer_iterator:
+            # length of experiences is 1
             v_target, adv = compute_v_target_and_advantage(
-                self._v_function, experience, gamma=self._params.gamma, lmb=self._params.lmb)
+                self._v_function, experiences[0], gamma=self._params.gamma, lmb=self._params.lmb)
             v_target_batch.append(v_target.reshape(-1, 1))
             adv_batch.append(adv.reshape(-1, 1))
 
@@ -240,12 +237,14 @@ class TRPO(Algorithm):
         adv_batch = (adv_batch - adv_mean) / adv_std
         return v_target_batch, adv_batch
 
-    def _align_state_and_action(self, experiences):
+    def _align_state_and_action(self, buffer_iterator):
         s_batch = []
         a_batch = []
 
-        for experience in experiences:
-            s_seq, a_seq, *_ = marshall_experiences(experience)
+        buffer_iterator.reset()
+        for experiences, _ in buffer_iterator:
+            # length of experiences is 1
+            s_seq, a_seq, *_ = marshall_experiences(experiences[0])
             s_batch.append(s_seq)
             a_batch.append(a_seq)
 
@@ -253,19 +252,25 @@ class TRPO(Algorithm):
         a_batch = np.concatenate(a_batch, axis=0)
         return s_batch, a_batch
 
-    def _v_function_training(self, batch: TrainingBatch):
-        data_size = batch.batch_size
-        s_batch = batch.s_current
-        v_target_batch = batch.extra['v_target']
-        num_iterations_per_epoch = data_size // self._params.vf_batch_size
-        for _ in range(self._params.vf_epochs * num_iterations_per_epoch):
-            indices = np.random.randint(0, data_size, size=self._params.vf_batch_size)
-            mini_batch = TrainingBatch(batch_size=self._params.vf_batch_size,
-                                       s_current=s_batch[indices],
-                                       extra={'v_target': v_target_batch[indices]})
-            self._v_function_trainer.train(mini_batch)
+    def _v_function_training(self, s, v_target):
+        num_iterations_per_epoch = self._params.num_steps_per_iteration // self._params.vf_batch_size
 
-    def _policy_training(self, batch: TrainingBatch):
+        for _ in range(self._params.vf_epochs * num_iterations_per_epoch):
+            indices = np.random.randint(0, self._params.num_steps_per_iteration, size=self._params.vf_batch_size)
+            batch = TrainingBatch(batch_size=self._params.vf_batch_size,
+                                  s_current=s[indices],
+                                  extra={'v_target': v_target[indices]})
+            self._v_function_trainer.train(batch)
+
+    def _policy_training(self, s, a, v_target, advantage):
+        extra = {}
+        extra['v_target'] = v_target[:self._params.pi_batch_size]
+        extra['advantage'] = advantage[:self._params.pi_batch_size]
+        batch = TrainingBatch(batch_size=self._params.pi_batch_size,
+                              s_current=s[:self._params.pi_batch_size],
+                              a_current=a[:self._params.pi_batch_size],
+                              extra=extra)
+
         self._policy_trainer.train(batch)
 
     def _compute_action(self, s):

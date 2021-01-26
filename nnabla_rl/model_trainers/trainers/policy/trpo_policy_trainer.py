@@ -1,4 +1,4 @@
-from typing import Iterable, Dict
+from typing import Iterable, Dict, Optional
 
 import numpy as np
 
@@ -77,16 +77,13 @@ def _update_network_params_by_flat_params(params, new_flat_params):
 
 @dataclass
 class TRPOPolicyTrainerParam(TrainerParam):
-    batch_size: int = 5000
-    num_steps_per_iteration: int = 5000
+    gpu_batch_size: Optional[int] = None
     sigma_kl_divergence_constraint: float = 0.01
     maximum_backtrack_numbers: int = 10
     conjugate_gradient_damping: float = 0.1
     conjugate_gradient_iterations: int = 20
 
     def __post_init__(self):
-        self._assert_positive(self.batch_size, 'batch_size')
-        self._assert_positive(self.num_steps_per_iteration, 'num_steps_per_iteration')
         self._assert_positive(self.sigma_kl_divergence_constraint, 'sigma_kl_divergence_constraint')
         self._assert_positive(self.maximum_backtrack_numbers, 'maximum_backtrack_numbers')
         self._assert_positive(self.conjugate_gradient_damping, 'conjugate_gradient_damping')
@@ -105,23 +102,13 @@ class TRPOPolicyTrainer(ModelTrainer):
 
         self._train_count = 0
 
-    # Override train to avoid creating training variables every iteration
-    def train(self, experience, **kwargs) -> Dict:
-        if self._models is None:
-            raise RuntimeError('Call setup_training() first. Model is not set!')
-        self._train_count += 1
-        self._training.before_update(self._train_count)
-        error_info = self._update_model(self._models, self._solvers, experience, self._training_variables, **kwargs)
-        self._training.after_update(self._train_count)
-
-        return error_info
-
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs):
+
         s = batch.s_current
         a = batch.a_current
         advantage = batch.extra['advantage']
@@ -129,14 +116,28 @@ class TRPOPolicyTrainer(ModelTrainer):
         policy = models[0]
         old_policy = self._old_policy
 
-        full_step_params_update = self._compute_full_step_params_update(policy, s, a, advantage, training_variables)
+        full_step_params_update = self._compute_full_step_params_update(
+            policy, s, a, advantage, training_variables)
 
-        self._linesearch_and_update_params(policy, s, a, advantage, full_step_params_update, training_variables)
+        self._linesearch_and_update_params(policy, s, a, advantage,
+                                           full_step_params_update, training_variables)
 
         copy_network_parameters(policy.get_parameters(), old_policy.get_parameters(), tau=1.0)
 
         errors = {}
         return errors
+
+    def _total_blocks(self, batch_size):
+        # We use gpu_batch_size to reduce one forward gpu calculation memory
+        # Usually, gpu_batch_size is the same as batch_size
+        if self._params.gpu_batch_size is not None:
+            if self._params.gpu_batch_size > batch_size:
+                raise ValueError("Invalid gpu_batch_size, gpu_batch_size should be batch_size or less")
+            total_blocks = batch_size // self._params.gpu_batch_size
+        else:
+            total_blocks = 1
+
+        return total_blocks
 
     def _build_training_graph(self, models: Iterable[Model],
                               training: Training,
@@ -181,7 +182,8 @@ class TRPOPolicyTrainer(ModelTrainer):
             s_batch, a_batch, adv_batch, training_variables)
 
         def fisher_vector_product_wrapper(step_direction):
-            return self._fisher_vector_product(policy, s_batch, a_batch, step_direction, training_variables)
+            return self._fisher_vector_product(policy, s_batch, a_batch,
+                                               step_direction, training_variables)
 
         step_direction = conjugate_gradient(
             fisher_vector_product_wrapper, approximate_return_flat_grads,
@@ -200,13 +202,17 @@ class TRPOPolicyTrainer(ModelTrainer):
     def _fisher_vector_product(self, policy, s_batch, a_batch, vector, training_variables):
         sum_hessian_multiplied_vector = 0
 
-        batch_size = self._params.batch_size
-        total_blocks = self._params.num_steps_per_iteration // batch_size
+        if self._params.gpu_batch_size is not None:
+            gpu_batch_size = self._params.gpu_batch_size
+        else:
+            gpu_batch_size = len(s_batch)
+
+        total_blocks = self._total_blocks(len(s_batch))
 
         for block_index in range(total_blocks):
-            start_idx = block_index * batch_size
-            training_variables.s_current.d = s_batch[start_idx:start_idx+batch_size]
-            training_variables.a_current.d = a_batch[start_idx:start_idx+batch_size]
+            start_idx = block_index * gpu_batch_size
+            training_variables.s_current.d = s_batch[start_idx:start_idx+gpu_batch_size]
+            training_variables.a_current.d = a_batch[start_idx:start_idx+gpu_batch_size]
 
             for param in policy.get_parameters().values():
                 param.grad.zero()
@@ -222,7 +228,8 @@ class TRPOPolicyTrainer(ModelTrainer):
             self, policy, s_batch, a_batch, adv_batch, full_step_params_update, training_variables):
         current_flat_params = _concat_network_params_in_ndarray(policy.get_parameters())
 
-        current_approximate_return, _, _ = self._forward_all_variables(s_batch, a_batch, adv_batch, training_variables)
+        current_approximate_return, _, _ = self._forward_all_variables(
+            s_batch, a_batch, adv_batch, training_variables)
 
         for step_size in 0.5**np.arange(self._params.maximum_backtrack_numbers):
             new_flat_params = current_flat_params + step_size * full_step_params_update
@@ -247,18 +254,22 @@ class TRPOPolicyTrainer(ModelTrainer):
         _update_network_params_by_flat_params(policy.get_parameters(), current_flat_params)
 
     def _forward_all_variables(self, s_batch, a_batch, adv_batch, training_variables):
-        batch_size = self._params.batch_size
-        total_blocks = self._params.num_steps_per_iteration // batch_size
-
         sum_approximate_return = 0.0
         sum_kl_divergence = 0.0
         sum_approximate_return_flat_grad = 0.0
 
+        if self._params.gpu_batch_size is not None:
+            gpu_batch_size = self._params.gpu_batch_size
+        else:
+            gpu_batch_size = len(s_batch)
+
+        total_blocks = self._total_blocks(len(s_batch))
+
         for block_index in range(total_blocks):
-            start_idx = block_index * batch_size
-            training_variables.s_current.d = s_batch[start_idx:start_idx+batch_size]
-            training_variables.a_current.d = a_batch[start_idx:start_idx+batch_size]
-            training_variables.extra['advantage'].d = adv_batch[start_idx:start_idx+batch_size]
+            start_idx = block_index * gpu_batch_size
+            training_variables.s_current.d = s_batch[start_idx:start_idx+gpu_batch_size]
+            training_variables.a_current.d = a_batch[start_idx:start_idx+gpu_batch_size]
+            training_variables.extra['advantage'].d = adv_batch[start_idx:start_idx+gpu_batch_size]
 
             nn.forward_all([self._approximate_return,
                             self._kl_divergence,
@@ -276,7 +287,6 @@ class TRPOPolicyTrainer(ModelTrainer):
     def _setup_training_variables(self, batch_size: int) -> TrainingVariables:
         # Training input variables
         # Use batch_size specied by the user
-        batch_size = self._params.batch_size
         s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
         if self._env_info.is_discrete_action_env():
             a_current_var = nn.Variable((batch_size, 1))

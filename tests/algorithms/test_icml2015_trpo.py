@@ -23,7 +23,8 @@ class TestICML2015TRPO(object):
         """
         dummy_env = E.DummyDiscreteImg()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
-        params = A.ICML2015TRPOParam(batch_size=2,
+        params = A.ICML2015TRPOParam(batch_size=5,
+                                     gpu_batch_size=2,
                                      num_steps_per_iteration=5,
                                      sigma_kl_divergence_constraint=10.0,
                                      maximum_backtrack_numbers=2)
@@ -58,11 +59,13 @@ class TestICML2015TRPO(object):
 
         gamma = 0.1
         num_steps_per_iteration = 1000
+        batch_size = 1000
         sigma_kl_divergence_constraint = 0.5
         maximum_backtrack_numbers = 20
         conjugate_gradient_damping = 0.1
 
         param = {'gamma': gamma,
+                 'batch_size': batch_size,
                  'num_steps_per_iteration': num_steps_per_iteration,
                  'sigma_kl_divergence_constraint': sigma_kl_divergence_constraint,
                  'maximum_backtrack_numbers': maximum_backtrack_numbers,
@@ -71,6 +74,7 @@ class TestICML2015TRPO(object):
         trpo.update_algorithm_params(**param)
 
         assert trpo._params.gamma == gamma
+        assert trpo._params.batch_size == batch_size
         assert trpo._params.num_steps_per_iteration == num_steps_per_iteration
         assert trpo._params.sigma_kl_divergence_constraint == sigma_kl_divergence_constraint
         assert trpo._params.maximum_backtrack_numbers == maximum_backtrack_numbers

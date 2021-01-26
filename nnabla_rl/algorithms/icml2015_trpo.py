@@ -11,6 +11,7 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
 from nnabla_rl.builders import ModelBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, StochasticPolicy, Model
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
@@ -40,7 +41,8 @@ class DefaultPolicyBuilder(ModelBuilder):
 class ICML2015TRPOParam(AlgorithmParam):
     gamma: float = 0.99
     num_steps_per_iteration: int = int(1e5)
-    batch_size: int = 2500
+    gpu_batch_size: int = 2500
+    batch_size: int = int(1e5)
     sigma_kl_divergence_constraint: float = 0.01
     maximum_backtrack_numbers: int = 10
     conjugate_gradient_damping: float = 0.001
@@ -53,7 +55,8 @@ class ICML2015TRPOParam(AlgorithmParam):
 
         '''
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.batch_size, 'batch_size')
+        self._assert_positive(self.gpu_batch_size, 'gpu_batch_size')
+        self._assert_between(self.batch_size, 0, self.num_steps_per_iteration, 'batch_size')
         self._assert_positive(self.num_steps_per_iteration, 'num_steps_per_iteration')
         self._assert_positive(self.sigma_kl_divergence_constraint, 'sigma_kl_divergence_constraint')
         self._assert_positive(self.maximum_backtrack_numbers, 'maximum_backtrack_numbers')
@@ -93,54 +96,57 @@ class ICML2015TRPO(Algorithm):
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_params = MT.policy_trainers.TRPOPolicyTrainerParam(
-            batch_size=self._params.batch_size,
-            num_steps_per_iteration=self._params.num_steps_per_iteration,
+            gpu_batch_size=self._params.gpu_batch_size,
             sigma_kl_divergence_constraint=self._params.sigma_kl_divergence_constraint,
             maximum_backtrack_numbers=self._params.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._params.conjugate_gradient_damping,
             conjugate_gradient_iterations=self._params.conjugate_gradient_iterations)
-        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(
-            env_info=self._env_info,
-            params=policy_trainer_params)
-
+        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
+                                                              params=policy_trainer_params)
         training = MT.model_trainer.Training()
         policy_trainer.setup_training(self._policy, {}, training)
+
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
-        self._buffer = ReplayBuffer(capacity=self._params.num_steps_per_iteration)
+        if self.iteration_num % self._params.num_steps_per_iteration != 0:
+            return
+
+        buffer = ReplayBuffer(capacity=self._params.num_steps_per_iteration)
 
         num_steps = 0
         while num_steps <= self._params.num_steps_per_iteration:
             experience = self._environment_explorer.rollout(env)
-            self._buffer.append(experience)
+            buffer.append(experience)
             num_steps += len(experience)
 
-        self._trpo_training(self._buffer)
+        self._trpo_training(buffer)
 
     def _run_offline_training_iteration(self, buffer):
         raise NotImplementedError
 
     def _trpo_training(self, buffer):
-        # sample all experience in the buffer
-        experiences, *_ = buffer.sample(len(buffer))
-        s_batch, a_batch, advantage = self._align_experiences(experiences)
+        buffer_iterator = BufferIterator(buffer, 1, shuffle=False, repeat=False)
+        s, a, accumulated_reward = self._align_experiences(buffer_iterator)
+
         extra = {}
-        extra['advantage'] = advantage
+        extra['advantage'] = accumulated_reward  # Use accumulated_reward as advantage
         batch = TrainingBatch(batch_size=self._params.batch_size,
-                              s_current=s_batch,
-                              a_current=a_batch,
+                              s_current=s,
+                              a_current=a,
                               extra=extra)
 
         self._policy_trainer.train(batch)
 
-    def _align_experiences(self, experiences):
+    def _align_experiences(self, buffer_iterator):
         s_batch = []
         a_batch = []
         accumulated_reward_batch = []
 
-        for experience in experiences:
-            s_seq, a_seq, r_seq, *_ = marshall_experiences(experience)
+        buffer_iterator.reset()
+        for experiences in buffer_iterator:
+            experience, *_ = experiences
+            s_seq, a_seq, r_seq, *_ = marshall_experiences(experience[0])
             accumulated_reward = self._compute_accumulated_reward(r_seq, self._params.gamma)
             s_batch.append(s_seq)
             a_batch.append(a_seq)
@@ -150,7 +156,6 @@ class ICML2015TRPO(Algorithm):
         a_batch = np.concatenate(a_batch, axis=0)
         accumulated_reward_batch = np.concatenate(accumulated_reward_batch, axis=0)
 
-        assert len(s_batch) >= self._params.num_steps_per_iteration
         return s_batch[:self._params.num_steps_per_iteration], \
             a_batch[:self._params.num_steps_per_iteration], \
             accumulated_reward_batch[:self._params.num_steps_per_iteration]

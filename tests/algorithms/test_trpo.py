@@ -26,6 +26,8 @@ class TestTRPO():
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
 
         params = A.TRPOParam(num_steps_per_iteration=5,
+                             gpu_batch_size=5,
+                             pi_batch_size=5,
                              vf_batch_size=2,
                              sigma_kl_divergence_constraint=10.0,
                              maximum_backtrack_numbers=50)
