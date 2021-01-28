@@ -7,6 +7,9 @@ from nnabla_rl.models.mujoco.variational_auto_encoders import UnsquashedVariatio
 from nnabla_rl.models.mujoco.perturbators import BCQPerturbator  # noqa
 from nnabla_rl.models.mujoco.policies import ICML2015TRPOPolicy as ICML2015TRPOMujocoPolicy  # noqa
 from nnabla_rl.models.mujoco.policies import PPOPolicy as PPOMujocoPolicy  # noqa
+from nnabla_rl.models.mujoco.policies import GAILPolicy  # noqa
+from nnabla_rl.models.mujoco.v_functions import GAILVFunction  # noqa
+from nnabla_rl.models.mujoco.reward_functions import GAILDiscriminator  # noqa
 from nnabla_rl.models.atari.policies import PPOPolicy as PPOAtariPolicy  # noqa
 from nnabla_rl.models.atari.policies import A3CPolicy  # noqa
 from nnabla_rl.models.atari.q_functions import DQNQFunction  # noqa
@@ -26,4 +29,5 @@ from nnabla_rl.models.perturbator import Perturbator  # noqa
 from nnabla_rl.models.policy import Policy, DeterministicPolicy, StochasticPolicy  # noqa
 from nnabla_rl.models.q_function import QFunction  # noqa
 from nnabla_rl.models.v_function import VFunction  # noqa
+from nnabla_rl.models.reward_function import RewardFunction  # noqa
 from nnabla_rl.models.variational_auto_encoder import VariationalAutoEncoder  # noqa

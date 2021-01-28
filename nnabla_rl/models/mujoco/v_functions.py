@@ -67,3 +67,25 @@ class PPOVFunction(VFunction):
                 v = NPF.affine(h, n_outmaps=1,
                                w_init=RI.NormcInitializer(std=1.0))
         return v
+
+
+class GAILVFunction(VFunction):
+    """
+    Value function proposed by Jonathan Ho, et al.
+    See: https://arxiv.org/pdf/1606.03476.pdf
+    """
+
+    def __init__(self, scope_name: str):
+        super(GAILVFunction, self).__init__(scope_name)
+
+    def v(self, s: nn.Variable) -> nn.Variable:
+        with nn.parameter_scope(self.scope_name):
+            h = NPF.affine(s, n_outmaps=100, name="linear1",
+                           w_init=RI.NormcInitializer(std=1.0))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=100, name="linear2",
+                           w_init=RI.NormcInitializer(std=1.0))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=1, name="linear3",
+                           w_init=RI.NormcInitializer(std=1.0))
+        return h

@@ -8,3 +8,4 @@ from nnabla_rl.model_trainers.trainers import policy as policy_trainers  # noqa
 from nnabla_rl.model_trainers.trainers import q_value as q_value_trainers  # noqa
 from nnabla_rl.model_trainers.trainers import v_value as v_value_trainers  # noqa
 from nnabla_rl.model_trainers.trainers import vae as vae_trainers  # noqa
+from nnabla_rl.model_trainers.trainers import reward as reward_trainiers  # noqa

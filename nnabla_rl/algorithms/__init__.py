@@ -17,6 +17,7 @@ from nnabla_rl.algorithms.sac import SAC, SACParam
 from nnabla_rl.algorithms.td3 import TD3, TD3Param
 from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOParam
 from nnabla_rl.algorithms.trpo import TRPO, TRPOParam
+from nnabla_rl.algorithms.gail import GAIL, GAILParam
 
 # Do NOT manipulate this dictionary directly.
 # Use register_algorithm() instead.
@@ -63,3 +64,4 @@ register_algorithm(SAC, SACParam)
 register_algorithm(TD3, TD3Param)
 register_algorithm(ICML2015TRPO, ICML2015TRPOParam)
 register_algorithm(TRPO, TRPOParam)
+register_algorithm(GAIL, GAILParam)

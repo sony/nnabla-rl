@@ -1,7 +1,7 @@
 import nnabla as nn
 import numpy as np
 
-from nnabla_rl.models import VFunction, StochasticPolicy, Model
+from nnabla_rl.models import VFunction, StochasticPolicy, Model, RewardFunction
 from nnabla_rl.preprocessors import Preprocessor
 
 
@@ -91,6 +91,26 @@ class _StatePreprocessedPolicy(StochasticPolicy):
     def pi(self, s: nn.Variable):
         preprocessed_state = self._preprocessor.process(s)
         return self._policy.pi(preprocessed_state)
+
+    def deepcopy(self, new_scope_name: str) -> Model:
+        copied = super().deepcopy(new_scope_name=new_scope_name)
+        copied._policy._scope_name = new_scope_name
+        return copied
+
+
+class _StatePreprocessedRewardFunction(RewardFunction):
+    _reward_function: RewardFunction
+    _preprocessor: Preprocessor
+
+    def __init__(self, reward_function: RewardFunction, preprocessor: Preprocessor):
+        super(_StatePreprocessedRewardFunction, self).__init__(reward_function.scope_name)
+        self._reward_function = reward_function
+        self._preprocessor = preprocessor
+
+    def r(self, s_current: nn.Variable, a_current: nn.Variable, s_next: nn.Variable) -> nn.Variable:
+        preprocessed_state_current = self._preprocessor.process(s_current)
+        preprocessed_state_next = self._preprocessor.process(s_next)
+        return self._reward_function.r(preprocessed_state_current, a_current, preprocessed_state_next)
 
     def deepcopy(self, new_scope_name: str) -> Model:
         copied = super().deepcopy(new_scope_name=new_scope_name)

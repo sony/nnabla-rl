@@ -78,6 +78,11 @@ def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     return NI.UniformInitializer(lim=(-lim, lim))
 
 
+def GlorotUniform(inmaps, outmaps, kernel=(1, 1)):
+    lb, ub = NI.calc_uniform_lim_glorot(inmaps, outmaps, kernel)
+    return NI.UniformInitializer(lim=(lb, ub))
+
+
 class NormcInitializer(NI.BaseInitializer):
     # See: https://github.com/openai/baselines/blob/master/baselines/common/tf_util.py
     def __init__(self, std=1.0, axis=0, rng=None):

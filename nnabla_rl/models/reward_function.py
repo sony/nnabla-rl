@@ -10,12 +10,13 @@ class RewardFunction(Model, metaclass=ABCMeta):
         super(RewardFunction, self).__init__(scope_name)
 
     @abstractmethod
-    def r(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+    def r(self, s_current: nn.Variable, a_current: nn.Variable, s_next: nn.Variable) -> nn.Variable:
         '''r
 
         Args:
-            state (nnabla.Variable): State variable
-            action (nnabla.Variable): Action variable
+            s_current (nnabla.Variable): State variable
+            a_current (nnabla.Variable): Action variable
+            s_next (nnabla.Variable): Next state variable
 
 
         Returns:

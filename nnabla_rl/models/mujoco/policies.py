@@ -209,3 +209,32 @@ class TRPOPolicy(StochasticPolicy):
             ln_var = NF.broadcast(
                 ln_sigma, (s.shape[0], self._action_dim)) * 2.0
         return D.Gaussian(mean, ln_var)
+
+
+class GAILPolicy(StochasticPolicy):
+    """
+    Actor model proposed by Jonathan Ho, et al.
+    See: https://arxiv.org/pdf/1606.03476.pdf
+    """
+
+    def __init__(self, scope_name: str, action_dim: str):
+        super(GAILPolicy, self).__init__(scope_name)
+        self._action_dim = action_dim
+
+    def pi(self, s: nn.Variable) -> D.Distribution:
+        with nn.parameter_scope(self.scope_name):
+            h = NPF.affine(s, n_outmaps=100, name="linear1",
+                           w_init=RI.NormcInitializer(std=1.0))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=100, name="linear2",
+                           w_init=RI.NormcInitializer(std=1.0))
+            h = NF.tanh(x=h)
+            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
+                              w_init=RI.NormcInitializer(std=0.01))
+            assert mean.shape == (s.shape[0], self._action_dim)
+
+            ln_sigma = get_parameter_or_create(
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.))
+            ln_var = NF.broadcast(
+                ln_sigma, (s.shape[0], self._action_dim)) * 2.0
+        return D.Gaussian(mean, ln_var)
