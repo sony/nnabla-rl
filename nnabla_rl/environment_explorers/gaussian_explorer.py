@@ -3,6 +3,7 @@ from typing import Callable, Dict, Tuple
 from dataclasses import dataclass
 
 import numpy as np
+import sys
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerParam
@@ -10,8 +11,8 @@ from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplo
 
 @dataclass
 class GaussianExplorerParam(EnvironmentExplorerParam):
-    action_clip_low: float = None
-    action_clip_high: float = None
+    action_clip_low: float = sys.float_info.min
+    action_clip_high: float = sys.float_info.max
     sigma: float = 1.0
 
     def __post_init__(self):

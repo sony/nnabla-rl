@@ -10,12 +10,20 @@ class Parameter():
         return asdict(self)
 
     def _assert_positive(self, param, var_name):
+        if param <= 0:
+            raise ValueError('{} must be positive'.format(var_name))
+
+    def _assert_positive_or_zero(self, param, var_name):
         if param < 0:
             raise ValueError('{} must be positive'.format(var_name))
 
     def _assert_negative(self, param, var_name):
-        if 0 < param:
+        if 0 <= param:
             raise ValueError('{} must be negative'.format(var_name))
+
+    def _assert_negative_or_zero(self, param, var_name):
+        if 0 < param:
+            raise ValueError('{} must be positive'.format(var_name))
 
     def _assert_between(self, param, low, high, var_name):
         if not (low <= param and param <= high):

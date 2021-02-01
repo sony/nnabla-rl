@@ -1,4 +1,4 @@
-from typing import Iterable, Dict
+from typing import cast, Dict, Sequence
 
 import numpy as np
 
@@ -8,6 +8,7 @@ import nnabla.functions as NF
 from dataclasses import dataclass
 
 import nnabla_rl.functions as RF
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.logger import logger
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
@@ -21,27 +22,29 @@ class QRDQNQuantileDistributionFunctionTrainerParam(TrainerParam):
 
 
 class QRDQNQuantileDistributionFunctionTrainer(ModelTrainer):
+    _params: QRDQNQuantileDistributionFunctionTrainerParam
+    _tau_hat_var: nn.Variable
+    _quantile_huber_loss: nn.Variable
+
     def __init__(self,
-                 env_info,
-                 params: QRDQNQuantileDistributionFunctionTrainerParam):
+                 env_info: EnvironmentInfo,
+                 params: QRDQNQuantileDistributionFunctionTrainerParam = QRDQNQuantileDistributionFunctionTrainerParam()
+                 ):
         super(QRDQNQuantileDistributionFunctionTrainer, self).__init__(env_info, params)
-        if self._params.kappa == 0.0:
+        if params.kappa == 0.0:
             logger.info("kappa is set to 0.0. Quantile regression loss will be used for training")
         else:
             logger.info("kappa is non 0.0. Quantile huber loss will be used for training")
 
-        tau_hat = self._precompute_tau_hat(self._params.num_quantiles)
+        tau_hat = self._precompute_tau_hat(params.num_quantiles)
         self._tau_hat_var = nn.Variable.from_numpy_array(tau_hat)
 
-        # Training loss/output
-        self._quantile_huber_loss = None
-
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict:
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
         training_variables.a_current.d = batch.a_current
         training_variables.reward.d = batch.reward
@@ -60,11 +63,10 @@ class QRDQNQuantileDistributionFunctionTrainer(ModelTrainer):
         return {}
 
     def _build_training_graph(self,
-                              models: Iterable[Model],
+                              models: Sequence[Model],
                               training: 'Training',
                               training_variables: TrainingVariables):
-        for model in models:
-            assert isinstance(model, QuantileDistributionFunction)
+        models = cast(Sequence[QuantileDistributionFunction], models)
         batch_size = training_variables.batch_size
 
         # Ttheta_j is the target quantile distribution

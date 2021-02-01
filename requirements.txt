@@ -1,4 +1,4 @@
-nnabla
+nnabla>=1.14.0
 gym
 dataclasses;python_version=="3.6"
 opencv-python
@@ -7,3 +7,4 @@ flake8
 pylint
 pytest
 pytest-cov
+mypy

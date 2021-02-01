@@ -1,10 +1,13 @@
-from typing import Iterable, Dict
+from typing import cast, Dict, Sequence
+
+import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
 
 from dataclasses import dataclass
 
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy
@@ -19,17 +22,20 @@ class PPOPolicyTrainerParam(TrainerParam):
 class PPOPolicyTrainer(ModelTrainer):
     '''Proximal Policy Optimization (PPO) style Policy Trainer
     '''
+    _params: PPOPolicyTrainerParam
+    _pi_loss: nn.Variable
 
-    def __init__(self, env_info, params=PPOPolicyTrainerParam()):
+    def __init__(self,
+                 env_info: EnvironmentInfo,
+                 params: PPOPolicyTrainerParam = PPOPolicyTrainerParam()):
         super(PPOPolicyTrainer, self).__init__(env_info, params)
-        self._pi_loss = None
 
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs):
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
         training_variables.a_current.d = batch.a_current
         training_variables.extra['log_prob'].d = batch.extra['log_prob']
@@ -43,15 +49,12 @@ class PPOPolicyTrainer(ModelTrainer):
         self._pi_loss.backward(clear_buffer=True)
         for solver in solvers.values():
             solver.update()
+        return {}
 
-        errors = {}
-        return errors
-
-    def _build_training_graph(self, models: Iterable[Model],
+    def _build_training_graph(self, models: Sequence[Model],
                               training: Training,
                               training_variables: TrainingVariables):
-        if not isinstance(models[0], StochasticPolicy):
-            raise ValueError
+        models = cast(Sequence[StochasticPolicy], models)
         self._pi_loss = 0
         for policy in models:
             distribution = policy.pi(training_variables.s_current)

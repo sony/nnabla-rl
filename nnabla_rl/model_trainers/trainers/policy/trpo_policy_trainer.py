@@ -1,5 +1,3 @@
-from typing import Iterable, Dict, Optional
-
 import numpy as np
 
 import nnabla as nn
@@ -7,12 +5,14 @@ import nnabla.functions as NF
 
 from dataclasses import dataclass
 
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
-from nnabla_rl.models import Model, StochasticPolicy
-from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.utils.optimization import conjugate_gradient
 from nnabla_rl.logger import logger
+from nnabla_rl.utils.optimization import conjugate_gradient
+from nnabla_rl.utils.copy import copy_network_parameters
+from nnabla_rl.models import Model, StochasticPolicy
+from typing import cast, Dict, Optional, Sequence
 
 
 def _hessian_vector_product(flat_grads, params, vector):
@@ -91,29 +91,30 @@ class TRPOPolicyTrainerParam(TrainerParam):
 
 
 class TRPOPolicyTrainer(ModelTrainer):
-    def __init__(self, env_info, params=TRPOPolicyTrainerParam()):
+    _params: TRPOPolicyTrainerParam
+    _approximate_return: nn.Variable
+    _approximate_return_flat_grads: nn.Variable
+    _kl_divergence: nn.Variable
+    _kl_divergence_flat_grads: nn.Variable
+    _old_policy: StochasticPolicy
+
+    def __init__(self,
+                 env_info: EnvironmentInfo,
+                 params: TRPOPolicyTrainerParam = TRPOPolicyTrainerParam()):
         super(TRPOPolicyTrainer, self).__init__(env_info, params)
-        self._old_policy = None
-
-        self._approximate_return = None
-        self._approximate_return_flat_grads = None
-        self._kl_divergence = None
-        self._kl_divergence_flat_grads = None
-
-        self._train_count = 0
 
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs):
-
+                      **kwargs) -> Dict[str, np.array]:
         s = batch.s_current
         a = batch.a_current
         advantage = batch.extra['advantage']
 
         policy = models[0]
+
         old_policy = self._old_policy
 
         full_step_params_update = self._compute_full_step_params_update(
@@ -124,8 +125,7 @@ class TRPOPolicyTrainer(ModelTrainer):
 
         copy_network_parameters(policy.get_parameters(), old_policy.get_parameters(), tau=1.0)
 
-        errors = {}
-        return errors
+        return {}
 
     def _total_blocks(self, batch_size):
         # We use gpu_batch_size to reduce one forward gpu calculation memory
@@ -139,16 +139,15 @@ class TRPOPolicyTrainer(ModelTrainer):
 
         return total_blocks
 
-    def _build_training_graph(self, models: Iterable[Model],
+    def _build_training_graph(self, models: Sequence[Model],
                               training: Training,
                               training_variables: TrainingVariables):
         if len(models) != 1:
             raise RuntimeError('TRPO training only support 1 model for training')
-        if not isinstance(models[0], StochasticPolicy):
-            raise ValueError
+        models = cast(Sequence[StochasticPolicy], models)
         policy = models[0]
-        if self._old_policy is None:
-            self._old_policy = policy.deepcopy('old_policy')
+        if not hasattr(self, '_old_policy'):
+            self._old_policy = cast(StochasticPolicy, policy.deepcopy('old_policy'))
         old_policy = self._old_policy
 
         # policy learning

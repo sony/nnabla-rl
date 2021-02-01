@@ -3,63 +3,22 @@ from dataclasses import dataclass
 import numpy as np
 
 import gym
-from typing import Union
+from typing import cast, Dict, List, Union
 
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.environment_explorers as EE
 import nnabla as nn
 import nnabla.solvers as NS
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder, SolverBuilder, ReplayBufferBuilder
+from nnabla_rl.builders import StochasticPolicyBuilder, QFunctionBuilder, VFunctionBuilder, \
+    SolverBuilder, ReplayBufferBuilder
+from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import SACVFunction, SACQFunction, SACPolicy, VFunction, QFunction, StochasticPolicy, Model
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
-
-
-class DefaultVFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return SACVFunction(scope_name)
-
-
-class DefaultQFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return SACQFunction(scope_name)
-
-
-class DefaultPolicyBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return SACPolicy(scope_name, env_info.action_dim)
-
-
-class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
-                     **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.learning_rate)
-
-
-class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,
-                            env_info: EnvironmentInfo,
-                            algorithm_params: AlgorithmParam,
-                            **kwargs) -> ReplayBuffer:
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+from nnabla_rl.models import SACVFunction, SACQFunction, SACPolicy, VFunction, QFunction, StochasticPolicy
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 
 
 @dataclass
@@ -90,6 +49,51 @@ class ICML2018SACParam(AlgorithmParam):
                               'target_update_interval')
 
 
+class DefaultVFunctionBuilder(VFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: ICML2018SACParam,
+                    **kwargs) -> VFunction:
+        return SACVFunction(scope_name)
+
+
+class DefaultQFunctionBuilder(QFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: ICML2018SACParam,
+                    **kwargs) -> QFunction:
+        return SACQFunction(scope_name)
+
+
+class DefaultPolicyBuilder(StochasticPolicyBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: ICML2018SACParam,
+                    **kwargs) -> StochasticPolicy:
+        return SACPolicy(scope_name, env_info.action_dim)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: ICML2018SACParam,
+                     **kwargs) -> nn.solver.Solver:
+        assert isinstance(algorithm_params, ICML2018SACParam)
+        return NS.Adam(alpha=algorithm_params.learning_rate)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,  # type: ignore[override]
+                            env_info: EnvironmentInfo,
+                            algorithm_params: ICML2018SACParam,
+                            **kwargs) -> ReplayBuffer:
+        assert isinstance(algorithm_params, ICML2018SACParam)
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+
+
 class ICML2018SAC(Algorithm):
     '''Soft Actor-Critic (SAC) algorithm implementation.
 
@@ -103,28 +107,42 @@ class ICML2018SAC(Algorithm):
     You will need to scale the reward received from the environment properly to get the algorithm work.
     '''
 
+    _params: ICML2018SACParam
+    _v: VFunction
+    _v_solver: nn.solver.Solver
+    _target_v: VFunction
+    _q1: QFunction
+    _q2: QFunction
+    _train_q_functions: List[QFunction]
+    _train_q_solvers: Dict[str, nn.solver.Solver]
+    _replay_buffer: ReplayBuffer
+    _environment_explorer: EnvironmentExplorer
+    _policy_trainer: ModelTrainer
+    _q_function_trainer: ModelTrainer
+    _v_function_trainer: ModelTrainer
+
+    _eval_state_var: nn.Variable
+    _eval_action: nn.Variable
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: ICML2018SACParam = ICML2018SACParam(),
-                 v_function_builder: ModelBuilder = DefaultVFunctionBuilder(),
+                 v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 q_function_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_function_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
 
         super(ICML2018SAC, self).__init__(env_or_env_info, params=params)
 
         self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_params=self._params)
-        self._v_solver = {self._v.scope_name: v_solver_builder(env_info=self._env_info, algorithm_params=self._params)}
-        self._target_v = self._v.deepcopy('target_' + self._v.scope_name)
-        assert isinstance(self._v, VFunction)
-        assert isinstance(self._target_v, VFunction)
+        self._v_solver = v_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._target_v = cast(VFunction, self._v.deepcopy('target_' + self._v.scope_name))
 
         self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
         self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._q1, QFunction)
-        assert isinstance(self._q2, QFunction)
+
         self._train_q_functions = [self._q1, self._q2]
         self._train_q_solvers = {}
         for q in self._train_q_functions:
@@ -132,9 +150,7 @@ class ICML2018SAC(Algorithm):
                 env_info=self._env_info, algorithm_params=self._params)
 
         self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        self._pi_solver = {self._pi.scope_name: policy_solver_builder(
-            env_info=self._env_info, algorithm_params=self._params)}
-        assert isinstance(self._pi, StochasticPolicy)
+        self._pi_solver = policy_solver_builder(env_info=self._env_info, algorithm_params=self._params)
 
         self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_params=self._params)
 
@@ -171,7 +187,7 @@ class ICML2018SAC(Algorithm):
                                                               q_functions=self._train_q_functions)
 
         training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._pi, self._pi_solver, training)
+        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
@@ -209,7 +225,7 @@ class ICML2018SAC(Algorithm):
             train_functions=self._v,
             target_functions=self._train_q_functions,  # Set training q as target
             target_policy=self._pi)
-        v_function_trainer.setup_training(self._v, self._v_solver, training)
+        v_function_trainer.setup_training(self._v, {self._v.scope_name: self._v_solver}, training)
         copy_network_parameters(self._v.get_parameters(), self._target_v.get_parameters(), 1.0)
 
         return v_function_trainer
@@ -277,6 +293,6 @@ class ICML2018SAC(Algorithm):
     def _solvers(self):
         solvers = {}
         solvers.update(self._train_q_solvers)
-        solvers.update(self._v_solver)
-        solvers.update(self._pi_solver)
+        solvers[self._v.scope_name] = self._v_solver
+        solvers[self._pi.scope_name] = self._pi_solver
         return solvers

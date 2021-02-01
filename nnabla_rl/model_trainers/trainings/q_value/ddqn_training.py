@@ -8,6 +8,9 @@ from nnabla_rl.model_trainers.model_trainer import Training, TrainingVariables
 
 
 class _QFunctionDDQNTraining(Training):
+    _train_function: QFunction
+    _target_function: QFunction
+
     def __init__(self, train_function: QFunction, target_function: QFunction):
         self._train_function = train_function
         self._target_function = target_function
@@ -17,6 +20,11 @@ class _QFunctionDDQNTraining(Training):
         reward = training_variables.reward
         non_terminal = training_variables.non_terminal
         s_next = training_variables.s_next
+        assert gamma is not None
+        assert reward is not None
+        assert non_terminal is not None
+        assert s_next is not None
+
         a_next = self._train_function.argmax_q(s_next)
         double_q_target = self._target_function.q(s_next, a_next)
         return reward + gamma * non_terminal * double_q_target
@@ -30,21 +38,21 @@ class _ValueDistributionFunctionDDQNTraining(Training):
         self._target_function = target_function
 
     def compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:
-        batch_size = training_variables.s_next.shape[0]
+        batch_size = training_variables.batch_size
 
         gamma = training_variables.gamma
         reward = training_variables.reward
         non_terminal = training_variables.non_terminal
         s_next = training_variables.s_next
 
-        N = self._target_function._num_atoms
+        N = self._target_function._n_atom
         v_max = self._target_function._v_max
         v_min = self._target_function._v_min
 
         train_atom_probabilities = self._train_function.probabilities(s_next)
         a_star = self._train_function.argmax_q_from_probabilities(train_atom_probabilities)
         target_atom_probabilities = self._target_function.probabilities(s_next)
-        pj = self._target_function.probabilities_of(target_atom_probabilities, a_star)
+        pj = self._target_function._probabilities_of(target_atom_probabilities, a_star)
 
         delta_z = (v_max - v_min) / (N - 1)
         z = np.asarray([v_min + i * delta_z for i in range(N)])
@@ -82,6 +90,8 @@ class _ValueDistributionFunctionDDQNTraining(Training):
 
 
 class DDQNTraining(Training):
+    _delegate: Training
+
     def __init__(self,
                  train_function: Model,
                  target_function: Model):

@@ -75,6 +75,7 @@ class _StatePreprocessedVFunction(VFunction):
 
     def deepcopy(self, new_scope_name: str) -> Model:
         copied = super().deepcopy(new_scope_name=new_scope_name)
+        assert isinstance(copied,  _StatePreprocessedVFunction)
         copied._v_function._scope_name = new_scope_name
         return copied
 
@@ -94,6 +95,7 @@ class _StatePreprocessedPolicy(StochasticPolicy):
 
     def deepcopy(self, new_scope_name: str) -> Model:
         copied = super().deepcopy(new_scope_name=new_scope_name)
+        assert isinstance(copied,  _StatePreprocessedPolicy)
         copied._policy._scope_name = new_scope_name
         return copied
 
@@ -114,5 +116,6 @@ class _StatePreprocessedRewardFunction(RewardFunction):
 
     def deepcopy(self, new_scope_name: str) -> Model:
         copied = super().deepcopy(new_scope_name=new_scope_name)
-        copied._policy._scope_name = new_scope_name
+        assert isinstance(copied,  _StatePreprocessedRewardFunction)
+        copied._reward_function._scope_name = new_scope_name
         return copied

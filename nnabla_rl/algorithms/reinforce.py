@@ -8,42 +8,16 @@ import numpy as np
 import gym
 from typing import Union
 
-from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder, SolverBuilder
-from nnabla_rl.replay_buffer import ReplayBuffer
-from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy, Model
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
-
-
-class DefaultPolicyBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        if env_info.is_discrete_action_env():
-            policy = self._build_discrete_policy(scope_name, env_info, algorithm_params)
-        else:
-            policy = self._build_continuous_policy(scope_name, env_info, algorithm_params)
-        return policy
-
-    def _build_continuous_policy(self, scope_name, env_info, algorithm_params, **kwargs):
-        return REINFORCEContinousPolicy(scope_name, env_info.action_dim, algorithm_params.fixed_ln_var)
-
-    def _build_discrete_policy(self, scope_name, env_info, algorithm_params, **kwargs):
-        return REINFORCEDiscretePolicy(scope_name, env_info.action_dim)
-
-
-class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
-                     **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.learning_rate)
+from nnabla_rl.environment_explorer import EnvironmentExplorer
+from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.builders import StochasticPolicyBuilder, SolverBuilder
+from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.models import StochasticPolicy, REINFORCEContinousPolicy, REINFORCEDiscretePolicy
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 
 
 @dataclass
@@ -51,8 +25,8 @@ class REINFORCEParam(AlgorithmParam):
     reward_scale: float = 0.01
     num_rollouts_per_train_iteration: int = 10
     learning_rate: float = 1e-3
-    clip_grad_norm: float = 1.
-    # this parameter does not use in discrete environment
+    clip_grad_norm: float = 1.0
+    # this parameter is not used in discrete environment
     fixed_ln_var: float = np.log(0.1)
 
     def __post_init__(self):
@@ -67,16 +41,59 @@ class REINFORCEParam(AlgorithmParam):
         self._assert_positive(self.clip_grad_norm, 'clip_grad_norm')
 
 
+class DefaultPolicyBuilder(StochasticPolicyBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: REINFORCEParam,
+                    **kwargs) -> StochasticPolicy:
+        if env_info.is_discrete_action_env():
+            return self._build_discrete_policy(scope_name, env_info, algorithm_params)
+        else:
+            return self._build_continuous_policy(scope_name, env_info, algorithm_params)
+
+    def _build_continuous_policy(self,
+                                 scope_name: str,
+                                 env_info: EnvironmentInfo,
+                                 algorithm_params: REINFORCEParam,
+                                 **kwargs) -> StochasticPolicy:
+        return REINFORCEContinousPolicy(scope_name, env_info.action_dim, algorithm_params.fixed_ln_var)
+
+    def _build_discrete_policy(self,
+                               scope_name: str,
+                               env_info: EnvironmentInfo,
+                               algorithm_params: REINFORCEParam,
+                               **kwargs) -> StochasticPolicy:
+        return REINFORCEDiscretePolicy(scope_name, env_info.action_dim)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: REINFORCEParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
+
+
 class REINFORCE(Algorithm):
+    _params: REINFORCEParam
+    _policy: StochasticPolicy
+    _policy_solver: nn.solver.Solver
+
+    _environment_explorer: EnvironmentExplorer
+    _policy_trainer: ModelTrainer
+
+    _eval_state_var: nn.Variable
+    _eval_action: nn.Variable
+
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: REINFORCEParam = REINFORCEParam(),
-                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder()):
         super(REINFORCE, self).__init__(env_or_env_info, params=params)
         self._policy = policy_builder("pi", self._env_info, self._params)
-        assert isinstance(self._policy, StochasticPolicy)
-        self._policy_solver = {self._policy.scope_name: policy_solver_builder(self._env_info, self._params)}
+        self._policy_solver = policy_solver_builder(self._env_info, self._params)
 
     @eval_api
     def compute_eval_action(self, s):
@@ -102,14 +119,14 @@ class REINFORCE(Algorithm):
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_params = MT.policy_trainers.SPGPolicyTrainerParam(
-            pi_loss_scalar=1.0/self._params.num_rollouts_per_train_iteration,
+            pi_loss_scalar=1.0 / self._params.num_rollouts_per_train_iteration,
             grad_clip_norm=self._params.clip_grad_norm)
         policy_trainer = MT.policy_trainers.SPGPolicyTrainer(
             env_info=self._env_info,
             params=policy_trainer_params)
 
         training = MT.policy_trainings.REINFORCETraining()
-        policy_trainer.setup_training(self._policy, self._policy_solver, training)
+        policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
@@ -176,7 +193,7 @@ class REINFORCE(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers.update(self._policy_solver)
+        solvers[self._policy.scope_name] = self._policy_solver
         return solvers
 
     @property

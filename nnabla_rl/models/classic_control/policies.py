@@ -5,8 +5,8 @@ import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 
 import nnabla_rl.distributions as D
-from nnabla_rl.models.policy import StochasticPolicy
 import nnabla_rl.initializers as RI
+from nnabla_rl.models.policy import StochasticPolicy
 
 
 class REINFORCEDiscretePolicy(StochasticPolicy):

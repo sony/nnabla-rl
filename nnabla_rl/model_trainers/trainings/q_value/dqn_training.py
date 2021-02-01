@@ -9,6 +9,8 @@ from nnabla_rl.models import \
 
 
 class _QFunctionDQNTraining(Training):
+    _target_function: QFunction
+
     def __init__(self, target_function: QFunction):
         self._target_function = target_function
 
@@ -17,17 +19,19 @@ class _QFunctionDQNTraining(Training):
         reward = training_variables.reward
         non_terminal = training_variables.non_terminal
         s_next = training_variables.s_next
+
         max_q_value = self._target_function.max_q(s_next)
         return reward + gamma * non_terminal * max_q_value
 
 
 class _ValueDistributionFunctionDQNTraining(Training):
+    _target_function: ValueDistributionFunction
+
     def __init__(self, target_function: ValueDistributionFunction):
         self._target_function = target_function
 
     def compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:
-        batch_size = training_variables.s_next.shape[0]
-
+        batch_size = training_variables.batch_size
         gamma = training_variables.gamma
         reward = training_variables.reward
         non_terminal = training_variables.non_terminal
@@ -77,6 +81,8 @@ class _ValueDistributionFunctionDQNTraining(Training):
 
 
 class _QuantileDistributionFunctionDQNTraining(Training):
+    _target_function: QuantileDistributionFunction
+
     def __init__(self, target_function: QuantileDistributionFunction):
         self._target_function = target_function
 
@@ -95,6 +101,8 @@ class _QuantileDistributionFunctionDQNTraining(Training):
 
 
 class _StateActionQuantileFunctionDQNTraining(Training):
+    _target_function: StateActionQuantileFunction
+
     def __init__(self, target_function: StateActionQuantileFunction):
         self._target_function = target_function
 
@@ -122,6 +130,8 @@ class _StateActionQuantileFunctionDQNTraining(Training):
 
 
 class DQNTraining(Training):
+    _delegate: Training
+
     def __init__(self, train_function: Model, target_function: Model):
         if type(train_function) is not type(target_function):
             raise ValueError

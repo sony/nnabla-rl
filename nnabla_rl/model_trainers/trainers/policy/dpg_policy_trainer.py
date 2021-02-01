@@ -1,13 +1,16 @@
-from typing import Iterable, Dict
+from typing import cast, Dict, Sequence
+
+import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
 
 from dataclasses import dataclass
 
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
-from nnabla_rl.models import Model, DeterministicPolicy
+from nnabla_rl.models import Model, QFunction, DeterministicPolicy
 
 
 @dataclass
@@ -19,17 +22,23 @@ class DPGPolicyTrainer(ModelTrainer):
     '''Deterministic Policy Gradient (DPG) style Policy Trainer
     '''
 
-    def __init__(self, env_info, q_function, params=DPGPolicyTrainerParam()):
+    _params: DPGPolicyTrainerParam
+    _pi_loss: nn.Variable
+    _q_function: QFunction
+
+    def __init__(self,
+                 env_info: EnvironmentInfo,
+                 q_function: QFunction,
+                 params: DPGPolicyTrainerParam = DPGPolicyTrainerParam()):
         super(DPGPolicyTrainer, self).__init__(env_info, params)
         self._q_function = q_function
-        self._pi_loss = None
 
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs):
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
 
         # update model
@@ -39,16 +48,12 @@ class DPGPolicyTrainer(ModelTrainer):
         self._pi_loss.backward(clear_buffer=True)
         for solver in solvers.values():
             solver.update()
+        return {}
 
-        errors = {}
-        return errors
-
-    def _build_training_graph(self, models: Iterable[Model],
+    def _build_training_graph(self, models: Sequence[Model],
                               training: Training,
                               training_variables: TrainingVariables):
-        if not isinstance(models[0], DeterministicPolicy):
-            raise ValueError
-
+        models = cast(Sequence[DeterministicPolicy], models)
         self._pi_loss = 0
         for policy in models:
             action = policy.pi(training_variables.s_current)

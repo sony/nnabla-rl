@@ -8,33 +8,16 @@ import gym
 from typing import Union
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder
+from nnabla_rl.builders import StochasticPolicyBuilder
+from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, StochasticPolicy, Model
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
+from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, StochasticPolicy
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
-
-
-class DefaultPolicyBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        if env_info.is_discrete_action_env():
-            return self._build_default_discrete_policy(scope_name, env_info, algorithm_params)
-        else:
-            return self._build_default_continuous_policy(scope_name, env_info, algorithm_params)
-
-    def _build_default_continuous_policy(self, scope_name, env_info, algorithm_params, **kwargs):
-        return ICML2015TRPOMujocoPolicy(scope_name, env_info.action_dim)
-
-    def _build_default_discrete_policy(self, scope_name, env_info, algorithm_params, **kwargs):
-        return ICML2015TRPOAtariPolicy(scope_name, env_info.action_dim)
 
 
 @dataclass
@@ -63,6 +46,32 @@ class ICML2015TRPOParam(AlgorithmParam):
         self._assert_positive(self.conjugate_gradient_damping, 'conjugate_gradient_damping')
 
 
+class DefaultPolicyBuilder(StochasticPolicyBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: ICML2015TRPOParam,
+                    **kwargs) -> StochasticPolicy:
+        if env_info.is_discrete_action_env():
+            return self._build_default_discrete_policy(scope_name, env_info, algorithm_params)
+        else:
+            return self._build_default_continuous_policy(scope_name, env_info, algorithm_params)
+
+    def _build_default_continuous_policy(self,
+                                         scope_name: str,
+                                         env_info: EnvironmentInfo,
+                                         algorithm_params: ICML2015TRPOParam,
+                                         **kwargs) -> StochasticPolicy:
+        return ICML2015TRPOMujocoPolicy(scope_name, env_info.action_dim)
+
+    def _build_default_discrete_policy(self,
+                                       scope_name: str,
+                                       env_info: EnvironmentInfo,
+                                       algorithm_params: ICML2015TRPOParam,
+                                       **kwargs) -> StochasticPolicy:
+        return ICML2015TRPOAtariPolicy(scope_name, env_info.action_dim)
+
+
 class ICML2015TRPO(Algorithm):
     """ Trust Region Policy Optimiation method, this implements pure one.
         Please note that original TRPO use Single Path method to estimate Q value
@@ -70,12 +79,18 @@ class ICML2015TRPO(Algorithm):
         See: https://arxiv.org/pdf/1502.05477.pdf
     """
 
+    _params: ICML2015TRPOParam
+    _policy: StochasticPolicy
+    _policy_trainer: ModelTrainer
+    _environment_explorer: EnvironmentExplorer
+    _eval_state_var: nn.Variable
+    _eval_action: nn.Variable
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: ICML2015TRPOParam = ICML2015TRPOParam(),
-                 policy_builder: ModelBuilder = DefaultPolicyBuilder()):
+                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder()):
         super(ICML2015TRPO, self).__init__(env_or_env_info, params=params)
         self._policy = policy_builder("pi", self._env_info, self._params)
-        assert isinstance(self._policy, StochasticPolicy)
 
     @eval_api
     def compute_eval_action(self, s):

@@ -6,44 +6,20 @@ from dataclasses import dataclass
 import gym
 import numpy as np
 
-from typing import Union
+from typing import cast, Union
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import QFunctionBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import DQNQFunction, QFunction, Model
+from nnabla_rl.models import DQNQFunction, QFunction
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
+from nnabla_rl.environment_explorer import EnvironmentExplorer
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
-
-
-class DefaultQFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return DQNQFunction(scope_name, env_info.action_dim)
-
-
-class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self, env_info, algorithm_params, **kwargs):
-        solver = NS.RMSpropGraves(
-            lr=algorithm_params.learning_rate, decay=algorithm_params.decay,
-            momentum=algorithm_params.momentum, eps=algorithm_params.min_squared_gradient)
-        return solver
-
-
-class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,
-                            env_info: EnvironmentInfo,
-                            algorithm_params: AlgorithmParam,
-                            **kwargs) -> ReplayBuffer:
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -74,42 +50,64 @@ class DQNParam(AlgorithmParam):
         Check set values are in valid range.
 
         '''
-        if not ((0.0 <= self.gamma) & (self.gamma <= 1.0)):
-            raise ValueError('gamma must lie between [0.0, 1.0]')
-        if not (0 <= self.batch_size):
-            raise ValueError('batch size must not be negative')
-        if not (0 <= self.learning_rate):
-            raise ValueError('learning rate must not be negative')
-        if not (0 <= self.decay):
-            raise ValueError('decay must not be negative')
-        if not (0 <= self.min_squared_gradient):
-            raise ValueError('min_squared_gradient must not be negative')
-        if not (0 <= self.learner_update_frequency):
-            raise ValueError('learner update frequency must not be negative')
-        if not (0 <= self.target_update_frequency):
-            raise ValueError('target update frequency must not be negative')
-        if self.start_timesteps is not None:
-            if not (0 <= self.start_timesteps):
-                raise ValueError('start timesteps must not be negative')
-        if (self.start_timesteps > self.replay_buffer_size):
-            raise ValueError('start timesteps should be smaller than \
-                replay buffer size')
-        if not (0 <= self.replay_buffer_size):
-            raise ValueError('replay buffer size must not be negative')
-        if not ((0.0 <= self.initial_epsilon) & (self.initial_epsilon <= 1.0)):
-            raise ValueError('initial epsilon must lie between [0.0, 1.0]')
-        if not ((0.0 <= self.final_epsilon) & (self.final_epsilon <= 1.0)):
-            raise ValueError('final epsilon must lie between [0.0, 1.0]')
-        if not ((0.0 <= self.test_epsilon) & (self.test_epsilon <= 1.0)):
-            raise ValueError('test epsilon must lie between [0.0, 1.0]')
-        if not (0 <= self.max_explore_steps):
-            raise ValueError('max explore step must not be negative')
+        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
+        self._assert_positive(self.batch_size, 'batch_size')
+        self._assert_positive(self.learning_rate, 'learning_rate')
+        self._assert_positive(self.decay, 'decay')
+        self._assert_positive(self.min_squared_gradient, 'min_squared_gradient')
+        self._assert_positive(self.learner_update_frequency, 'learner_update_frequency')
+        self._assert_positive(self.target_update_frequency, 'target_update_frequency')
+        self._assert_positive(self.start_timesteps, 'start_timesteps')
+        self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
+        self._assert_smaller_than(self.start_timesteps, self.replay_buffer_size, 'start_timesteps')
+        self._assert_between(self.initial_epsilon, 0.0, 1.0, 'initial_epsilon')
+        self._assert_between(self.final_epsilon, 0.0, 1.0, 'final_epsilon')
+        self._assert_between(self.test_epsilon, 0.0, 1.0, 'test_epsilon')
+        self._assert_positive(self.max_explore_steps, 'max_explore_steps')
+
+
+class DefaultQFunctionBuilder(QFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: DQNParam,
+                    **kwargs) -> QFunction:
+        return DQNQFunction(scope_name, env_info.action_dim)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: DQNParam,
+                     **kwargs) -> nn.solver.Solver:
+        solver = NS.RMSpropGraves(
+            lr=algorithm_params.learning_rate, decay=algorithm_params.decay,
+            momentum=algorithm_params.momentum, eps=algorithm_params.min_squared_gradient)
+        return solver
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,  # type: ignore[override]
+                            env_info: EnvironmentInfo,
+                            algorithm_params: DQNParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 class DQN(Algorithm):
+    _params: DQNParam
+    _q: QFunction
+    _q_solver: nn.solver.Solver
+    _target_q: QFunction
+    _replay_buffer: ReplayBuffer
+    _environment_explorer: EnvironmentExplorer
+    _q_function_trainer: ModelTrainer
+    _eval_state_var: nn.Variable
+    _a_greedy: nn.Variable
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: DQNParam = DQNParam(),
-                 q_func_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_func_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(DQN, self).__init__(env_or_env_info, params=params)
@@ -118,10 +116,8 @@ class DQN(Algorithm):
             raise ValueError('Invalid env_info. Action space of DQN must be {}' .format(gym.spaces.Discrete))
 
         self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_params=self._params)
-        self._q_solver = {self._q.scope_name: q_solver_builder(env_info=self._env_info, algorithm_params=self._params)}
-        self._target_q = self._q.deepcopy('target_' + self._q.scope_name)
-        assert isinstance(self._q, QFunction)
-        assert isinstance(self._target_q, QFunction)
+        self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
 
         self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_params=self._params)
 
@@ -172,7 +168,7 @@ class DQN(Algorithm):
             dst_models=self._target_q,
             target_update_frequency=target_update_frequency,
             tau=1.0)
-        q_function_trainer.setup_training(self._q, self._q_solver, training)
+        q_function_trainer.setup_training(self._q, {self._q.scope_name: self._q_solver}, training)
         copy_network_parameters(self._q.get_parameters(), self._target_q.get_parameters())
         return q_function_trainer
 
@@ -223,7 +219,7 @@ class DQN(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers.update(self._q_solver)
+        solvers[self._q.scope_name] = self._q_solver
         return solvers
 
     @property

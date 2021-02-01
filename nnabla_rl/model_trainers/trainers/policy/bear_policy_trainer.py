@@ -1,4 +1,4 @@
-from typing import Iterable, Dict
+from typing import cast, Dict, Optional, Sequence
 
 import numpy as np
 
@@ -8,12 +8,15 @@ import nnabla.functions as NF
 from dataclasses import dataclass
 
 import nnabla_rl.functions as RF
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy, QFunction, VariationalAutoEncoder
 
 
 class AdjustableLagrangeMultiplier(Model):
+    _log_lagrange: nn.Variable
+
     def __init__(self, scope_name, initial_value=None):
         super(AdjustableLagrangeMultiplier, self).__init__(
             scope_name=scope_name)
@@ -58,12 +61,23 @@ class BEARPolicyTrainer(ModelTrainer):
     '''Bootstrapping Error Accumulation Reduction (BEAR) style Policy Trainer
     '''
 
+    _params: BEARPolicyTrainerParam
+    _mmd_loss: nn.Variable
+    _pi_loss: nn.Variable
+    _pi_warmup_loss: nn.Variable
+    _lagrange_loss: nn.Variable
+
+    _q_ensembles: Sequence[QFunction]
+    _vae: VariationalAutoEncoder
+    _lagrange: AdjustableLagrangeMultiplier
+    _lagrange_solver: Optional[nn.solver.Solver]
+
     def __init__(self,
-                 env_info,
-                 q_ensembles: Iterable[QFunction],
+                 env_info: EnvironmentInfo,
+                 q_ensembles: Sequence[QFunction],
                  vae: VariationalAutoEncoder,
                  lagrange_multiplier: AdjustableLagrangeMultiplier,
-                 lagrange_solver: nn.solver.Solver = None,
+                 lagrange_solver: Optional[nn.solver.Solver] = None,
                  params: BEARPolicyTrainerParam = BEARPolicyTrainerParam()):
         super(BEARPolicyTrainer, self).__init__(env_info, params)
         self._q_ensembles = q_ensembles
@@ -72,17 +86,12 @@ class BEARPolicyTrainer(ModelTrainer):
         self._lagrange = lagrange_multiplier
         self._lagrange_solver = lagrange_solver
 
-        self._mmd_loss = None
-        self._pi_loss = None
-        self._pi_warmup_loss = None
-        self._lagrange_loss = None
-
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs):
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
 
         # Optimize actor
@@ -97,20 +106,18 @@ class BEARPolicyTrainer(ModelTrainer):
 
         # Update lagrange_multiplier if requested
         if not self._params.fix_lagrange_multiplier:
+            assert self._lagrange_solver is not None
             self._lagrange_solver.zero_grad()
             self._lagrange_loss.backward()
             self._lagrange_solver.update()
             self._lagrange.clip(-5.0, 10.0)
 
-        errors = {}
-        return errors
+        return {}
 
-    def _build_training_graph(self, models: Iterable[Model],
+    def _build_training_graph(self, models: Sequence[Model],
                               training: Training,
                               training_variables: TrainingVariables):
-        if not isinstance(models[0], StochasticPolicy):
-            raise ValueError
-
+        models = cast(Sequence[StochasticPolicy], models)
         batch_size = training_variables.batch_size
         self._pi_loss = 0
         self._pi_warmup_loss = 0

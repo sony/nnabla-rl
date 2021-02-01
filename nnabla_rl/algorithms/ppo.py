@@ -11,15 +11,16 @@ import multiprocessing as mp
 import os
 
 import gym
-from typing import Optional, Union
+from typing import List, NamedTuple, Optional, Union
 
 import nnabla_rl.preprocessors as RP
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.utils.context as context
-from nnabla_rl.builders import ModelBuilder, SolverBuilder, PreprocessorBuilder
+from nnabla_rl.builders import StochasticPolicyBuilder, VFunctionBuilder, SolverBuilder, PreprocessorBuilder
+from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import \
     PPOSharedFunctionHead, PPOAtariPolicy, PPOAtariVFunction, \
     PPOMujocoPolicy, PPOMujocoVFunction, \
@@ -28,6 +29,7 @@ from nnabla_rl.models import \
 from nnabla_rl.algorithms.common_utils import \
     compute_v_target_and_advantage, _StatePreprocessedPolicy, _StatePreprocessedVFunction
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences, unzip
@@ -37,50 +39,64 @@ from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
 from nnabla_rl.utils.reproductions import set_global_seed
 
 
-class DefaultPolicyBuilder(ModelBuilder):
+class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def build_model(self,
                     scope_name: str,
                     env_info: EnvironmentInfo,
                     algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
+                    **kwargs) -> StochasticPolicy:
         if env_info.is_discrete_action_env():
             # scope name is same as that of v-function -> parameter is shared across models automatically
             return self._build_shared_policy("shared", env_info, algorithm_params)
         else:
             return self._build_mujoco_policy(scope_name, env_info, algorithm_params)
 
-    def _build_shared_policy(self, scope_name, env_info, algorithm_params, **kwargs):
+    def _build_shared_policy(self,
+                             scope_name: str,
+                             env_info: EnvironmentInfo,
+                             algorithm_params: AlgorithmParam,
+                             **kwargs) -> StochasticPolicy:
         _shared_function_head = PPOSharedFunctionHead(scope_name=scope_name,
                                                       state_shape=env_info.state_shape,
                                                       action_dim=env_info.action_dim)
         return PPOAtariPolicy(scope_name=scope_name, action_dim=env_info.action_dim, head=_shared_function_head)
 
-    def _build_mujoco_policy(self, scope_name, env_info, algorithm_params, **kwargs):
-        policy = PPOMujocoPolicy(scope_name=scope_name, action_dim=env_info.action_dim)
-        return policy
+    def _build_mujoco_policy(self,
+                             scope_name: str,
+                             env_info: EnvironmentInfo,
+                             algorithm_params: AlgorithmParam,
+                             **kwargs) -> StochasticPolicy:
+        return PPOMujocoPolicy(scope_name=scope_name, action_dim=env_info.action_dim)
 
 
-class DefaultVFunctionBuilder(ModelBuilder):
+class DefaultVFunctionBuilder(VFunctionBuilder):
     def build_model(self,
                     scope_name: str,
                     env_info: EnvironmentInfo,
                     algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
+                    **kwargs) -> VFunction:
         if env_info.is_discrete_action_env():
             # scope name is same as that of policy -> parameter is shared across models automatically
             return self._build_shared_v_function("shared", env_info, algorithm_params)
         else:
             return self._build_mujoco_v_function(scope_name, env_info, algorithm_params)
 
-    def _build_shared_v_function(self, scope_name, env_info, algorithm_params, **kwargs):
+    def _build_shared_v_function(self,
+                                 scope_name: str,
+                                 env_info: EnvironmentInfo,
+                                 algorithm_params: AlgorithmParam,
+                                 **kwargs) -> VFunction:
         _shared_function_head = PPOSharedFunctionHead(scope_name=scope_name,
                                                       state_shape=env_info.state_shape,
                                                       action_dim=env_info.action_dim)
         return PPOAtariVFunction(scope_name=scope_name, head=_shared_function_head)
 
-    def _build_mujoco_v_function(self, scope_name, env_info, algorithm_params, **kwargs):
-        v_function = PPOMujocoVFunction(scope_name=scope_name)
-        return v_function
+    def _build_mujoco_v_function(self,
+                                 scope_name: str,
+                                 env_info: EnvironmentInfo,
+                                 algorithm_params: AlgorithmParam,
+                                 **kwargs) -> VFunction:
+        return PPOMujocoVFunction(scope_name=scope_name)
 
 
 class DefaultSolverBuilder(SolverBuilder):
@@ -88,6 +104,7 @@ class DefaultSolverBuilder(SolverBuilder):
                      env_info: EnvironmentInfo,
                      algorithm_params: AlgorithmParam,
                      **kwargs) -> nn.solver.Solver:
+        assert isinstance(algorithm_params, PPOParam)
         return NS.Adam(alpha=algorithm_params.learning_rate, eps=1e-5)
 
 
@@ -96,7 +113,7 @@ class DefaultPreprocessorBuilder(PreprocessorBuilder):
                            scope_name: str,
                            env_info: EnvironmentInfo,
                            algorithm_params: AlgorithmParam,
-                           **kwargs):
+                           **kwargs) -> Preprocessor:
         return RP.RunningMeanNormalizer('preprocessor', env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
@@ -141,12 +158,26 @@ class PPO(Algorithm):
 
     This algorithm only supports online training.
     '''
+    _params: PPOParam
+
+    _gpu_id: int
+    _v_function: VFunction
+    _v_function_solver: nn.solver.Solver
+    _policy: StochasticPolicy
+    _policy_solver: nn.solver.Solver
+    _state_preprocessor: Optional[Preprocessor]
+
+    _policy_trainer: ModelTrainer
+    _v_function_trainer: ModelTrainer
+
+    _actors: List['_PPOActor']
+    _actor_processes: List[mp.Process]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: PPOParam = PPOParam(),
-                 v_function_builder: ModelBuilder = DefaultVFunctionBuilder(),
+                 v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
         self._gpu_id = context._gpu_id
@@ -155,26 +186,18 @@ class PPO(Algorithm):
             context._gpu_id = -1
         super(PPO, self).__init__(env_or_env_info, params=params)
 
-        v_function = v_function_builder('v', self._env_info, self._params)
-        policy = policy_builder('pi', self._env_info, self._params)
-        if self._params.preprocess_state:
+        self._v_function = v_function_builder('v', self._env_info, self._params)
+        self._policy = policy_builder('pi', self._env_info, self._params)
+        self._state_preprocessor = None
+
+        if self._params.preprocess_state and state_preprocessor_builder is not None:
             preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._params)
-            self._v_function = _StatePreprocessedVFunction(v_function=v_function, preprocessor=preprocessor)
-            self._policy = _StatePreprocessedPolicy(policy=policy, preprocessor=preprocessor)
+            assert preprocessor is not None
+            self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
+            self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
             self._state_preprocessor = preprocessor
-        else:
-            self._v_function = v_function
-            self._policy = policy
-            self._state_preprocessor = None
-
-        assert isinstance(self._policy, StochasticPolicy)
-        assert isinstance(self._v_function, VFunction)
-
-        self._policy_solver = {self._policy.scope_name: policy_solver_builder(self._env_info, self._params)}
-        self._v_function_solver = {self._v_function.scope_name: v_solver_builder(self._env_info, self._params)}
-
-        self._actors = None
-        self._actor_processes = []
+        self._policy_solver = policy_solver_builder(self._env_info, self._params)
+        self._v_function_solver = v_solver_builder(self._env_info, self._params)
 
     @eval_api
     def compute_eval_action(self, state):
@@ -189,7 +212,7 @@ class PPO(Algorithm):
         context._gpu_id = self._gpu_id
         env = env_or_buffer
 
-        # FIXME: This setup is a workaround for creating underliying model parameters
+        # FIXME: This setup is a workaround for creating underlying model parameters
         # If the parameter is not created, the multiprocessable array (created in launch_actor_processes)
         # will be empty and the agent does not learn anything
         self._setup_policy_training(env_or_buffer)
@@ -211,7 +234,7 @@ class PPO(Algorithm):
             params=policy_trainer_params)
 
         training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, self._policy_solver, training)
+        policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
         return policy_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
@@ -226,7 +249,8 @@ class PPO(Algorithm):
             params=v_function_trainer_params)
 
         training = MT.v_value_trainings.MonteCarloVValueTraining()
-        v_function_trainer.setup_training(self._v_function, self._v_function_solver, training)
+        v_function_trainer.setup_training(
+            self._v_function, {self._v_function.scope_name: self._v_function_solver}, training)
         return v_function_trainer
 
     def _after_training_finish(self, env_or_buffer):
@@ -342,8 +366,8 @@ class PPO(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers.update(self._policy_solver)
-        solvers.update(self._v_function_solver)
+        solvers[self._policy.scope_name] = self._policy_solver
+        solvers[self._v_function.scope_name] = self._v_function_solver
         return solvers
 
     def _build_ppo_actors(self, env, v_function, policy, state_preprocessor):
@@ -362,6 +386,19 @@ class PPO(Algorithm):
 
 
 class _PPOActor(object):
+    _actor_num: int
+    _env: gym.Env
+    _env_info: EnvironmentInfo
+    _v_function: VFunction
+    _policy: StochasticPolicy
+    _timesteps: int
+    _gamma: float
+    _lambda: float
+    _params: PPOParam
+
+    _environment_explorer: EnvironmentExplorer
+    _mp_arrays: NamedTuple
+
     def __init__(self, actor_num, env, env_info, v_function, policy, state_preprocessor, params):
         # These variables will be copied when process is created
         self._actor_num = actor_num

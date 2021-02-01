@@ -3,7 +3,7 @@ import numpy as np
 import os
 from dataclasses import dataclass
 from collections import namedtuple
-from typing import Optional
+from typing import List, Optional
 
 import nnabla as nn
 from nnabla import functions as NF
@@ -12,52 +12,15 @@ from nnabla import solvers as NS
 import nnabla_rl.utils.context as context
 import nnabla_rl.functions as RF
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder, SolverBuilder
+from nnabla_rl.builders import VFunctionBuilder, StochasticPolicyBuilder, SolverBuilder
 from nnabla_rl import environment_explorers as EE
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.utils.data import marshall_experiences, unzip
-from nnabla_rl.models import Model, StochasticPolicy, VFunction, A3CSharedFunctionHead, A3CPolicy, A3CVFunction
+from nnabla_rl.models import StochasticPolicy, VFunction, A3CSharedFunctionHead, A3CPolicy, A3CVFunction
 from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
                                           mp_array_from_np_array, new_mp_arrays_from_params,
                                           copy_mp_arrays_to_params, copy_params_to_mp_arrays)
 from nnabla_rl.utils.reproductions import set_global_seed
-
-
-class DefaultPolicyBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        _shared_function_head = A3CSharedFunctionHead(scope_name="shared",
-                                                      state_shape=env_info.state_shape)
-        return A3CPolicy(head=_shared_function_head,
-                         scope_name="shared",
-                         state_shape=env_info.state_shape,
-                         action_dim=env_info.action_dim)
-
-
-class DefaultVFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        _shared_function_head = A3CSharedFunctionHead(scope_name="shared",
-                                                      state_shape=env_info.state_shape)
-        return A3CVFunction(head=_shared_function_head,
-                            scope_name="shared",
-                            state_shape=env_info.state_shape)
-
-
-class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
-                     **kwargs) -> nn.solver.Solver:
-        return NS.RMSprop(lr=algorithm_params.learning_rate,
-                          decay=algorithm_params.decay,
-                          eps=algorithm_params.epsilon)
 
 
 @dataclass
@@ -88,11 +51,64 @@ class A2CParam(AlgorithmParam):
         self._assert_positive(self.max_grad_norm, 'max_grad_norm')
 
 
+class DefaultPolicyBuilder(StochasticPolicyBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: A2CParam,
+                    **kwargs) -> StochasticPolicy:
+        _shared_function_head = A3CSharedFunctionHead(scope_name="shared",
+                                                      state_shape=env_info.state_shape)
+        return A3CPolicy(head=_shared_function_head,
+                         scope_name="shared",
+                         state_shape=env_info.state_shape,
+                         action_dim=env_info.action_dim)
+
+
+class DefaultVFunctionBuilder(VFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: A2CParam,
+                    **kwargs) -> VFunction:
+        _shared_function_head = A3CSharedFunctionHead(scope_name="shared",
+                                                      state_shape=env_info.state_shape)
+        return A3CVFunction(head=_shared_function_head,
+                            scope_name="shared",
+                            state_shape=env_info.state_shape)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: A2CParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.RMSprop(lr=algorithm_params.learning_rate,
+                          decay=algorithm_params.decay,
+                          eps=algorithm_params.epsilon)
+
+
 class A2C(Algorithm):
+    _params: A2CParam
+    _gpu_id: int
+    _v_function: VFunction
+    _v_function_solver: nn.solver.Solver
+    _policy: StochasticPolicy
+    _policy_solver: nn.solver.Solver
+    _actors: List['_A2CActor']
+    _actor_processes: List[mp.Process]
+    _eval_state_var: nn.Variable
+    _eval_action: nn.Variable
+    _s_current_var: nn.Variable
+    _a_current_var: nn.Variable
+    _returns_var: nn.Variable
+    _policy_loss: nn.Variable
+    _v_function_loss: nn.Variable
+
     def __init__(self, env_or_env_info,
-                 v_function_builder: ModelBuilder = DefaultVFunctionBuilder(),
+                 v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  params=A2CParam()):
         self._gpu_id = context._gpu_id
@@ -104,14 +120,8 @@ class A2C(Algorithm):
         self._v_function = v_function_builder('v', self._env_info, self._params)
         self._policy = policy_builder('pi', self._env_info, self._params)
 
-        assert isinstance(self._policy, StochasticPolicy)
-        assert isinstance(self._v_function, VFunction)
-
         self._policy_solver = policy_solver_builder(self._env_info, self._params)
         self._v_function_solver = v_solver_builder(self._env_info, self._params)
-
-        self._actors = None
-        self._actor_processes = []
 
     @eval_api
     def compute_eval_action(self, state):

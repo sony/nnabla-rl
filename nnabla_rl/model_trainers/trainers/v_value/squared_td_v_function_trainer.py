@@ -1,4 +1,6 @@
-from typing import Iterable, Dict
+from typing import cast, Dict, Iterable
+
+import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -17,23 +19,25 @@ class SquaredTDVFunctionTrainerParam(TrainerParam):
     v_loss_scalar: float = 1.0
 
     def __post_init__(self):
+        super(SquaredTDVFunctionTrainerParam, self).__post_init__()
         self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
 
 
 class SquaredTDVFunctionTrainer(ModelTrainer):
-    def __init__(self, env_info: EnvironmentInfo,
-                 params: SquaredTDVFunctionTrainerParam):
-        super(SquaredTDVFunctionTrainer, self).__init__(env_info, params)
+    _params: SquaredTDVFunctionTrainerParam
+    _v_loss: nn.Variable  # Training loss/output
 
-        # Training loss/output
-        self._v_loss = None
+    def __init__(self,
+                 env_info: EnvironmentInfo,
+                 params: SquaredTDVFunctionTrainerParam = SquaredTDVFunctionTrainerParam()):
+        super(SquaredTDVFunctionTrainer, self).__init__(env_info, params)
 
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict:
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
 
         # update model
@@ -44,15 +48,14 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
 
-        errors = {}
-        return errors
+        return {}
 
     def _build_training_graph(self,
                               models: Iterable[Model],
                               training: 'Training',
                               training_variables: TrainingVariables):
-        for model in models:
-            assert isinstance(model, VFunction)
+        models = cast(Iterable[VFunction], models)
+
         # value function learning
         target_v = training.compute_target(training_variables)
 

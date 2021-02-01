@@ -6,53 +6,20 @@ from dataclasses import dataclass
 import gym
 import numpy as np
 
-from typing import Callable, Union
+from typing import cast, Callable, Union
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import StateActionQuantileFunctionBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction, Model
+from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
-
-
-def risk_neutral_measure(tau):
-    return tau
-
-
-class DefaultQuantileFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        risk_measure_function = kwargs['risk_measure_function']
-        return IQNQuantileFunction(scope_name,
-                                   env_info.action_dim,
-                                   algorithm_params.embedding_dim,
-                                   K=algorithm_params.K,
-                                   risk_measure_function=risk_measure_function)
-
-
-class DefaultQuantileSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
-                     **kwargs) -> nn.solvers.Solver:
-        return NS.Adam(algorithm_params.learning_rate, eps=1e-2 / algorithm_params.batch_size)
-
-
-class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,
-                            env_info: EnvironmentInfo,
-                            algorithm_params: AlgorithmParam,
-                            **kwargs) -> ReplayBuffer:
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -103,6 +70,43 @@ class MunchausenIQNParam(AlgorithmParam):
         self._assert_negative(self.clipping_value, 'clipping_value')
 
 
+def risk_neutral_measure(tau):
+    return tau
+
+
+class DefaultQuantileFunctionBuilder(StateActionQuantileFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: MunchausenIQNParam,
+                    **kwargs) -> StateActionQuantileFunction:
+        assert isinstance(algorithm_params, MunchausenIQNParam)
+        risk_measure_function = kwargs['risk_measure_function']
+        return IQNQuantileFunction(scope_name,
+                                   env_info.action_dim,
+                                   algorithm_params.embedding_dim,
+                                   K=algorithm_params.K,
+                                   risk_measure_function=risk_measure_function)
+
+
+class DefaultQuantileSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: MunchausenIQNParam,
+                     **kwargs) -> nn.solvers.Solver:
+        assert isinstance(algorithm_params, MunchausenIQNParam)
+        return NS.Adam(algorithm_params.learning_rate, eps=1e-2 / algorithm_params.batch_size)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,  # type: ignore[override]
+                            env_info: EnvironmentInfo,
+                            algorithm_params: MunchausenIQNParam,
+                            **kwargs) -> ReplayBuffer:
+        assert isinstance(algorithm_params, MunchausenIQNParam)
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+
+
 class MunchausenIQN(Algorithm):
     '''Munchausen-IQN algorithm implementation.
 
@@ -111,11 +115,23 @@ class MunchausenIQN(Algorithm):
     For detail see: https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf
     '''
 
+    _params: MunchausenIQNParam
+    _quantile_function: StateActionQuantileFunction
+    _target_quantile_function: StateActionQuantileFunction
+    _quantile_function_solver: nn.solver.Solver
+    _replay_buffer: ReplayBuffer
+
+    _environment_explorer: EnvironmentExplorer
+    _quantile_function_trainer: ModelTrainer
+
+    _eval_state_var: nn.Variable
+    _a_greedy: nn.Variable
+
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: MunchausenIQNParam = MunchausenIQNParam(),
                  risk_measure_function: Callable[[nn.Variable], nn.Variable] = risk_neutral_measure,
-                 quantile_function_builder: ModelBuilder = DefaultQuantileFunctionBuilder(),
+                 quantile_function_builder: StateActionQuantileFunctionBuilder = DefaultQuantileFunctionBuilder(),
                  quantile_solver_builder: SolverBuilder = DefaultQuantileSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(MunchausenIQN, self).__init__(env_or_env_info, params=params)
@@ -126,12 +142,10 @@ class MunchausenIQN(Algorithm):
         kwargs = {}
         kwargs['risk_measure_function'] = risk_measure_function
         self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._params, **kwargs)
-        self._target_quantile_function = self._quantile_function.deepcopy('target_quantile_function')
-        assert isinstance(self._quantile_function, StateActionQuantileFunction)
-        assert isinstance(self._target_quantile_function, StateActionQuantileFunction)
+        self._target_quantile_function = cast(StateActionQuantileFunction,
+                                              self._quantile_function.deepcopy('target_quantile_function'))
 
-        self._quantile_function_solver = {
-            self._quantile_function.scope_name: quantile_solver_builder(self._env_info, self._params)}
+        self._quantile_function_solver = quantile_solver_builder(self._env_info, self._params)
 
         self._replay_buffer = replay_buffer_builder(self._env_info, self._params)
 
@@ -180,7 +194,8 @@ class MunchausenIQN(Algorithm):
             dst_models=self._target_quantile_function,
             target_update_frequency=target_update_frequency,
             tau=1.0)
-        quantile_function_trainer.setup_training(self._quantile_function, self._quantile_function_solver, training)
+        quantile_function_trainer.setup_training(
+            self._quantile_function, {self._quantile_function.scope_name: self._quantile_function_solver}, training)
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction
@@ -242,5 +257,5 @@ class MunchausenIQN(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers.update(self._quantile_function_solver)
+        solvers[self._quantile_function.scope_name] = self._quantile_function_solver
         return solvers

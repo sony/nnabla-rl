@@ -1,4 +1,6 @@
-from typing import Iterable, Dict
+from typing import cast, Dict, Sequence
+
+import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -6,6 +8,7 @@ import nnabla.functions as NF
 from dataclasses import dataclass
 
 import nnabla_rl.functions as RF
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import StateActionQuantileFunction, Model
@@ -20,20 +23,20 @@ class IQNQuantileFunctionTrainerParam(TrainerParam):
 
 
 class IQNQuantileFunctionTrainer(ModelTrainer):
+    _params: IQNQuantileFunctionTrainerParam
+    _quantile_huber_loss: nn.Variable
+
     def __init__(self,
-                 env_info,
-                 params: IQNQuantileFunctionTrainerParam):
+                 env_info: EnvironmentInfo,
+                 params: IQNQuantileFunctionTrainerParam = IQNQuantileFunctionTrainerParam()):
         super(IQNQuantileFunctionTrainer, self).__init__(env_info, params)
 
-        # Training loss/output
-        self._quantile_huber_loss = None
-
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict:
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
         training_variables.a_current.d = batch.a_current
         training_variables.reward.d = batch.reward
@@ -52,11 +55,11 @@ class IQNQuantileFunctionTrainer(ModelTrainer):
         return {}
 
     def _build_training_graph(self,
-                              models: Iterable[Model],
+                              models: Sequence[Model],
                               training: 'Training',
                               training_variables: TrainingVariables):
-        for model in models:
-            assert isinstance(model, StateActionQuantileFunction)
+        models = cast(Sequence[StateActionQuantileFunction], models)
+
         kwargs = {}
         kwargs['K'] = self._params.K
         kwargs['N_prime'] = self._params.N_prime

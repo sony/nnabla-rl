@@ -7,49 +7,20 @@ from dataclasses import dataclass
 import numpy as np
 
 import gym
-from typing import Union
+from typing import cast, Union
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import QFunctionBuilder, DeterministicPolicyBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.model_trainers.model_trainer import Training
-from nnabla_rl.models import TD3QFunction, TD3Policy, QFunction, DeterministicPolicy, Model
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, Training
+from nnabla_rl.models import TD3QFunction, TD3Policy, QFunction, DeterministicPolicy
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
-
-
-class DefaultCriticBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        target_policy = kwargs.get('target_policy')
-        return TD3QFunction(scope_name, optimal_policy=target_policy)
-
-
-class DefaultActorBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        max_action_value = float(env_info.action_space.high[0])
-        return TD3Policy(scope_name, env_info.action_dim, max_action_value=max_action_value)
-
-
-class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self, env_info, algorithm_params, **kwargs):
-        return NS.Adam(alpha=algorithm_params.learning_rate)
-
-
-class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self, env_info, algorithm_params, **kwargs):
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -63,29 +34,71 @@ class DDPGParam(AlgorithmParam):
     exploration_noise_sigma: float = 0.1
 
 
+class DefaultCriticBuilder(QFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: DDPGParam,
+                    **kwargs) -> QFunction:
+        target_policy = kwargs.get('target_policy')
+        return TD3QFunction(scope_name, optimal_policy=target_policy)
+
+
+class DefaultActorBuilder(DeterministicPolicyBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: DDPGParam,
+                    **kwargs) -> DeterministicPolicy:
+        max_action_value = float(env_info.action_space.high[0])
+        return TD3Policy(scope_name, env_info.action_dim, max_action_value=max_action_value)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: DDPGParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,  # type: ignore[override]
+                            env_info: EnvironmentInfo,
+                            algorithm_params: DDPGParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+
+
 class DDPG(Algorithm):
+    _params: DDPGParam
+    _q: QFunction
+    _q_solver: nn.solver.Solver
+    _target_q: QFunction
+    _pi: DeterministicPolicy
+    _pi_solver: nn.solver.Solver
+    _target_pi: DeterministicPolicy
+    _replay_buffer: ReplayBuffer
+    _environment_explorer: EnvironmentExplorer
+    _q_function_trainer: ModelTrainer
+    _policy_trainer: ModelTrainer
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: DDPGParam = DDPGParam(),
-                 critic_builder: ModelBuilder = DefaultCriticBuilder(),
+                 critic_builder: QFunctionBuilder = DefaultCriticBuilder(),
                  critic_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 actor_builder: ModelBuilder = DefaultActorBuilder(),
+                 actor_builder: DeterministicPolicyBuilder = DefaultActorBuilder(),
                  actor_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(DDPG, self).__init__(env_or_env_info, params=params)
 
         self._q = critic_builder(scope_name="q", env_info=self._env_info, algorithm_params=self._params)
-        self._q_solver = {self._q.scope_name: critic_solver_builder(
-            env_info=self._env_info, algorithm_params=self._params)}
-        self._target_q = self._q.deepcopy('target_' + self._q.scope_name)
-        assert isinstance(self._q, QFunction)
-        assert isinstance(self._target_q, QFunction)
+        self._q_solver = critic_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
 
         self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        self._pi_solver = {self._pi.scope_name: actor_solver_builder(
-            env_info=self._env_info, algorithm_params=self._params)}
-        self._target_pi = self._pi.deepcopy("target_" + self._pi.scope_name)
-        assert isinstance(self._pi, DeterministicPolicy)
-        assert isinstance(self._target_pi, DeterministicPolicy)
+        self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy("target_" + self._pi.scope_name))
 
         self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_params=self._params)
 
@@ -130,7 +143,7 @@ class DDPG(Algorithm):
             dst_models=self._target_q,
             target_update_frequency=1,
             tau=self._params.tau)
-        q_function_trainer.setup_training(self._q, self._q_solver, training)
+        q_function_trainer.setup_training(self._q, {self._q.scope_name: self._q_solver}, training)
         copy_network_parameters(self._q.get_parameters(), self._target_q.get_parameters())
         return q_function_trainer
 
@@ -148,7 +161,7 @@ class DDPG(Algorithm):
             target_update_frequency=1,
             tau=self._params.tau
         )
-        policy_trainer.setup_training(self._pi, self._pi_solver, training)
+        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
         copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), tau=1.0)
 
         return policy_trainer
@@ -204,8 +217,8 @@ class DDPG(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers.update(self._pi_solver)
-        solvers.update(self._q_solver)
+        solvers[self._pi.scope_name] = self._pi_solver
+        solvers[self._q.scope_name] = self._q_solver
         return solvers
 
     @property

@@ -1,4 +1,4 @@
-from typing import Iterable, Dict
+from typing import cast, Iterable, Dict
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -21,19 +21,20 @@ class KLDVariationalAutoEncoderTrainerParam(TrainerParam):
 
 
 class KLDVariationalAutoEncoderTrainer(ModelTrainer):
-    def __init__(self, env_info: EnvironmentInfo,
-                 params: KLDVariationalAutoEncoderTrainerParam):
-        super(KLDVariationalAutoEncoderTrainer, self).__init__(env_info, params)
+    _params: KLDVariationalAutoEncoderTrainerParam
+    _vae_loss: nn.Variable  # Training loss/output
 
-        # Training loss/output
-        self._vae_loss = None
+    def __init__(self,
+                 env_info: EnvironmentInfo,
+                 params: KLDVariationalAutoEncoderTrainerParam = KLDVariationalAutoEncoderTrainerParam()):
+        super(KLDVariationalAutoEncoderTrainer, self).__init__(env_info, params)
 
     def _update_model(self,
                       models: Iterable[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict:
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
         training_variables.a_current.d = batch.a_current
 
@@ -45,15 +46,13 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
 
-        errors = {}
-        return errors
+        return {}
 
     def _build_training_graph(self,
                               models: Iterable[Model],
                               training: 'Training',
                               training_variables: TrainingVariables):
-        for model in models:
-            assert isinstance(model, VariationalAutoEncoder)
+        models = cast(Iterable[VariationalAutoEncoder], models)
         batch_size = training_variables.batch_size
 
         self._vae_loss = 0

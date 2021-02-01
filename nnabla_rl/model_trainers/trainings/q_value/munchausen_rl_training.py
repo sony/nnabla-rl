@@ -23,6 +23,12 @@ def _tau_log_pi(q_k: nn.Variable, q_values: nn.Variable, max_q: nn.Variable, tau
 
 
 class _QFunctionMunchausenRLTraining(Training):
+    _target_function: QFunction
+    _tau: float
+    _alpha: float
+    _clip_min: float
+    _clip_max: float
+
     def __init__(self, target_function: QFunction, tau: float, alpha: float, clip_min: float, clip_max: float):
         self._target_function = target_function
         self._tau = tau
@@ -55,6 +61,12 @@ class _QFunctionMunchausenRLTraining(Training):
 
 
 class _StateActionQuantileFunctionMunchausenRLTraining(Training):
+    _target_function: StateActionQuantileFunction
+    _tau: float
+    _alpha: float
+    _clip_min: float
+    _clip_max: float
+
     def __init__(self, target_function: StateActionQuantileFunction,
                  tau: float, alpha: float, clip_min: float, clip_max: float):
         self._target_function = target_function
@@ -102,6 +114,8 @@ class _StateActionQuantileFunctionMunchausenRLTraining(Training):
 
 
 class MunchausenRLTraining(Training):
+    _delegate: Training
+
     def __init__(self, train_function: Model, target_function: Model,
                  tau: float = 0.03, alpha: float = 0.9, clip_min: float = -1.0, clip_max: float = 0.0):
         if type(train_function) is not type(target_function):

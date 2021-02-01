@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Dict, List, Optional, Union
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -11,53 +11,15 @@ import gym
 import numpy as np
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder, SolverBuilder
+from nnabla_rl.builders import QFunctionBuilder, StochasticPolicyBuilder, VariationalAutoEncoderBuilder, SolverBuilder
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
 from nnabla_rl.models import TD3QFunction, BEARPolicy, UnsquashedVariationalAutoEncoder, \
-    DeterministicPolicy, StochasticPolicy, QFunction, VariationalAutoEncoder, Model
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
+    DeterministicPolicy, StochasticPolicy, QFunction, VariationalAutoEncoder
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.functions as RF
-
-
-class DefaultQFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return TD3QFunction(scope_name)
-
-
-class DefaultPolicyBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return BEARPolicy(scope_name, env_info.action_dim)
-
-
-class DefaultVAEBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return UnsquashedVariationalAutoEncoder(scope_name,
-                                                env_info.state_dim,
-                                                env_info.action_dim,
-                                                env_info.action_dim*2)
-
-
-class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
-                     **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.learning_rate)
 
 
 @dataclass
@@ -77,9 +39,6 @@ class BEARParam(AlgorithmParam):
         mmd_type(str): kernel type used for MMD computation. laplacian or gaussian is supported. Defaults to gaussian.
         mmd_sigma(float): parameter used for adjusting the  MMD. Defaults to 20.0.
         warmup_iterations(int): Number of iterations until start updating the policy. Defaults to 20000
-        start_timesteps(int or None): Number of iterations to start training the networks.
-                                      Only used on online training and must be set on online training.
-                                      Defaults to None.
         batch_size(int or None): Number of iterations starting to train the networks. Defaults to None.
         use_mean_for_eval(bool): Use mean value instead of best action among the samples for evaluation
     '''
@@ -96,7 +55,6 @@ class BEARParam(AlgorithmParam):
     initial_lagrange_multiplier: Optional[float] = None
     fix_lagrange_multiplier: bool = False
     warmup_iterations: int = 20000
-    start_timesteps: int = None
     batch_size: int = 100
     use_mean_for_eval: bool = False
 
@@ -118,11 +76,46 @@ class BEARParam(AlgorithmParam):
             raise ValueError('num action samples must not be negative')
         if not (0 <= self.warmup_iterations):
             raise ValueError('warmup iterations must not be negative')
-        if self.start_timesteps is not None:
-            if not (0 <= self.start_timesteps):
-                raise ValueError('start timesteps must not be negative')
         if not (0 <= self.batch_size):
             raise ValueError('batch size must not be negative')
+
+
+class DefaultQFunctionBuilder(QFunctionBuilder):
+    def build_model(self,   # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: BEARParam,
+                    **kwargs) -> QFunction:
+        return TD3QFunction(scope_name)
+
+
+class DefaultPolicyBuilder(StochasticPolicyBuilder):
+    def build_model(self,   # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: BEARParam,
+                    **kwargs) -> StochasticPolicy:
+        return BEARPolicy(scope_name, env_info.action_dim)
+
+
+class DefaultVAEBuilder(VariationalAutoEncoderBuilder):
+    def build_model(self,   # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: BEARParam,
+                    **kwargs) -> VariationalAutoEncoder:
+        return UnsquashedVariationalAutoEncoder(scope_name,
+                                                env_info.state_dim,
+                                                env_info.action_dim,
+                                                env_info.action_dim*2)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: BEARParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
 
 
 class BEAR(Algorithm):
@@ -134,13 +127,31 @@ class BEAR(Algorithm):
 
     '''
 
+    _params: BEARParam
+    _q_ensembles: List[QFunction]
+    _q_solvers: Dict[str, nn.solver.Solver]
+    _target_q_ensembles: List[QFunction]
+    _pi: StochasticPolicy
+    _pi_solver: nn.solver.Solver
+    _target_pi: StochasticPolicy
+    _vae: VariationalAutoEncoder
+    _vae_solver: nn.solver.Solver
+    _lagrange: MT.policy_trainers.bear_policy_trainer.AdjustableLagrangeMultiplier
+    _lagrange_solver: nn.solver.Solver
+    _q_function_trainer: ModelTrainer
+    _vae_trainer: ModelTrainer
+    _policy_trainer: ModelTrainer
+    _eval_state_var: nn.Variable
+    _eval_action: nn.Variable
+    _eval_max_index: nn.Variable
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: BEARParam = BEARParam(),
-                 q_function_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_function_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 pi_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 pi_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  pi_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 vae_builder: ModelBuilder = DefaultVAEBuilder(),
+                 vae_builder: VariationalAutoEncoderBuilder = DefaultVAEBuilder(),
                  vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  lagrange_solver_builder: SolverBuilder = DefaultSolverBuilder()):
         super(BEAR, self).__init__(env_or_env_info, params=params)
@@ -150,7 +161,6 @@ class BEAR(Algorithm):
         self._target_q_ensembles = []
         for i in range(self._params.num_q_ensembles):
             q = q_function_builder(scope_name="q{}".format(i), env_info=self._env_info, algorithm_params=self._params)
-            assert isinstance(q, QFunction)
             target_q = q_function_builder(
                 scope_name="target_q{}".format(i), env_info=self._env_info, algorithm_params=self._params)
             self._q_ensembles.append(q)
@@ -158,23 +168,16 @@ class BEAR(Algorithm):
             self._target_q_ensembles.append(target_q)
 
         self._pi = pi_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        self._pi_solver = {self._pi.scope_name: pi_solver_builder(
-            env_info=self._env_info, algorithm_params=self._params)}
-        assert isinstance(self._pi, StochasticPolicy)
+        self._pi_solver = pi_solver_builder(env_info=self._env_info, algorithm_params=self._params)
         self._target_pi = pi_builder(scope_name="target_pi", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._target_pi, StochasticPolicy)
 
         self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_params=self._params)
-        self._vae_solver = {self._vae.scope_name: vae_solver_builder(
-            env_info=self._env_info, algorithm_params=self._params)}
+        self._vae_solver = vae_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+
         self._lagrange = MT.policy_trainers.bear_policy_trainer.AdjustableLagrangeMultiplier(
             scope_name="alpha",
             initial_value=self._params.initial_lagrange_multiplier)
         self._lagrange_solver = lagrange_solver_builder(env_info=self._env_info, algorithm_params=self._params)
-
-        self._q_function_trainer = None
-        self._vae_trainer = None
-        self._policy_trainer = None
 
     @eval_api
     def compute_eval_action(self, s):
@@ -229,7 +232,7 @@ class BEAR(Algorithm):
 
         training = MT.model_trainer.Training()
         squashed_action_vae = SquashedActionVAE(self._vae)
-        vae_trainer.setup_training(squashed_action_vae, self._vae_solver, training)
+        vae_trainer.setup_training(squashed_action_vae, {self._vae.scope_name: self._vae_solver}, training)
         return vae_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
@@ -298,7 +301,7 @@ class BEAR(Algorithm):
             dst_models=self._target_pi,
             target_update_frequency=1,
             tau=self._params.tau)
-        policy_trainer.setup_training(self._pi, self._pi_solver, training)
+        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
         copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), 1.0)
 
         return policy_trainer
@@ -337,10 +340,10 @@ class BEAR(Algorithm):
     def _solvers(self):
         solvers = {}
         solvers.update(self._q_solvers)
-        solvers.update(self._pi_solver)
-        solvers.update(self._vae_solver)
+        solvers[self._pi.scope_name] = self._pi_solver
+        solvers[self._vae.scope_name] = self._vae_solver
         if not self._params.fix_lagrange_multiplier:
-            solvers.update({self._lagrange.scope_name: self._lagrange_solver})
+            solvers.update[self._lagrange.scope_name] = self._lagrange_solver
         return solvers
 
     @property

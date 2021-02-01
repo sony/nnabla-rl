@@ -1,20 +1,22 @@
-from typing import Iterable, Dict, Union, Sequence
+from typing import cast, Iterable, Dict, Union, Sequence
 
 import nnabla as nn
 import nnabla.functions as NF
+
+import numpy as np
 
 from dataclasses import dataclass
 
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingVariables, ModelTrainer, TrainingBatch
 from nnabla_rl.models import Model, RewardFunction
-from nnabla_rl.utils.data import convert_to_list_if_not_iterable
+from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 
 @dataclass
 class GAILRewardFunctionTrainerParam(TrainerParam):
     batch_size: int = 1024
-    learning_rate: int = 3e-4
+    learning_rate: float = 3e-4
     entropy_coef: float = 0.001
 
     def __post_init__(self):
@@ -22,6 +24,8 @@ class GAILRewardFunctionTrainerParam(TrainerParam):
 
 
 class GAILRewardFunctionTrainer(ModelTrainer):
+    _params: GAILRewardFunctionTrainerParam
+
     def __init__(self, env_info, params=GAILRewardFunctionTrainerParam()):
         super(GAILRewardFunctionTrainer, self).__init__(env_info, params)
         self._binary_classification_loss = None
@@ -31,7 +35,7 @@ class GAILRewardFunctionTrainer(ModelTrainer):
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs):
+                      **kwargs) -> Dict[str, np.array]:
         s_curr_agent = batch.extra['s_current_agent']
         a_curr_agent = batch.extra['a_current_agent']
         s_next_agent = batch.extra['s_next_agent']
@@ -54,15 +58,13 @@ class GAILRewardFunctionTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
 
-        errors = {}
-        return errors
+        return {}
 
     def _build_training_graph(self, models: Union[Model, Sequence[Model]],
                               training: Training,
                               training_variables: TrainingVariables):
-        models = convert_to_list_if_not_iterable(models)
-        for model in models:
-            assert isinstance(model, RewardFunction)
+        models = convert_to_list_if_not_list(models)
+        models = cast(Sequence[RewardFunction], models)
 
         self._binary_classification_loss = 0
         for model in models:
@@ -101,6 +103,6 @@ class GAILRewardFunctionTrainer(ModelTrainer):
                      's_current_agent': s_current_agent_var,
                      'a_current_agent': a_current_agent_var,
                      's_next_agent': s_next_agent_var}
-        training_variables = TrainingVariables(extra=variables)
+        training_variables = TrainingVariables(batch_size, extra=variables)
 
         return training_variables

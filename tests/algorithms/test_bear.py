@@ -25,8 +25,7 @@ class TestBEAR(object):
         """
 
         dummy_env = E.DummyContinuous()
-        params = A.BEARParam(start_timesteps=100)
-        bear = A.BEAR(dummy_env, params=params)
+        bear = A.BEAR(dummy_env)
 
         with pytest.raises(NotImplementedError):
             bear.train_online(dummy_env, total_iterations=10)
@@ -68,7 +67,6 @@ class TestBEAR(object):
         num_mmd_actions = 5
         num_action_samples = 10
         warmup_iterations = 500
-        start_timesteps = 2000
         param = {'tau': tau,
                  'gamma': gamma,
                  'learning_rate': learning_rate,
@@ -76,8 +74,7 @@ class TestBEAR(object):
                  'num_q_ensembles': num_q_ensembles,
                  'num_mmd_actions': num_mmd_actions,
                  'num_action_samples': num_action_samples,
-                 'warmup_iterations': warmup_iterations,
-                 'start_timesteps': start_timesteps}
+                 'warmup_iterations': warmup_iterations}
 
         bear.update_algorithm_params(**param)
 
@@ -89,7 +86,6 @@ class TestBEAR(object):
         assert bear._params.num_mmd_actions == num_mmd_actions
         assert bear._params.num_action_samples == num_action_samples
         assert bear._params.warmup_iterations == warmup_iterations
-        assert bear._params.start_timesteps == start_timesteps
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
@@ -108,8 +104,6 @@ class TestBEAR(object):
             A.BEARParam(num_action_samples=-100)
         with pytest.raises(ValueError):
             A.BEARParam(warmup_iterations=-100)
-        with pytest.raises(ValueError):
-            A.BEARParam(start_timesteps=-100)
 
 
 if __name__ == "__main__":

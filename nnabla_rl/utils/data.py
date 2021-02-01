@@ -25,8 +25,8 @@ def is_array_like(x):
     return hasattr(x, "__len__")
 
 
-def convert_to_list_if_not_iterable(value: Union[Iterable[T], T]) -> List[T]:
-    if is_array_like(value):
+def convert_to_list_if_not_list(value: Union[Iterable[T], T]) -> List[T]:
+    if isinstance(value, Iterable):
         return list(value)
     else:
         return [value]

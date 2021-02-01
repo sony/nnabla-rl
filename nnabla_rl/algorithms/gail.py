@@ -11,9 +11,11 @@ import random
 import gym
 from typing import Union, Optional
 
+from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder, SolverBuilder, PreprocessorBuilder
+from nnabla_rl.builders import VFunctionBuilder, RewardFunctionBuilder, StochasticPolicyBuilder, \
+    SolverBuilder, PreprocessorBuilder
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
@@ -22,64 +24,10 @@ from nnabla_rl.algorithms.common_utils import compute_v_target_and_advantage, _S
     _StatePreprocessedVFunction, _StatePreprocessedRewardFunction
 from nnabla_rl.models \
     import GAILPolicy, GAILVFunction, GAILDiscriminator, StochasticPolicy, VFunction, RewardFunction, Model
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
-
-
-class DefaultPreprocessorBuilder(PreprocessorBuilder):
-    def build_preprocessor(self,
-                           scope_name: str,
-                           env_info: EnvironmentInfo,
-                           algorithm_params: AlgorithmParam,
-                           **kwargs) -> Preprocessor:
-        return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
-
-
-class DefaultPolicyBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return GAILPolicy(scope_name, env_info.action_dim)
-
-
-class DefaultVFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return GAILVFunction(scope_name)
-
-
-class DefaultRewardFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return GAILDiscriminator(scope_name)
-
-
-class DefaultVFunctionSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
-                     **kwargs) -> nn.solver.Solver:
-        assert isinstance(algorithm_params, GAILParam)
-        return NS.Adam(alpha=algorithm_params.vf_learning_rate)
-
-
-class DefaultRewardFunctionSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
-                     **kwargs) -> nn.solver.Solver:
-        assert isinstance(algorithm_params, GAILParam)
-        return NS.Adam(alpha=algorithm_params.discriminator_learning_rate)
 
 
 @dataclass
@@ -87,7 +35,7 @@ class GAILParam(AlgorithmParam):
     preprocess_state: bool = True
     act_deterministic_in_eval: bool = True
     discriminator_batch_size: int = 1024
-    discriminator_learning_rate: int = 3e-4
+    discriminator_learning_rate: float = 3e-4
     policy_update_interval: int = 1
     discriminator_update_interval: int = 3
     adversary_entropy_coef: float = 0.001
@@ -127,19 +75,88 @@ class GAILParam(AlgorithmParam):
         self._assert_positive(self.vf_learning_rate, 'vf_learning_rate')
 
 
+class DefaultPreprocessorBuilder(PreprocessorBuilder):
+    def build_preprocessor(self,  # type: ignore[override]
+                           scope_name: str,
+                           env_info: EnvironmentInfo,
+                           algorithm_params: GAILParam,
+                           **kwargs) -> Preprocessor:
+        return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
+
+
+class DefaultPolicyBuilder(StochasticPolicyBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: GAILParam,
+                    **kwargs) -> StochasticPolicy:
+        return GAILPolicy(scope_name, env_info.action_dim)
+
+
+class DefaultVFunctionBuilder(VFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: GAILParam,
+                    **kwargs) -> VFunction:
+        return GAILVFunction(scope_name)
+
+
+class DefaultRewardFunctionBuilder(RewardFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: GAILParam,
+                    **kwargs) -> RewardFunction:
+        return GAILDiscriminator(scope_name)
+
+
+class DefaultVFunctionSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: GAILParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.vf_learning_rate)
+
+
+class DefaultRewardFunctionSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: GAILParam,
+                     **kwargs) -> nn.solver.Solver:
+        assert isinstance(algorithm_params, GAILParam)
+        return NS.Adam(alpha=algorithm_params.discriminator_learning_rate)
+
+
 class GAIL(Algorithm):
     """ Generative Adversarial Imitation Learning
         See: https://arxiv.org/abs/1606.03476.pdf
     """
 
+    _params: GAILParam
+    _v_function: VFunction
+    _v_function_solver: nn.solver.Solver
+    _policy: StochasticPolicy
+    _discriminator: RewardFunction
+    _discriminator_solver: nn.solver.Solver
+    _environment_explorer: EnvironmentExplorer
+    _v_function_trainer: ModelTrainer
+    _policy_trainer: ModelTrainer
+    _discriminator_trainer: ModelTrainer
+
+    _s_var_label: nn.Variable
+    _s_next_var_label: nn.Variable
+    _a_var_label: nn.Variable
+    _reward: nn.Variable
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  expert_buffer: ReplayBuffer,
                  params=GAILParam(),
-                 v_function_builder: ModelBuilder = DefaultVFunctionBuilder(),
+                 v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultVFunctionSolverBuilder(),
-                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
-                 reward_function_builder: ModelBuilder = DefaultRewardFunctionBuilder(),
-                 reward_solver_builder: ModelBuilder = DefaultRewardFunctionSolverBuilder(),
+                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
+                 reward_function_builder: RewardFunctionBuilder = DefaultRewardFunctionBuilder(),
+                 reward_solver_builder: SolverBuilder = DefaultRewardFunctionSolverBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
         super(GAIL, self).__init__(env_or_env_info, params=params)
         if self._env_info.is_discrete_action_env():
@@ -152,27 +169,21 @@ class GAIL(Algorithm):
         discriminator = reward_function_builder("discriminator", self._env_info, self._params)
 
         if self._params.preprocess_state:
+            if state_preprocessor_builder is None:
+                raise ValueError('State preprocessing is enabled but no preprocessor builder is given')
             pi_v_preprocessor = state_preprocessor_builder('pi_v_preprocessor', self._env_info, self._params)
-            self._v_function = _StatePreprocessedVFunction(v_function=v_function, preprocessor=pi_v_preprocessor)
-            self._policy = _StatePreprocessedPolicy(policy=policy, preprocessor=pi_v_preprocessor)
-            self._pi_v_state_preprocessor = pi_v_preprocessor
+            v_function = _StatePreprocessedVFunction(v_function=v_function, preprocessor=pi_v_preprocessor)
+            policy = _StatePreprocessedPolicy(policy=policy, preprocessor=pi_v_preprocessor)
             r_preprocessor = state_preprocessor_builder('r_preprocessor', self._env_info, self._params)
-            self._discriminator = _StatePreprocessedRewardFunction(
-                reward_function=discriminator, preprocessor=r_preprocessor)
+            discriminator = _StatePreprocessedRewardFunction(reward_function=discriminator, preprocessor=r_preprocessor)
+            self._pi_v_state_preprocessor = pi_v_preprocessor
             self._r_state_preprocessor = r_preprocessor
-        else:
-            self._v_function = v_function
-            self._policy = policy
-            self._discriminator = discriminator
+        self._v_function = v_function
+        self._policy = policy
+        self._discriminator = discriminator
 
-        assert isinstance(self._policy, StochasticPolicy)
-        assert isinstance(self._v_function, VFunction)
-        assert isinstance(self._discriminator, RewardFunction)
-
-        self._v_function_solver = {self._v_function.scope_name: v_solver_builder(self._env_info, self._params)}
-
-        self._discriminator_solver = \
-            {self._discriminator.scope_name: reward_solver_builder(self._env_info, self._params)}
+        self._v_function_solver = v_solver_builder(self._env_info, self._params)
+        self._discriminator_solver = reward_solver_builder(self._env_info, self._params)
 
     def _before_training_start(self, env_or_buffer):
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
@@ -202,7 +213,8 @@ class GAIL(Algorithm):
             params=v_function_trainer_params)
 
         training = MT.v_value_trainings.MonteCarloVValueTraining()
-        v_function_trainer.setup_training(self._v_function, self._v_function_solver, training)
+        v_function_trainer.setup_training(
+            self._v_function, {self._v_function.scope_name: self._v_function_solver}, training)
         return v_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
@@ -227,7 +239,8 @@ class GAIL(Algorithm):
         reward_function_trainer = MT.reward_trainiers.GAILRewardFunctionTrainer(env_info=self._env_info,
                                                                                 params=reward_function_trainer_params)
         training = MT.model_trainer.Training()
-        reward_function_trainer.setup_training(self._discriminator, self._discriminator_solver, training)
+        reward_function_trainer.setup_training(
+            self._discriminator, {self._discriminator.scope_name: self._discriminator_solver}, training)
 
         return reward_function_trainer
 
@@ -439,8 +452,8 @@ class GAIL(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers.update(self._v_function_solver)
-        solvers.update(self._discriminator_solver)
+        solvers[self._v_function.scope_name] = self._v_function_solver
+        solvers[self._discriminator.scope_name] = self._discriminator_solver
         return solvers
 
     @property

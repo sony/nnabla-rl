@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABCMeta
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterable, Optional
 
 import numpy as np
 
@@ -186,7 +186,7 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
 
     _n_action: int
     _k: float
-    _risk_measure_function: Callable[[nn.Variable], nn.Variable]
+    # _risk_measure_funciton: Callable[[nn.Variable], nn.Variable]
 
     def __init__(self,
                  scope_name: str,
@@ -262,9 +262,9 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
         one_hot = NF.broadcast(one_hot, shape=shape)
         return one_hot
 
-    def _sample_tau(self, shape: Optional[List] = None) -> nn.Variable:
+    def _sample_tau(self, shape: Optional[Iterable] = None) -> nn.Variable:
         return RF.rand(low=0.0, high=1.0, shape=shape)
 
-    def _sample_risk_measured_tau(self, shape: Optional[List]) -> nn.Variable:
+    def _sample_risk_measured_tau(self, shape: Optional[Iterable]) -> nn.Variable:
         tau = self._sample_tau(shape)
         return self._risk_measure_function(tau)

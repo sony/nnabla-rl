@@ -1,10 +1,13 @@
-from typing import Optional, Iterable, Dict
+from typing import cast, Dict, Optional, Sequence
+
+import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
 
 from dataclasses import dataclass
 
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy
@@ -21,16 +24,20 @@ class SPGPolicyTrainer(ModelTrainer):
     Stochastic Policy Gradient is widely known as 'Policy Gradient algorithm'
     '''
 
-    def __init__(self, env_info, params=SPGPolicyTrainerParam()):
+    _params: SPGPolicyTrainerParam
+    _pi_loss: nn.Variable
+
+    def __init__(self,
+                 env_info: EnvironmentInfo,
+                 params: SPGPolicyTrainerParam = SPGPolicyTrainerParam()):
         super(SPGPolicyTrainer, self).__init__(env_info, params)
-        self._pi_loss = None
 
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs):
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
         training_variables.a_current.d = batch.a_current
 
@@ -39,19 +46,19 @@ class SPGPolicyTrainer(ModelTrainer):
             solver.zero_grad()
         self._pi_loss.forward(clear_no_need_grad=True)
         self._pi_loss.backward(clear_buffer=True)
+
         for solver in solvers.values():
             if self._params.grad_clip_norm is not None:
                 solver.clip_grad_by_norm(self._params.grad_clip_norm)
             solver.update()
 
-        errors = {}
-        return errors
+        return {}
 
-    def _build_training_graph(self, models: Iterable[Model],
+    def _build_training_graph(self,
+                              models: Sequence[Model],
                               training: Training,
                               training_variables: TrainingVariables):
-        if not isinstance(models[0], StochasticPolicy):
-            raise ValueError
+        models = cast(Sequence[StochasticPolicy], models)
 
         # Actor optimization graph
         target_value = training.compute_target(training_variables)

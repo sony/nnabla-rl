@@ -1,5 +1,5 @@
 import copy
-from typing import Dict
+from typing import Dict, Union
 
 import nnabla as nn
 
@@ -36,9 +36,10 @@ class Model(object):
             parameters (OrderedDict): Parameter map.
         '''
         with nn.parameter_scope(self.scope_name):
-            return nn.get_parameters(grad_only=grad_only)
+            parameters: Dict[str, nn.Variable] = nn.get_parameters(grad_only=grad_only)
+            return parameters
 
-    def save_parameters(self, filepath: str) -> None:
+    def save_parameters(self, filepath: Union[str, pathlib.Path]) -> None:
         '''save_parameters
         Save model parameters to given filepath.
 
@@ -50,7 +51,7 @@ class Model(object):
         with nn.parameter_scope(self.scope_name):
             nn.save_parameters(path=filepath)
 
-    def load_parameters(self, filepath: str) -> None:
+    def load_parameters(self, filepath: Union[str, pathlib.Path]) -> None:
         '''load_parameters
         Load model parameters from given filepath.
 

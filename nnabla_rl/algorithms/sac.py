@@ -6,52 +6,19 @@ from dataclasses import dataclass
 import numpy as np
 
 import gym
-from typing import Union
+from typing import cast, Dict, List, Optional, Union
 
+from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
-from nnabla_rl.builders import ModelBuilder, SolverBuilder, ReplayBufferBuilder
+from nnabla_rl.builders import StochasticPolicyBuilder, QFunctionBuilder, SolverBuilder, ReplayBufferBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.copy import copy_network_parameters
-from nnabla_rl.models import SACQFunction, SACPolicy, QFunction, StochasticPolicy, Model
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch
+from nnabla_rl.models import SACQFunction, SACPolicy, QFunction, StochasticPolicy
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
-
-
-class DefaultQFunctionBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return SACQFunction(scope_name)
-
-
-class DefaultPolicyBuilder(ModelBuilder):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
-                    **kwargs) -> Model:
-        return SACPolicy(scope_name, env_info.action_dim)
-
-
-class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
-                     **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.learning_rate)
-
-
-class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,
-                            env_info: EnvironmentInfo,
-                            algorithm_params: AlgorithmParam,
-                            **kwargs) -> ReplayBuffer:
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 @dataclass
@@ -61,8 +28,8 @@ class SACParam(AlgorithmParam):
     learning_rate: float = 3.0*1e-4
     environment_steps: int = 1
     gradient_steps: int = 1
-    target_entropy: float = None
-    initial_temperature: float = None
+    target_entropy: Optional[float] = None
+    initial_temperature: Optional[float] = None
     fix_temperature: bool = False
     batch_size: int = 256
     start_timesteps: int = 10000
@@ -70,23 +37,49 @@ class SACParam(AlgorithmParam):
 
     def __post_init__(self):
         '''__post_init__
-
-        Check the set values are in valid range.
-
+        Check set values are in valid range.
         '''
-        if not ((0.0 <= self.tau) & (self.tau <= 1.0)):
-            raise ValueError('tau must lie between [0.0, 1.0]')
-        if not ((0.0 <= self.gamma) & (self.gamma <= 1.0)):
-            raise ValueError('gamma must lie between [0.0, 1.0]')
-        if not (0 < self.gradient_steps):
-            raise ValueError('gradient steps must be greater than 0')
-        if not (0 < self.environment_steps):
-            raise ValueError('environment steps must be greater than 0')
-        if (self.initial_temperature is not None):
-            if (self.initial_temperature <= 0.0):
-                raise ValueError('temperature must be greater than 0')
-        if not (0 <= self.start_timesteps):
-            raise ValueError('start_timesteps must not be negative')
+        self._assert_between(self.tau, 0.0, 1.0, 'tau')
+        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
+        self._assert_positive(self.gradient_steps, 'gradient_steps')
+        self._assert_positive(self.environment_steps, 'environment_steps')
+        if self.initial_temperature is not None:
+            self._assert_positive(self.initial_temperature, 'initial_temperature')
+        self._assert_positive(self.start_timesteps, 'start_timesteps')
+
+
+class DefaultQFunctionBuilder(QFunctionBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: SACParam,
+                    **kwargs) -> QFunction:
+        return SACQFunction(scope_name)
+
+
+class DefaultPolicyBuilder(StochasticPolicyBuilder):
+    def build_model(self,  # type: ignore[override]
+                    scope_name: str,
+                    env_info: EnvironmentInfo,
+                    algorithm_params: SACParam,
+                    **kwargs) -> StochasticPolicy:
+        return SACPolicy(scope_name, env_info.action_dim)
+
+
+class DefaultSolverBuilder(SolverBuilder):
+    def build_solver(self,  # type: ignore[override]
+                     env_info: EnvironmentInfo,
+                     algorithm_params: SACParam,
+                     **kwargs) -> nn.solver.Solver:
+        return NS.Adam(alpha=algorithm_params.learning_rate)
+
+
+class DefaultReplayBufferBuilder(ReplayBufferBuilder):
+    def build_replay_buffer(self,  # type: ignore[override]
+                            env_info: EnvironmentInfo,
+                            algorithm_params: SACParam,
+                            **kwargs) -> ReplayBuffer:
+        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
 
 
 class SAC(Algorithm):
@@ -104,29 +97,45 @@ class SAC(Algorithm):
 
     '''
 
+    _params: SACParam
+    _q1: QFunction
+    _q2: QFunction
+    _train_q_functions: List[QFunction]
+    _train_q_solvers: Dict[str, nn.solver.Solver]
+    _target_q_functions: List[QFunction]
+
+    _pi: StochasticPolicy
+    _temperature: MT.policy_trainers.soft_policy_trainer.AdjustableTemperature
+    _temperature_solver: Optional[nn.solver.Solver]
+    _replay_buffer: ReplayBuffer
+
+    _environment_explorer: EnvironmentExplorer
+    _policy_trainer: ModelTrainer
+    _q_function_trainer: ModelTrainer
+
+    _eval_state_var: nn.Variable
+    _eval_action: nn.Variable
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  params: SACParam = SACParam(),
-                 q_function_builder: ModelBuilder = DefaultQFunctionBuilder(),
+                 q_function_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder = DefaultPolicyBuilder(),
+                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(SAC, self).__init__(env_or_env_info, params=params)
 
         self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._q1, QFunction)
         self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._q2, QFunction)
-        train_q_functions = [self._q1, self._q2]
-        self._train_q_functions = train_q_functions
-        self._train_q_solvers = {q.scope_name: q_solver_builder(
-            self._env_info, self._params) for q in train_q_functions}
-        self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in train_q_functions]
+        self._train_q_functions = [self._q1, self._q2]
+        self._train_q_solvers = {q.scope_name: q_solver_builder(self._env_info, self._params)
+                                 for q in self._train_q_functions}
+        self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
+                                    for q in self._train_q_functions]
 
         self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        assert isinstance(self._pi, StochasticPolicy)
-        self._pi_solver = {self._pi.scope_name: policy_solver_builder(self._env_info, self._params)}
+        self._pi_solver = policy_solver_builder(self._env_info, self._params)
 
         self._temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
             scope_name='temperature',
@@ -173,7 +182,7 @@ class SAC(Algorithm):
             q_functions=[self._q1, self._q2])
 
         training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._pi, self._pi_solver, training)
+        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
@@ -256,8 +265,8 @@ class SAC(Algorithm):
 
     def _solvers(self):
         solvers = {}
-        solvers.update(self._pi_solver)
+        solvers[self._pi.scope_name] = self._pi_solver
         solvers.update(self._train_q_solvers)
         if self._temperature_solver is not None:
-            solvers.update({self._temperature.scope_name: self._temperature_solver})
+            solvers[self._temperature.scope_name] = self._temperature_solver
         return solvers

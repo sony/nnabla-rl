@@ -1,4 +1,4 @@
-from typing import Iterable, Dict
+from typing import cast, Dict, Sequence
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -21,7 +21,13 @@ class BCQPerturbatorTrainerParam(TrainerParam):
 
 
 class BCQPerturbatorTrainer(ModelTrainer):
-    def __init__(self, env_info: EnvironmentInfo,
+    _params: BCQPerturbatorTrainerParam
+    _q_function: QFunction
+    _vae: VariationalAutoEncoder
+    _perturbator_loss: nn.Variable
+
+    def __init__(self,
+                 env_info: EnvironmentInfo,
                  params: BCQPerturbatorTrainerParam,
                  q_function: QFunction,
                  vae: VariationalAutoEncoder):
@@ -29,11 +35,8 @@ class BCQPerturbatorTrainer(ModelTrainer):
         self._q_function = q_function
         self._vae = vae
 
-        # Training loss/output
-        self._perturbator_loss = None
-
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
@@ -48,15 +51,15 @@ class BCQPerturbatorTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
 
-        errors = {}
+        errors: Dict = {}
         return errors
 
     def _build_training_graph(self,
-                              models: Iterable[Model],
+                              models: Sequence[Model],
                               training: 'Training',
                               training_variables: TrainingVariables):
-        for model in models:
-            assert isinstance(model, Perturbator)
+        assert training_variables.s_current is not None
+        models = cast(Sequence[Perturbator], models)
         batch_size = training_variables.batch_size
 
         self._perturbator_loss = 0

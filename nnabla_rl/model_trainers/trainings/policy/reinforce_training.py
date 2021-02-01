@@ -6,9 +6,10 @@ from nnabla_rl.model_trainers.model_trainer import TrainingVariables, Training, 
 
 
 class REINFORCETraining(Training):
+    _target_return: nn.Variable
+
     def __init__(self):
         super(REINFORCETraining, self).__init__()
-        self._target_return = None
 
     def setup_batch(self, batch: TrainingBatch):
         target_return = batch.extra['target_return']
@@ -20,8 +21,8 @@ class REINFORCETraining(Training):
         self._target_return.d = target_return
         return batch
 
-    def compute_target(self, training_variables: TrainingVariables) -> nn.Variable:
+    def compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:
         batch_size = training_variables.batch_size
-        if self._target_return is None or self._target_return.shape[0] != batch_size:
+        if not hasattr(self, '_target_return') or self._target_return.shape[0] != batch_size:
             self._target_return = nn.Variable((batch_size, 1))
         return self._target_return

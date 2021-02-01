@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
-from typing import Optional, Iterable, Union, Dict
+from typing import Dict, Optional, Sequence, Union
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -11,7 +11,7 @@ import nnabla as nn
 from nnabla_rl.parameter import Parameter
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import Model
-from nnabla_rl.utils.data import convert_to_list_if_not_iterable
+from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 
 @dataclass
@@ -20,47 +20,108 @@ class TrainerParam(Parameter):
         super(TrainerParam, self).__post_init__()
 
 
-@dataclass
 class TrainingBatch():
-    batch_size: int = -1
-    s_current: Optional[np.array] = None
-    a_current: Optional[np.array] = None
-    reward: Optional[np.array] = None
-    gamma: Optional[float] = None
-    non_terminal: Optional[np.array] = None
-    s_next: Optional[np.array] = None
-    weight: Optional[np.array] = None
-    extra: Dict[str, np.array] = field(default_factory=dict)
+    batch_size: int
+    s_current: np.array
+    a_current: np.array
+    reward: np.array
+    gamma: float
+    non_terminal: np.array
+    s_next: np.array
+    weight: np.array
+    extra: Dict[str, np.array]
 
     # Used in n-step learning
-    next_step_batch: Optional['TrainingBatch'] = None
+    next_step_batch: Optional['TrainingBatch']
+
+    def __init__(self,
+                 batch_size: int,
+                 s_current: Optional[np.array] = None,
+                 a_current: Optional[np.array] = None,
+                 reward: Optional[np.array] = None,
+                 gamma: Optional[float] = None,
+                 non_terminal: Optional[np.array] = None,
+                 s_next: Optional[np.array] = None,
+                 weight: Optional[np.array] = None,
+                 extra: Dict[str, np.array] = {},
+                 next_step_batch: Optional['TrainingBatch'] = None):
+        assert 0 < batch_size
+        self.batch_size = batch_size
+        if s_current is not None:
+            self.s_current = s_current
+        if a_current is not None:
+            self.a_current = a_current
+        if reward is not None:
+            self.reward = reward
+        if gamma is not None:
+            self.gamma = gamma
+        if non_terminal is not None:
+            self.non_terminal = non_terminal
+        if s_next is not None:
+            self.s_next = s_next
+        if weight is not None:
+            self.weight = weight
+        self.extra: Dict[str, np.array] = extra
+        self.next_step_batch = next_step_batch
 
 
-@dataclass
 class TrainingVariables():
-    batch_size: int = -1
-    s_current: Optional[nn.Variable] = None
-    a_current: Optional[nn.Variable] = None
-    reward: Optional[nn.Variable] = None
-    gamma: Optional[nn.Variable] = None
-    non_terminal: Optional[nn.Variable] = None
-    s_next: Optional[nn.Variable] = None
-    weight: Optional[nn.Variable] = None
-    extra: Dict[str, nn.Variable] = field(default_factory=dict)
+    batch_size: int
+    s_current: nn.Variable
+    a_current: nn.Variable
+    reward: nn.Variable
+    gamma: nn.Variable
+    non_terminal: nn.Variable
+    s_next: nn.Variable
+    weight: nn.Variable
+
+    def __init__(self,
+                 batch_size: int,
+                 s_current: Optional[nn.Variable] = None,
+                 a_current: Optional[nn.Variable] = None,
+                 reward: Optional[nn.Variable] = None,
+                 gamma: Optional[nn.Variable] = None,
+                 non_terminal: Optional[nn.Variable] = None,
+                 s_next: Optional[nn.Variable] = None,
+                 weight: Optional[nn.Variable] = None,
+                 extra: Dict[str, nn.Variable] = {}):
+        assert 0 < batch_size
+        self.batch_size = batch_size
+        if s_current is not None:
+            self.s_current = s_current
+        if a_current is not None:
+            self.a_current = a_current
+        if reward is not None:
+            self.reward = reward
+        if gamma is not None:
+            self.gamma = gamma
+        if non_terminal is not None:
+            self.non_terminal = non_terminal
+        if s_next is not None:
+            self.s_next = s_next
+        if weight is not None:
+            self.weight = weight
+        self.extra: Dict[str, nn.Variable] = extra
 
 
 class ModelTrainer(metaclass=ABCMeta):
+    _env_info: EnvironmentInfo
+    _params: TrainerParam
+    _models: Sequence[Model]
+    _solvers: Dict[str, nn.solver.Solver]
+    _train_count: int
+    _training: 'Training'
+    _training_variables: TrainingVariables
+
     def __init__(self, env_info: EnvironmentInfo, params: TrainerParam):
         self._env_info = env_info
         self._params = params
 
-        self._models: Iterable[Model] = None
-        self._solvers: Dict[str, nn.solver.Solver] = None
-        self._train_count: int = 0
-        self._training: 'Training' = None
-        self._training_variables: TrainingVariables = None
+        self._models = []
+        self._solvers = {}
+        self._train_count = 0
 
-    def train(self, batch: TrainingBatch, **kwargs) -> Dict:
+    def train(self, batch: TrainingBatch, **kwargs) -> Dict[str, np.array]:
         if self._models is None:
             raise RuntimeError('Call setup_training() first. Model is not set!')
         self._train_count += 1
@@ -79,10 +140,10 @@ class ModelTrainer(metaclass=ABCMeta):
         return error_info
 
     def setup_training(self,
-                       models: Union[Model, Iterable[Model]],
+                       models: Union[Model, Sequence[Model]],
                        solvers: Dict[str, nn.solver.Solver],
                        training: 'Training'):
-        self._models = convert_to_list_if_not_iterable(models)
+        self._models = convert_to_list_if_not_list(models)
         self._solvers = solvers
         self._training = training
 
@@ -100,16 +161,16 @@ class ModelTrainer(metaclass=ABCMeta):
 
     @abstractmethod
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict:
+                      **kwargs) -> Dict[str, np.array]:
         raise NotImplementedError
 
     @abstractmethod
     def _build_training_graph(self,
-                              models: Iterable[Model],
+                              models: Sequence[Model],
                               training: 'Training',
                               training_variables: TrainingVariables):
         raise NotImplementedError

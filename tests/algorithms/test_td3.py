@@ -69,6 +69,18 @@ class TestTD3(object):
             A.TD3Param(gamma=-100.0)
         with pytest.raises(ValueError):
             A.TD3Param(gamma=10.0)
+        with pytest.raises(ValueError):
+            A.TD3Param(exploration_noise_sigma=-1.0)
+        with pytest.raises(ValueError):
+            A.TD3Param(train_action_noise_sigma=-1.0)
+        with pytest.raises(ValueError):
+            A.TD3Param(train_action_noise_abs=-1.0)
+        with pytest.raises(ValueError):
+            A.TD3Param(batch_size=-1)
+        with pytest.raises(ValueError):
+            A.TD3Param(start_timesteps=-1)
+        with pytest.raises(ValueError):
+            A.TD3Param(replay_buffer_size=-1)
 
     def test_update_algorithm_params(self):
         dummy_env = E.DummyContinuous()
@@ -80,7 +92,7 @@ class TestTD3(object):
         learning_rate = 1e-5
         exploration_noise_sigma = 1e-1 * 7.0
         train_action_noise_sigma = 1e-4
-        train_action_noise_abs = -5.0
+        train_action_noise_abs = 5.0
         batch_size = 1000
         start_timesteps = 10
         replay_buffer_size = 100

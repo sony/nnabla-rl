@@ -7,7 +7,7 @@ import nnabla.parametric_functions as NPF
 
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.q_function import QFunction
-from nnabla_rl.models.policy import Policy
+from nnabla_rl.models.policy import DeterministicPolicy
 
 
 class TD3QFunction(QFunction):
@@ -16,9 +16,9 @@ class TD3QFunction(QFunction):
     See: https://arxiv.org/abs/1802.09477
     """
 
-    _optimal_policy: Optional[Policy]
+    _optimal_policy: Optional[DeterministicPolicy]
 
-    def __init__(self, scope_name: str, optimal_policy: Optional[Policy] = None):
+    def __init__(self, scope_name: str, optimal_policy: Optional[DeterministicPolicy] = None):
         super(TD3QFunction, self).__init__(scope_name)
         self._optimal_policy = optimal_policy
 
@@ -43,7 +43,7 @@ class TD3QFunction(QFunction):
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
         assert self._optimal_policy, 'Optimal policy is not set!'
-        optimal_action = self._optimal_policy(s)
+        optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)
 
 
@@ -53,9 +53,9 @@ class SACQFunction(QFunction):
     See: https://arxiv.org/pdf/1801.01290.pdf
     """
 
-    _optimal_policy: Optional[Policy]
+    _optimal_policy: Optional[DeterministicPolicy]
 
-    def __init__(self, scope_name, optimal_policy: Optional[Policy] = None):
+    def __init__(self, scope_name, optimal_policy: Optional[DeterministicPolicy] = None):
         super(SACQFunction, self).__init__(scope_name)
         self._optimal_policy = optimal_policy
 
@@ -71,5 +71,5 @@ class SACQFunction(QFunction):
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
         assert self._optimal_policy, 'Optimal policy is not set!'
-        optimal_action = self._optimal_policy(s)
+        optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)

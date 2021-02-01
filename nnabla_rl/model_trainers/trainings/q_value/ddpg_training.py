@@ -1,16 +1,19 @@
-from typing import Iterable, Union
+from typing import cast, Sequence, Union
 
 import nnabla as nn
 
 import nnabla_rl.functions as RNF
 from nnabla_rl.model_trainers.model_trainer import Training, TrainingVariables
 from nnabla_rl.models import QFunction, DeterministicPolicy, Model
-from nnabla_rl.utils.data import convert_to_list_if_not_iterable
+from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 
 class _QFunctionDDPGTraining(Training):
+    _target_functions: Sequence[QFunction]
+    _target_policy: DeterministicPolicy
+
     def __init__(self,
-                 target_functions: Iterable[QFunction],
+                 target_functions: Sequence[QFunction],
                  target_policy: DeterministicPolicy):
         self._target_functions = target_functions
         self._target_policy = target_policy
@@ -33,16 +36,19 @@ class _QFunctionDDPGTraining(Training):
 
 
 class DDPGTraining(Training):
+    _delegate: Training
+
     def __init__(self,
-                 train_functions: Union[Model, Iterable[Model]],
-                 target_functions: Union[Model, Iterable[Model]],
+                 train_functions: Union[Model, Sequence[Model]],
+                 target_functions: Union[Model, Sequence[Model]],
                  target_policy: DeterministicPolicy):
-        train_functions = convert_to_list_if_not_iterable(train_functions)
-        target_functions = convert_to_list_if_not_iterable(target_functions)
+        train_functions = convert_to_list_if_not_list(train_functions)
+        target_functions = convert_to_list_if_not_list(target_functions)
 
         train_function = train_functions[0]
         target_function = target_functions[0]
         if isinstance(train_function, QFunction) and isinstance(target_function, QFunction):
+            target_functions = cast(Sequence[QFunction], target_functions)
             self._delegate = _QFunctionDDPGTraining(target_functions, target_policy)
         else:
             raise NotImplementedError(f'No training implementation for class: {train_function.__class__}')

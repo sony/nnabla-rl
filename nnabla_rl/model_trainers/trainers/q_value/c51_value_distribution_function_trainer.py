@@ -1,10 +1,13 @@
-from typing import Iterable, Dict
+from typing import cast, Dict, Sequence
+
+import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
 
 from dataclasses import dataclass
 
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import ValueDistributionFunction, Model
@@ -18,23 +21,24 @@ class C51ValueDistributionFunctionTrainerParam(TrainerParam):
 
 
 class C51ValueDistributionFunctionTrainer(ModelTrainer):
+    _params: C51ValueDistributionFunctionTrainerParam
+    _model: ValueDistributionFunction
+    # Training loss/output
+    _kl_loss: nn.Variable
+    _cross_entropy_loss: nn.Variable
+
     def __init__(self,
-                 env_info,
+                 env_info: EnvironmentInfo,
                  params: C51ValueDistributionFunctionTrainerParam):
         super(C51ValueDistributionFunctionTrainer, self).__init__(env_info, params)
-        self._model: ValueDistributionFunction = None
-        self._env_info = env_info
-
-        # Training loss/output
-        self._kl_loss = None
-        self._cross_entropy_loss = None
+        self._env_info: EnvironmentInfo = env_info
 
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict:
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
         training_variables.a_current.d = batch.a_current
         training_variables.reward.d = batch.reward
@@ -57,11 +61,11 @@ class C51ValueDistributionFunctionTrainer(ModelTrainer):
         return errors
 
     def _build_training_graph(self,
-                              models: Iterable[Model],
+                              models: Sequence[Model],
                               training: 'Training',
                               training_variables: TrainingVariables):
-        for model in models:
-            assert isinstance(model, ValueDistributionFunction)
+        models = cast(Sequence[ValueDistributionFunction], models)
+
         # Computing the target probabilities
         mi = self._training.compute_target(training_variables)
         mi.need_grad = False

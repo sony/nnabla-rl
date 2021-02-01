@@ -8,7 +8,7 @@ from nnabla_rl.environment_explorers.gaussian_explorer import GaussianExplorer, 
 class TestRandomGaussianActionStrategy(object):
     @pytest.mark.parametrize('clip_low', np.arange(start=-1.0, stop=0.0, step=0.25))
     @pytest.mark.parametrize("clip_high", np.arange(start=0.0, stop=1.0, step=0.25))
-    @pytest.mark.parametrize("sigma", np.arange(start=0.0, stop=5.0, step=1.0))
+    @pytest.mark.parametrize("sigma", np.arange(start=0.01, stop=5.0, step=1.0))
     def test_random_gaussian_action_selection(self, clip_low, clip_high, sigma):
         def policy_action_selector(state):
             return np.zeros(shape=state.shape), {'test': 'success'}

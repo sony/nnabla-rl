@@ -1,4 +1,4 @@
-from typing import Iterable, Dict
+from typing import Dict, Sequence, Optional
 
 import numpy as np
 
@@ -35,7 +35,7 @@ class AdjustableTemperature(Model):
 @dataclass
 class SoftPolicyTrainerParam(TrainerParam):
     fixed_temperature: bool = False
-    target_entropy: float = None
+    target_entropy: Optional[float] = None
 
     def __post_init__(self):
         super(SoftPolicyTrainerParam, self).__post_init__()
@@ -45,11 +45,18 @@ class SoftPolicyTrainer(ModelTrainer):
     '''Soft Policy Gradient style Policy Trainer
     '''
 
+    _q_functions: Sequence[QFunction]
+    _temperature_loss: nn.Variable
+    _temperature: AdjustableTemperature
+    _temperature_solver: Optional[nn.solver.Solver]
+    _params: SoftPolicyTrainerParam
+    _pi_loss: nn.Variable
+
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 q_functions: Iterable[QFunction],
+                 q_functions: Sequence[QFunction],
                  temperature: AdjustableTemperature,
-                 temperature_solver: nn.solver.Solver = None,
+                 temperature_solver: Optional[nn.solver.Solver] = None,
                  params: SoftPolicyTrainerParam = SoftPolicyTrainerParam()):
         super(SoftPolicyTrainer, self).__init__(env_info, params)
         if len(q_functions) < 2:
@@ -60,18 +67,15 @@ class SoftPolicyTrainer(ModelTrainer):
         self._temperature = temperature
         self._temperature_solver = temperature_solver
 
-        self._pi_loss = None
-        self._temperature_loss = None
-
         if self._params.target_entropy is None:
             self._params.target_entropy = -self._env_info.action_dim
 
     def _update_model(self,
-                      models: Iterable[Model],
+                      models: Sequence[Model],
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs):
+                      **kwargs) -> Dict[str, np.array]:
         training_variables.s_current.d = batch.s_current
 
         # update model
@@ -83,19 +87,20 @@ class SoftPolicyTrainer(ModelTrainer):
             solver.update()
         # Update temperature if requested
         if not self._params.fixed_temperature:
+            assert self._temperature_solver is not None
+            assert self._temperature_loss is not None
             self._temperature_solver.zero_grad()
             self._temperature_loss.forward()
             self._temperature_loss.backward()
             self._temperature_solver.update()
-        errors = {}
-        return errors
+        return {}
 
     def get_temperature(self) -> nn.Variable:
         # Will return exponentiated log temperature. To keep temperature always positive
         return self._temperature()
 
     def _build_training_graph(self,
-                              models: Iterable[Model],
+                              models: Sequence[Model],
                               training: Training,
                               training_variables: TrainingVariables):
         self._pi_loss = 0
