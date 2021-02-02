@@ -1,17 +1,23 @@
 import nnabla_rl.algorithms as A
 import nnabla_rl.environments as E
-from nnabla_rl.hook import as_hook
+from nnabla_rl.hook import Hook
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
-@as_hook(timing=1)
-def print_hello(algorithm):
-    print('hello!!')
+class PrintHello(Hook):
+    def __init__(self):
+        super().__init__(timing=1)
+
+    def on_hook_called(self, algorithm):
+        print('hello!!')
 
 
-@as_hook(timing=2)
-def print_only_on_even_iteration(algorithm):
-    print('even iteration -> {}'.format(algorithm.iteration_num))
+class PrintOnlyEvenIteraion(Hook):
+    def __init__(self):
+        super().__init__(timing=2)
+
+    def on_hook_called(self, algorithm):
+        print('even iteration -> {}'.format(algorithm.iteration_num))
 
 
 def main():
@@ -19,11 +25,11 @@ def main():
     empty_buffer = ReplayBuffer()
 
     dummy_algorithm = A.Dummy(dummy_env)
-    dummy_algorithm.set_hooks(hooks=[print_hello])
+    dummy_algorithm.set_hooks(hooks=[PrintHello()])
     dummy_algorithm.train(empty_buffer, total_iterations=10)
 
     dummy_algorithm = A.Dummy(dummy_env)
-    dummy_algorithm.set_hooks(hooks=[print_only_on_even_iteration])
+    dummy_algorithm.set_hooks(hooks=[PrintHello(), PrintOnlyEvenIteraion()])
     dummy_algorithm.train(empty_buffer, total_iterations=10)
 
 

@@ -73,11 +73,11 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
 
 
 class ICML2015TRPO(Algorithm):
-    """ Trust Region Policy Optimiation method, this implements pure one.
+    ''' Trust Region Policy Optimiation method, this implements pure one.
         Please note that original TRPO use Single Path method to estimate Q value
         instead of Generalized Advantage Estimation (GAE).
         See: https://arxiv.org/pdf/1502.05477.pdf
-    """
+    '''
 
     _params: ICML2015TRPOParam
     _policy: StochasticPolicy

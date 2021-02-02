@@ -20,9 +20,9 @@ class TestTD3(object):
         assert td3.__name__ == 'TD3'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyContinuous()
         batch_size = 5
@@ -32,9 +32,9 @@ class TestTD3(object):
         td3.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
 
         dummy_env = E.DummyContinuous()
         batch_size = 5
@@ -81,44 +81,6 @@ class TestTD3(object):
             A.TD3Param(start_timesteps=-1)
         with pytest.raises(ValueError):
             A.TD3Param(replay_buffer_size=-1)
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyContinuous()
-        td3 = A.TD3(dummy_env)
-
-        d = 100
-        tau = 1.0
-        gamma = 0.5
-        learning_rate = 1e-5
-        exploration_noise_sigma = 1e-1 * 7.0
-        train_action_noise_sigma = 1e-4
-        train_action_noise_abs = 5.0
-        batch_size = 1000
-        start_timesteps = 10
-        replay_buffer_size = 100
-        param = {'d': d,
-                 'tau': tau,
-                 'gamma': gamma,
-                 'learning_rate': learning_rate,
-                 'exploration_noise_sigma': exploration_noise_sigma,
-                 'train_action_noise_sigma': train_action_noise_sigma,
-                 'train_action_noise_abs': train_action_noise_abs,
-                 'batch_size': batch_size,
-                 'start_timesteps': start_timesteps,
-                 'replay_buffer_size': replay_buffer_size}
-
-        td3.update_algorithm_params(**param)
-
-        assert td3._params.d == d
-        assert td3._params.tau == tau
-        assert td3._params.gamma == gamma
-        assert td3._params.learning_rate == learning_rate
-        assert td3._params.exploration_noise_sigma == exploration_noise_sigma
-        assert td3._params.train_action_noise_sigma == train_action_noise_sigma
-        assert td3._params.train_action_noise_abs == train_action_noise_abs
-        assert td3._params.batch_size == batch_size
-        assert td3._params.start_timesteps == start_timesteps
-        assert td3._params.replay_buffer_size == replay_buffer_size
 
 
 if __name__ == "__main__":

@@ -8,13 +8,7 @@ import nnabla_rl.replay_buffers as RB
 from nnabla_rl.builders import ReplayBufferBuilder
 from nnabla_rl.utils.evaluator import TimestepEvaluator, EpisodicEvaluator
 from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
-from nnabla_rl.hook import as_hook
 from nnabla_rl.utils import serializers
-
-
-@as_hook(timing=100)
-def print_iteration_number(algorithm):
-    print('Current iteration: {}'.format(algorithm.iteration_num))
 
 
 class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
@@ -34,6 +28,7 @@ def run_training(args):
         eval_env, evaluator, timing=250000, writer=W.FileWriter(outdir=outdir,
                                                                 file_prefix='evaluation_result'))
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=50000)
+    iteration_num_hook = H.IterationNumHook(timing=100)
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
@@ -41,7 +36,7 @@ def run_training(args):
                                            replay_buffer_builder=MemoryEfficientBufferBuilder())
     else:
         categorical_dqn = serializers.load_snapshot(args.snapshot_dir)
-    hooks = [print_iteration_number, save_snapshot_hook, evaluation_hook]
+    hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     categorical_dqn.set_hooks(hooks)
 
     categorical_dqn.train_online(train_env, total_iterations=50000000)
@@ -59,7 +54,6 @@ def run_showcase(args):
     categorical_dqn = serializers.load_snapshot(args.snapshot_dir)
     if not isinstance(categorical_dqn, A.CategoricalDQN):
         raise ValueError('Loaded snapshot is not trained with CategoricalDQN!')
-    categorical_dqn.update_algorithm_params(**{'test_epsilon': 0.001})
 
     eval_env = build_atari_env(
         args.env, test=True, seed=args.seed + 200, render=True)

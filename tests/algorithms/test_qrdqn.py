@@ -20,9 +20,9 @@ class TestQRDQN(object):
         assert qrdqn.__name__ == 'QRDQN'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyDiscreteImg()
         params = A.QRDQNParam()
@@ -59,23 +59,6 @@ class TestQRDQN(object):
         action = qrdqn.compute_eval_action(state)
 
         assert action.shape == (1, )
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyDiscreteImg()
-        qrdqn = A.QRDQN(dummy_env)
-
-        gamma = 0.5
-        learning_rate = 1e-5
-        batch_size = 1000
-        param = {'gamma': gamma,
-                 'learning_rate': learning_rate,
-                 'batch_size': batch_size}
-
-        qrdqn.update_algorithm_params(**param)
-
-        assert qrdqn._params.gamma == gamma
-        assert qrdqn._params.learning_rate == learning_rate
-        assert qrdqn._params.batch_size == batch_size
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):

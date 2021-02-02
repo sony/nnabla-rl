@@ -19,9 +19,9 @@ class TestDummy(object):
         assert dummy.__name__ == 'Dummy'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyContinuous()
         dummy = A.Dummy(dummy_env)
@@ -29,9 +29,9 @@ class TestDummy(object):
         dummy.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
 
         dummy_env = E.DummyContinuous()
         dummy = A.Dummy(dummy_env)

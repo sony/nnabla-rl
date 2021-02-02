@@ -4,7 +4,7 @@ import numpy as np
 
 
 def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
-    """ Create Weight initialzier proposed by He et al. (Normal distribution version)
+    ''' Create Weight initializer proposed by He et al. (Normal distribution version)
 
     Args:
         inmaps (int): Map size of an input Variable,
@@ -17,7 +17,7 @@ def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
         HeNormal : weight initialzier
     Raises:
         NotImplementedError: mode other than 'fan_in' or 'fan_out' is given
-    """
+    '''
     if mode == 'fan_in':
         s = calc_normal_std_he_forward(
             inmaps, outmaps, kernel, factor)
@@ -31,7 +31,7 @@ def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
 
 
 def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
-    """ Create Weight initialzier proposed in LeCun 98, Efficient Backprop (Normal distribution version)
+    ''' Create Weight initializer proposed in LeCun 98, Efficient Backprop (Normal distribution version)
 
     Args:
         inmaps (int): Map size of an input Variable,
@@ -44,7 +44,7 @@ def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
         LeCunNormal : weight initialzier
     Raises:
         NotImplementedError: mode other than 'fan_in' is given
-    """
+    '''
     if mode == 'fan_in':
         s = calc_normal_std_he_forward(inmaps, outmaps, kernel, factor)
     else:
@@ -54,7 +54,7 @@ def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
 
 
 def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
-    """ Create Weight initialzier proposed by He et al. (Uniform distribution version)
+    ''' Create Weight initializer proposed by He et al. (Uniform distribution version)
 
     Args:
         inmaps (int): Map size of an input Variable,
@@ -67,7 +67,7 @@ def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
         HeUniform : weight initialzier
     Raises:
         NotImplementedError: mode other than 'fan_in' or 'fan_out' is given
-    """
+    '''
     if mode == 'fan_in':
         lim = calc_uniform_lim_he_forward(inmaps, outmaps, kernel, factor)
     elif mode == 'fan_out':
@@ -84,7 +84,20 @@ def GlorotUniform(inmaps, outmaps, kernel=(1, 1)):
 
 
 class NormcInitializer(NI.BaseInitializer):
-    # See: https://github.com/openai/baselines/blob/master/baselines/common/tf_util.py
+    ''' Create Normc initializer
+    See: https://github.com/openai/baselines/blob/master/baselines/common/tf_util.py
+    Parameter initialized with params normalized along 'axis' dimension.
+
+    Args:
+        std (float): normalization scaling value. Defaults to 1.
+        axis (int): dimension to normalize. Defaults to 0.
+        rng (np.random.RandomState):
+            Random number generator to sample numbers from. Defaults to None.
+            When None, NNabla's default random nunmber generator will be used.
+    Returns:
+        NormcInitializer : weight initialzier
+    '''
+
     def __init__(self, std=1.0, axis=0, rng=None):
         if rng is None:
             rng = NI.random.prng
@@ -94,8 +107,7 @@ class NormcInitializer(NI.BaseInitializer):
 
     def __call__(self, shape):
         params = self._rng.randn(*shape)
-        params *= self._std / \
-            np.sqrt(np.square(params).sum(axis=self._axis, keepdims=True))
+        params *= self._std / np.sqrt(np.square(params).sum(axis=self._axis, keepdims=True))
         return params
 
 

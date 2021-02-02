@@ -1,8 +1,8 @@
-from typing import List
+from typing import Any, Dict, List, Tuple
 
 from abc import abstractmethod, ABCMeta
 
-from gym import Env
+import gym
 
 import numpy as np
 
@@ -10,6 +10,8 @@ from dataclasses import dataclass
 
 from nnabla_rl.parameter import Parameter
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+
+Experience = Tuple[np.array, np.array, float, float, np.array, Dict[str, Any]]
 
 
 @dataclass
@@ -21,6 +23,10 @@ class EnvironmentExplorerParam(Parameter):
 
 
 class EnvironmentExplorer(metaclass=ABCMeta):
+    '''
+    Base class for environment exploration methods.
+    '''
+
     def __init__(self,
                  env_info: EnvironmentInfo,
                  params: EnvironmentExplorerParam = EnvironmentExplorerParam()):
@@ -34,10 +40,31 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         self._steps = self._params.initial_step_num
 
     @abstractmethod
-    def action(self, steps, state):
+    def action(self, steps: int, state: np.array) -> np.array:
+        '''
+        Compute the action for given state at given timestep
+
+        Args:
+            steps(int): timesteps since the beginning of exploration
+            state(np.array): current state to compute the action
+
+        Returns:
+            np.array: action for current state at given timestep
+        '''
         raise NotImplementedError
 
-    def step(self, env: Env, n: int = 1, break_if_done: bool = False) -> List:
+    def step(self, env: gym.Env, n: int = 1, break_if_done: bool = False) -> List[Experience]:
+        '''
+        Step n timesteps in given env
+
+        Args:
+            env(gym.Env): Environment
+            n(int): Number of timesteps to act in the environment
+
+        Returns:
+            List[Tuple[np.array, np.array, float, float, np.array, Dict]]:
+                List of tuple which consist of (state, action, reward, terminal flag, next state and extra info).
+        '''
         assert 0 < n
         experiences = []
         if self._state is None:
@@ -51,7 +78,17 @@ class EnvironmentExplorer(metaclass=ABCMeta):
                 break
         return experiences
 
-    def rollout(self, env) -> List:
+    def rollout(self, env: gym.Env) -> List[Experience]:
+        '''
+        Rollout the episode in current env
+
+        Args:
+            env(gym.Env): Environment
+
+        Returns:
+            List[Tuple[np.array, np.array, float, float, np.array, Dict]]:
+                List of tuple which consist of (state, action, reward, terminal flag, next state and extra info).
+        '''
         self._state = env.reset()
 
         done = False
@@ -62,7 +99,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             experiences.append(experience)
         return experiences
 
-    def _step_once(self, env):
+    def _step_once(self, env) -> Tuple[Experience, bool]:
         self._steps += 1
         if self._steps < self._params.warmup_random_steps:
             action_info = {}

@@ -8,19 +8,19 @@ from nnabla_rl.models.reward_function import RewardFunction
 
 
 class GAILDiscriminator(RewardFunction):
-    """
+    '''
     discriminator model used as reward function proposed by Jonathan Ho, et al.
     See: https://arxiv.org/pdf/1606.03476.pdf
-    """
+    '''
 
     def __init__(self, scope_name: str):
         super(GAILDiscriminator, self).__init__(scope_name)
 
     def r(self, s_current: nn.Variable, a_current: nn.Variable, s_next: nn.Variable) -> nn.Variable:
-        """
+        '''
         Notes:
             In gail, we don't use the next state.
-        """
+        '''
         h = NF.concatenate(s_current, a_current, axis=1)
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(h, n_outmaps=100, name="linear1",

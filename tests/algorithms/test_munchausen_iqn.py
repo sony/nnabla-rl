@@ -20,9 +20,9 @@ class TestMunchausenIQN(object):
         assert m_iqn.__name__ == 'MunchausenIQN'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyDiscreteImg()
         params = A.MunchausenIQNParam()
@@ -58,23 +58,6 @@ class TestMunchausenIQN(object):
         action = m_iqn.compute_eval_action(state)
 
         assert action.shape == (1, )
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyDiscreteImg()
-        m_iqn = A.MunchausenIQN(dummy_env)
-
-        gamma = 0.5
-        learning_rate = 1e-5
-        batch_size = 1000
-        param = {'gamma': gamma,
-                 'learning_rate': learning_rate,
-                 'batch_size': batch_size}
-
-        m_iqn.update_algorithm_params(**param)
-
-        assert m_iqn._params.gamma == gamma
-        assert m_iqn._params.learning_rate == learning_rate
-        assert m_iqn._params.batch_size == batch_size
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):

@@ -9,9 +9,9 @@ class DummyParam(AlgorithmParam):
 
 
 class Dummy(Algorithm):
-    """
+    '''
     This algorithm does nothing. Just used for understanding the concept of the framework.
-    """
+    '''
 
     def __init__(self, env_or_env_info, params=DummyParam()):
         super(Dummy, self).__init__(env_or_env_info, params=params)

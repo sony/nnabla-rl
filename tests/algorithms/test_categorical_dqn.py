@@ -20,9 +20,9 @@ class TestCategoricalDQN(object):
         assert categorical_dqn.__name__ == 'CategoricalDQN'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyDiscreteImg()
         params = A.CategoricalDQNParam()
@@ -35,9 +35,9 @@ class TestCategoricalDQN(object):
         categorical_dqn.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
 
         batch_size = 5
         dummy_env = E.DummyDiscreteImg()

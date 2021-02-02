@@ -10,11 +10,11 @@ from nnabla_rl.models.policy import StochasticPolicy
 
 
 class REINFORCEDiscretePolicy(StochasticPolicy):
-    """
+    '''
     REINFORCE policy for classic control discrete environment.
     This network outputs the policy distribution.
     See: http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-5.pdf
-    """
+    '''
 
     _action_dim: int
 
@@ -37,11 +37,11 @@ class REINFORCEDiscretePolicy(StochasticPolicy):
 
 
 class REINFORCEContinousPolicy(StochasticPolicy):
-    """
+    '''
     REINFORCE policy for classic control continous environment.
     This network outputs the policy distribution.
     See: http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-5.pdf
-    """
+    '''
 
     _action_dim: int
     _fixed_ln_var: np.ndarray

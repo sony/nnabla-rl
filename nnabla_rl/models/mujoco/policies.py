@@ -13,10 +13,10 @@ from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy
 
 
 class TD3Policy(DeterministicPolicy):
-    """
+    '''
     Actor model proposed by S. Fujimoto in TD3 paper for mujoco environment.
     See: https://arxiv.org/abs/1802.09477
-    """
+    '''
 
     _action_dim: int
     _max_action_value: float
@@ -46,10 +46,10 @@ class TD3Policy(DeterministicPolicy):
 
 
 class SACPolicy(StochasticPolicy):
-    """
+    '''
     Actor model proposed by T. Haarnoja in SAC paper for mujoco environment.
     See: https://arxiv.org/pdf/1801.01290.pdf
-    """
+    '''
 
     _action_dim: int
     _clip_log_sigma: bool
@@ -87,10 +87,10 @@ class SACPolicy(StochasticPolicy):
 
 
 class BEARPolicy(StochasticPolicy):
-    """
+    '''
     Actor model proposed by A. Kumar, et al. in BEAR paper for mujoco environment.
     See: https://arxiv.org/pdf/1906.00949.pdf
-    """
+    '''
 
     _action_dim: int
 
@@ -122,11 +122,11 @@ class BEARPolicy(StochasticPolicy):
 
 
 class PPOPolicy(StochasticPolicy):
-    """
+    '''
     Actor model proposed by John Schulman, et al. in PPO paper for mujoco environment.
     This network outputs the policy distribution
     See: https://arxiv.org/pdf/1707.06347.pdf
-    """
+    '''
 
     _action_dim: int
 
@@ -154,10 +154,10 @@ class PPOPolicy(StochasticPolicy):
 
 
 class ICML2015TRPOPolicy(StochasticPolicy):
-    """
+    '''
     Actor model proposed by John Schulman, et al. in TRPO paper for mujoco environment.
     See: https://arxiv.org/pdf/1502.05477.pdf (Original paper)
-    """
+    '''
 
     _action_dim: int
 
@@ -180,11 +180,11 @@ class ICML2015TRPOPolicy(StochasticPolicy):
 
 
 class TRPOPolicy(StochasticPolicy):
-    """
+    '''
     Actor model proposed by Peter Henderson, et al.
     in Deep Reinforcement Learning that Matters paper for mujoco environment.
     See: https://arxiv.org/abs/1709.06560.pdf
-    """
+    '''
 
     _action_dim: int
 
@@ -212,10 +212,10 @@ class TRPOPolicy(StochasticPolicy):
 
 
 class GAILPolicy(StochasticPolicy):
-    """
+    '''
     Actor model proposed by Jonathan Ho, et al.
     See: https://arxiv.org/pdf/1606.03476.pdf
-    """
+    '''
 
     def __init__(self, scope_name: str, action_dim: str):
         super(GAILPolicy, self).__init__(scope_name)

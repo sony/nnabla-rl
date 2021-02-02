@@ -20,9 +20,9 @@ class TestDDPG(object):
         assert ddpg.__name__ == 'DDPG'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyContinuous()
         batch_size = 5
@@ -32,9 +32,9 @@ class TestDDPG(object):
         ddpg.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
@@ -55,32 +55,6 @@ class TestDDPG(object):
         action = ddpg.compute_eval_action(state)
 
         assert action.shape == dummy_env.action_space.shape
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyContinuous()
-        ddpg = A.DDPG(dummy_env)
-
-        tau = 1.0
-        gamma = 100.0
-        learning_rate = 1e-5
-        batch_size = 1000
-        start_timesteps = 10
-        replay_buffer_size = 100
-        param = {'tau': tau,
-                 'gamma': gamma,
-                 'learning_rate': learning_rate,
-                 'batch_size': batch_size,
-                 'start_timesteps': start_timesteps,
-                 'replay_buffer_size': replay_buffer_size}
-
-        ddpg.update_algorithm_params(**param)
-
-        assert ddpg._params.tau == tau
-        assert ddpg._params.gamma == gamma
-        assert ddpg._params.learning_rate == learning_rate
-        assert ddpg._params.batch_size == batch_size
-        assert ddpg._params.start_timesteps == start_timesteps
-        assert ddpg._params.replay_buffer_size == replay_buffer_size
 
 
 if __name__ == "__main__":

@@ -2,6 +2,13 @@ from abc import ABCMeta, abstractmethod
 
 
 class Hook(metaclass=ABCMeta):
+    '''
+    Base class of hooks for Algorithm classes.
+
+    Hook is called at every 'timing' iterations during the training.
+    'timing' is specified at the beginning of the class instantiation.
+    '''
+
     timing = 1
 
     def __init__(self, timing=1000):
@@ -15,15 +22,3 @@ class Hook(metaclass=ABCMeta):
     @abstractmethod
     def on_hook_called(self, algorithm):
         raise NotImplementedError
-
-
-def as_hook(timing=None, **kwargs):
-    if timing is None:
-        timing = Hook.timing
-
-    def decorate(hook):
-        def decorated_hook(algorithm):
-            if algorithm.iteration_num % timing == 0:
-                hook(algorithm)
-        return decorated_hook
-    return decorate

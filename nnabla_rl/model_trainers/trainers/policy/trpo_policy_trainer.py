@@ -16,7 +16,7 @@ from typing import cast, Dict, Optional, Sequence
 
 
 def _hessian_vector_product(flat_grads, params, vector):
-    """ Compute multiplied vector hessian of parameters and vector
+    ''' Compute multiplied vector hessian of parameters and vector
 
     Args:
         flat_grads (nn.Variable): gradient of parameters, should be flattened
@@ -26,7 +26,7 @@ def _hessian_vector_product(flat_grads, params, vector):
         hessian_vector (numpy.ndarray): multiplied vector of hessian of parameters and vector
     See:
         https://www.telesens.co/2018/06/09/efficiently-computing-the-fisher-vector-product-in-trpo/
-    """
+    '''
     assert flat_grads.shape[0] == len(vector)
     if isinstance(vector, np.ndarray):
         vector = nn.Variable.from_numpy_array(vector)
@@ -40,14 +40,14 @@ def _hessian_vector_product(flat_grads, params, vector):
 
 
 def _concat_network_params_in_ndarray(params):
-    """ Concatenate network parameters in numpy.ndarray,
+    ''' Concatenate network parameters in numpy.ndarray,
         this function returns copied parameters
 
     Args:
         params (OrderedDict): parameters
     Returns:
         flat_params (numpy.ndarray): flatten parameters in numpy.ndarray type
-    """
+    '''
     flat_params = []
     for param in params.values():
         flat_param = param.d.copy().flatten()
@@ -56,12 +56,12 @@ def _concat_network_params_in_ndarray(params):
 
 
 def _update_network_params_by_flat_params(params, new_flat_params):
-    """ Update Network parameters by hand
+    ''' Update Network parameters by hand
 
     Args:
         params (OrderedDict): parameteres
         new_flat_params (numpy.ndarray): flattened new parameters
-    """
+    '''
     if not isinstance(new_flat_params, np.ndarray):
         raise ValueError("Invalid new_flat_params")
     total_param_numbers = 0

@@ -5,7 +5,6 @@ import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 from nnabla_rl.writer import Writer
 from nnabla_rl.environments.wrappers import NumpyFloat32Env
-from nnabla_rl.hook import as_hook
 from nnabla_rl.utils.files import create_dir_if_not_exist
 
 import os
@@ -31,11 +30,6 @@ class MyScalarWriter(Writer):
         for name in names:
             self._monitor_series.append(MonitorSeries(
                 name, self._monitor, interval=1, verbose=False))
-
-
-@as_hook(timing=100)
-def print_iteration_number(algorithm):
-    print('Current iteration: {}'.format(algorithm.iteration_num))
 
 
 def build_env(seed=None):

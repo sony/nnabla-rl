@@ -11,11 +11,11 @@ class Policy(Model, metaclass=ABCMeta):
 
 
 class DeterministicPolicy(Policy, metaclass=ABCMeta):
-    """ DeterministicPolicy
+    ''' DeterministicPolicy
     Abstract class for deterministic policy
 
     By calling this policy, it will return an action for the given state.
-    """
+    '''
     @abstractmethod
     def pi(self, s: nn.Variable) -> nn.Variable:
         '''pi

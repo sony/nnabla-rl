@@ -8,13 +8,7 @@ import nnabla_rl.writers as W
 from nnabla_rl.builders import ReplayBufferBuilder
 from nnabla_rl.utils.evaluator import TimestepEvaluator, EpisodicEvaluator
 from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
-from nnabla_rl.hook import as_hook
 from nnabla_rl.utils import serializers
-
-
-@as_hook(timing=100)
-def print_iteration_number(algorithm):
-    print('Current iteration: {}'.format(algorithm.iteration_num))
 
 
 class MemoryEfficientAtariBufferBuilder(ReplayBufferBuilder):
@@ -31,9 +25,9 @@ def run_training(args):
     eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render)
     evaluator = TimestepEvaluator(num_timesteps=125000)
     evaluation_hook = H.EvaluationHook(
-        eval_env, evaluator, timing=250000, writer=W.FileWriter(outdir=outdir,
-                                                                file_prefix='evaluation_result'))
+        eval_env, evaluator, timing=250000, writer=W.FileWriter(outdir=outdir, file_prefix='evaluation_result'))
 
+    iteration_num_hook = H.IterationNumHook(timing=100)
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=50000)
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
@@ -41,7 +35,7 @@ def run_training(args):
         iqn = A.IQN(train_env, replay_buffer_builder=MemoryEfficientAtariBufferBuilder())
     else:
         iqn = serializers.load_snapshot(args.snapshot_dir)
-    hooks = [print_iteration_number, save_snapshot_hook, evaluation_hook]
+    hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     iqn.set_hooks(hooks)
 
     iqn.train_online(train_env, total_iterations=50000000)
@@ -59,10 +53,8 @@ def run_showcase(args):
     iqn = serializers.load_snapshot(args.snapshot_dir)
     if not isinstance(iqn, A.IQN):
         raise ValueError('Loaded snapshot is not trained with IQN!')
-    iqn.update_algorithm_params(**{'test_epsilon': 0.001})
 
-    eval_env = build_atari_env(
-        args.env, test=True, seed=args.seed + 200, render=True)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=True)
     evaluator = EpisodicEvaluator()
     evaluator(iqn, eval_env)
 

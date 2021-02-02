@@ -11,10 +11,10 @@ from nnabla_rl.models.policy import DeterministicPolicy
 
 
 class TD3QFunction(QFunction):
-    """
+    '''
     Critic model proposed by S. Fujimoto in TD3 paper for mujoco environment.
     See: https://arxiv.org/abs/1802.09477
-    """
+    '''
 
     _optimal_policy: Optional[DeterministicPolicy]
 
@@ -48,10 +48,10 @@ class TD3QFunction(QFunction):
 
 
 class SACQFunction(QFunction):
-    """
+    '''
     QFunciton model proposed by T. Haarnoja in SAC paper for mujoco environment.
     See: https://arxiv.org/pdf/1801.01290.pdf
-    """
+    '''
 
     _optimal_policy: Optional[DeterministicPolicy]
 

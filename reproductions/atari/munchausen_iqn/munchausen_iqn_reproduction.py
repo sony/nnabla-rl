@@ -50,7 +50,6 @@ def run_showcase(args):
     iqn = serializers.load_snapshot(args.snapshot_dir)
     if not isinstance(iqn, A.MunchausenIQN):
         raise ValueError('Loaded snapshot is not trained with IQN!')
-    iqn.update_algorithm_params(**{'test_epsilon': 0.05})
 
     eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=False)
     evaluator = EpisodicEvaluator(run_per_evaluation=30)

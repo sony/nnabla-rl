@@ -1,15 +1,22 @@
 from abc import ABCMeta, abstractmethod
 
-from dataclasses import dataclass, replace
+from typing import Any, Dict, Sequence, Union
+
+from dataclasses import dataclass
+
+import nnabla.solvers
+import nnabla as nn
+
+import numpy as np
+import gym
 
 from nnabla_rl.parameter import Parameter
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedTrainingException
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.hook import Hook
 import nnabla_rl.utils.context as context
 import nnabla_rl as rl
-
-import gym
 
 
 def eval_api(f):
@@ -25,6 +32,12 @@ class AlgorithmParam(Parameter):
 
 
 class Algorithm(metaclass=ABCMeta):
+    _env_info: EnvironmentInfo
+    _params: AlgorithmParam
+    _iteration_num: int
+    _max_iterations: int
+    _hooks: Sequence[Hook]
+
     def __init__(self, env_info, params=AlgorithmParam()):
         if isinstance(env_info, gym.Env):
             env_info = EnvironmentInfo.from_env(env_info)
@@ -40,42 +53,54 @@ class Algorithm(metaclass=ABCMeta):
         return self.__class__.__name__
 
     @property
-    def latest_iteration_state(self):
-        """
+    def latest_iteration_state(self) -> Dict[str, Any]:
+        '''
         Return latest iteration state that is composed of items of training process state.
         You can use this state for debugging (e.g. plot loss curve).
         See [IterationStateHook](./hooks/iteration_state_hook.py) for getting more details.
 
         Returns:
-            latest_iteration_state (dict): Dictionary with items of training process state.
-        """
-        latest_iteration_state = {}
+            Dict[str, Any]: Dictionary with items of training process state.
+        '''
+        latest_iteration_state: Dict[str, Any] = {}
         latest_iteration_state['scalar'] = {}
         latest_iteration_state['histogram'] = {}
         latest_iteration_state['image'] = {}
         return latest_iteration_state
 
     @property
-    def iteration_num(self):
+    def iteration_num(self) -> int:
+        '''
+        Current iteration number.
+
+        Returns:
+            int: Current iteration number of running training.
+        '''
         return self._iteration_num
 
     @property
-    def max_iterations(self):
+    def max_iterations(self) -> int:
+        '''
+        Maximum iteration number of running training.
+
+        Returns:
+            int: Maximum iteration number of running training.
+        '''
         return self._max_iterations
 
-    def train(self, env_or_buffer, total_iterations):
-        """
+    def train(self, env_or_buffer: Union[gym.Env, ReplayBuffer], total_iterations: int):
+        '''
         Train the policy with reinforcement learning algorithm
 
         Args:
-            env_or_buffer (gym.Env or ReplayBuffer): Target environment to
+            env_or_buffer (Union[gym.Env, ReplayBuffer]): Target environment to
                 train the policy online or reply buffer to train the policy offline.
             total_iterations (int): Total number of iterations to train the policy.
 
         Raises:
             UnsupportedTrainingException: Raises if this algorithm does not
                 support the training method for given parameter.
-        """
+        '''
         if self._is_env(env_or_buffer):
             self.train_online(env_or_buffer, total_iterations)
         elif self._is_buffer(env_or_buffer):
@@ -83,8 +108,8 @@ class Algorithm(metaclass=ABCMeta):
         else:
             raise UnsupportedTrainingException
 
-    def train_online(self, train_env, total_iterations):
-        """
+    def train_online(self, train_env: gym.Env, total_iterations: int):
+        '''
         Train the policy by interacting with given environment.
 
         Args:
@@ -93,8 +118,8 @@ class Algorithm(metaclass=ABCMeta):
 
         Raises:
             UnsupportedTrainingException:
-                Raises if this algorithm does not support online training
-        """
+                Raises if the algorithm does not support online training
+        '''
         self._max_iterations = self._iteration_num + total_iterations
         self._before_training_start(train_env)
         while self._iteration_num < self.max_iterations:
@@ -103,19 +128,18 @@ class Algorithm(metaclass=ABCMeta):
             self._invoke_hooks()
         self._after_training_finish(train_env)
 
-    def train_offline(self, replay_buffer, total_iterations):
-        """
+    def train_offline(self, replay_buffer: gym.Env, total_iterations: int):
+        '''
         Train the policy using only the replay buffer.
 
         Args:
-            replay_buffer (ReplayBuffer): Replay buffer to sample experiences
-                to train the policy.
+            replay_buffer (ReplayBuffer): Replay buffer to sample experiences to train the policy.
             total_iterations (int): Total number of iterations to train the policy.
 
         Raises:
             UnsupportedTrainingException:
-                Raises if this algorithm does not support offline training
-        """
+                Raises if the algorithm does not support offline training
+        '''
         self._max_iterations = self._iteration_num + total_iterations
         self._before_training_start(replay_buffer)
         while self._iteration_num < self.max_iterations:
@@ -124,35 +148,32 @@ class Algorithm(metaclass=ABCMeta):
             self._invoke_hooks()
         self._after_training_finish(replay_buffer)
 
-    def set_hooks(self, hooks):
-        """
+    def set_hooks(self, hooks: Sequence[Hook]):
+        '''
         Set hooks for running additional operation during training.
-        Previously set hooks will be removed and replaced with the new hooks.
+        Previously set hooks will be removed and replaced with new hooks.
 
         Args:
             hooks (list of nnabla_rl.hook.Hook): Hooks to invoke during training
-        """
+        '''
         self._hooks = hooks
 
     def _invoke_hooks(self):
         for hook in self._hooks:
             hook(self)
 
-    def update_algorithm_params(self, **params):
-        self._params = replace(self._params, **params)
-
     @abstractmethod
-    def compute_eval_action(self, state):
-        """
+    def compute_eval_action(self, state) -> np.array:
+        '''
         Compute action for given state using current best policy.
-        This is used for evaluation.
+        This is usually used for evaluation.
 
         Args:
             state (np.ndarray): state to compute the action.
 
         Returns:
-            action (np.ndarray): Best action for given state using current trained policy.
-        """
+            np.ndarray: Action for given state using current trained policy.
+        '''
         raise NotImplementedError
 
     def _before_training_start(self, env_or_buffer):
@@ -171,22 +192,22 @@ class Algorithm(metaclass=ABCMeta):
 
     @abstractmethod
     def _models(self):
-        """
+        '''
         Model objects which are trained by the algorithm.
 
         Returns:
-            models (dict): Dictionary with items of model name as key and object as value.
-        """
+            Dict[str, nnabla_rl.model.Model]: Dictionary with items of model name as key and object as value.
+        '''
         raise NotImplementedError
 
     @abstractmethod
-    def _solvers(self):
-        """
+    def _solvers(self) -> Dict[str, nn.solver.Solver]:
+        '''
         Solver objects which are used for training the models by the algorithm.
 
         Returns:
-            solvers (dict): Dictionary with items of solver name as key and object as value.
-        """
+            Dict[str, nn.solver.Solver]: Dictionary with items of solver name as key and object as value.
+        '''
         raise NotImplementedError
 
     def _is_env(self, env):

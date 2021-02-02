@@ -20,9 +20,9 @@ class TestBEAR(object):
         assert bear.__name__ == 'BEAR'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyContinuous()
         bear = A.BEAR(dummy_env)
@@ -31,9 +31,9 @@ class TestBEAR(object):
             bear.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
@@ -54,38 +54,6 @@ class TestBEAR(object):
         action = bear.compute_eval_action(state)
 
         assert action.shape == dummy_env.action_space.shape
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyContinuous()
-        bear = A.BEAR(dummy_env)
-
-        tau = 1.0
-        gamma = 0.5
-        learning_rate = 1e-5
-        batch_size = 1000
-        num_q_ensembles = 30
-        num_mmd_actions = 5
-        num_action_samples = 10
-        warmup_iterations = 500
-        param = {'tau': tau,
-                 'gamma': gamma,
-                 'learning_rate': learning_rate,
-                 'batch_size': batch_size,
-                 'num_q_ensembles': num_q_ensembles,
-                 'num_mmd_actions': num_mmd_actions,
-                 'num_action_samples': num_action_samples,
-                 'warmup_iterations': warmup_iterations}
-
-        bear.update_algorithm_params(**param)
-
-        assert bear._params.tau == tau
-        assert bear._params.gamma == gamma
-        assert bear._params.learning_rate == learning_rate
-        assert bear._params.batch_size == batch_size
-        assert bear._params.num_q_ensembles == num_q_ensembles
-        assert bear._params.num_mmd_actions == num_mmd_actions
-        assert bear._params.num_action_samples == num_action_samples
-        assert bear._params.warmup_iterations == warmup_iterations
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):

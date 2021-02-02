@@ -6,7 +6,7 @@ from nnabla_rl.preprocessors import Preprocessor
 
 
 def compute_v_target_and_advantage(v_function, experiences, gamma=0.99, lmb=0.97):
-    """ Compute value target and advantage by using Generalized Advantage Estimation (GAE)
+    ''' Compute value target and advantage by using Generalized Advantage Estimation (GAE)
 
     Args:
         v_function (M.VFunction): value function
@@ -20,7 +20,7 @@ def compute_v_target_and_advantage(v_function, experiences, gamma=0.99, lmb=0.97
         advantage (numpy.ndarray): advantage
     Ref:
         https://arxiv.org/pdf/1506.02438.pdf
-    """
+    '''
     assert isinstance(v_function, VFunction), "Invalid v_function"
     T = len(experiences)
     v_targets = []

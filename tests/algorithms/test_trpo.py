@@ -19,9 +19,9 @@ class TestTRPO():
         assert trpo.__name__ == 'TRPO'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
         dummy_env = E.DummyContinuous()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
 
@@ -36,9 +36,9 @@ class TestTRPO():
         trpo.train_online(dummy_env, total_iterations=5)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that raising error when calling offline training
-        """
+        '''
         dummy_env = E.DummyContinuous()
         trpo = A.TRPO(dummy_env)
 

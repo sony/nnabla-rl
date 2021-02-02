@@ -5,14 +5,14 @@ import numpy as np
 
 
 def compute_hessian(y, x):
-    """ Compute hessian (= dy^2 / dx^2) in Naive way,
+    ''' Compute hessian (= dy^2 / dx^2) in Naive way,
 
     Args:
         y (nn.Variable): Outputs of the differentiable function.
         x (list[nn.Variable]): List of parameters
     Returns:
         hessian (numpy.ndarray): Hessian of outputs with respect to the parameters
-    """
+    '''
     for param in x:
         param.grad.zero()
     grads = nn.grad([y], x)

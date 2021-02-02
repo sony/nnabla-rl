@@ -2,7 +2,7 @@ import numpy as np
 
 
 def conjugate_gradient(compute_Ax, b, max_iterations=10, residual_tol=1e-10):
-    """ Conjugate gradient method to solve x = A^-1b
+    ''' Conjugate gradient method to solve x = A^-1b
         We implemented that iteration version of conjugate gradient method
         This function minimize f(x) = 0.5 * x^TAx + bx
 
@@ -14,7 +14,7 @@ def conjugate_gradient(compute_Ax, b, max_iterations=10, residual_tol=1e-10):
         residual_tol (float): residual value of tolerance.
     Returns:
         x (numpy.ndarray): optimization results, solving x = A^-1b
-    """
+    '''
     x = np.zeros_like(b)
     r = b - compute_Ax(x)
     p = r.copy()

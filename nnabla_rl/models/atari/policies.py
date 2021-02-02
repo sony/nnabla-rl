@@ -10,11 +10,11 @@ from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead
 
 
 class PPOPolicy(StochasticPolicy):
-    """
+    '''
     Shared parameter function proposed used in PPO paper for atari environment.
     This network outputs the policy distribution.
     See: https://arxiv.org/pdf/1707.06347.pdf
-    """
+    '''
     _head: PPOSharedFunctionHead
     _action_dim: int
 
@@ -36,11 +36,11 @@ class PPOPolicy(StochasticPolicy):
 
 
 class ICML2015TRPOPolicy(StochasticPolicy):
-    """
+    '''
     Policy network proposed in TRPO original paper for atari environment.
     This network outputs the value and policy distribution.
     See: https://arxiv.org/pdf/1502.05477.pdf
-    """
+    '''
 
     _action_dim: int
 
@@ -67,10 +67,10 @@ class ICML2015TRPOPolicy(StochasticPolicy):
 
 
 class A3CPolicy(StochasticPolicy):
-    """
+    '''
     Shared parameter function used in A3C paper for atari environment.
     See: https://arxiv.org/pdf/1602.01783.pdf
-    """
+    '''
 
     def __init__(self, head, scope_name, state_shape, action_dim):
         super(A3CPolicy, self).__init__(scope_name=scope_name)

@@ -129,9 +129,9 @@ class DefaultRewardFunctionSolverBuilder(SolverBuilder):
 
 
 class GAIL(Algorithm):
-    """ Generative Adversarial Imitation Learning
+    ''' Generative Adversarial Imitation Learning
         See: https://arxiv.org/abs/1606.03476.pdf
-    """
+    '''
 
     _params: GAILParam
     _v_function: VFunction

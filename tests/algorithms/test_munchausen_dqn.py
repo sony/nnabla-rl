@@ -20,9 +20,9 @@ class TestMunchausenDQN(object):
         assert dqn.__name__ == 'MunchausenDQN'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
         dummy_env = E.DummyDiscreteImg()
         params = A.MunchausenDQNParam()
         params.start_timesteps = 5
@@ -34,9 +34,9 @@ class TestMunchausenDQN(object):
         dqn.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
         params = A.MunchausenDQNParam()
@@ -60,49 +60,6 @@ class TestMunchausenDQN(object):
         action = dqn.compute_eval_action(state)
 
         assert action.shape == (1,)
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyDiscreteImg()
-        dqn = A.MunchausenDQN(dummy_env)
-
-        gamma = 0.1
-        batch_size = 10
-        learning_rate = 0.1
-        learner_update_frequency = 100
-        target_update_frequency = 5000
-        start_timesteps = 50
-        replay_buffer_size = 1000
-        initial_epsilon = 0.5
-        final_epsilon = 0.1
-        test_epsilon = 0.1
-        max_explore_steps = 10
-
-        param = {'gamma': gamma,
-                 'batch_size': batch_size,
-                 'learning_rate': learning_rate,
-                 'learner_update_frequency': learner_update_frequency,
-                 'target_update_frequency': target_update_frequency,
-                 'start_timesteps': start_timesteps,
-                 'replay_buffer_size': replay_buffer_size,
-                 'initial_epsilon': initial_epsilon,
-                 'final_epsilon': final_epsilon,
-                 'test_epsilon': test_epsilon,
-                 'max_explore_steps': max_explore_steps
-                 }
-
-        dqn.update_algorithm_params(**param)
-
-        assert dqn._params.gamma == gamma
-        assert dqn._params.batch_size == batch_size
-        assert dqn._params.learning_rate == learning_rate
-        assert dqn._params.learner_update_frequency == learner_update_frequency
-        assert dqn._params.target_update_frequency == target_update_frequency
-        assert dqn._params.start_timesteps == start_timesteps
-        assert dqn._params.replay_buffer_size == replay_buffer_size
-        assert dqn._params.initial_epsilon == initial_epsilon
-        assert dqn._params.final_epsilon == final_epsilon
-        assert dqn._params.test_epsilon == test_epsilon
-        assert dqn._params.max_explore_steps == max_explore_steps
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):

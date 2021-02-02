@@ -20,7 +20,7 @@ _KEY_SOLVERS = 'solvers'
 
 
 def save_snapshot(path, algorithm):
-    """Save training snapshot to file
+    '''Save training snapshot to file
 
     Args:
       path(str or pathlib.Path): Path to the snapshot saved dir
@@ -28,7 +28,7 @@ def save_snapshot(path, algorithm):
 
     Returns: pathlib.Path
       File path where the snapshot is saved to
-    """
+    '''
     assert isinstance(algorithm, Algorithm)
     if isinstance(path, str):
         path = pathlib.Path(path)
@@ -47,7 +47,7 @@ def save_snapshot(path, algorithm):
 
 def load_snapshot(path,
                   algorithm_kwargs={}):
-    """Load training snapshot from file
+    '''Load training snapshot from file
 
     Args:
       path(str or pathlib.Path): Path to the snapshot saved dir
@@ -55,7 +55,7 @@ def load_snapshot(path,
 
     Returns: nnabla_rl.Algorithm
       Algorithm with parameters and settings loaded from file
-    """
+    '''
     if isinstance(path, str):
         path = pathlib.Path(path)
     training_info = _load_training_info(path)

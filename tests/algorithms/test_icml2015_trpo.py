@@ -18,9 +18,9 @@ class TestICML2015TRPO(object):
         assert trpo.__name__ == 'ICML2015TRPO'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
         dummy_env = E.DummyDiscreteImg()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
         params = A.ICML2015TRPOParam(batch_size=5,
@@ -33,9 +33,9 @@ class TestICML2015TRPO(object):
         trpo.train_online(dummy_env, total_iterations=1)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
         dummy_env = E.DummyDiscreteImg()
         trpo = A.ICML2015TRPO(dummy_env)
 
@@ -52,33 +52,6 @@ class TestICML2015TRPO(object):
         action = trpo.compute_eval_action(state)
 
         assert action.shape == (1,)
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyDiscreteImg()
-        trpo = A.ICML2015TRPO(dummy_env)
-
-        gamma = 0.1
-        num_steps_per_iteration = 1000
-        batch_size = 1000
-        sigma_kl_divergence_constraint = 0.5
-        maximum_backtrack_numbers = 20
-        conjugate_gradient_damping = 0.1
-
-        param = {'gamma': gamma,
-                 'batch_size': batch_size,
-                 'num_steps_per_iteration': num_steps_per_iteration,
-                 'sigma_kl_divergence_constraint': sigma_kl_divergence_constraint,
-                 'maximum_backtrack_numbers': maximum_backtrack_numbers,
-                 'conjugate_gradient_damping': conjugate_gradient_damping}
-
-        trpo.update_algorithm_params(**param)
-
-        assert trpo._params.gamma == gamma
-        assert trpo._params.batch_size == batch_size
-        assert trpo._params.num_steps_per_iteration == num_steps_per_iteration
-        assert trpo._params.sigma_kl_divergence_constraint == sigma_kl_divergence_constraint
-        assert trpo._params.maximum_backtrack_numbers == maximum_backtrack_numbers
-        assert trpo._params.conjugate_gradient_damping == conjugate_gradient_damping
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):

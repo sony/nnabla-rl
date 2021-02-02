@@ -8,9 +8,9 @@ import numpy as np
 class EvaluationHook(Hook):
     def __init__(self, env, evaluator=EpisodicEvaluator(), timing=1000, writer=None):
         super(EvaluationHook, self).__init__(timing=timing)
-        """
+        '''
         Hook to run evaluation during training.
-        """
+        '''
         self._env = env
         self._evaluator = evaluator
         self._timing = timing

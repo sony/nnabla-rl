@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -8,9 +8,20 @@ import nnabla.functions as NF
 import nnabla_rl.random as rl_random
 
 
-def sample_gaussian(mean, ln_var, noise_clip=None):
-    assert isinstance(mean, nn.Variable)
-    assert isinstance(ln_var, nn.Variable)
+def sample_gaussian(mean: nn.Variable,
+                    ln_var: nn.Variable,
+                    noise_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+    '''
+    Sample value from a gaussian distribution of given mean and variance.
+
+    Args:
+        mean (nn.Variable): Mean of the gaussian distribution
+        ln_var (nn.Variable): Logarithm of the variance of the gaussian distribution
+        noise_clip (Optional[Tuple(float, float)]): Clipping value of the sampled noise.
+
+    Returns:
+        nn.Variable: Sampled value from gaussian distribution of given mean and variance
+    '''
     if not (mean.shape == ln_var.shape):
         raise ValueError('mean and ln_var has different shape')
 
@@ -22,9 +33,24 @@ def sample_gaussian(mean, ln_var, noise_clip=None):
     return mean + stddev * noise
 
 
-def sample_gaussian_multiple(mean, ln_var, num_samples, noise_clip=None):
-    assert isinstance(mean, nn.Variable)
-    assert isinstance(ln_var, nn.Variable)
+def sample_gaussian_multiple(mean: nn.Variable,
+                             ln_var: nn.Variable,
+                             num_samples: int,
+                             noise_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+    '''
+    Sample multiple values from a gaussian distribution of given mean and variance.
+    The returned variable will have an additional axis in the middle as follows
+    (batch_size, num_samples, dimension)
+
+    Args:
+        mean (nn.Variable): Mean of the gaussian distribution
+        ln_var (nn.Variable): Logarithm of the variance of the gaussian distribution
+        num_samples (int): Number of samples to sample
+        noise_clip (Optional[Tuple(float, float)]): Clipping value of the sampled noise.
+
+    Returns:
+        nn.Variable: Sampled values from gaussian distribution of given mean and variance
+    '''
     if not (mean.shape == ln_var.shape):
         raise ValueError('mean and ln_var has different shape')
 
@@ -44,12 +70,33 @@ def sample_gaussian_multiple(mean, ln_var, num_samples, noise_clip=None):
     return sample
 
 
-def expand_dims(x, axis):
+def expand_dims(x: nn.Variable, axis: int) -> nn.Variable:
+    '''
+    Add dimension to target axis for the given variable
+
+    Args:
+        x (nn.Variable): Variable to expand the dimension
+        axis (int): The axis to expand the dimension. Non negative.
+
+    Returns:
+        nn.Variable: Variable with additional dimension in the target axis
+    '''
     target_shape = (*x.shape[0:axis], 1, *x.shape[axis:])
     return NF.reshape(x, shape=target_shape, inplace=False)
 
 
-def repeat(x, repeats, axis):
+def repeat(x: nn.Variable, repeats: int, axis: int) -> nn.Variable:
+    '''
+    repeats the value along given axis for repeats times.
+
+    Args:
+        x (nn.Variable): Variable to repeat the values along given axis
+        repeats (int): Number of times to repeat
+        axis (int): The axis to expand the dimension. Non negative.
+
+    Returns:
+        nn.Variable: Variable with values repeated along given axis
+    '''
     # TODO: Find more efficient way
     assert isinstance(repeats, int)
     assert axis is not None
@@ -62,11 +109,31 @@ def repeat(x, repeats, axis):
     return NF.reshape(x, final_size)
 
 
-def sqrt(x):
+def sqrt(x: nn.Variable):
+    '''
+    Compute the squared root of given variable
+
+    Args:
+        x (nn.Variable): Variable to compute the squared root
+
+    Returns:
+        nn.Variable: Squared root of given variable
+    '''
     return NF.pow_scalar(x, 0.5)
 
 
-def std(x, axis=None, keepdims=False):
+def std(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -> nn.Variable:
+    '''
+    Compute the standard deviation of given variable along axis.
+
+    Args:
+        x (nn.Variable): Variable to compute the squared root
+        axis (Optional[int]): Axis to compute the standard deviation. Defaults to None. None will reduce all dimensions.
+        keepdims (bool): Flag whether the reduced axis are kept as a dimension with 1 element.
+
+    Returns:
+        nn.Variable: Standard deviation of given variable along axis.
+    '''
     # sigma = sqrt(E[(X - E[X])^2])
     mean = NF.mean(x, axis=axis, keepdims=True)
     diff = x - mean
@@ -74,15 +141,36 @@ def std(x, axis=None, keepdims=False):
     return sqrt(variance)
 
 
-def argmax(x, axis=None, keepdims=False):
+def argmax(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -> nn.Variable:
+    '''
+    Compute the index which given variable has maximum value along the axis.
+
+    Args:
+        x (nn.Variable): Variable to compute the argmax
+        axis (Optional[int]): Axis to compare the values. Defaults to None. None will reduce all dimensions.
+        keepdims (bool): Flag whether the reduced axis are kept as a dimension with 1 element.
+
+    Returns:
+        nn.Variable: Index of the variable which its value is maximum along the axis
+    '''
     return NF.max(x=x, axis=axis, keepdims=keepdims, with_index=True, only_index=True)
 
 
-def quantile_huber_loss(x0, x1, kappa, tau):
-    ''' Quantile huber loss
+def quantile_huber_loss(x0: nn.Variable, x1: nn.Variable, kappa: float, tau: nn.Variable) -> nn.Variable:
+    '''
+    Compute the quantile huber loss
     See following papers for details:
     https://arxiv.org/pdf/1710.10044.pdf
     https://arxiv.org/pdf/1806.06923.pdf
+
+    Args:
+        x0 (nn.Variable): Quantile values
+        x1 (nn.Variable): Quantile values
+        kappa (float): Threshold value of huber loss which switches the loss value between squared loss and linear loss
+        tau (nn.Variable): Quantile targets
+
+    Returns:
+        nn.Variable: Quantile huber loss
     '''
     u = x0 - x1
     # delta(u < 0)
@@ -98,11 +186,30 @@ def quantile_huber_loss(x0, x1, kappa, tau):
         return NF.abs(tau - delta) * Lk / kappa
 
 
-def mean_squared_error(x0, x1):
+def mean_squared_error(x0: nn.Variable, x1: nn.Variable) -> nn.Variable:
+    '''
+    Convenient alias for mean squared error operation
+
+    Args:
+        x0 (nn.Variable): N-D array
+        x1 (nn.Variable): N-D array
+
+    Returns:
+        nn.Variable: Mean squared error between x0 and x1
+    '''
     return NF.mean(NF.squared_error(x0, x1))
 
 
-def minimum_n(variables):
+def minimum_n(variables: Sequence[nn.Variable]) -> nn.Variable:
+    '''
+    Compute the minimum among the list of variables
+
+    Args:
+        variables (Sequence[nn.Variable]): Sequence of variables. All the variables must have same shape.
+
+    Returns:
+        nn.Variable: Minimum value among the list of variables
+    '''
     if len(variables) < 1:
         raise ValueError('Variables must have at least 1 variable')
     if len(variables) == 1:
@@ -146,7 +253,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
                                   init_mean: nn.Variable, init_var: nn.Variable,
                                   pop_size: int = 500, num_elites: int = 10,
                                   num_iterations: int = 5, alpha: float = 0.25) -> Tuple[nn.Variable, nn.Variable]:
-    """ Cross Entropy Method using gaussian distribution.
+    ''' Cross Entropy Method using gaussian distribution.
         This function optimized objective function J(x), where x is variable.
 
     Examples:
@@ -181,7 +288,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
 
     Returns:
         Tuple[nn.Variable, nn.Variable]: mean of elites samples and top of elites samples
-    """
+    '''
     mean = init_mean
     var = init_var
     batch_size, gaussian_dimension = mean.shape

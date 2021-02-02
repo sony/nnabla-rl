@@ -6,10 +6,10 @@ from nnabla_rl.models.perturbator import Perturbator
 
 
 class BCQPerturbator(Perturbator):
-    """
+    '''
     Perturbator model proposed by S. Fujimoto in BCQ paper for mujoco environment.
     See: https://arxiv.org/abs/1812.02900
-    """
+    '''
 
     def __init__(self, scope_name, state_dim, action_dim, max_action_value):
         super(BCQPerturbator, self).__init__(scope_name)

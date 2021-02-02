@@ -20,9 +20,9 @@ class TestICML2018SAC(object):
         assert sac.__name__ == 'ICML2018SAC'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that no error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyContinuous()
         sac = A.ICML2018SAC(dummy_env)
@@ -30,9 +30,9 @@ class TestICML2018SAC(object):
         sac.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
@@ -61,45 +61,6 @@ class TestICML2018SAC(object):
         # Should be initialized to same parameters
         assert self._has_same_parameters(
             sac._v.get_parameters(), sac._target_v.get_parameters())
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyContinuous()
-        sac = A.ICML2018SAC(dummy_env)
-
-        tau = 1.0
-        gamma = 0.5
-        learning_rate = 1e-5
-        batch_size = 1000
-        start_timesteps = 10
-        replay_buffer_size = 100
-        reward_scalar: float = 100.0
-        environment_steps: int = 5
-        gradient_steps: int = 10
-        target_update_interval: int = 7
-
-        param = {'tau': tau,
-                 'gamma': gamma,
-                 'learning_rate': learning_rate,
-                 'batch_size': batch_size,
-                 'start_timesteps': start_timesteps,
-                 'replay_buffer_size': replay_buffer_size,
-                 'reward_scalar': reward_scalar,
-                 'environment_steps': environment_steps,
-                 'gradient_steps': gradient_steps,
-                 'target_update_interval': target_update_interval}
-
-        sac.update_algorithm_params(**param)
-
-        assert sac._params.tau == tau
-        assert sac._params.gamma == gamma
-        assert sac._params.learning_rate == learning_rate
-        assert sac._params.batch_size == batch_size
-        assert sac._params.start_timesteps == start_timesteps
-        assert sac._params.replay_buffer_size == replay_buffer_size
-        assert sac._params.gradient_steps == gradient_steps
-        assert sac._params.environment_steps == environment_steps
-        assert sac._params.reward_scalar == reward_scalar
-        assert sac._params.target_update_interval == target_update_interval
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):

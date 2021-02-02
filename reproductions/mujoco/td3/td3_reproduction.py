@@ -6,13 +6,7 @@ import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
 from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed
-from nnabla_rl.hook import as_hook
 from nnabla_rl.utils import serializers
-
-
-@as_hook(timing=100)
-def print_iteration_number(algorithm):
-    print('Current iteration: {}'.format(algorithm.iteration_num))
 
 
 def select_start_timesteps(env_name):
@@ -35,9 +29,8 @@ def run_training(args):
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
                                        timing=5000,
-                                       writer=W.FileWriter(outdir=outdir,
-                                                           file_prefix='evaluation_result'))
-
+                                       writer=W.FileWriter(outdir=outdir, file_prefix='evaluation_result'))
+    iteration_num_hook = H.IterationNumHook(timing=100)
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=5000)
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
@@ -47,7 +40,7 @@ def run_training(args):
         td3 = A.TD3(train_env, params=params)
     else:
         td3 = serializers.load_snapshot(args.snapshot_dir)
-    hooks = [print_iteration_number, save_snapshot_hook, evaluation_hook]
+    hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     td3.set_hooks(hooks)
 
     td3.train_online(train_env, total_iterations=1000000)

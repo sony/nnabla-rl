@@ -25,12 +25,12 @@ def save_graph(x, file_path, verbose=False):
 
 
 def count_parameter_number(parameters):
-    """
+    '''
     Args:
         parameters (dict): parameters in dictionary form
     Returns:
         parameter_number (int): parameter number
-    """
+    '''
     parameter_number = 0
     for parameter in parameters.values():
         parameter_number += parameter.size

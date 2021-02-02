@@ -98,10 +98,10 @@ class DefaultPreprocessorBuilder(PreprocessorBuilder):
 
 
 class TRPO(Algorithm):
-    """ Trust Region Policy Optimiation method
+    ''' Trust Region Policy Optimiation method
         with Generalized Advantage Estimation (GAE)
         See: https://arxiv.org/pdf/1502.05477.pdf and https://arxiv.org/pdf/1506.02438.pdf
-    """
+    '''
 
     _params: TRPOParam
     _policy: StochasticPolicy

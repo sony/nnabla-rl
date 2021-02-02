@@ -20,9 +20,9 @@ class TestBCQ(object):
         assert bcq.__name__ == 'BCQ'
 
     def test_run_online_training(self):
-        """
+        '''
         Check that error occurs when calling online training
-        """
+        '''
 
         dummy_env = E.DummyContinuous()
         params = A.BCQParam()
@@ -32,9 +32,9 @@ class TestBCQ(object):
             bcq.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        """
+        '''
         Check that no error occurs when calling offline training
-        """
+        '''
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
@@ -54,38 +54,6 @@ class TestBCQ(object):
         state = np.float32(state)
         action = bcq.compute_eval_action(state)
         assert action.shape == dummy_env.action_space.shape
-
-    def test_update_algorithm_params(self):
-        dummy_env = E.DummyContinuous()
-        bcq = A.BCQ(dummy_env)
-
-        tau = 1.0
-        gamma = 0.5
-        learning_rate = 1e-5
-        lmb = 0.1
-        phi = 0.2
-        batch_size = 1000
-        num_q_ensembles = 30
-        num_action_samples = 10
-        param = {'tau': tau,
-                 'gamma': gamma,
-                 'learning_rate': learning_rate,
-                 'lmb': lmb,
-                 'phi': phi,
-                 'batch_size': batch_size,
-                 'num_q_ensembles': num_q_ensembles,
-                 'num_action_samples': num_action_samples}
-
-        bcq.update_algorithm_params(**param)
-
-        assert bcq._params.tau == tau
-        assert bcq._params.gamma == gamma
-        assert bcq._params.learning_rate == learning_rate
-        assert bcq._params.lmb == lmb
-        assert bcq._params.phi == phi
-        assert bcq._params.batch_size == batch_size
-        assert bcq._params.num_q_ensembles == num_q_ensembles
-        assert bcq._params.num_action_samples == num_action_samples
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):

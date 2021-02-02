@@ -9,10 +9,10 @@ from nnabla_rl.models.q_function import QFunction
 
 
 class DQNQFunction(QFunction):
-    """
+    '''
     Q function proposed by DeepMind in DQN paper for atari environment.
     See: https://deepmind.com/research/publications/human-level-control-through-deep-reinforcement-learning
-    """
+    '''
 
     _n_action: int
 
@@ -29,8 +29,8 @@ class DQNQFunction(QFunction):
         return q_value
 
     def all_q(self, s: nn.Variable) -> nn.Variable:
-        """ Predict all q values of the given state
-        """
+        ''' Predict all q values of the given state
+        '''
         with nn.parameter_scope(self.scope_name):
 
             with nn.parameter_scope("conv1"):
