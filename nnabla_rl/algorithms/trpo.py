@@ -25,7 +25,7 @@ from typing import Optional, Union
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import StochasticPolicyBuilder, VFunctionBuilder, SolverBuilder, PreprocessorBuilder
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
@@ -41,7 +41,7 @@ import nnabla_rl.preprocessors as RP
 
 
 @dataclass
-class TRPOParam(AlgorithmParam):
+class TRPOConfig(AlgorithmConfig):
     gpu_batch_size: Optional[int] = None
     gamma: float = 0.995
     lmb: float = 0.97
@@ -80,7 +80,7 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: TRPOParam,
+                    algorithm_config: TRPOConfig,
                     **kwargs) -> StochasticPolicy:
         return TRPOPolicy(scope_name, env_info.action_dim)
 
@@ -89,7 +89,7 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: TRPOParam,
+                    algorithm_config: TRPOConfig,
                     **kwargs) -> VFunction:
         return TRPOVFunction(scope_name)
 
@@ -97,16 +97,16 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: TRPOParam,
+                     algorithm_config: TRPOConfig,
                      **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.vf_learning_rate)
+        return NS.Adam(alpha=algorithm_config.vf_learning_rate)
 
 
 class DefaultPreprocessorBuilder(PreprocessorBuilder):
     def build_preprocessor(self,
                            scope_name: str,
                            env_info: EnvironmentInfo,
-                           algorithm_params: AlgorithmParam,
+                           algorithm_config: AlgorithmConfig,
                            **kwargs) -> Preprocessor:
         return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
 
@@ -117,7 +117,7 @@ class TRPO(Algorithm):
         See: https://arxiv.org/pdf/1502.05477.pdf and https://arxiv.org/pdf/1506.02438.pdf
     '''
 
-    _params: TRPOParam
+    _config: TRPOConfig
     _policy: StochasticPolicy
     _v_function: VFunction
     _v_function_solver: nn.solvers.Solver
@@ -130,26 +130,26 @@ class TRPO(Algorithm):
 
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: TRPOParam = TRPOParam(),
+                 config: TRPOConfig = TRPOConfig(),
                  v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
-        super(TRPO, self).__init__(env_or_env_info, params=params)
+        super(TRPO, self).__init__(env_or_env_info, config=config)
         if self._env_info.is_discrete_action_env():
             raise NotImplementedError
 
-        self._v_function = v_function_builder('v', self._env_info, self._params)
-        self._policy = policy_builder('pi', self._env_info, self._params)
+        self._v_function = v_function_builder('v', self._env_info, self._config)
+        self._policy = policy_builder('pi', self._env_info, self._config)
 
         self._preprocessor: Optional[Preprocessor] = None
-        if self._params.preprocess_state and state_preprocessor_builder is not None:
-            preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._params)
+        if self._config.preprocess_state and state_preprocessor_builder is not None:
+            preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
             assert preprocessor is not None
             self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
             self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
             self._state_preprocessor = preprocessor
-        self._v_function_solver = v_solver_builder(self._env_info, self._params)
+        self._v_function_solver = v_solver_builder(self._env_info, self._config)
 
     def _before_training_start(self, env_or_buffer):
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
@@ -159,23 +159,23 @@ class TRPO(Algorithm):
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
             return None
-        explorer_params = EE.RawPolicyExplorerParam(
+        explorer_config = EE.RawPolicyExplorerConfig(
             initial_step_num=self.iteration_num,
             timelimit_as_terminal=False
         )
         explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
                                         env_info=self._env_info,
-                                        params=explorer_params)
+                                        config=explorer_config)
         return explorer
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_params = MT.v_value_trainers.SquaredTDVFunctionTrainerParam(
+        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=1.0
         )
         v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
             env_info=self._env_info,
-            params=v_function_trainer_params)
+            config=v_function_trainer_config)
 
         training = MT.v_value_trainings.MonteCarloVValueTraining()
         v_function_trainer.setup_training(
@@ -183,14 +183,14 @@ class TRPO(Algorithm):
         return v_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_params = MT.policy_trainers.TRPOPolicyTrainerParam(
-            gpu_batch_size=self._params.gpu_batch_size,
-            sigma_kl_divergence_constraint=self._params.sigma_kl_divergence_constraint,
-            maximum_backtrack_numbers=self._params.maximum_backtrack_numbers,
-            conjugate_gradient_damping=self._params.conjugate_gradient_damping,
-            conjugate_gradient_iterations=self._params.conjugate_gradient_iterations)
+        policy_trainer_config = MT.policy_trainers.TRPOPolicyTrainerConfig(
+            gpu_batch_size=self._config.gpu_batch_size,
+            sigma_kl_divergence_constraint=self._config.sigma_kl_divergence_constraint,
+            maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
+            conjugate_gradient_damping=self._config.conjugate_gradient_damping,
+            conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
         policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
-                                                              params=policy_trainer_params)
+                                                              config=policy_trainer_config)
         training = MT.model_trainer.Training()
         policy_trainer.setup_training(self._policy, {}, training)
 
@@ -202,13 +202,13 @@ class TRPO(Algorithm):
         return action
 
     def _run_online_training_iteration(self, env):
-        if self.iteration_num % self._params.num_steps_per_iteration != 0:
+        if self.iteration_num % self._config.num_steps_per_iteration != 0:
             return
 
-        buffer = ReplayBuffer(capacity=self._params.num_steps_per_iteration)
+        buffer = ReplayBuffer(capacity=self._config.num_steps_per_iteration)
 
         num_steps = 0
-        while num_steps <= self._params.num_steps_per_iteration:
+        while num_steps <= self._config.num_steps_per_iteration:
             experience = self._environment_explorer.rollout(env)
             buffer.append(experience)
             num_steps += len(experience)
@@ -222,7 +222,7 @@ class TRPO(Algorithm):
         buffer_iterator = BufferIterator(buffer, 1, shuffle=False, repeat=False)
         s, a, v_target, advantage = self._align_experiences(buffer_iterator)
 
-        if self._params.preprocess_state:
+        if self._config.preprocess_state:
             self._state_preprocessor.update(s)
 
         # v function training
@@ -236,10 +236,10 @@ class TRPO(Algorithm):
 
         s_batch, a_batch = self._align_state_and_action(buffer_iterator)
 
-        return s_batch[:self._params.num_steps_per_iteration], \
-            a_batch[:self._params.num_steps_per_iteration], \
-            v_target_batch[:self._params.num_steps_per_iteration], \
-            adv_batch[:self._params.num_steps_per_iteration]
+        return s_batch[:self._config.num_steps_per_iteration], \
+            a_batch[:self._config.num_steps_per_iteration], \
+            v_target_batch[:self._config.num_steps_per_iteration], \
+            adv_batch[:self._config.num_steps_per_iteration]
 
     def _compute_v_target_and_advantage(self, buffer_iterator):
         v_target_batch = []
@@ -248,7 +248,7 @@ class TRPO(Algorithm):
         for experiences, _ in buffer_iterator:
             # length of experiences is 1
             v_target, adv = compute_v_target_and_advantage(
-                self._v_function, experiences[0], gamma=self._params.gamma, lmb=self._params.lmb)
+                self._v_function, experiences[0], gamma=self._config.gamma, lmb=self._config.lmb)
             v_target_batch.append(v_target.reshape(-1, 1))
             adv_batch.append(adv.reshape(-1, 1))
 
@@ -276,22 +276,22 @@ class TRPO(Algorithm):
         return s_batch, a_batch
 
     def _v_function_training(self, s, v_target):
-        num_iterations_per_epoch = self._params.num_steps_per_iteration // self._params.vf_batch_size
+        num_iterations_per_epoch = self._config.num_steps_per_iteration // self._config.vf_batch_size
 
-        for _ in range(self._params.vf_epochs * num_iterations_per_epoch):
-            indices = np.random.randint(0, self._params.num_steps_per_iteration, size=self._params.vf_batch_size)
-            batch = TrainingBatch(batch_size=self._params.vf_batch_size,
+        for _ in range(self._config.vf_epochs * num_iterations_per_epoch):
+            indices = np.random.randint(0, self._config.num_steps_per_iteration, size=self._config.vf_batch_size)
+            batch = TrainingBatch(batch_size=self._config.vf_batch_size,
                                   s_current=s[indices],
                                   extra={'v_target': v_target[indices]})
             self._v_function_trainer.train(batch)
 
     def _policy_training(self, s, a, v_target, advantage):
         extra = {}
-        extra['v_target'] = v_target[:self._params.pi_batch_size]
-        extra['advantage'] = advantage[:self._params.pi_batch_size]
-        batch = TrainingBatch(batch_size=self._params.pi_batch_size,
-                              s_current=s[:self._params.pi_batch_size],
-                              a_current=a[:self._params.pi_batch_size],
+        extra['v_target'] = v_target[:self._config.pi_batch_size]
+        extra['advantage'] = advantage[:self._config.pi_batch_size]
+        batch = TrainingBatch(batch_size=self._config.pi_batch_size,
+                              s_current=s[:self._config.pi_batch_size],
+                              a_current=a[:self._config.pi_batch_size],
                               extra=extra)
 
         self._policy_trainer.train(batch)
@@ -310,7 +310,7 @@ class TRPO(Algorithm):
         models = {}
         models[self._policy.scope_name] = self._policy
         models[self._v_function.scope_name] = self._v_function
-        if self._params.preprocess_state and isinstance(self._state_preprocessor, Model):
+        if self._config.preprocess_state and isinstance(self._state_preprocessor, Model):
             models[self._state_preprocessor.scope_name] = self._state_preprocessor
         return models
 

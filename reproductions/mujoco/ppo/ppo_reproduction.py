@@ -53,17 +53,17 @@ def run_training(args):
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
         timelimit_as_terminal = select_timelimit_as_terminal(args.env)
-        params = A.PPOParam(epsilon=0.2,
-                            entropy_coefficient=0.0,
-                            actor_timesteps=2048,
-                            epochs=10,
-                            batch_size=64,
-                            learning_rate=3.0*1e-4,
-                            actor_num=1,
-                            decrease_alpha=False,
-                            timelimit_as_terminal=timelimit_as_terminal,
-                            seed=args.seed)
-        ppo = A.PPO(train_env, params=params)
+        config = A.PPOConfig(epsilon=0.2,
+                             entropy_coefficient=0.0,
+                             actor_timesteps=2048,
+                             epochs=10,
+                             batch_size=64,
+                             learning_rate=3.0*1e-4,
+                             actor_num=1,
+                             decrease_alpha=False,
+                             timelimit_as_terminal=timelimit_as_terminal,
+                             seed=args.seed)
+        ppo = A.PPO(train_env, config=config)
     else:
         ppo = serializers.load_snapshot(args.snapshot_dir)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]

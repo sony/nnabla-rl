@@ -23,12 +23,12 @@ from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy
 
 
 @dataclass
-class PPOPolicyTrainerParam(TrainerParam):
+class PPOPolicyTrainerConfig(TrainerConfig):
     entropy_coefficient: float = 0.01
     epsilon: float = 0.1
 
@@ -36,13 +36,13 @@ class PPOPolicyTrainerParam(TrainerParam):
 class PPOPolicyTrainer(ModelTrainer):
     '''Proximal Policy Optimization (PPO) style Policy Trainer
     '''
-    _params: PPOPolicyTrainerParam
+    _config: PPOPolicyTrainerConfig
     _pi_loss: nn.Variable
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: PPOPolicyTrainerParam = PPOPolicyTrainerParam()):
-        super(PPOPolicyTrainer, self).__init__(env_info, params)
+                 config: PPOPolicyTrainerConfig = PPOPolicyTrainerConfig()):
+        super(PPOPolicyTrainer, self).__init__(env_info, config)
 
     def _update_model(self,
                       models: Sequence[Model],
@@ -77,8 +77,8 @@ class PPOPolicyTrainer(ModelTrainer):
             probability_ratio = NF.exp(log_prob_new - log_prob_old)
             alpha = training_variables.extra['alpha']
             clipped_ratio = NF.clip_by_value(probability_ratio,
-                                             1 - self._params.epsilon * alpha,
-                                             1 + self._params.epsilon * alpha)
+                                             1 - self._config.epsilon * alpha,
+                                             1 + self._config.epsilon * alpha)
             advantage = training_variables.extra['advantage']
             lower_bounds = NF.minimum2(probability_ratio * advantage, clipped_ratio * advantage)
             clip_loss = NF.mean(lower_bounds)
@@ -86,7 +86,7 @@ class PPOPolicyTrainer(ModelTrainer):
             entropy = distribution.entropy()
             entropy_loss = NF.mean(entropy)
 
-            self._pi_loss += -clip_loss - self._params.entropy_coefficient * entropy_loss
+            self._pi_loss += -clip_loss - self._config.entropy_coefficient * entropy_loss
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables

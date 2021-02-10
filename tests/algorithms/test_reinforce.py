@@ -53,13 +53,13 @@ class TestREINFORCE(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.REINFORCEParam(reward_scale=-0.1)
+            A.REINFORCEConfig(reward_scale=-0.1)
         with pytest.raises(ValueError):
-            A.REINFORCEParam(num_rollouts_per_train_iteration=-1)
+            A.REINFORCEConfig(num_rollouts_per_train_iteration=-1)
         with pytest.raises(ValueError):
-            A.REINFORCEParam(learning_rate=-0.1)
+            A.REINFORCEConfig(learning_rate=-0.1)
         with pytest.raises(ValueError):
-            A.REINFORCEParam(clip_grad_norm=-0.1)
+            A.REINFORCEConfig(clip_grad_norm=-0.1)
 
 
 if __name__ == "__main__":

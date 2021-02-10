@@ -25,7 +25,7 @@ from typing import cast, Union
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import QuantileDistributionFunctionBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
@@ -38,7 +38,7 @@ import nnabla_rl.model_trainers as MT
 
 
 @dataclass
-class QRDQNParam(AlgorithmParam):
+class QRDQNConfig(AlgorithmConfig):
     batch_size: int = 32
     gamma: float = 0.99
     start_timesteps: int = 50000
@@ -77,25 +77,25 @@ class DefaultQuantileBuilder(QuantileDistributionFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: QRDQNParam,
+                    algorithm_config: QRDQNConfig,
                     **kwargs) -> QuantileDistributionFunction:
-        return QRDQNQuantileDistributionFunction(scope_name, env_info.action_dim, algorithm_params.num_quantiles)
+        return QRDQNQuantileDistributionFunction(scope_name, env_info.action_dim, algorithm_config.num_quantiles)
 
 
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: QRDQNParam,
+                     algorithm_config: QRDQNConfig,
                      **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.learning_rate, eps=1e-2 / algorithm_params.batch_size)
+        return NS.Adam(alpha=algorithm_config.learning_rate, eps=1e-2 / algorithm_config.batch_size)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
     def build_replay_buffer(self,  # type: ignore[override]
                             env_info: EnvironmentInfo,
-                            algorithm_params: QRDQNParam,
+                            algorithm_config: QRDQNConfig,
                             **kwargs) -> ReplayBuffer:
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+        return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class QRDQN(Algorithm):
@@ -106,7 +106,7 @@ class QRDQN(Algorithm):
     For detail see: https://arxiv.org/pdf/1710.10044.pdf
     '''
 
-    _params: QRDQNParam
+    _config: QRDQNConfig
 
     _quantile_dist: QuantileDistributionFunction
     _quantile_dist_solver: nn.solver.Solver
@@ -120,28 +120,28 @@ class QRDQN(Algorithm):
     _a_greedy: nn.Variable
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: QRDQNParam = QRDQNParam(),
+                 config: QRDQNConfig = QRDQNConfig(),
                  quantile_dist_function_builder: QuantileDistributionFunctionBuilder = DefaultQuantileBuilder(),
                  quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
-        super(QRDQN, self).__init__(env_or_env_info, params=params)
+        super(QRDQN, self).__init__(env_or_env_info, config=config)
 
         if not self._env_info.is_discrete_action_env():
             raise ValueError('{} only supports discrete action environment'.format(self.__name__))
 
-        self._quantile_dist = quantile_dist_function_builder('quantile_dist_train', self._env_info, self._params)
-        self._quantile_dist_solver = quantile_solver_builder(self._env_info, self._params)
+        self._quantile_dist = quantile_dist_function_builder('quantile_dist_train', self._env_info, self._config)
+        self._quantile_dist_solver = quantile_solver_builder(self._env_info, self._config)
         self._target_quantile_dist = cast(QuantileDistributionFunction,
                                           self._quantile_dist.deepcopy('quantile_dist_target'))
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._params)
+        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, state):
         (action, _), _ = epsilon_greedy_action_selection(state,
                                                          self._greedy_action_selector,
                                                          self._random_action_selector,
-                                                         epsilon=self._params.test_epsilon)
+                                                         epsilon=self._config.test_epsilon)
         return action
 
     def _before_training_start(self, env_or_buffer):
@@ -151,29 +151,29 @@ class QRDQN(Algorithm):
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
             return None
-        explorer_params = EE.LinearDecayEpsilonGreedyExplorerParam(
-            warmup_random_steps=self._params.start_timesteps,
+        explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
+            warmup_random_steps=self._config.start_timesteps,
             initial_step_num=self.iteration_num,
-            initial_epsilon=self._params.initial_epsilon,
-            final_epsilon=self._params.final_epsilon,
-            max_explore_steps=self._params.max_explore_steps
+            initial_epsilon=self._config.initial_epsilon,
+            final_epsilon=self._config.final_epsilon,
+            max_explore_steps=self._config.max_explore_steps
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
             greedy_action_selector=self._greedy_action_selector,
             random_action_selector=self._random_action_selector,
             env_info=self._env_info,
-            params=explorer_params)
+            config=explorer_config)
         return explorer
 
     def _setup_quantile_function_training(self, env_or_buffer):
-        trainer_params = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerParam(
-            num_quantiles=self._params.num_quantiles,
-            kappa=self._params.kappa)
+        trainer_config = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerConfig(
+            num_quantiles=self._config.num_quantiles,
+            kappa=self._config.kappa)
 
         quantile_dist_trainer = \
-            MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(self._env_info, params=trainer_params)
+            MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(self._env_info, config=trainer_config)
 
-        target_update_frequency = self._params.target_update_frequency / self._params.learner_update_frequency
+        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
         training = MT.q_value_trainings.DQNTraining(
             train_function=self._quantile_dist,
             target_function=self._target_quantile_dist)
@@ -196,20 +196,20 @@ class QRDQN(Algorithm):
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)
         self._replay_buffer.append_all(experiences)
-        if self._params.start_timesteps < self.iteration_num:
-            if self.iteration_num % self._params.learner_update_frequency == 0:
+        if self._config.start_timesteps < self.iteration_num:
+            if self.iteration_num % self._config.learner_update_frequency == 0:
                 self._qrdqn_training(self._replay_buffer)
 
     def _run_offline_training_iteration(self, buffer):
         self._qrdqn_training(buffer)
 
     def _qrdqn_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._params.batch_size)
+        experiences, info = replay_buffer.sample(self._config.batch_size)
         (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._params.batch_size,
+        batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,
-                              gamma=self._params.gamma,
+                              gamma=self._config.gamma,
                               reward=r,
                               non_terminal=non_terminal,
                               s_next=s_next,

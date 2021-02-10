@@ -23,12 +23,12 @@ from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import QFunction, Model
 
 
 @dataclass
-class SquaredTDQFunctionTrainerParam(TrainerParam):
+class SquaredTDQFunctionTrainerConfig(TrainerConfig):
     reduction_method: str = 'mean'
     grad_clip: Optional[tuple] = None
     q_loss_scalar: float = 1.0
@@ -41,15 +41,15 @@ class SquaredTDQFunctionTrainerParam(TrainerParam):
 
 
 class SquaredTDQFunctionTrainer(ModelTrainer):
-    _params: SquaredTDQFunctionTrainerParam
+    _config: SquaredTDQFunctionTrainerConfig
     # Training loss/output
     _td_error: nn.Variable
     _q_loss: nn.Variable
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: SquaredTDQFunctionTrainerParam = SquaredTDQFunctionTrainerParam()):
-        super(SquaredTDQFunctionTrainer, self).__init__(env_info, params)
+                 config: SquaredTDQFunctionTrainerConfig = SquaredTDQFunctionTrainerConfig()):
+        super(SquaredTDQFunctionTrainer, self).__init__(env_info, config)
 
     def _update_model(self,
                       models: Sequence[Model],
@@ -94,18 +94,18 @@ class SquaredTDQFunctionTrainer(ModelTrainer):
 
         q_loss = 0
         for td_error in td_errors:
-            if self._params.grad_clip is not None:
+            if self._config.grad_clip is not None:
                 # NOTE: Gradient clipping is used in DQN and its variants.
                 # This operation is same as using huber_loss if the grad_clip value is (-1, 1)
-                clip_min, clip_max = self._params.grad_clip
+                clip_min, clip_max = self._config.grad_clip
                 minimum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_min))
                 maximum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_max))
                 td_error = NF.clip_grad_by_value(td_error, minimum, maximum)
             squared_td_error = training_variables.weight * NF.pow_scalar(td_error, 2.0)
-            if self._params.reduction_method == 'mean':
-                q_loss += self._params.q_loss_scalar * NF.mean(squared_td_error)
-            elif self._params.reduction_method == 'sum':
-                q_loss += self._params.q_loss_scalar * NF.sum(squared_td_error)
+            if self._config.reduction_method == 'mean':
+                q_loss += self._config.q_loss_scalar * NF.mean(squared_td_error)
+            elif self._config.reduction_method == 'sum':
+                q_loss += self._config.q_loss_scalar * NF.sum(squared_td_error)
             else:
                 raise RuntimeError
         self._q_loss = q_loss

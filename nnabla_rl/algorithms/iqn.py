@@ -25,7 +25,7 @@ from typing import cast, Union
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import StateActionQuantileFunctionBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
@@ -38,7 +38,7 @@ import nnabla_rl.model_trainers as MT
 
 
 @dataclass
-class IQNParam(AlgorithmParam):
+class IQNConfig(AlgorithmConfig):
     batch_size: int = 32
     gamma: float = 0.99
     start_timesteps: int = 50000
@@ -87,32 +87,32 @@ class DefaultQuantileFunctionBuilder(StateActionQuantileFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: IQNParam,
+                    algorithm_config: IQNConfig,
                     **kwargs) -> StateActionQuantileFunction:
-        assert isinstance(algorithm_params, IQNParam)
+        assert isinstance(algorithm_config, IQNConfig)
         return IQNQuantileFunction(scope_name,
                                    env_info.action_dim,
-                                   algorithm_params.embedding_dim,
-                                   K=algorithm_params.K,
+                                   algorithm_config.embedding_dim,
+                                   K=algorithm_config.K,
                                    risk_measure_function=risk_neutral_measure)
 
 
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: IQNParam,
+                     algorithm_config: IQNConfig,
                      **kwargs) -> nn.solver.Solver:
-        assert isinstance(algorithm_params, IQNParam)
-        return NS.Adam(alpha=algorithm_params.learning_rate, eps=1e-2 / algorithm_params.batch_size)
+        assert isinstance(algorithm_config, IQNConfig)
+        return NS.Adam(alpha=algorithm_config.learning_rate, eps=1e-2 / algorithm_config.batch_size)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
     def build_replay_buffer(self,  # type: ignore[override]
                             env_info: EnvironmentInfo,
-                            algorithm_params: IQNParam,
+                            algorithm_config: IQNConfig,
                             **kwargs) -> ReplayBuffer:
-        assert isinstance(algorithm_params, IQNParam)
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+        assert isinstance(algorithm_config, IQNConfig)
+        return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class IQN(Algorithm):
@@ -123,7 +123,7 @@ class IQN(Algorithm):
     For detail see: https://arxiv.org/pdf/1806.06923.pdf
     '''
 
-    _params: IQNParam
+    _config: IQNConfig
     _quantile_function: StateActionQuantileFunction
     _target_quantile_function: StateActionQuantileFunction
     _quantile_function_solver: nn.solver.Solver
@@ -136,22 +136,22 @@ class IQN(Algorithm):
     _a_greedy: nn.Variable
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: IQNParam = IQNParam(),
+                 config: IQNConfig = IQNConfig(),
                  quantile_function_builder: StateActionQuantileFunctionBuilder = DefaultQuantileFunctionBuilder(),
                  quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
-        super(IQN, self).__init__(env_or_env_info, params=params)
+        super(IQN, self).__init__(env_or_env_info, config=config)
 
         if not self._env_info.is_discrete_action_env():
             raise ValueError('{} only supports discrete action environment'.format(self.__name__))
 
-        self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._params)
+        self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._config)
         self._target_quantile_function = cast(StateActionQuantileFunction,
                                               self._quantile_function.deepcopy('target_quantile_function'))
 
-        self._quantile_function_solver = quantile_solver_builder(self._env_info, self._params)
+        self._quantile_function_solver = quantile_solver_builder(self._env_info, self._config)
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._params)
+        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     def _before_training_start(self, env_or_buffer):
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
@@ -160,32 +160,32 @@ class IQN(Algorithm):
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
             return None
-        explorer_params = EE.LinearDecayEpsilonGreedyExplorerParam(
-            warmup_random_steps=self._params.start_timesteps,
+        explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
+            warmup_random_steps=self._config.start_timesteps,
             initial_step_num=self.iteration_num,
-            initial_epsilon=self._params.initial_epsilon,
-            final_epsilon=self._params.final_epsilon,
-            max_explore_steps=self._params.max_explore_steps
+            initial_epsilon=self._config.initial_epsilon,
+            final_epsilon=self._config.final_epsilon,
+            max_explore_steps=self._config.max_explore_steps
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
             greedy_action_selector=self._greedy_action_selector,
             random_action_selector=self._random_action_selector,
             env_info=self._env_info,
-            params=explorer_params)
+            config=explorer_config)
         return explorer
 
     def _setup_quantile_function_training(self, env_or_buffer):
-        trainer_params = MT.q_value_trainers.IQNQuantileFunctionTrainerParam(
-            N=self._params.N,
-            N_prime=self._params.N_prime,
-            K=self._params.K,
-            kappa=self._params.kappa)
+        trainer_config = MT.q_value_trainers.IQNQuantileFunctionTrainerConfig(
+            N=self._config.N,
+            N_prime=self._config.N_prime,
+            K=self._config.K,
+            kappa=self._config.kappa)
 
         quantile_function_trainer = MT.q_value_trainers.IQNQuantileFunctionTrainer(
             self._env_info,
-            params=trainer_params)
+            config=trainer_config)
 
-        target_update_frequency = self._params.target_update_frequency / self._params.learner_update_frequency
+        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
         training = MT.q_value_trainings.DQNTraining(
             train_function=self._quantile_function,
             target_function=self._target_quantile_function)
@@ -210,26 +210,26 @@ class IQN(Algorithm):
         (action, _), _ = epsilon_greedy_action_selection(state,
                                                          self._greedy_action_selector,
                                                          self._random_action_selector,
-                                                         epsilon=self._params.test_epsilon)
+                                                         epsilon=self._config.test_epsilon)
         return action
 
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)
         self._replay_buffer.append_all(experiences)
-        if self._params.start_timesteps < self.iteration_num:
-            if self.iteration_num % self._params.learner_update_frequency == 0:
+        if self._config.start_timesteps < self.iteration_num:
+            if self.iteration_num % self._config.learner_update_frequency == 0:
                 self._iqn_training(self._replay_buffer)
 
     def _run_offline_training_iteration(self, buffer):
         self._iqn_training(buffer)
 
     def _iqn_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._params.batch_size)
+        experiences, info = replay_buffer.sample(self._config.batch_size)
         (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._params.batch_size,
+        batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,
-                              gamma=self._params.gamma,
+                              gamma=self._config.gamma,
                               reward=r,
                               non_terminal=non_terminal,
                               s_next=s_next,

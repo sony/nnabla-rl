@@ -1,7 +1,7 @@
 {
     "algorithm_name": "DDPG",
     "algorithm_class_name": "DDPG",
-    "algorithm_params": {
+    "algorithm_config": {
         "tau": 0.05,
         "gamma": 0.99,
         "learning_rate": 0.001,

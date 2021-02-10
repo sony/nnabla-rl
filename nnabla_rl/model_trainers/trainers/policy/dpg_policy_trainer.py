@@ -23,12 +23,12 @@ from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, QFunction, DeterministicPolicy
 
 
 @dataclass
-class DPGPolicyTrainerParam(TrainerParam):
+class DPGPolicyTrainerConfig(TrainerConfig):
     pass
 
 
@@ -36,15 +36,15 @@ class DPGPolicyTrainer(ModelTrainer):
     '''Deterministic Policy Gradient (DPG) style Policy Trainer
     '''
 
-    _params: DPGPolicyTrainerParam
+    _config: DPGPolicyTrainerConfig
     _pi_loss: nn.Variable
     _q_function: QFunction
 
     def __init__(self,
                  env_info: EnvironmentInfo,
                  q_function: QFunction,
-                 params: DPGPolicyTrainerParam = DPGPolicyTrainerParam()):
-        super(DPGPolicyTrainer, self).__init__(env_info, params)
+                 config: DPGPolicyTrainerConfig = DPGPolicyTrainerConfig()):
+        super(DPGPolicyTrainer, self).__init__(env_info, config)
         self._q_function = q_function
 
     def _update_model(self,

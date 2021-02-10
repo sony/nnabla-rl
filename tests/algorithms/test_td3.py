@@ -40,8 +40,8 @@ class TestTD3(object):
 
         dummy_env = E.DummyContinuous()
         batch_size = 5
-        params = A.TD3Param(batch_size=batch_size, start_timesteps=5)
-        td3 = A.TD3(dummy_env, params=params)
+        config = A.TD3Config(batch_size=batch_size, start_timesteps=5)
+        td3 = A.TD3(dummy_env, config=config)
 
         td3.train_online(dummy_env, total_iterations=10)
 
@@ -52,8 +52,8 @@ class TestTD3(object):
 
         dummy_env = E.DummyContinuous()
         batch_size = 5
-        params = A.TD3Param(batch_size=batch_size)
-        td3 = A.TD3(dummy_env, params=params)
+        config = A.TD3Config(batch_size=batch_size)
+        td3 = A.TD3(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -70,31 +70,31 @@ class TestTD3(object):
 
         assert action.shape == dummy_env.action_space.shape
 
-    def test_params_lie_in_range(self):
+    def test_config_lie_in_range(self):
         with pytest.raises(ValueError):
-            A.TD3Param(d=0)
+            A.TD3Config(d=0)
         with pytest.raises(ValueError):
-            A.TD3Param(d=-1)
+            A.TD3Config(d=-1)
         with pytest.raises(ValueError):
-            A.TD3Param(tau=-0.5)
+            A.TD3Config(tau=-0.5)
         with pytest.raises(ValueError):
-            A.TD3Param(tau=100.0)
+            A.TD3Config(tau=100.0)
         with pytest.raises(ValueError):
-            A.TD3Param(gamma=-100.0)
+            A.TD3Config(gamma=-100.0)
         with pytest.raises(ValueError):
-            A.TD3Param(gamma=10.0)
+            A.TD3Config(gamma=10.0)
         with pytest.raises(ValueError):
-            A.TD3Param(exploration_noise_sigma=-1.0)
+            A.TD3Config(exploration_noise_sigma=-1.0)
         with pytest.raises(ValueError):
-            A.TD3Param(train_action_noise_sigma=-1.0)
+            A.TD3Config(train_action_noise_sigma=-1.0)
         with pytest.raises(ValueError):
-            A.TD3Param(train_action_noise_abs=-1.0)
+            A.TD3Config(train_action_noise_abs=-1.0)
         with pytest.raises(ValueError):
-            A.TD3Param(batch_size=-1)
+            A.TD3Config(batch_size=-1)
         with pytest.raises(ValueError):
-            A.TD3Param(start_timesteps=-1)
+            A.TD3Config(start_timesteps=-1)
         with pytest.raises(ValueError):
-            A.TD3Param(replay_buffer_size=-1)
+            A.TD3Config(replay_buffer_size=-1)
 
 
 if __name__ == "__main__":

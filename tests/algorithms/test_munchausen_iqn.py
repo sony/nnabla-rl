@@ -39,24 +39,24 @@ class TestMunchausenIQN(object):
         '''
 
         dummy_env = E.DummyDiscreteImg()
-        params = A.MunchausenIQNParam()
-        params.start_timesteps = 5
-        params.batch_size = 5
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
-        m_iqn = A.MunchausenIQN(dummy_env, params=params)
+        config = A.MunchausenIQNConfig()
+        config.start_timesteps = 5
+        config.batch_size = 5
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        m_iqn = A.MunchausenIQN(dummy_env, config=config)
 
         m_iqn.train_online(dummy_env, total_iterations=5)
 
     def test_run_offline_training(self):
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
-        params = A.MunchausenIQNParam()
-        params.batch_size = batch_size
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
+        config = A.MunchausenIQNConfig()
+        config.batch_size = batch_size
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
 
-        m_iqn = A.MunchausenIQN(dummy_env, params=params)
+        m_iqn = A.MunchausenIQN(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -75,37 +75,37 @@ class TestMunchausenIQN(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(gamma=1.1)
+            A.MunchausenIQNConfig(gamma=1.1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(gamma=-0.1)
+            A.MunchausenIQNConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(batch_size=-1)
+            A.MunchausenIQNConfig(batch_size=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(replay_buffer_size=-1)
+            A.MunchausenIQNConfig(replay_buffer_size=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(learner_update_frequency=-1)
+            A.MunchausenIQNConfig(learner_update_frequency=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(max_explore_steps=-1)
+            A.MunchausenIQNConfig(max_explore_steps=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(learning_rate=-1)
+            A.MunchausenIQNConfig(learning_rate=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(initial_epsilon=-1)
+            A.MunchausenIQNConfig(initial_epsilon=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(final_epsilon=-1)
+            A.MunchausenIQNConfig(final_epsilon=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(test_epsilon=-1)
+            A.MunchausenIQNConfig(test_epsilon=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(K=-1)
+            A.MunchausenIQNConfig(K=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(N=-1)
+            A.MunchausenIQNConfig(N=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(N_prime=-1)
+            A.MunchausenIQNConfig(N_prime=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(kappa=-1)
+            A.MunchausenIQNConfig(kappa=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(embedding_dim=-1)
+            A.MunchausenIQNConfig(embedding_dim=-1)
         with pytest.raises(ValueError):
-            A.MunchausenIQNParam(clipping_value=100)
+            A.MunchausenIQNConfig(clipping_value=100)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 import nnabla_rl.functions as RNF
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import Model, QFunction, StochasticPolicy
 
@@ -47,12 +47,12 @@ class AdjustableTemperature(Model):
 
 
 @dataclass
-class SoftPolicyTrainerParam(TrainerParam):
+class SoftPolicyTrainerConfig(TrainerConfig):
     fixed_temperature: bool = False
     target_entropy: Optional[float] = None
 
     def __post_init__(self):
-        super(SoftPolicyTrainerParam, self).__post_init__()
+        super(SoftPolicyTrainerConfig, self).__post_init__()
 
 
 class SoftPolicyTrainer(ModelTrainer):
@@ -63,7 +63,7 @@ class SoftPolicyTrainer(ModelTrainer):
     _temperature_loss: nn.Variable
     _temperature: AdjustableTemperature
     _temperature_solver: Optional[nn.solver.Solver]
-    _params: SoftPolicyTrainerParam
+    _config: SoftPolicyTrainerConfig
     _pi_loss: nn.Variable
 
     def __init__(self,
@@ -71,18 +71,18 @@ class SoftPolicyTrainer(ModelTrainer):
                  q_functions: Sequence[QFunction],
                  temperature: AdjustableTemperature,
                  temperature_solver: Optional[nn.solver.Solver] = None,
-                 params: SoftPolicyTrainerParam = SoftPolicyTrainerParam()):
-        super(SoftPolicyTrainer, self).__init__(env_info, params)
+                 config: SoftPolicyTrainerConfig = SoftPolicyTrainerConfig()):
+        super(SoftPolicyTrainer, self).__init__(env_info, config)
         if len(q_functions) < 2:
             raise ValueError('Must provide at least 2 Q-functions for soft-training')
         self._q_functions = q_functions
-        if not self._params.fixed_temperature and temperature_solver is None:
+        if not self._config.fixed_temperature and temperature_solver is None:
             raise ValueError('Please set solver for temperature model')
         self._temperature = temperature
         self._temperature_solver = temperature_solver
 
-        if self._params.target_entropy is None:
-            self._params.target_entropy = -self._env_info.action_dim
+        if self._config.target_entropy is None:
+            self._config.target_entropy = -self._env_info.action_dim
 
     def _update_model(self,
                       models: Sequence[Model],
@@ -100,7 +100,7 @@ class SoftPolicyTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
         # Update temperature if requested
-        if not self._params.fixed_temperature:
+        if not self._config.fixed_temperature:
             assert self._temperature_solver is not None
             assert self._temperature_loss is not None
             self._temperature_solver.zero_grad()
@@ -129,10 +129,10 @@ class SoftPolicyTrainer(ModelTrainer):
             min_q = RNF.minimum_n(q_values)
             self._pi_loss += NF.mean(self.get_temperature() * log_pi - min_q)
 
-        if not self._params.fixed_temperature:
+        if not self._config.fixed_temperature:
             log_pi_unlinked = log_pi.get_unlinked_variable()
             self._temperature_loss = -NF.mean(self.get_temperature() *
-                                              (log_pi_unlinked + self._params.target_entropy))
+                                              (log_pi_unlinked + self._config.target_entropy))
 
     def _setup_training_variables(self, batch_size):
         # Training input variables
@@ -141,5 +141,5 @@ class SoftPolicyTrainer(ModelTrainer):
 
     def _setup_solver(self):
         super()._setup_solver()
-        if not self._params.fixed_temperature:
+        if not self._config.fixed_temperature:
             self._temperature_solver.set_parameters(self._temperature.get_parameters(), reset=False, retain_state=True)

@@ -29,12 +29,12 @@ class TestLoadSnapshot(object):
 
         assert isinstance(ddpg, A.DDPG)
         assert ddpg.iteration_num == 10000
-        assert np.isclose(ddpg._params.tau, 0.05)
-        assert np.isclose(ddpg._params.gamma, 0.99)
-        assert np.isclose(ddpg._params.learning_rate, 0.001)
-        assert np.isclose(ddpg._params.batch_size, 100)
-        assert np.isclose(ddpg._params.start_timesteps, 200)
-        assert ddpg._params.replay_buffer_size == 1000000
+        assert np.isclose(ddpg._config.tau, 0.05)
+        assert np.isclose(ddpg._config.gamma, 0.99)
+        assert np.isclose(ddpg._config.learning_rate, 0.001)
+        assert np.isclose(ddpg._config.batch_size, 100)
+        assert np.isclose(ddpg._config.start_timesteps, 200)
+        assert ddpg._config.replay_buffer_size == 1000000
 
 
 if __name__ == '__main__':

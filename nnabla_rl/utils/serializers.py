@@ -27,7 +27,7 @@ _ENV_INFO_FILENAME = 'env_info.pickle'
 
 _KEY_ALGORITHM_NAME = 'algorithm_name'
 _KEY_ALGORITHM_CLASS_NAME = 'algorithm_class_name'
-_KEY_ALGORITHM_PARAMS = 'algorithm_params'
+_KEY_ALGORITHM_CONFIG = 'algorithm_config'
 _KEY_ITERATION_NUM = 'iteration_num'
 _KEY_MODELS = 'models'
 _KEY_SOLVERS = 'solvers'
@@ -83,11 +83,11 @@ def load_snapshot(path,
 
 def _instantiate_algorithm_from_training_info(training_info, env_info, **kwargs):
     algorithm_name = training_info[_KEY_ALGORITHM_CLASS_NAME]
-    (algorithm_klass, params_klass) = A.get_class_of(algorithm_name)
+    (algorithm_klass, config_klass) = A.get_class_of(algorithm_name)
 
-    if kwargs.get('params', None) is None:
-        saved_params = training_info[_KEY_ALGORITHM_PARAMS]
-        kwargs['params'] = params_klass(**saved_params)
+    if kwargs.get('config', None) is None:
+        saved_config = training_info[_KEY_ALGORITHM_CONFIG]
+        kwargs['config'] = config_klass(**saved_config)
     algorithm = algorithm_klass(env_info, **kwargs)
     algorithm._iteration_num = training_info[_KEY_ITERATION_NUM]
     return algorithm
@@ -97,7 +97,7 @@ def _create_training_info(algorithm):
     training_info = {}
     training_info[_KEY_ALGORITHM_NAME] = algorithm.__name__
     training_info[_KEY_ALGORITHM_CLASS_NAME] = algorithm.__class__.__name__
-    training_info[_KEY_ALGORITHM_PARAMS] = algorithm._params.to_dict()
+    training_info[_KEY_ALGORITHM_CONFIG] = algorithm._config.to_dict()
     training_info[_KEY_ITERATION_NUM] = algorithm.iteration_num
     training_info[_KEY_MODELS] = list(algorithm._models().keys())
     training_info[_KEY_SOLVERS] = list(algorithm._solvers().keys())

@@ -50,8 +50,8 @@ def run_training(args):
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
         timesteps = select_start_timesteps(args.env)
-        params = A.TD3Param(start_timesteps=timesteps)
-        td3 = A.TD3(train_env, params=params)
+        config = A.TD3Config(start_timesteps=timesteps)
+        td3 = A.TD3(train_env, config=config)
     else:
         td3 = serializers.load_snapshot(args.snapshot_dir)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]

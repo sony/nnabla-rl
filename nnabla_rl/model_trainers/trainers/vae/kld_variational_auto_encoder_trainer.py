@@ -24,24 +24,24 @@ from dataclasses import dataclass
 import nnabla_rl.functions as RNF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import VariationalAutoEncoder, Model
 from nnabla_rl.distributions import Gaussian
 
 
 @dataclass
-class KLDVariationalAutoEncoderTrainerParam(TrainerParam):
+class KLDVariationalAutoEncoderTrainerConfig(TrainerConfig):
     pass
 
 
 class KLDVariationalAutoEncoderTrainer(ModelTrainer):
-    _params: KLDVariationalAutoEncoderTrainerParam
+    _config: KLDVariationalAutoEncoderTrainerConfig
     _vae_loss: nn.Variable  # Training loss/output
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: KLDVariationalAutoEncoderTrainerParam = KLDVariationalAutoEncoderTrainerParam()):
-        super(KLDVariationalAutoEncoderTrainer, self).__init__(env_info, params)
+                 config: KLDVariationalAutoEncoderTrainerConfig = KLDVariationalAutoEncoderTrainerConfig()):
+        super(KLDVariationalAutoEncoderTrainer, self).__init__(env_info, config)
 
     def _update_model(self,
                       models: Iterable[Model],

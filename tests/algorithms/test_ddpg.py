@@ -40,8 +40,8 @@ class TestDDPG(object):
 
         dummy_env = E.DummyContinuous()
         batch_size = 5
-        params = A.DDPGParam(batch_size=batch_size, start_timesteps=5)
-        ddpg = A.DDPG(dummy_env, params=params)
+        config = A.DDPGConfig(batch_size=batch_size, start_timesteps=5)
+        ddpg = A.DDPG(dummy_env, config=config)
 
         ddpg.train_online(dummy_env, total_iterations=10)
 
@@ -52,8 +52,8 @@ class TestDDPG(object):
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
-        params = A.DDPGParam(batch_size=batch_size)
-        ddpg = A.DDPG(dummy_env, params=params)
+        config = A.DDPGConfig(batch_size=batch_size)
+        ddpg = A.DDPG(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()

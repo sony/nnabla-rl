@@ -21,7 +21,7 @@ from dataclasses import dataclass
 import gym
 from typing import Union
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import StochasticPolicyBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -35,7 +35,7 @@ import nnabla_rl.model_trainers as MT
 
 
 @dataclass
-class ICML2015TRPOParam(AlgorithmParam):
+class ICML2015TRPOConfig(AlgorithmConfig):
     gamma: float = 0.99
     num_steps_per_iteration: int = int(1e5)
     gpu_batch_size: int = 2500
@@ -64,24 +64,24 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: ICML2015TRPOParam,
+                    algorithm_config: ICML2015TRPOConfig,
                     **kwargs) -> StochasticPolicy:
         if env_info.is_discrete_action_env():
-            return self._build_default_discrete_policy(scope_name, env_info, algorithm_params)
+            return self._build_default_discrete_policy(scope_name, env_info, algorithm_config)
         else:
-            return self._build_default_continuous_policy(scope_name, env_info, algorithm_params)
+            return self._build_default_continuous_policy(scope_name, env_info, algorithm_config)
 
     def _build_default_continuous_policy(self,
                                          scope_name: str,
                                          env_info: EnvironmentInfo,
-                                         algorithm_params: ICML2015TRPOParam,
+                                         algorithm_config: ICML2015TRPOConfig,
                                          **kwargs) -> StochasticPolicy:
         return ICML2015TRPOMujocoPolicy(scope_name, env_info.action_dim)
 
     def _build_default_discrete_policy(self,
                                        scope_name: str,
                                        env_info: EnvironmentInfo,
-                                       algorithm_params: ICML2015TRPOParam,
+                                       algorithm_config: ICML2015TRPOConfig,
                                        **kwargs) -> StochasticPolicy:
         return ICML2015TRPOAtariPolicy(scope_name, env_info.action_dim)
 
@@ -93,7 +93,7 @@ class ICML2015TRPO(Algorithm):
         See: https://arxiv.org/pdf/1502.05477.pdf
     '''
 
-    _params: ICML2015TRPOParam
+    _config: ICML2015TRPOConfig
     _policy: StochasticPolicy
     _policy_trainer: ModelTrainer
     _environment_explorer: EnvironmentExplorer
@@ -101,10 +101,10 @@ class ICML2015TRPO(Algorithm):
     _eval_action: nn.Variable
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: ICML2015TRPOParam = ICML2015TRPOParam(),
+                 config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
                  policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder()):
-        super(ICML2015TRPO, self).__init__(env_or_env_info, params=params)
-        self._policy = policy_builder("pi", self._env_info, self._params)
+        super(ICML2015TRPO, self).__init__(env_or_env_info, config=config)
+        self._policy = policy_builder("pi", self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, s):
@@ -118,33 +118,33 @@ class ICML2015TRPO(Algorithm):
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
             return None
-        explorer_params = EE.RawPolicyExplorerParam(initial_step_num=self.iteration_num, timelimit_as_terminal=False)
+        explorer_config = EE.RawPolicyExplorerConfig(initial_step_num=self.iteration_num, timelimit_as_terminal=False)
         explorer = EE.RawPolicyExplorer(
-            policy_action_selector=self._compute_action, env_info=self._env_info, params=explorer_params)
+            policy_action_selector=self._compute_action, env_info=self._env_info, config=explorer_config)
         return explorer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_params = MT.policy_trainers.TRPOPolicyTrainerParam(
-            gpu_batch_size=self._params.gpu_batch_size,
-            sigma_kl_divergence_constraint=self._params.sigma_kl_divergence_constraint,
-            maximum_backtrack_numbers=self._params.maximum_backtrack_numbers,
-            conjugate_gradient_damping=self._params.conjugate_gradient_damping,
-            conjugate_gradient_iterations=self._params.conjugate_gradient_iterations)
+        policy_trainer_config = MT.policy_trainers.TRPOPolicyTrainerConfig(
+            gpu_batch_size=self._config.gpu_batch_size,
+            sigma_kl_divergence_constraint=self._config.sigma_kl_divergence_constraint,
+            maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
+            conjugate_gradient_damping=self._config.conjugate_gradient_damping,
+            conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
         policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
-                                                              params=policy_trainer_params)
+                                                              config=policy_trainer_config)
         training = MT.model_trainer.Training()
         policy_trainer.setup_training(self._policy, {}, training)
 
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
-        if self.iteration_num % self._params.num_steps_per_iteration != 0:
+        if self.iteration_num % self._config.num_steps_per_iteration != 0:
             return
 
-        buffer = ReplayBuffer(capacity=self._params.num_steps_per_iteration)
+        buffer = ReplayBuffer(capacity=self._config.num_steps_per_iteration)
 
         num_steps = 0
-        while num_steps <= self._params.num_steps_per_iteration:
+        while num_steps <= self._config.num_steps_per_iteration:
             experience = self._environment_explorer.rollout(env)
             buffer.append(experience)
             num_steps += len(experience)
@@ -160,7 +160,7 @@ class ICML2015TRPO(Algorithm):
 
         extra = {}
         extra['advantage'] = accumulated_reward  # Use accumulated_reward as advantage
-        batch = TrainingBatch(batch_size=self._params.batch_size,
+        batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,
                               extra=extra)
@@ -176,7 +176,7 @@ class ICML2015TRPO(Algorithm):
         for experiences in buffer_iterator:
             experience, *_ = experiences
             s_seq, a_seq, r_seq, *_ = marshall_experiences(experience[0])
-            accumulated_reward = self._compute_accumulated_reward(r_seq, self._params.gamma)
+            accumulated_reward = self._compute_accumulated_reward(r_seq, self._config.gamma)
             s_batch.append(s_seq)
             a_batch.append(a_seq)
             accumulated_reward_batch.append(accumulated_reward)
@@ -185,9 +185,9 @@ class ICML2015TRPO(Algorithm):
         a_batch = np.concatenate(a_batch, axis=0)
         accumulated_reward_batch = np.concatenate(accumulated_reward_batch, axis=0)
 
-        return s_batch[:self._params.num_steps_per_iteration], \
-            a_batch[:self._params.num_steps_per_iteration], \
-            accumulated_reward_batch[:self._params.num_steps_per_iteration]
+        return s_batch[:self._config.num_steps_per_iteration], \
+            a_batch[:self._config.num_steps_per_iteration], \
+            accumulated_reward_batch[:self._config.num_steps_per_iteration]
 
     def _compute_accumulated_reward(self, reward_sequence, gamma):
         episode_length = len(reward_sequence)

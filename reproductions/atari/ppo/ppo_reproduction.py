@@ -42,12 +42,12 @@ def run_training(args):
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
-        params = A.PPOParam(actor_num=actor_num,
-                            total_timesteps=total_timesteps,
-                            timelimit_as_terminal=True,
-                            seed=args.seed,
-                            preprocess_state=False)
-        ppo = A.PPO(train_env, params=params)
+        config = A.PPOConfig(actor_num=actor_num,
+                             total_timesteps=total_timesteps,
+                             timelimit_as_terminal=True,
+                             seed=args.seed,
+                             preprocess_state=False)
+        ppo = A.PPO(train_env, config=config)
     else:
         ppo = serializers.load_snapshot(args.snapshot_dir)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]

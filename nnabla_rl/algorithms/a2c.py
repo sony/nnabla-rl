@@ -25,7 +25,7 @@ from nnabla import solvers as NS
 
 import nnabla_rl.utils.context as context
 import nnabla_rl.functions as RF
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import VFunctionBuilder, StochasticPolicyBuilder, SolverBuilder
 from nnabla_rl import environment_explorers as EE
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -38,7 +38,7 @@ from nnabla_rl.utils.reproductions import set_global_seed
 
 
 @dataclass
-class A2CParam(AlgorithmParam):
+class A2CConfig(AlgorithmConfig):
     gamma: float = 0.99
     n_steps: int = 5
     learning_rate: float = 7e-4
@@ -69,7 +69,7 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: A2CParam,
+                    algorithm_config: A2CConfig,
                     **kwargs) -> StochasticPolicy:
         _shared_function_head = A3CSharedFunctionHead(scope_name="shared",
                                                       state_shape=env_info.state_shape)
@@ -83,7 +83,7 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: A2CParam,
+                    algorithm_config: A2CConfig,
                     **kwargs) -> VFunction:
         _shared_function_head = A3CSharedFunctionHead(scope_name="shared",
                                                       state_shape=env_info.state_shape)
@@ -95,15 +95,15 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: A2CParam,
+                     algorithm_config: A2CConfig,
                      **kwargs) -> nn.solver.Solver:
-        return NS.RMSprop(lr=algorithm_params.learning_rate,
-                          decay=algorithm_params.decay,
-                          eps=algorithm_params.epsilon)
+        return NS.RMSprop(lr=algorithm_config.learning_rate,
+                          decay=algorithm_config.decay,
+                          eps=algorithm_config.epsilon)
 
 
 class A2C(Algorithm):
-    _params: A2CParam
+    _config: A2CConfig
     _gpu_id: int
     _v_function: VFunction
     _v_function_solver: nn.solver.Solver
@@ -124,18 +124,18 @@ class A2C(Algorithm):
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 params=A2CParam()):
+                 config=A2CConfig()):
         self._gpu_id = context._gpu_id
         # Prevent setting context by the Algorithm class
         if 0 <= self._gpu_id:
             context._gpu_id = -1
-        super(A2C, self).__init__(env_or_env_info, params=params)
+        super(A2C, self).__init__(env_or_env_info, config=config)
 
-        self._v_function = v_function_builder('v', self._env_info, self._params)
-        self._policy = policy_builder('pi', self._env_info, self._params)
+        self._v_function = v_function_builder('v', self._env_info, self._config)
+        self._policy = policy_builder('pi', self._env_info, self._config)
 
-        self._policy_solver = policy_solver_builder(self._env_info, self._params)
-        self._v_function_solver = v_solver_builder(self._env_info, self._params)
+        self._policy_solver = policy_solver_builder(self._env_info, self._config)
+        self._v_function_solver = v_solver_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, state):
@@ -174,8 +174,8 @@ class A2C(Algorithm):
         self._setup_v_function_training(env_or_buffer)
 
     def _build_training_graph(self, env):
-        n_steps = self._params.n_steps
-        actor_num = self._params.actor_num
+        n_steps = self._config.n_steps
+        actor_num = self._config.actor_num
         batch_size = n_steps * actor_num
 
         state_shape = env.observation_space.shape
@@ -195,8 +195,8 @@ class A2C(Algorithm):
         advantage = self._returns_var - v_var
         advantage.need_grad = False
 
-        pi_loss = NF.mean(-advantage * log_prob - self._params.entropy_coef * entropy)
-        v_loss = self._params.v_function_coef * RF.mean_squared_error(self._returns_var, v_var)
+        pi_loss = NF.mean(-advantage * log_prob - self._config.entropy_coef * entropy)
+        v_loss = self._config.v_function_coef * RF.mean_squared_error(self._returns_var, v_var)
 
         self._policy_loss = pi_loss
         self._v_function_loss = v_loss
@@ -228,13 +228,13 @@ class A2C(Algorithm):
 
     def _build_a2c_actors(self, env, v_function, policy):
         actors = []
-        for i in range(self._params.actor_num):
+        for i in range(self._config.actor_num):
             actor = _A2CActor(actor_num=i,
                               env=env,
                               env_info=self._env_info,
                               v_function=v_function,
                               policy=policy,
-                              params=self._params)
+                              config=self._config)
             actors.append(actor)
         return actors
 
@@ -243,7 +243,7 @@ class A2C(Algorithm):
         process.join()
 
     def _run_online_training_iteration(self, env):
-        update_interval = self._params.n_steps * self._params.actor_num
+        update_interval = self._config.n_steps * self._config.actor_num
         if self.iteration_num % update_interval != 0:
             return
         experiences = self._collect_experiences(self._actors)
@@ -264,7 +264,7 @@ class A2C(Algorithm):
 
     def _a2c_training(self, experiences):
         # lr decay
-        alpha = self._params.learning_rate * (1.0 - self._iteration_num / self.max_iterations)
+        alpha = self._config.learning_rate * (1.0 - self._iteration_num / self.max_iterations)
         self._policy_solver.set_learning_rate(alpha)
         self._v_function_solver.set_learning_rate(alpha)
 
@@ -277,15 +277,15 @@ class A2C(Algorithm):
         self._policy_solver.zero_grad()
         self._policy_loss.forward(clear_no_need_grad=True)
         self._policy_loss.backward(clear_buffer=True)
-        if self._params.max_grad_norm is not None:
-            self._clip_grad_by_global_norm(self._policy_solver, clip_norm=self._params.max_grad_norm)
+        if self._config.max_grad_norm is not None:
+            self._clip_grad_by_global_norm(self._policy_solver, clip_norm=self._config.max_grad_norm)
         self._policy_solver.update()
 
         self._v_function_solver.zero_grad()
         self._v_function_loss.forward(clear_no_need_grad=True)
         self._v_function_loss.backward(clear_buffer=True)
-        if self._params.max_grad_norm is not None:
-            self._clip_grad_by_global_norm(self._v_function_solver, clip_norm=self._params.max_grad_norm)
+        if self._config.max_grad_norm is not None:
+            self._clip_grad_by_global_norm(self._v_function_solver, clip_norm=self._config.max_grad_norm)
         self._v_function_solver.update()
 
     def _clip_grad_by_global_norm(self, solver, clip_norm):
@@ -309,15 +309,15 @@ class A2C(Algorithm):
 
 
 class _A2CActor(object):
-    def __init__(self, actor_num, env, env_info, policy, v_function, params):
+    def __init__(self, actor_num, env, env_info, policy, v_function, config):
         self._actor_num = actor_num
         self._env = env
         self._env_info = env_info
         self._policy = policy
         self._v_function = v_function
-        self._n_steps = params.n_steps
-        self._gamma = params.gamma
-        self._params = params
+        self._n_steps = config.n_steps
+        self._gamma = config.gamma
+        self._config = config
 
         # IPC communication variables
         self._disposed = mp.Value('i', False)
@@ -327,11 +327,11 @@ class _A2CActor(object):
         self._policy_mp_arrays = new_mp_arrays_from_params(policy.get_parameters())
         self._v_function_mp_arrays = new_mp_arrays_from_params(v_function.get_parameters())
 
-        explorer_params = EE.RawPolicyExplorerParam(initial_step_num=0,
-                                                    timelimit_as_terminal=self._params.timelimit_as_terminal)
+        explorer_config = EE.RawPolicyExplorerConfig(initial_step_num=0,
+                                                     timelimit_as_terminal=self._config.timelimit_as_terminal)
         self._environment_explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
                                                           env_info=self._env_info,
-                                                          params=explorer_params)
+                                                          config=explorer_config)
 
         obs_space = self._env.observation_space
         action_space = self._env.action_space
@@ -383,8 +383,8 @@ class _A2CActor(object):
 
     def _run_actor_loop(self):
         context._set_nnabla_context()
-        if self._params.seed >= 0:
-            seed = self._actor_num + self._params.seed
+        if self._config.seed >= 0:
+            seed = self._actor_num + self._config.seed
         else:
             seed = os.getpid()
         set_global_seed(seed)

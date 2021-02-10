@@ -51,8 +51,8 @@ def run_training(args):
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
         timesteps = select_start_timesteps(args.env)
-        params = A.DDPGParam(start_timesteps=timesteps)
-        ddpg = A.DDPG(train_env, params=params)
+        config = A.DDPGConfig(start_timesteps=timesteps)
+        ddpg = A.DDPG(train_env, config=config)
     else:
         ddpg = serializers.load_snapshot(args.snapshot_dir)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]

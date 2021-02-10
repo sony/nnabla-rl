@@ -26,8 +26,8 @@ from nnabla_rl.utils import serializers
 
 
 class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
-    def __call__(self, env_info, algorithm_params, **kwargs):
-        return RB.MemoryEfficientAtariBuffer(capacity=algorithm_params.replay_buffer_size)
+    def __call__(self, env_info, algorithm_config, **kwargs):
+        return RB.MemoryEfficientAtariBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 def run_training(args):

@@ -18,9 +18,9 @@ from nnabla_rl.utils import serializers
 
 
 def main():
-    params = A.DDPGParam(start_timesteps=200)
+    config = A.DDPGConfig(start_timesteps=200)
     env = E.DummyContinuous()
-    ddpg = A.DDPG(env, params=params)
+    ddpg = A.DDPG(env, config=config)
 
     outdir = './save_load_snapshot'
 

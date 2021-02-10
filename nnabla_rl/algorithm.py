@@ -24,7 +24,7 @@ import nnabla as nn
 import numpy as np
 import gym
 
-from nnabla_rl.parameter import Parameter
+from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedTrainingException
 from nnabla_rl.replay_buffer import ReplayBuffer
@@ -41,22 +41,22 @@ def eval_api(f):
 
 
 @dataclass
-class AlgorithmParam(Parameter):
+class AlgorithmConfig(Configuration):
     pass
 
 
 class Algorithm(metaclass=ABCMeta):
     _env_info: EnvironmentInfo
-    _params: AlgorithmParam
+    _config: AlgorithmConfig
     _iteration_num: int
     _max_iterations: int
     _hooks: Sequence[Hook]
 
-    def __init__(self, env_info, params=AlgorithmParam()):
+    def __init__(self, env_info, config=AlgorithmConfig()):
         if isinstance(env_info, gym.Env):
             env_info = EnvironmentInfo.from_env(env_info)
         self._env_info = env_info
-        self._params = params
+        self._config = config
         self._iteration_num = 0
         self._max_iterations = 0
         self._hooks = []

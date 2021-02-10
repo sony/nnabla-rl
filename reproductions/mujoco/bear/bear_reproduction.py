@@ -59,8 +59,8 @@ def run_training(args):
     buffer = d4rl_dataset_to_buffer(train_dataset, max_buffer_size=1000000)
     if args.snapshot_dir is None:
         mmd_sigma = select_mmd_sigma(args.env, args.mmd_kernel)
-        params = A.BEARParam(mmd_sigma=mmd_sigma, mmd_type=args.mmd_kernel)
-        bear = A.BEAR(train_env, params=params)
+        config = A.BEARConfig(mmd_sigma=mmd_sigma, mmd_type=args.mmd_kernel)
+        bear = A.BEAR(train_env, config=config)
     else:
         bear = serializers.load_snapshot(args.snapshot_dir)
     hooks = [save_snapshot_hook, evaluation_hook,

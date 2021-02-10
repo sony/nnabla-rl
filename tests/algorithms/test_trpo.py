@@ -39,13 +39,13 @@ class TestTRPO():
         dummy_env = E.DummyContinuous()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
 
-        params = A.TRPOParam(num_steps_per_iteration=5,
-                             gpu_batch_size=5,
-                             pi_batch_size=5,
-                             vf_batch_size=2,
-                             sigma_kl_divergence_constraint=10.0,
-                             maximum_backtrack_numbers=50)
-        trpo = A.TRPO(dummy_env, params=params)
+        config = A.TRPOConfig(num_steps_per_iteration=5,
+                              gpu_batch_size=5,
+                              pi_batch_size=5,
+                              vf_batch_size=2,
+                              sigma_kl_divergence_constraint=10.0,
+                              maximum_backtrack_numbers=50)
+        trpo = A.TRPO(dummy_env, config=config)
 
         trpo.train_online(dummy_env, total_iterations=5)
 
@@ -71,23 +71,23 @@ class TestTRPO():
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.TRPOParam(gamma=-0.1)
+            A.TRPOConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.TRPOParam(num_steps_per_iteration=-1)
+            A.TRPOConfig(num_steps_per_iteration=-1)
         with pytest.raises(ValueError):
-            A.TRPOParam(sigma_kl_divergence_constraint=-0.1)
+            A.TRPOConfig(sigma_kl_divergence_constraint=-0.1)
         with pytest.raises(ValueError):
-            A.TRPOParam(maximum_backtrack_numbers=-0.1)
+            A.TRPOConfig(maximum_backtrack_numbers=-0.1)
         with pytest.raises(ValueError):
-            A.TRPOParam(conjugate_gradient_damping=-0.1)
+            A.TRPOConfig(conjugate_gradient_damping=-0.1)
         with pytest.raises(ValueError):
-            A.TRPOParam(conjugate_gradient_iterations=-5)
+            A.TRPOConfig(conjugate_gradient_iterations=-5)
         with pytest.raises(ValueError):
-            A.TRPOParam(vf_epochs=-5)
+            A.TRPOConfig(vf_epochs=-5)
         with pytest.raises(ValueError):
-            A.TRPOParam(vf_batch_size=-5)
+            A.TRPOConfig(vf_batch_size=-5)
         with pytest.raises(ValueError):
-            A.TRPOParam(vf_learning_rate=-0.5)
+            A.TRPOConfig(vf_learning_rate=-0.5)
 
 
 if __name__ == "__main__":

@@ -19,11 +19,11 @@ from dataclasses import dataclass
 import numpy as np
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerParam
+from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerConfig
 
 
 @dataclass
-class RawPolicyExplorerParam(EnvironmentExplorerParam):
+class RawPolicyExplorerConfig(EnvironmentExplorerConfig):
     pass
 
 
@@ -31,8 +31,8 @@ class RawPolicyExplorer(EnvironmentExplorer):
     def __init__(self,
                  policy_action_selector: Callable[[np.array], Tuple[np.array, Dict]],
                  env_info: EnvironmentInfo,
-                 params: RawPolicyExplorerParam = RawPolicyExplorerParam()):
-        super().__init__(env_info, params)
+                 config: RawPolicyExplorerConfig = RawPolicyExplorerConfig()):
+        super().__init__(env_info, config)
         self._policy_action_selector = policy_action_selector
 
     def action(self, step, state):

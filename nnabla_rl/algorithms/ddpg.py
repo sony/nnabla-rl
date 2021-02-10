@@ -23,7 +23,7 @@ import numpy as np
 import gym
 from typing import cast, Union
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import QFunctionBuilder, DeterministicPolicyBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -38,7 +38,7 @@ import nnabla_rl.model_trainers as MT
 
 
 @dataclass
-class DDPGParam(AlgorithmParam):
+class DDPGConfig(AlgorithmConfig):
     tau: float = 0.005
     gamma: float = 0.99
     learning_rate: float = 1.0*1e-3
@@ -52,7 +52,7 @@ class DefaultCriticBuilder(QFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: DDPGParam,
+                    algorithm_config: DDPGConfig,
                     **kwargs) -> QFunction:
         target_policy = kwargs.get('target_policy')
         return TD3QFunction(scope_name, optimal_policy=target_policy)
@@ -62,7 +62,7 @@ class DefaultActorBuilder(DeterministicPolicyBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: DDPGParam,
+                    algorithm_config: DDPGConfig,
                     **kwargs) -> DeterministicPolicy:
         max_action_value = float(env_info.action_space.high[0])
         return TD3Policy(scope_name, env_info.action_dim, max_action_value=max_action_value)
@@ -71,21 +71,21 @@ class DefaultActorBuilder(DeterministicPolicyBuilder):
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: DDPGParam,
+                     algorithm_config: DDPGConfig,
                      **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.learning_rate)
+        return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
     def build_replay_buffer(self,  # type: ignore[override]
                             env_info: EnvironmentInfo,
-                            algorithm_params: DDPGParam,
+                            algorithm_config: DDPGConfig,
                             **kwargs) -> ReplayBuffer:
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+        return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DDPG(Algorithm):
-    _params: DDPGParam
+    _config: DDPGConfig
     _q: QFunction
     _q_solver: nn.solver.Solver
     _target_q: QFunction
@@ -98,23 +98,23 @@ class DDPG(Algorithm):
     _policy_trainer: ModelTrainer
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: DDPGParam = DDPGParam(),
+                 config: DDPGConfig = DDPGConfig(),
                  critic_builder: QFunctionBuilder = DefaultCriticBuilder(),
                  critic_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  actor_builder: DeterministicPolicyBuilder = DefaultActorBuilder(),
                  actor_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
-        super(DDPG, self).__init__(env_or_env_info, params=params)
+        super(DDPG, self).__init__(env_or_env_info, config=config)
 
-        self._q = critic_builder(scope_name="q", env_info=self._env_info, algorithm_params=self._params)
-        self._q_solver = critic_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._q = critic_builder(scope_name="q", env_info=self._env_info, algorithm_config=self._config)
+        self._q_solver = critic_solver_builder(env_info=self._env_info, algorithm_config=self._config)
         self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
 
-        self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_params=self._params)
-        self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+        self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
         self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy("target_" + self._pi.scope_name))
 
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
     def _before_training_start(self, env_or_buffer):
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
@@ -125,27 +125,27 @@ class DDPG(Algorithm):
         if self._is_buffer(env_or_buffer):
             return None
 
-        explorer_params = EE.GaussianExplorerParam(
-            warmup_random_steps=self._params.start_timesteps,
+        explorer_config = EE.GaussianExplorerConfig(
+            warmup_random_steps=self._config.start_timesteps,
             initial_step_num=self.iteration_num,
             timelimit_as_terminal=False,
             action_clip_low=self._env_info.action_space.low,
             action_clip_high=self._env_info.action_space.high,
-            sigma=self._params.exploration_noise_sigma
+            sigma=self._config.exploration_noise_sigma
         )
         explorer = EE.GaussianExplorer(policy_action_selector=self._compute_greedy_action,
                                        env_info=self._env_info,
-                                       params=explorer_params)
+                                       config=explorer_config)
         return explorer
 
     def _setup_q_function_training(self, env_or_buffer):
-        q_function_trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
+        q_function_trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
             reduction_method='mean',
             grad_clip=None)
 
         q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
             env_info=self._env_info,
-            params=q_function_trainer_params)
+            config=q_function_trainer_config)
 
         training = MT.q_value_trainings.DDPGTraining(
             train_functions=self._q,
@@ -156,15 +156,15 @@ class DDPG(Algorithm):
             src_models=self._q,
             dst_models=self._target_q,
             target_update_frequency=1,
-            tau=self._params.tau)
+            tau=self._config.tau)
         q_function_trainer.setup_training(self._q, {self._q.scope_name: self._q_solver}, training)
         copy_network_parameters(self._q.get_parameters(), self._target_q.get_parameters())
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_params = MT.policy_trainers.DPGPolicyTrainerParam()
+        policy_trainer_config = MT.policy_trainers.DPGPolicyTrainerConfig()
         policy_trainer = MT.policy_trainers.DPGPolicyTrainer(env_info=self._env_info,
-                                                             params=policy_trainer_params,
+                                                             config=policy_trainer_config,
                                                              q_function=self._q)
         # Empty training will not configure anything and does the default training written in policy_trainer class
         training = Training()
@@ -173,7 +173,7 @@ class DDPG(Algorithm):
             src_models=self._pi,
             dst_models=self._target_pi,
             target_update_frequency=1,
-            tau=self._params.tau
+            tau=self._config.tau
         )
         policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
         copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), tau=1.0)
@@ -188,19 +188,19 @@ class DDPG(Algorithm):
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)
         self._replay_buffer.append_all(experiences)
-        if self._params.start_timesteps < self.iteration_num:
+        if self._config.start_timesteps < self.iteration_num:
             self._ddpg_training(self._replay_buffer)
 
     def _run_offline_training_iteration(self, buffer):
         self._ddpg_training(buffer)
 
     def _ddpg_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._params.batch_size)
+        experiences, info = replay_buffer.sample(self._config.batch_size)
         (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._params.batch_size,
+        batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,
-                              gamma=self._params.gamma,
+                              gamma=self._config.gamma,
                               reward=r,
                               non_terminal=non_terminal,
                               s_next=s_next,

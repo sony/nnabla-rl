@@ -18,7 +18,7 @@ import pytest
 import numpy as np
 
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import \
-    LinearDecayEpsilonGreedyExplorer, LinearDecayEpsilonGreedyExplorerParam
+    LinearDecayEpsilonGreedyExplorer, LinearDecayEpsilonGreedyExplorerConfig
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
 
 
@@ -74,13 +74,13 @@ class TestEpsilonGreedyActionStrategy(object):
         max_explore_steps = 100
         greedy_selector_mock = mock.MagicMock(return_value=(1, {}))
         random_selector_mock = mock.MagicMock(return_value=(2, {}))
-        params = LinearDecayEpsilonGreedyExplorerParam(initial_epsilon=initial_epsilon,
-                                                       final_epsilon=final_epsilon,
-                                                       max_explore_steps=max_explore_steps)
+        config = LinearDecayEpsilonGreedyExplorerConfig(initial_epsilon=initial_epsilon,
+                                                        final_epsilon=final_epsilon,
+                                                        max_explore_steps=max_explore_steps)
         explorer = LinearDecayEpsilonGreedyExplorer(greedy_selector_mock,
                                                     random_selector_mock,
                                                     env_info=None,
-                                                    params=params)
+                                                    config=config)
 
         def expected_epsilon(step):
             epsilon = initial_epsilon - \

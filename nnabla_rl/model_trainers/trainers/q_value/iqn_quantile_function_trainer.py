@@ -24,12 +24,12 @@ from dataclasses import dataclass
 import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import StateActionQuantileFunction, Model
 
 
 @dataclass
-class IQNQuantileFunctionTrainerParam(TrainerParam):
+class IQNQuantileFunctionTrainerConfig(TrainerConfig):
     N: int = 64
     N_prime: int = 64
     K: int = 32
@@ -37,13 +37,13 @@ class IQNQuantileFunctionTrainerParam(TrainerParam):
 
 
 class IQNQuantileFunctionTrainer(ModelTrainer):
-    _params: IQNQuantileFunctionTrainerParam
+    _config: IQNQuantileFunctionTrainerConfig
     _quantile_huber_loss: nn.Variable
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: IQNQuantileFunctionTrainerParam = IQNQuantileFunctionTrainerParam()):
-        super(IQNQuantileFunctionTrainer, self).__init__(env_info, params)
+                 config: IQNQuantileFunctionTrainerConfig = IQNQuantileFunctionTrainerConfig()):
+        super(IQNQuantileFunctionTrainer, self).__init__(env_info, config)
 
     def _update_model(self,
                       models: Sequence[Model],
@@ -75,27 +75,27 @@ class IQNQuantileFunctionTrainer(ModelTrainer):
         models = cast(Sequence[StateActionQuantileFunction], models)
 
         kwargs = {}
-        kwargs['K'] = self._params.K
-        kwargs['N_prime'] = self._params.N_prime
+        kwargs['K'] = self._config.K
+        kwargs['N_prime'] = self._config.N_prime
         batch_size = training_variables.batch_size
 
         target = training.compute_target(training_variables, **kwargs)
         target = RF.expand_dims(target, axis=1)
         target.need_grad = False
-        assert target.shape == (batch_size, 1, self._params.N_prime)
+        assert target.shape == (batch_size, 1, self._config.N_prime)
 
         self._quantile_huber_loss = 0
         for model in models:
-            tau_i = model._sample_tau(shape=(batch_size, self._params.N))
+            tau_i = model._sample_tau(shape=(batch_size, self._config.N))
             quantiles = model.quantiles(training_variables.s_current, tau_i)
             Z_tau_i = model._quantiles_of(quantiles, training_variables.a_current)
             Z_tau_i = RF.expand_dims(Z_tau_i, axis=2)
             tau_i = RF.expand_dims(tau_i, axis=2)
-            assert Z_tau_i.shape == (batch_size, self._params.N, 1)
+            assert Z_tau_i.shape == (batch_size, self._config.N, 1)
             assert tau_i.shape == Z_tau_i.shape
 
-            quantile_huber_loss = RF.quantile_huber_loss(target, Z_tau_i, self._params.kappa, tau_i)
-            assert quantile_huber_loss.shape == (batch_size, self._params.N, self._params.N_prime)
+            quantile_huber_loss = RF.quantile_huber_loss(target, Z_tau_i, self._config.kappa, tau_i)
+            assert quantile_huber_loss.shape == (batch_size, self._config.N, self._config.N_prime)
             quantile_huber_loss = NF.mean(quantile_huber_loss, axis=2)
             quantile_huber_loss = NF.sum(quantile_huber_loss, axis=1)
             self._quantile_huber_loss += NF.mean(quantile_huber_loss)

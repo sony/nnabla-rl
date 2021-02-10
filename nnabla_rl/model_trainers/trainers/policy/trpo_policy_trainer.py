@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.logger import logger
 from nnabla_rl.utils.optimization import conjugate_gradient
 from nnabla_rl.utils.copy import copy_network_parameters
@@ -90,7 +90,7 @@ def _update_network_params_by_flat_params(params, new_flat_params):
 
 
 @dataclass
-class TRPOPolicyTrainerParam(TrainerParam):
+class TRPOPolicyTrainerConfig(TrainerConfig):
     gpu_batch_size: Optional[int] = None
     sigma_kl_divergence_constraint: float = 0.01
     maximum_backtrack_numbers: int = 10
@@ -105,7 +105,7 @@ class TRPOPolicyTrainerParam(TrainerParam):
 
 
 class TRPOPolicyTrainer(ModelTrainer):
-    _params: TRPOPolicyTrainerParam
+    _config: TRPOPolicyTrainerConfig
     _approximate_return: nn.Variable
     _approximate_return_flat_grads: nn.Variable
     _kl_divergence: nn.Variable
@@ -114,8 +114,8 @@ class TRPOPolicyTrainer(ModelTrainer):
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: TRPOPolicyTrainerParam = TRPOPolicyTrainerParam()):
-        super(TRPOPolicyTrainer, self).__init__(env_info, params)
+                 config: TRPOPolicyTrainerConfig = TRPOPolicyTrainerConfig()):
+        super(TRPOPolicyTrainer, self).__init__(env_info, config)
 
     def _update_model(self,
                       models: Sequence[Model],
@@ -144,10 +144,10 @@ class TRPOPolicyTrainer(ModelTrainer):
     def _total_blocks(self, batch_size):
         # We use gpu_batch_size to reduce one forward gpu calculation memory
         # Usually, gpu_batch_size is the same as batch_size
-        if self._params.gpu_batch_size is not None:
-            if self._params.gpu_batch_size > batch_size:
+        if self._config.gpu_batch_size is not None:
+            if self._config.gpu_batch_size > batch_size:
                 raise ValueError("Invalid gpu_batch_size, gpu_batch_size should be batch_size or less")
-            total_blocks = batch_size // self._params.gpu_batch_size
+            total_blocks = batch_size // self._config.gpu_batch_size
         else:
             total_blocks = 1
 
@@ -200,14 +200,14 @@ class TRPOPolicyTrainer(ModelTrainer):
 
         step_direction = conjugate_gradient(
             fisher_vector_product_wrapper, approximate_return_flat_grads,
-            max_iterations=self._params.conjugate_gradient_iterations)
+            max_iterations=self._config.conjugate_gradient_iterations)
 
         fisher_vector_product = self._fisher_vector_product(
             policy, s_batch, a_batch, step_direction, training_variables)
         sAs = float(np.dot(step_direction, fisher_vector_product))
 
         # adding 1e-8 to avoid computational error
-        beta = (2.0 * self._params.sigma_kl_divergence_constraint / (sAs + 1e-8)) ** 0.5
+        beta = (2.0 * self._config.sigma_kl_divergence_constraint / (sAs + 1e-8)) ** 0.5
         full_step_params_update = beta * step_direction
 
         return full_step_params_update
@@ -215,8 +215,8 @@ class TRPOPolicyTrainer(ModelTrainer):
     def _fisher_vector_product(self, policy, s_batch, a_batch, vector, training_variables):
         sum_hessian_multiplied_vector = 0
 
-        if self._params.gpu_batch_size is not None:
-            gpu_batch_size = self._params.gpu_batch_size
+        if self._config.gpu_batch_size is not None:
+            gpu_batch_size = self._config.gpu_batch_size
         else:
             gpu_batch_size = len(s_batch)
 
@@ -233,7 +233,7 @@ class TRPOPolicyTrainer(ModelTrainer):
             hessian_vector_product = _hessian_vector_product(self._kl_divergence_flat_grads,
                                                              policy.get_parameters().values(),
                                                              vector)
-            hessian_multiplied_vector = hessian_vector_product + self._params.conjugate_gradient_damping * vector
+            hessian_multiplied_vector = hessian_vector_product + self._config.conjugate_gradient_damping * vector
             sum_hessian_multiplied_vector += hessian_multiplied_vector
         return sum_hessian_multiplied_vector / total_blocks
 
@@ -244,7 +244,7 @@ class TRPOPolicyTrainer(ModelTrainer):
         current_approximate_return, _, _ = self._forward_all_variables(
             s_batch, a_batch, adv_batch, training_variables)
 
-        for step_size in 0.5**np.arange(self._params.maximum_backtrack_numbers):
+        for step_size in 0.5**np.arange(self._config.maximum_backtrack_numbers):
             new_flat_params = current_flat_params + step_size * full_step_params_update
             _update_network_params_by_flat_params(policy.get_parameters(), new_flat_params)
 
@@ -252,7 +252,7 @@ class TRPOPolicyTrainer(ModelTrainer):
                 s_batch, a_batch, adv_batch, training_variables)
 
             improved = approximate_return - current_approximate_return > 0.
-            is_in_kl_divergence_constraint = kl_divergence < self._params.sigma_kl_divergence_constraint
+            is_in_kl_divergence_constraint = kl_divergence < self._config.sigma_kl_divergence_constraint
 
             if improved and is_in_kl_divergence_constraint:
                 return
@@ -271,8 +271,8 @@ class TRPOPolicyTrainer(ModelTrainer):
         sum_kl_divergence = 0.0
         sum_approximate_return_flat_grad = 0.0
 
-        if self._params.gpu_batch_size is not None:
-            gpu_batch_size = self._params.gpu_batch_size
+        if self._config.gpu_batch_size is not None:
+            gpu_batch_size = self._config.gpu_batch_size
         else:
             gpu_batch_size = len(s_batch)
 

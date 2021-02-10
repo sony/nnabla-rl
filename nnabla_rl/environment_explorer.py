@@ -22,14 +22,14 @@ import numpy as np
 
 from dataclasses import dataclass
 
-from nnabla_rl.parameter import Parameter
+from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 Experience = Tuple[np.array, np.array, float, float, np.array, Dict[str, Any]]
 
 
 @dataclass
-class EnvironmentExplorerParam(Parameter):
+class EnvironmentExplorerConfig(Configuration):
     warmup_random_steps: int = 0
     reward_scalar: float = 1.0
     timelimit_as_terminal: bool = True
@@ -43,15 +43,15 @@ class EnvironmentExplorer(metaclass=ABCMeta):
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: EnvironmentExplorerParam = EnvironmentExplorerParam()):
+                 config: EnvironmentExplorerConfig = EnvironmentExplorerConfig()):
         self._env_info = env_info
-        self._params = params
+        self._config = config
 
         self._state = None
         self._action = None
         self._next_state = None
 
-        self._steps = self._params.initial_step_num
+        self._steps = self._config.initial_step_num
 
     @abstractmethod
     def action(self, steps: int, state: np.array) -> np.array:
@@ -115,7 +115,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
 
     def _step_once(self, env) -> Tuple[Experience, bool]:
         self._steps += 1
-        if self._steps < self._params.warmup_random_steps:
+        if self._steps < self._config.warmup_random_steps:
             action_info = {}
             if self._env_info.is_discrete_action_env():
                 action = env.action_space.sample()
@@ -127,7 +127,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
 
         self._next_state, r, done, step_info = env.step(self._action)
         timelimit = step_info.get('TimeLimit.truncated', False)
-        if _is_end_of_episode(done, timelimit, self._params.timelimit_as_terminal):
+        if _is_end_of_episode(done, timelimit, self._config.timelimit_as_terminal):
             non_terminal = 0.0
         else:
             non_terminal = 1.0
@@ -135,7 +135,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         extra_info = {}
         extra_info.update(action_info)
         extra_info.update(step_info)
-        experience = (self._state, self._action, r * self._params.reward_scalar,
+        experience = (self._state, self._action, r * self._config.reward_scalar,
                       non_terminal, self._next_state, extra_info)
 
         if done:

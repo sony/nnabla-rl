@@ -38,12 +38,12 @@ class TestMunchausenDQN(object):
         Check that no error occurs when calling online training
         '''
         dummy_env = E.DummyDiscreteImg()
-        params = A.MunchausenDQNParam()
-        params.start_timesteps = 5
-        params.batch_size = 5
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
-        dqn = A.MunchausenDQN(dummy_env, params=params)
+        config = A.MunchausenDQNConfig()
+        config.start_timesteps = 5
+        config.batch_size = 5
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        dqn = A.MunchausenDQN(dummy_env, config=config)
 
         dqn.train_online(dummy_env, total_iterations=10)
 
@@ -53,12 +53,12 @@ class TestMunchausenDQN(object):
         '''
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
-        params = A.MunchausenDQNParam()
-        params.batch_size = batch_size
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
+        config = A.MunchausenDQNConfig()
+        config.batch_size = batch_size
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
 
-        dqn = A.MunchausenDQN(dummy_env, params=params)
+        dqn = A.MunchausenDQN(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -77,27 +77,27 @@ class TestMunchausenDQN(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(gamma=-0.1)
+            A.MunchausenDQNConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(batch_size=-1)
+            A.MunchausenDQNConfig(batch_size=-1)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(learning_rate=-0.1)
+            A.MunchausenDQNConfig(learning_rate=-0.1)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(learner_update_frequency=-1000)
+            A.MunchausenDQNConfig(learner_update_frequency=-1000)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(target_update_frequency=-1000)
+            A.MunchausenDQNConfig(target_update_frequency=-1000)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(start_timesteps=-1000)
+            A.MunchausenDQNConfig(start_timesteps=-1000)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(replay_buffer_size=-1000)
+            A.MunchausenDQNConfig(replay_buffer_size=-1000)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(initial_epsilon=1.5)
+            A.MunchausenDQNConfig(initial_epsilon=1.5)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(final_epsilon=1.1)
+            A.MunchausenDQNConfig(final_epsilon=1.1)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(test_epsilon=-1000)
+            A.MunchausenDQNConfig(test_epsilon=-1000)
         with pytest.raises(ValueError):
-            A.MunchausenDQNParam(max_explore_steps=-100)
+            A.MunchausenDQNConfig(max_explore_steps=-100)
 
 
 if __name__ == "__main__":

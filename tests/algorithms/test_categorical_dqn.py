@@ -39,12 +39,12 @@ class TestCategoricalDQN(object):
         '''
 
         dummy_env = E.DummyDiscreteImg()
-        params = A.CategoricalDQNParam()
-        params.start_timesteps = 5
-        params.batch_size = 5
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
-        categorical_dqn = A.CategoricalDQN(dummy_env, params=params)
+        config = A.CategoricalDQNConfig()
+        config.start_timesteps = 5
+        config.batch_size = 5
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        categorical_dqn = A.CategoricalDQN(dummy_env, config=config)
 
         categorical_dqn.train_online(dummy_env, total_iterations=10)
 
@@ -55,8 +55,8 @@ class TestCategoricalDQN(object):
 
         batch_size = 5
         dummy_env = E.DummyDiscreteImg()
-        params = A.CategoricalDQNParam(batch_size=batch_size)
-        categorical_dqn = A.CategoricalDQN(dummy_env, params=params)
+        config = A.CategoricalDQNConfig(batch_size=batch_size)
+        categorical_dqn = A.CategoricalDQN(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()

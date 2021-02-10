@@ -38,8 +38,8 @@ class TestPPO(object):
         dummy_env = E.DummyDiscreteImg()
         actor_timesteps = 10
         actor_num = 2
-        params = A.PPOParam(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
-        ppo = A.PPO(dummy_env, params=params)
+        config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
+        ppo = A.PPO(dummy_env, config=config)
 
         ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
 
@@ -51,8 +51,8 @@ class TestPPO(object):
         dummy_env = E.DummyContinuous()
         actor_timesteps = 10
         actor_num = 2
-        params = A.PPOParam(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
-        ppo = A.PPO(dummy_env, params=params)
+        config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
+        ppo = A.PPO(dummy_env, config=config)
 
         ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
@@ -69,17 +69,17 @@ class TestPPO(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.PPOParam(gamma=1.1)
+            A.PPOConfig(gamma=1.1)
         with pytest.raises(ValueError):
-            A.PPOParam(gamma=-0.1)
+            A.PPOConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.PPOParam(actor_num=-1)
+            A.PPOConfig(actor_num=-1)
         with pytest.raises(ValueError):
-            A.PPOParam(batch_size=-1)
+            A.PPOConfig(batch_size=-1)
         with pytest.raises(ValueError):
-            A.PPOParam(actor_timesteps=-1)
+            A.PPOConfig(actor_timesteps=-1)
         with pytest.raises(ValueError):
-            A.PPOParam(total_timesteps=-1)
+            A.PPOConfig(total_timesteps=-1)
 
 
 if __name__ == "__main__":

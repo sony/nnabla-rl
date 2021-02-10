@@ -44,8 +44,8 @@ def run_training(args):
 
     actor_num = 8
     total_timesteps = 50000000
-    params = A.A2CParam(actor_num=actor_num)
-    a2c = A.A2C(train_env, params=params)
+    config = A.A2CConfig(actor_num=actor_num)
+    a2c = A.A2C(train_env, config=config)
     a2c.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
 
     a2c.train(train_env, total_iterations=total_timesteps)

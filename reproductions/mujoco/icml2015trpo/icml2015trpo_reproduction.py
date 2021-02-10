@@ -40,11 +40,11 @@ def run_training(args):
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=int(1e6))
     iteration_num_hook = H.IterationNumHook(timing=int(1e6))
 
-    params = A.ICML2015TRPOParam(num_steps_per_iteration=int(1e6), batch_size=int(1e6), gpu_batch_size=int(1e5))
+    config = A.ICML2015TRPOConfig(num_steps_per_iteration=int(1e6), batch_size=int(1e6), gpu_batch_size=int(1e5))
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
-        trpo = A.ICML2015TRPO(train_env, params=params)
+        trpo = A.ICML2015TRPO(train_env, config=config)
     else:
         trpo = serializers.load_snapshot(args.snapshot_dir)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]

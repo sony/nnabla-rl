@@ -50,8 +50,8 @@ class TestICML2018SAC(object):
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
-        params = A.ICML2018SACParam(batch_size=batch_size)
-        sac = A.ICML2018SAC(dummy_env, params=params)
+        config = A.ICML2018SACConfig(batch_size=batch_size)
+        sac = A.ICML2018SAC(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -78,21 +78,21 @@ class TestICML2018SAC(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.ICML2018SACParam(tau=1.1)
+            A.ICML2018SACConfig(tau=1.1)
         with pytest.raises(ValueError):
-            A.ICML2018SACParam(tau=-0.1)
+            A.ICML2018SACConfig(tau=-0.1)
         with pytest.raises(ValueError):
-            A.ICML2018SACParam(gamma=1.1)
+            A.ICML2018SACConfig(gamma=1.1)
         with pytest.raises(ValueError):
-            A.ICML2018SACParam(gamma=-0.1)
+            A.ICML2018SACConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.ICML2018SACParam(start_timesteps=-100)
+            A.ICML2018SACConfig(start_timesteps=-100)
         with pytest.raises(ValueError):
-            A.ICML2018SACParam(environment_steps=-100)
+            A.ICML2018SACConfig(environment_steps=-100)
         with pytest.raises(ValueError):
-            A.ICML2018SACParam(gradient_steps=-100)
+            A.ICML2018SACConfig(gradient_steps=-100)
         with pytest.raises(ValueError):
-            A.ICML2018SACParam(target_update_interval=-100)
+            A.ICML2018SACConfig(target_update_interval=-100)
 
     def _has_same_parameters(self, params1, params2):
         for key in params1.keys():

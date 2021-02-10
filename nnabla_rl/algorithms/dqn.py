@@ -22,7 +22,7 @@ import numpy as np
 
 from typing import cast, Union
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import QFunctionBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
@@ -37,7 +37,7 @@ import nnabla_rl.model_trainers as MT
 
 
 @dataclass
-class DQNParam(AlgorithmParam):
+class DQNConfig(AlgorithmConfig):
     gamma: float = 0.99
     batch_size: int = 32
     # optimizer
@@ -84,7 +84,7 @@ class DefaultQFunctionBuilder(QFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: DQNParam,
+                    algorithm_config: DQNConfig,
                     **kwargs) -> QFunction:
         return DQNQFunction(scope_name, env_info.action_dim)
 
@@ -92,24 +92,24 @@ class DefaultQFunctionBuilder(QFunctionBuilder):
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: DQNParam,
+                     algorithm_config: DQNConfig,
                      **kwargs) -> nn.solver.Solver:
         solver = NS.RMSpropGraves(
-            lr=algorithm_params.learning_rate, decay=algorithm_params.decay,
-            momentum=algorithm_params.momentum, eps=algorithm_params.min_squared_gradient)
+            lr=algorithm_config.learning_rate, decay=algorithm_config.decay,
+            momentum=algorithm_config.momentum, eps=algorithm_config.min_squared_gradient)
         return solver
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
     def build_replay_buffer(self,  # type: ignore[override]
                             env_info: EnvironmentInfo,
-                            algorithm_params: DQNParam,
+                            algorithm_config: DQNConfig,
                             **kwargs) -> ReplayBuffer:
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+        return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DQN(Algorithm):
-    _params: DQNParam
+    _config: DQNConfig
     _q: QFunction
     _q_solver: nn.solver.Solver
     _target_q: QFunction
@@ -120,27 +120,27 @@ class DQN(Algorithm):
     _a_greedy: nn.Variable
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: DQNParam = DQNParam(),
+                 config: DQNConfig = DQNConfig(),
                  q_func_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
-        super(DQN, self).__init__(env_or_env_info, params=params)
+        super(DQN, self).__init__(env_or_env_info, config=config)
 
         if not self._env_info.is_discrete_action_env():
             raise ValueError('Invalid env_info. Action space of DQN must be {}' .format(gym.spaces.Discrete))
 
-        self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_params=self._params)
-        self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_config=self._config)
+        self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
         self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
 
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, s):
         (action, _), _ = epsilon_greedy_action_selection(s,
                                                          self._greedy_action_selector,
                                                          self._random_action_selector,
-                                                         epsilon=self._params.test_epsilon)
+                                                         epsilon=self._config.test_epsilon)
         return action
 
     def _before_training_start(self, env_or_buffer):
@@ -151,30 +151,30 @@ class DQN(Algorithm):
         if self._is_buffer(env_or_buffer):
             return None
 
-        explorer_params = EE.LinearDecayEpsilonGreedyExplorerParam(
-            warmup_random_steps=self._params.start_timesteps,
+        explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
+            warmup_random_steps=self._config.start_timesteps,
             initial_step_num=self.iteration_num,
-            initial_epsilon=self._params.initial_epsilon,
-            final_epsilon=self._params.final_epsilon,
-            max_explore_steps=self._params.max_explore_steps
+            initial_epsilon=self._config.initial_epsilon,
+            final_epsilon=self._config.final_epsilon,
+            max_explore_steps=self._config.max_explore_steps
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
             greedy_action_selector=self._greedy_action_selector,
             random_action_selector=self._random_action_selector,
             env_info=self._env_info,
-            params=explorer_params)
+            config=explorer_config)
         return explorer
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(
+        trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
             reduction_method='sum',
             grad_clip=(-1.0, 1.0))
 
         q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
             env_info=self._env_info,
-            params=trainer_params)
+            config=trainer_config)
 
-        target_update_frequency = self._params.target_update_frequency / self._params.learner_update_frequency
+        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
         training = MT.q_value_trainings.DQNTraining(train_function=self._q, target_function=self._target_q)
         training = MT.common_extensions.PeriodicalTargetUpdate(
             training,
@@ -189,8 +189,8 @@ class DQN(Algorithm):
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)
         self._replay_buffer.append_all(experiences)
-        if self._params.start_timesteps < self.iteration_num:
-            if self.iteration_num % self._params.learner_update_frequency == 0:
+        if self._config.start_timesteps < self.iteration_num:
+            if self.iteration_num % self._config.learner_update_frequency == 0:
                 self._dqn_training(self._replay_buffer)
 
     def _run_offline_training_iteration(self, buffer):
@@ -210,12 +210,12 @@ class DQN(Algorithm):
         return np.asarray(action).reshape((1, )), {}
 
     def _dqn_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._params.batch_size)
+        experiences, info = replay_buffer.sample(self._config.batch_size)
         (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._params.batch_size,
+        batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,
-                              gamma=self._params.gamma,
+                              gamma=self._config.gamma,
                               reward=r,
                               non_terminal=non_terminal,
                               s_next=s_next,

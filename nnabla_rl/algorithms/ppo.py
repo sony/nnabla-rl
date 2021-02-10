@@ -42,7 +42,7 @@ from nnabla_rl.models import \
     Model
 from nnabla_rl.algorithms.common_utils import \
     compute_v_target_and_advantage, _StatePreprocessedPolicy, _StatePreprocessedVFunction
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
@@ -57,18 +57,18 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def build_model(self,
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
+                    algorithm_config: AlgorithmConfig,
                     **kwargs) -> StochasticPolicy:
         if env_info.is_discrete_action_env():
             # scope name is same as that of v-function -> parameter is shared across models automatically
-            return self._build_shared_policy("shared", env_info, algorithm_params)
+            return self._build_shared_policy("shared", env_info, algorithm_config)
         else:
-            return self._build_mujoco_policy(scope_name, env_info, algorithm_params)
+            return self._build_mujoco_policy(scope_name, env_info, algorithm_config)
 
     def _build_shared_policy(self,
                              scope_name: str,
                              env_info: EnvironmentInfo,
-                             algorithm_params: AlgorithmParam,
+                             algorithm_config: AlgorithmConfig,
                              **kwargs) -> StochasticPolicy:
         _shared_function_head = PPOSharedFunctionHead(scope_name=scope_name,
                                                       state_shape=env_info.state_shape,
@@ -78,7 +78,7 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def _build_mujoco_policy(self,
                              scope_name: str,
                              env_info: EnvironmentInfo,
-                             algorithm_params: AlgorithmParam,
+                             algorithm_config: AlgorithmConfig,
                              **kwargs) -> StochasticPolicy:
         return PPOMujocoPolicy(scope_name=scope_name, action_dim=env_info.action_dim)
 
@@ -87,18 +87,18 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
     def build_model(self,
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: AlgorithmParam,
+                    algorithm_config: AlgorithmConfig,
                     **kwargs) -> VFunction:
         if env_info.is_discrete_action_env():
             # scope name is same as that of policy -> parameter is shared across models automatically
-            return self._build_shared_v_function("shared", env_info, algorithm_params)
+            return self._build_shared_v_function("shared", env_info, algorithm_config)
         else:
-            return self._build_mujoco_v_function(scope_name, env_info, algorithm_params)
+            return self._build_mujoco_v_function(scope_name, env_info, algorithm_config)
 
     def _build_shared_v_function(self,
                                  scope_name: str,
                                  env_info: EnvironmentInfo,
-                                 algorithm_params: AlgorithmParam,
+                                 algorithm_config: AlgorithmConfig,
                                  **kwargs) -> VFunction:
         _shared_function_head = PPOSharedFunctionHead(scope_name=scope_name,
                                                       state_shape=env_info.state_shape,
@@ -108,7 +108,7 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
     def _build_mujoco_v_function(self,
                                  scope_name: str,
                                  env_info: EnvironmentInfo,
-                                 algorithm_params: AlgorithmParam,
+                                 algorithm_config: AlgorithmConfig,
                                  **kwargs) -> VFunction:
         return PPOMujocoVFunction(scope_name=scope_name)
 
@@ -116,23 +116,23 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,
                      env_info: EnvironmentInfo,
-                     algorithm_params: AlgorithmParam,
+                     algorithm_config: AlgorithmConfig,
                      **kwargs) -> nn.solver.Solver:
-        assert isinstance(algorithm_params, PPOParam)
-        return NS.Adam(alpha=algorithm_params.learning_rate, eps=1e-5)
+        assert isinstance(algorithm_config, PPOConfig)
+        return NS.Adam(alpha=algorithm_config.learning_rate, eps=1e-5)
 
 
 class DefaultPreprocessorBuilder(PreprocessorBuilder):
     def build_preprocessor(self,
                            scope_name: str,
                            env_info: EnvironmentInfo,
-                           algorithm_params: AlgorithmParam,
+                           algorithm_config: AlgorithmConfig,
                            **kwargs) -> Preprocessor:
         return RP.RunningMeanNormalizer('preprocessor', env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
 @dataclass
-class PPOParam(AlgorithmParam):
+class PPOConfig(AlgorithmConfig):
     gamma: float = 0.99
     learning_rate: float = 2.5*1e-4
     lmb: float = 0.95
@@ -172,7 +172,7 @@ class PPO(Algorithm):
 
     This algorithm only supports online training.
     '''
-    _params: PPOParam
+    _config: PPOConfig
 
     _gpu_id: int
     _v_function: VFunction
@@ -188,7 +188,7 @@ class PPO(Algorithm):
     _actor_processes: List[mp.Process]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: PPOParam = PPOParam(),
+                 config: PPOConfig = PPOConfig(),
                  v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
@@ -198,20 +198,20 @@ class PPO(Algorithm):
         # Prevent setting context by the Algorithm class
         if 0 <= self._gpu_id:
             context._gpu_id = -1
-        super(PPO, self).__init__(env_or_env_info, params=params)
+        super(PPO, self).__init__(env_or_env_info, config=config)
 
-        self._v_function = v_function_builder('v', self._env_info, self._params)
-        self._policy = policy_builder('pi', self._env_info, self._params)
+        self._v_function = v_function_builder('v', self._env_info, self._config)
+        self._policy = policy_builder('pi', self._env_info, self._config)
         self._state_preprocessor = None
 
-        if self._params.preprocess_state and state_preprocessor_builder is not None:
-            preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._params)
+        if self._config.preprocess_state and state_preprocessor_builder is not None:
+            preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
             assert preprocessor is not None
             self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
             self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
             self._state_preprocessor = preprocessor
-        self._policy_solver = policy_solver_builder(self._env_info, self._params)
-        self._v_function_solver = v_solver_builder(self._env_info, self._params)
+        self._policy_solver = policy_solver_builder(self._env_info, self._config)
+        self._v_function_solver = v_solver_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, state):
@@ -240,12 +240,12 @@ class PPO(Algorithm):
         self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_params = MT.policy_trainers.PPOPolicyTrainerParam(
-            entropy_coefficient=self._params.entropy_coefficient
+        policy_trainer_config = MT.policy_trainers.PPOPolicyTrainerConfig(
+            entropy_coefficient=self._config.entropy_coefficient
         )
         policy_trainer = MT.policy_trainers.PPOPolicyTrainer(
             env_info=self._env_info,
-            params=policy_trainer_params)
+            config=policy_trainer_config)
 
         training = MT.model_trainer.Training()
         policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
@@ -253,14 +253,14 @@ class PPO(Algorithm):
 
     def _setup_v_function_training(self, env_or_buffer):
         # training input/loss variables
-        v_function_trainer_params = MT.v_value_trainers.SquaredTDVFunctionTrainerParam(
+        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
             reduction_method='mean',
-            v_loss_scalar=self._params.value_coefficient
+            v_loss_scalar=self._config.value_coefficient
         )
 
         v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
             env_info=self._env_info,
-            params=v_function_trainer_params)
+            config=v_function_trainer_config)
 
         training = MT.v_value_trainings.MonteCarloVValueTraining()
         v_function_trainer.setup_training(
@@ -277,14 +277,14 @@ class PPO(Algorithm):
         def normalize(values):
             return (values - np.mean(values)) / np.std(values)
 
-        update_interval = self._params.actor_timesteps * self._params.actor_num
+        update_interval = self._config.actor_timesteps * self._config.actor_num
         if self.iteration_num % update_interval != 0:
             return
 
         s, a, r, non_terminal, s_next, log_prob, v_targets, advantages = \
             self._collect_experiences(self._actors)
 
-        if self._params.preprocess_state:
+        if self._config.preprocess_state:
             self._state_preprocessor.update(s)
 
         advantages = normalize(advantages)
@@ -292,8 +292,8 @@ class PPO(Algorithm):
         replay_buffer = ReplayBuffer()
         replay_buffer.append_all(data)
 
-        buffer_iterator = BufferIterator(replay_buffer, batch_size=self._params.batch_size)
-        for _ in range(self._params.epochs):
+        buffer_iterator = BufferIterator(replay_buffer, batch_size=self._config.batch_size)
+        for _ in range(self._config.epochs):
             for experiences, *_ in buffer_iterator:
                 self._ppo_training(experiences)
             buffer_iterator.reset()
@@ -321,7 +321,7 @@ class PPO(Algorithm):
         for actor in self._actors:
             actor.update_v_params(self._v_function.get_parameters())
             actor.update_policy_params(self._policy.get_parameters())
-            if self._params.preprocess_state:
+            if self._config.preprocess_state:
                 actor.update_state_preprocessor_params(self._state_preprocessor.get_parameters())
 
             actor.run_data_collection()
@@ -333,8 +333,8 @@ class PPO(Algorithm):
         return (np.concatenate(item, axis=0) for item in unzip(results))
 
     def _ppo_training(self, experiences):
-        if self._params.decrease_alpha:
-            alpha = (1.0 - self.iteration_num / self._params.total_timesteps)
+        if self._config.decrease_alpha:
+            alpha = (1.0 - self.iteration_num / self._config.total_timesteps)
             alpha = np.maximum(alpha, 0.0)
         else:
             alpha = 1.0
@@ -351,9 +351,9 @@ class PPO(Algorithm):
                               a_current=a,
                               extra=extra)
 
-        self._policy_trainer.set_learning_rate(self._params.learning_rate * alpha)
+        self._policy_trainer.set_learning_rate(self._config.learning_rate * alpha)
         self._policy_trainer.train(batch)
-        self._v_function_trainer.set_learning_rate(self._params.learning_rate * alpha)
+        self._v_function_trainer.set_learning_rate(self._config.learning_rate * alpha)
         self._v_function_trainer.train(batch)
 
     def _compute_action(self, s):
@@ -374,7 +374,7 @@ class PPO(Algorithm):
         models = {}
         models[self._v_function.scope_name] = self._v_function
         models[self._policy.scope_name] = self._policy
-        if self._params.preprocess_state and isinstance(self._state_preprocessor, Model):
+        if self._config.preprocess_state and isinstance(self._state_preprocessor, Model):
             models[self._state_preprocessor.scope_name] = self._state_preprocessor
         return models
 
@@ -386,7 +386,7 @@ class PPO(Algorithm):
 
     def _build_ppo_actors(self, env, v_function, policy, state_preprocessor):
         actors = []
-        for i in range(self._params.actor_num):
+        for i in range(self._config.actor_num):
             actor = _PPOActor(
                 actor_num=i,
                 env=env,
@@ -394,7 +394,7 @@ class PPO(Algorithm):
                 v_function=v_function,
                 policy=policy,
                 state_preprocessor=state_preprocessor,
-                params=self._params)
+                config=self._config)
             actors.append(actor)
         return actors
 
@@ -408,12 +408,12 @@ class _PPOActor(object):
     _timesteps: int
     _gamma: float
     _lambda: float
-    _params: PPOParam
+    _config: PPOConfig
 
     _environment_explorer: EnvironmentExplorer
     _mp_arrays: NamedTuple
 
-    def __init__(self, actor_num, env, env_info, v_function, policy, state_preprocessor, params):
+    def __init__(self, actor_num, env, env_info, v_function, policy, state_preprocessor, config):
         # These variables will be copied when process is created
         self._actor_num = actor_num
         self._env = env
@@ -421,10 +421,10 @@ class _PPOActor(object):
         self._v_function = v_function
         self._policy = policy
         self._state_preprocessor = state_preprocessor
-        self._timesteps = params.actor_timesteps
-        self._gamma = params.gamma
-        self._lambda = params.lmb
-        self._params = params
+        self._timesteps = config.actor_timesteps
+        self._gamma = config.gamma
+        self._lambda = config.lmb
+        self._config = config
 
         # IPC communication variables
         self._disposed = mp.Value('i', False)
@@ -433,16 +433,16 @@ class _PPOActor(object):
 
         self._v_mp_arrays = new_mp_arrays_from_params(v_function.get_parameters())
         self._policy_mp_arrays = new_mp_arrays_from_params(policy.get_parameters())
-        if self._params.preprocess_state:
+        if self._config.preprocess_state:
             self._state_preprocessor_mp_arrays = new_mp_arrays_from_params(state_preprocessor.get_parameters())
 
-        explorer_params = EE.RawPolicyExplorerParam(
+        explorer_config = EE.RawPolicyExplorerConfig(
             initial_step_num=0,
-            timelimit_as_terminal=self._params.timelimit_as_terminal
+            timelimit_as_terminal=self._config.timelimit_as_terminal
         )
         self._environment_explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
                                                           env_info=self._env_info,
-                                                          params=explorer_params)
+                                                          config=explorer_config)
 
         obs_space = self._env.observation_space
         action_space = self._env.action_space
@@ -514,8 +514,8 @@ class _PPOActor(object):
 
     def _run_actor_loop(self):
         context._set_nnabla_context()
-        if self._params.seed >= 0:
-            seed = self._actor_num + self._params.seed
+        if self._config.seed >= 0:
+            seed = self._actor_num + self._config.seed
         else:
             seed = os.getpid()
 
@@ -528,7 +528,7 @@ class _PPOActor(object):
 
             self._synchronize_v_params(self._v_function.get_parameters())
             self._synchronize_policy_params(self._policy.get_parameters())
-            if self._params.preprocess_state:
+            if self._config.preprocess_state:
                 self._synchronize_preprocessor_params(self._state_preprocessor.get_parameters())
 
             experiences, v_targets, advantages = self._run_data_collection()

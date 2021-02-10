@@ -23,19 +23,19 @@ from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import ValueDistributionFunction, Model
 
 
 @dataclass
-class C51ValueDistributionFunctionTrainerParam(TrainerParam):
+class C51ValueDistributionFunctionTrainerConfig(TrainerConfig):
     v_min: float = -10.0
     v_max: float = 10.0
     num_atoms: int = 51
 
 
 class C51ValueDistributionFunctionTrainer(ModelTrainer):
-    _params: C51ValueDistributionFunctionTrainerParam
+    _config: C51ValueDistributionFunctionTrainerConfig
     _model: ValueDistributionFunction
     # Training loss/output
     _kl_loss: nn.Variable
@@ -43,8 +43,8 @@ class C51ValueDistributionFunctionTrainer(ModelTrainer):
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: C51ValueDistributionFunctionTrainerParam):
-        super(C51ValueDistributionFunctionTrainer, self).__init__(env_info, params)
+                 config: C51ValueDistributionFunctionTrainerConfig):
+        super(C51ValueDistributionFunctionTrainer, self).__init__(env_info, config)
         self._env_info: EnvironmentInfo = env_info
 
     def _update_model(self,
@@ -91,7 +91,7 @@ class C51ValueDistributionFunctionTrainer(ModelTrainer):
             atom_probabilities = model._probabilities_of(atom_probabilities, self._training_variables.a_current)
             atom_probabilities = NF.clip_by_value(atom_probabilities, 1e-10, 1.0)
             cross_entropy = mi * NF.log(atom_probabilities)
-            assert cross_entropy.shape == (batch_size, self._params.num_atoms)
+            assert cross_entropy.shape == (batch_size, self._config.num_atoms)
             # This kl_Loss value is same as the cross entropy but we name it as kl_loss for convenience to use for
             # prioritized experience replay
             # See: https://arxiv.org/pdf/1710.02298.pdf

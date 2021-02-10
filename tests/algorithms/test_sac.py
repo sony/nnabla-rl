@@ -50,8 +50,8 @@ class TestSAC(object):
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
-        params = A.SACParam(batch_size=batch_size)
-        sac = A.SAC(dummy_env, params=params)
+        config = A.SACConfig(batch_size=batch_size)
+        sac = A.SAC(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -70,21 +70,21 @@ class TestSAC(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.SACParam(tau=1.1)
+            A.SACConfig(tau=1.1)
         with pytest.raises(ValueError):
-            A.SACParam(tau=-0.1)
+            A.SACConfig(tau=-0.1)
         with pytest.raises(ValueError):
-            A.SACParam(gamma=1.1)
+            A.SACConfig(gamma=1.1)
         with pytest.raises(ValueError):
-            A.SACParam(gamma=-0.1)
+            A.SACConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.SACParam(start_timesteps=-100)
+            A.SACConfig(start_timesteps=-100)
         with pytest.raises(ValueError):
-            A.SACParam(environment_steps=-100)
+            A.SACConfig(environment_steps=-100)
         with pytest.raises(ValueError):
-            A.SACParam(gradient_steps=-100)
+            A.SACConfig(gradient_steps=-100)
         with pytest.raises(ValueError):
-            A.SACParam(initial_temperature=-100)
+            A.SACConfig(initial_temperature=-100)
 
 
 if __name__ == "__main__":

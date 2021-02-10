@@ -23,12 +23,12 @@ from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy
 
 
 @dataclass
-class SPGPolicyTrainerParam(TrainerParam):
+class SPGPolicyTrainerConfig(TrainerConfig):
     pi_loss_scalar: float = 1.0
     grad_clip_norm: Optional[float] = None
 
@@ -38,13 +38,13 @@ class SPGPolicyTrainer(ModelTrainer):
     Stochastic Policy Gradient is widely known as 'Policy Gradient algorithm'
     '''
 
-    _params: SPGPolicyTrainerParam
+    _config: SPGPolicyTrainerConfig
     _pi_loss: nn.Variable
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: SPGPolicyTrainerParam = SPGPolicyTrainerParam()):
-        super(SPGPolicyTrainer, self).__init__(env_info, params)
+                 config: SPGPolicyTrainerConfig = SPGPolicyTrainerConfig()):
+        super(SPGPolicyTrainer, self).__init__(env_info, config)
 
     def _update_model(self,
                       models: Sequence[Model],
@@ -62,8 +62,8 @@ class SPGPolicyTrainer(ModelTrainer):
         self._pi_loss.backward(clear_buffer=True)
 
         for solver in solvers.values():
-            if self._params.grad_clip_norm is not None:
-                solver.clip_grad_by_norm(self._params.grad_clip_norm)
+            if self._config.grad_clip_norm is not None:
+                solver.clip_grad_by_norm(self._config.grad_clip_norm)
             solver.update()
 
         return {}
@@ -81,7 +81,7 @@ class SPGPolicyTrainer(ModelTrainer):
         for policy in models:
             distribution = policy.pi(training_variables.s_current)
             log_prob = distribution.log_prob(training_variables.a_current)
-            self._pi_loss += NF.sum(-log_prob * target_value) * self._params.pi_loss_scalar
+            self._pi_loss += NF.sum(-log_prob * target_value) * self._config.pi_loss_scalar
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables

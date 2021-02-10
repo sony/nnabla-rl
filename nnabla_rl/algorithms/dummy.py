@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 
 from nnabla_rl.logger import logger
 import nnabla_rl as rl
 
 
-class DummyParam(AlgorithmParam):
+class DummyConfig(AlgorithmConfig):
     pass
 
 
@@ -27,8 +27,8 @@ class Dummy(Algorithm):
     This algorithm does nothing. Just used for understanding the concept of the framework.
     '''
 
-    def __init__(self, env_or_env_info, params=DummyParam()):
-        super(Dummy, self).__init__(env_or_env_info, params=params)
+    def __init__(self, env_or_env_info, config=DummyConfig()):
+        super(Dummy, self).__init__(env_or_env_info, config=config)
         self._action_space = self._env_info.action_space
 
     @eval_api

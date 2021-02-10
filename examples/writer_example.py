@@ -58,8 +58,8 @@ def main():
     training_state_hook = H.IterationStateHook(writer=writer, timing=100)
 
     train_env = build_env()
-    params = A.DDPGParam(start_timesteps=200)
-    ddpg = A.DDPG(train_env, params=params)
+    config = A.DDPGConfig(start_timesteps=200)
+    ddpg = A.DDPG(train_env, config=config)
     ddpg.set_hooks(hooks=[training_state_hook])
 
     ddpg.train(train_env, total_iterations=10000)

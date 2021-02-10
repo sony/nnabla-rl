@@ -74,9 +74,9 @@ def run_training(args):
     if args.snapshot_dir is None:
         timesteps = select_start_timesteps(args.env)
         reward_scalar = select_reward_scalar(args.env)
-        params = A.ICML2018SACParam(
+        config = A.ICML2018SACConfig(
             start_timesteps=timesteps, reward_scalar=reward_scalar)
-        icml2018sac = A.ICML2018SAC(train_env, params=params)
+        icml2018sac = A.ICML2018SAC(train_env, config=config)
     else:
         icml2018sac = serializers.load_snapshot(args.snapshot_dir)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]

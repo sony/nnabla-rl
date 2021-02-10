@@ -37,12 +37,12 @@ class TestICML2015TRPO(object):
         '''
         dummy_env = E.DummyDiscreteImg()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
-        params = A.ICML2015TRPOParam(batch_size=5,
-                                     gpu_batch_size=2,
-                                     num_steps_per_iteration=5,
-                                     sigma_kl_divergence_constraint=10.0,
-                                     maximum_backtrack_numbers=2)
-        trpo = A.ICML2015TRPO(dummy_env, params=params)
+        config = A.ICML2015TRPOConfig(batch_size=5,
+                                      gpu_batch_size=2,
+                                      num_steps_per_iteration=5,
+                                      sigma_kl_divergence_constraint=10.0,
+                                      maximum_backtrack_numbers=2)
+        trpo = A.ICML2015TRPO(dummy_env, config=config)
 
         trpo.train_online(dummy_env, total_iterations=1)
 
@@ -69,15 +69,15 @@ class TestICML2015TRPO(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.ICML2015TRPOParam(gamma=-0.1)
+            A.ICML2015TRPOConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.ICML2015TRPOParam(num_steps_per_iteration=-1)
+            A.ICML2015TRPOConfig(num_steps_per_iteration=-1)
         with pytest.raises(ValueError):
-            A.ICML2015TRPOParam(sigma_kl_divergence_constraint=-0.1)
+            A.ICML2015TRPOConfig(sigma_kl_divergence_constraint=-0.1)
         with pytest.raises(ValueError):
-            A.ICML2015TRPOParam(maximum_backtrack_numbers=-0.1)
+            A.ICML2015TRPOConfig(maximum_backtrack_numbers=-0.1)
         with pytest.raises(ValueError):
-            A.ICML2015TRPOParam(conjugate_gradient_damping=-0.1)
+            A.ICML2015TRPOConfig(conjugate_gradient_damping=-0.1)
 
     def test_compute_accumulated_reward(self):
         gamma = 0.99

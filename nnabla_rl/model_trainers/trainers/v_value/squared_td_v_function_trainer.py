@@ -23,28 +23,28 @@ from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import VFunction, Model
 
 
 @dataclass
-class SquaredTDVFunctionTrainerParam(TrainerParam):
+class SquaredTDVFunctionTrainerConfig(TrainerConfig):
     reduction_method: str = 'mean'
     v_loss_scalar: float = 1.0
 
     def __post_init__(self):
-        super(SquaredTDVFunctionTrainerParam, self).__post_init__()
+        super(SquaredTDVFunctionTrainerConfig, self).__post_init__()
         self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
 
 
 class SquaredTDVFunctionTrainer(ModelTrainer):
-    _params: SquaredTDVFunctionTrainerParam
+    _config: SquaredTDVFunctionTrainerConfig
     _v_loss: nn.Variable  # Training loss/output
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: SquaredTDVFunctionTrainerParam = SquaredTDVFunctionTrainerParam()):
-        super(SquaredTDVFunctionTrainer, self).__init__(env_info, params)
+                 config: SquaredTDVFunctionTrainerConfig = SquaredTDVFunctionTrainerConfig()):
+        super(SquaredTDVFunctionTrainer, self).__init__(env_info, config)
 
     def _update_model(self,
                       models: Iterable[Model],
@@ -77,10 +77,10 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
         v_loss = 0
         for td_error in td_errors:
             squared_td_error = NF.pow_scalar(td_error, 2.0)
-            if self._params.reduction_method == 'mean':
-                v_loss += self._params.v_loss_scalar * NF.mean(squared_td_error)
-            elif self._params.reduction_method == 'sum':
-                v_loss += self._params.v_loss_scalar * NF.sum(squared_td_error)
+            if self._config.reduction_method == 'mean':
+                v_loss += self._config.v_loss_scalar * NF.mean(squared_td_error)
+            elif self._config.reduction_method == 'sum':
+                v_loss += self._config.v_loss_scalar * NF.sum(squared_td_error)
             else:
                 raise RuntimeError
         self._v_loss = v_loss

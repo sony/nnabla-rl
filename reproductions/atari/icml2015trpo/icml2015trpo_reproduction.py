@@ -37,11 +37,11 @@ def run_training(args):
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=int(1e5))
     iteration_num_hook = H.IterationNumHook(timing=int(1e5))
 
-    params = A.ICML2015TRPOParam(gpu_batch_size=5000)
+    config = A.ICML2015TRPOConfig(gpu_batch_size=5000)
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
-        trpo = A.ICML2015TRPO(train_env, params=params)
+        trpo = A.ICML2015TRPO(train_env, config=config)
     else:
         trpo = serializers.load_snapshot(args.snapshot_dir)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]

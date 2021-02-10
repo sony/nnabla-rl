@@ -39,8 +39,8 @@ class TestBCQ(object):
         '''
 
         dummy_env = E.DummyContinuous()
-        params = A.BCQParam()
-        bcq = A.BCQ(dummy_env, params=params)
+        config = A.BCQConfig()
+        bcq = A.BCQ(dummy_env, config=config)
 
         with pytest.raises(NotImplementedError):
             bcq.train_online(dummy_env, total_iterations=10)
@@ -52,8 +52,8 @@ class TestBCQ(object):
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
-        params = A.BCQParam(batch_size=batch_size)
-        bcq = A.BCQ(dummy_env, params=params)
+        config = A.BCQConfig(batch_size=batch_size)
+        bcq = A.BCQ(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -71,21 +71,21 @@ class TestBCQ(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.BCQParam(tau=1.1)
+            A.BCQConfig(tau=1.1)
         with pytest.raises(ValueError):
-            A.BCQParam(tau=-0.1)
+            A.BCQConfig(tau=-0.1)
         with pytest.raises(ValueError):
-            A.BCQParam(gamma=1.1)
+            A.BCQConfig(gamma=1.1)
         with pytest.raises(ValueError):
-            A.BCQParam(gamma=-0.1)
+            A.BCQConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.BCQParam(lmb=-0.1)
+            A.BCQConfig(lmb=-0.1)
         with pytest.raises(ValueError):
-            A.BCQParam(phi=-0.1)
+            A.BCQConfig(phi=-0.1)
         with pytest.raises(ValueError):
-            A.BCQParam(num_q_ensembles=-100)
+            A.BCQConfig(num_q_ensembles=-100)
         with pytest.raises(ValueError):
-            A.BCQParam(num_action_samples=-100)
+            A.BCQConfig(num_action_samples=-100)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ import nnabla.solvers as NS
 import gym
 from typing import cast, Union
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import ValueDistributionFunctionBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -38,7 +38,7 @@ import nnabla_rl.model_trainers as MT
 
 
 @dataclass
-class CategoricalDQNParam(AlgorithmParam):
+class CategoricalDQNConfig(AlgorithmConfig):
     batch_size: int = 32
     gamma: float = 0.99
     start_timesteps: int = 50000
@@ -59,29 +59,29 @@ class DefaultValueDistFunctionBuilder(ValueDistributionFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: CategoricalDQNParam,
+                    algorithm_config: CategoricalDQNConfig,
                     **kwargs) -> ValueDistributionFunction:
         return C51ValueDistributionFunction(scope_name,
                                             env_info.action_dim,
-                                            algorithm_params.num_atoms,
-                                            algorithm_params.v_min,
-                                            algorithm_params.v_max)
+                                            algorithm_config.num_atoms,
+                                            algorithm_config.v_min,
+                                            algorithm_config.v_max)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
     def build_replay_buffer(self,  # type: ignore[override]
                             env_info: EnvironmentInfo,
-                            algorithm_params: CategoricalDQNParam,
+                            algorithm_config: CategoricalDQNConfig,
                             **kwargs) -> ReplayBuffer:
-        return ReplayBuffer(capacity=algorithm_params.replay_buffer_size)
+        return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: CategoricalDQNParam,
+                     algorithm_config: CategoricalDQNConfig,
                      **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.learning_rate, eps=1e-2 / algorithm_params.batch_size)
+        return NS.Adam(alpha=algorithm_config.learning_rate, eps=1e-2 / algorithm_config.batch_size)
 
 
 class CategoricalDQN(Algorithm):
@@ -92,7 +92,7 @@ class CategoricalDQN(Algorithm):
     For detail see: https://arxiv.org/pdf/1707.06887.pdf
     '''
 
-    _params: CategoricalDQNParam
+    _config: CategoricalDQNConfig
     _atom_p: ValueDistributionFunction
     _atom_p_solver: nn.solver.Solver
     _target_atom_p: ValueDistributionFunction
@@ -104,26 +104,26 @@ class CategoricalDQN(Algorithm):
     _a_greedy: nn.Variable
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: CategoricalDQNParam = CategoricalDQNParam(),
+                 config: CategoricalDQNConfig = CategoricalDQNConfig(),
                  value_distribution_builder: ValueDistributionFunctionBuilder = DefaultValueDistFunctionBuilder(),
                  value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
-        super(CategoricalDQN, self).__init__(env_or_env_info, params=params)
+        super(CategoricalDQN, self).__init__(env_or_env_info, config=config)
         if not self._env_info.is_discrete_action_env():
             raise ValueError('{} only supports discrete action environment'.format(self.__name__))
 
-        self._atom_p = value_distribution_builder('atom_p_train', self._env_info, self._params)
-        self._atom_p_solver = value_distribution_solver_builder(self._env_info, self._params)
+        self._atom_p = value_distribution_builder('atom_p_train', self._env_info, self._config)
+        self._atom_p_solver = value_distribution_solver_builder(self._env_info, self._config)
         self._target_atom_p = cast(ValueDistributionFunction, self._atom_p.deepcopy('target_atom_p_train'))
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._params)
+        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, state):
         (action, _), _ = epsilon_greedy_action_selection(state,
                                                          self._greedy_action_selector,
                                                          self._random_action_selector,
-                                                         epsilon=self._params.test_epsilon)
+                                                         epsilon=self._config.test_epsilon)
         return action
 
     def _before_training_start(self, env_or_buffer):
@@ -133,31 +133,31 @@ class CategoricalDQN(Algorithm):
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
             return None
-        explorer_params = EE.LinearDecayEpsilonGreedyExplorerParam(
-            warmup_random_steps=self._params.start_timesteps,
+        explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
+            warmup_random_steps=self._config.start_timesteps,
             initial_step_num=self.iteration_num,
-            initial_epsilon=self._params.initial_epsilon,
-            final_epsilon=self._params.final_epsilon,
-            max_explore_steps=self._params.max_explore_steps
+            initial_epsilon=self._config.initial_epsilon,
+            final_epsilon=self._config.final_epsilon,
+            max_explore_steps=self._config.max_explore_steps
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
             greedy_action_selector=self._greedy_action_selector,
             random_action_selector=self._random_action_selector,
             env_info=self._env_info,
-            params=explorer_params)
+            config=explorer_config)
         return explorer
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
-        trainer_params = MT.q_value_trainers.C51ValueDistributionFunctionTrainerParam(
-            v_min=self._params.v_min,
-            v_max=self._params.v_max,
-            num_atoms=self._params.num_atoms)
+        trainer_config = MT.q_value_trainers.C51ValueDistributionFunctionTrainerConfig(
+            v_min=self._config.v_min,
+            v_max=self._config.v_max,
+            num_atoms=self._config.num_atoms)
 
         model_trainer = MT.q_value_trainers.C51ValueDistributionFunctionTrainer(
             self._env_info,
-            params=trainer_params)
+            config=trainer_config)
 
-        target_update_frequency = self._params.target_update_frequency / self._params.learner_update_frequency
+        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
         training = MT.q_value_trainings.DQNTraining(
             train_function=self._atom_p,
             target_function=self._target_atom_p)
@@ -178,20 +178,20 @@ class CategoricalDQN(Algorithm):
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)
         self._replay_buffer.append_all(experiences)
-        if self._params.start_timesteps < self.iteration_num:
-            if self.iteration_num % self._params.learner_update_frequency == 0:
+        if self._config.start_timesteps < self.iteration_num:
+            if self.iteration_num % self._config.learner_update_frequency == 0:
                 self._categorical_dqn_training(self._replay_buffer)
 
     def _run_offline_training_iteration(self, buffer):
         self._categorical_dqn_training(buffer)
 
     def _categorical_dqn_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._params.batch_size)
+        experiences, info = replay_buffer.sample(self._config.batch_size)
         (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._params.batch_size,
+        batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,
-                              gamma=self._params.gamma,
+                              gamma=self._config.gamma,
                               reward=r,
                               non_terminal=non_terminal,
                               s_next=s_next,

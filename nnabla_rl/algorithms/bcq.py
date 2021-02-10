@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import QFunctionBuilder, VariationalAutoEncoderBuilder, PerturbatorBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.utils.data import marshall_experiences
@@ -36,9 +36,9 @@ import nnabla_rl.functions as RF
 
 
 @dataclass
-class BCQParam(AlgorithmParam):
-    '''BCQParam
-    Parameters used in BCQ algorithm.
+class BCQConfig(AlgorithmConfig):
+    '''BCQConfig
+    Configurations used in BCQ algorithm.
 
     Args:
         tau(float): soft network parameter update coefficient. Defaults to 0.005.
@@ -78,7 +78,7 @@ class DefaultQFunctionBuilder(QFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: BCQParam,
+                    algorithm_config: BCQConfig,
                     **kwargs) -> QFunction:
         return TD3QFunction(scope_name)
 
@@ -87,8 +87,8 @@ class DefaultVAEBuilder(VariationalAutoEncoderBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params:
-                    BCQParam, **kwargs) -> VariationalAutoEncoder:
+                    algorithm_config:
+                    BCQConfig, **kwargs) -> VariationalAutoEncoder:
         max_action_value = float(env_info.action_space.high[0])
         return BCQVariationalAutoEncoder(scope_name,
                                          env_info.state_dim,
@@ -101,7 +101,7 @@ class DefaultPerturbatorBuilder(PerturbatorBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: BCQParam,
+                    algorithm_config: BCQConfig,
                     **kwargs) -> Perturbator:
         max_action_value = float(env_info.action_space.high[0])
         return BCQPerturbator(scope_name,
@@ -113,9 +113,9 @@ class DefaultPerturbatorBuilder(PerturbatorBuilder):
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: BCQParam,
+                     algorithm_config: BCQConfig,
                      **kwargs):
-        return NS.Adam(alpha=algorithm_params.learning_rate)
+        return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class BCQ(Algorithm):
@@ -126,7 +126,7 @@ class BCQ(Algorithm):
     For detail see: https://arxiv.org/pdf/1812.02900.pdf
 
     '''
-    _params: BCQParam
+    _config: BCQConfig
     _q_ensembles: List[QFunction]
     _q_solvers: Dict[str, nn.solver.Solver]
     _target_q_ensembles: List[QFunction]
@@ -145,36 +145,36 @@ class BCQ(Algorithm):
 
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: BCQParam = BCQParam(),
+                 config: BCQConfig = BCQConfig(),
                  q_function_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  vae_builder: VariationalAutoEncoderBuilder = DefaultVAEBuilder(),
                  vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  perturbator_builder: PerturbatorBuilder = DefaultPerturbatorBuilder(),
                  perturbator_solver_builder: SolverBuilder = DefaultSolverBuilder()):
-        super(BCQ, self).__init__(env_or_env_info, params=params)
+        super(BCQ, self).__init__(env_or_env_info, config=config)
 
         self._q_ensembles = []
         self._q_solvers = {}
         self._target_q_ensembles = []
 
-        for i in range(self._params.num_q_ensembles):
+        for i in range(self._config.num_q_ensembles):
             q = q_function_builder(scope_name=f"q{i}",
                                    env_info=self._env_info,
-                                   algorithm_params=self._params)
+                                   algorithm_config=self._config)
             target_q = q.deepcopy(f'target_q{i}')
             assert isinstance(target_q, QFunction)
             self._q_ensembles.append(q)
-            self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+            self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
             self._target_q_ensembles.append(target_q)
 
-        self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_params=self._params)
-        self._vae_solver = vae_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_config=self._config)
+        self._vae_solver = vae_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
-        self._xi = perturbator_builder(scope_name="xi", env_info=self._env_info, algorithm_params=self._params)
-        self._xi_solver = perturbator_solver_builder(env_info=self._env_info, algorithm_params=self._params)
+        self._xi = perturbator_builder(scope_name="xi", env_info=self._env_info, algorithm_config=self._config)
+        self._xi_solver = perturbator_solver_builder(env_info=self._env_info, algorithm_config=self._config)
         self._target_xi = perturbator_builder(
-            scope_name="target_xi", env_info=self._env_info, algorithm_params=self._params)
+            scope_name="target_xi", env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, s):
@@ -185,7 +185,7 @@ class BCQ(Algorithm):
             state = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
             assert state.shape == (repeat_num, self._eval_state_var.shape[1])
             actions = self._vae.decode(state)
-            noise = self._xi.generate_noise(state, actions, self._params.phi)
+            noise = self._xi.generate_noise(state, actions, self._config.phi)
             self._eval_action = actions + noise
             q_values = self._q_ensembles[0].q(state, self._eval_action)
             self._eval_max_index = RF.argmax(q_values, axis=0)
@@ -199,21 +199,21 @@ class BCQ(Algorithm):
         self._perturbator_trainer = self._setup_perturbator_training(env_or_buffer)
 
     def _setup_vae_training(self, env_or_buffer):
-        trainer_params = MT.vae_trainers.KLDVariationalAutoEncoderTrainerParam()
+        trainer_config = MT.vae_trainers.KLDVariationalAutoEncoderTrainerConfig()
 
         vae_trainer = MT.vae_trainers.KLDVariationalAutoEncoderTrainer(
             env_info=self._env_info,
-            params=trainer_params)
+            config=trainer_config)
         training = MT.model_trainer.Training()
         vae_trainer.setup_training(self._vae, {self._vae.scope_name: self._vae_solver}, training)
         return vae_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_params = MT.q_value_trainers.SquaredTDQFunctionTrainerParam(reduction_method='mean')
+        trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(reduction_method='mean')
 
         q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
             env_info=self._env_info,
-            params=trainer_params)
+            config=trainer_config)
 
         # This is a wrapper class which outputs the target action for next state in q function training
         class PerturbedPolicy(DeterministicPolicy):
@@ -226,31 +226,31 @@ class BCQ(Algorithm):
                 a = self._vae.decode(s)
                 noise = self._perturbator.generate_noise(s, a, phi=self._phi)
                 return a + noise
-        target_policy = PerturbedPolicy(self._vae, self._target_xi, self._params.phi)
+        target_policy = PerturbedPolicy(self._vae, self._target_xi, self._config.phi)
         training = MT.q_value_trainings.BCQTraining(train_functions=self._q_ensembles,
                                                     target_functions=self._target_q_ensembles,
                                                     target_policy=target_policy,
-                                                    num_action_samples=self._params.num_action_samples,
-                                                    lmb=self._params.lmb)
+                                                    num_action_samples=self._config.num_action_samples,
+                                                    lmb=self._config.lmb)
         training = MT.common_extensions.PeriodicalTargetUpdate(
             training,
             src_models=self._q_ensembles,
             dst_models=self._target_q_ensembles,
             target_update_frequency=1,
-            tau=self._params.tau)
+            tau=self._config.tau)
         q_function_trainer.setup_training(self._q_ensembles, self._q_solvers, training)
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
             copy_network_parameters(q.get_parameters(), target_q.get_parameters(), 1.0)
         return q_function_trainer
 
     def _setup_perturbator_training(self, env_or_buffer):
-        trainer_params = MT.perturbator_trainers.BCQPerturbatorTrainerParam(
-            phi=self._params.phi
+        trainer_config = MT.perturbator_trainers.BCQPerturbatorTrainerConfig(
+            phi=self._config.phi
         )
 
         perturbator_trainer = MT.perturbator_trainers.BCQPerturbatorTrainer(
             env_info=self._env_info,
-            params=trainer_params,
+            config=trainer_config,
             q_function=self._q_ensembles[0],
             vae=self._vae)
         training = MT.model_trainer.Training()
@@ -259,7 +259,7 @@ class BCQ(Algorithm):
             src_models=self._xi,
             dst_models=self._target_xi,
             target_update_frequency=1,
-            tau=self._params.tau)
+            tau=self._config.tau)
         perturbator_trainer.setup_training(self._xi, {self._xi.scope_name: self._xi_solver}, training)
         copy_network_parameters(self._xi.get_parameters(), self._target_xi.get_parameters(), 1.0)
         return perturbator_trainer
@@ -271,12 +271,12 @@ class BCQ(Algorithm):
         self._bcq_training(buffer)
 
     def _bcq_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._params.batch_size)
+        experiences, info = replay_buffer.sample(self._config.batch_size)
         (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._params.batch_size,
+        batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,
-                              gamma=self._params.gamma,
+                              gamma=self._config.gamma,
                               reward=r,
                               non_terminal=non_terminal,
                               s_next=s_next,

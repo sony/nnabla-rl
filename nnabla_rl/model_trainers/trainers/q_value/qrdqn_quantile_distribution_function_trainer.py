@@ -25,32 +25,32 @@ import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.logger import logger
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import QuantileDistributionFunction, Model
 
 
 @dataclass
-class QRDQNQuantileDistributionFunctionTrainerParam(TrainerParam):
+class QRDQNQuantileDistributionFunctionTrainerConfig(TrainerConfig):
     num_quantiles: int = 200
     kappa: float = 1.0
 
 
 class QRDQNQuantileDistributionFunctionTrainer(ModelTrainer):
-    _params: QRDQNQuantileDistributionFunctionTrainerParam
+    _config: QRDQNQuantileDistributionFunctionTrainerConfig
     _tau_hat_var: nn.Variable
     _quantile_huber_loss: nn.Variable
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: QRDQNQuantileDistributionFunctionTrainerParam = QRDQNQuantileDistributionFunctionTrainerParam()
-                 ):
-        super(QRDQNQuantileDistributionFunctionTrainer, self).__init__(env_info, params)
-        if params.kappa == 0.0:
+                 config: QRDQNQuantileDistributionFunctionTrainerConfig
+                 = QRDQNQuantileDistributionFunctionTrainerConfig()):
+        super(QRDQNQuantileDistributionFunctionTrainer, self).__init__(env_info, config)
+        if config.kappa == 0.0:
             logger.info("kappa is set to 0.0. Quantile regression loss will be used for training")
         else:
             logger.info("kappa is non 0.0. Quantile huber loss will be used for training")
 
-        tau_hat = self._precompute_tau_hat(params.num_quantiles)
+        tau_hat = self._precompute_tau_hat(config.num_quantiles)
         self._tau_hat_var = nn.Variable.from_numpy_array(tau_hat)
 
     def _update_model(self,
@@ -93,17 +93,17 @@ class QRDQNQuantileDistributionFunctionTrainer(ModelTrainer):
             Ttheta_i = model.quantiles(s=training_variables.s_current)
             Ttheta_i = model._quantiles_of(Ttheta_i, training_variables.a_current)
             Ttheta_i = RF.expand_dims(Ttheta_i, axis=2)
-            assert Ttheta_i.shape == (batch_size, self._params.num_quantiles, 1)
+            assert Ttheta_i.shape == (batch_size, self._config.num_quantiles, 1)
 
             tau_hat = RF.expand_dims(self._tau_hat_var, axis=0)
             tau_hat = RF.repeat(tau_hat, repeats=batch_size, axis=0)
             tau_hat = RF.expand_dims(tau_hat, axis=2)
             assert tau_hat.shape == Ttheta_i.shape
 
-            quantile_huber_loss = RF.quantile_huber_loss(Ttheta_j, Ttheta_i, self._params.kappa, tau_hat)
+            quantile_huber_loss = RF.quantile_huber_loss(Ttheta_j, Ttheta_i, self._config.kappa, tau_hat)
             assert quantile_huber_loss.shape == (batch_size,
-                                                 self._params.num_quantiles,
-                                                 self._params.num_quantiles)
+                                                 self._config.num_quantiles,
+                                                 self._config.num_quantiles)
 
             quantile_huber_loss = NF.mean(quantile_huber_loss, axis=2)
             quantile_huber_loss = NF.sum(quantile_huber_loss, axis=1)

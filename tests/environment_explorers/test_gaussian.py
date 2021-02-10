@@ -16,7 +16,7 @@ import pytest
 
 import numpy as np
 
-from nnabla_rl.environment_explorers.gaussian_explorer import GaussianExplorer, GaussianExplorerParam
+from nnabla_rl.environment_explorers.gaussian_explorer import GaussianExplorer, GaussianExplorerConfig
 
 
 class TestRandomGaussianActionStrategy(object):
@@ -26,7 +26,7 @@ class TestRandomGaussianActionStrategy(object):
     def test_random_gaussian_action_selection(self, clip_low, clip_high, sigma):
         def policy_action_selector(state):
             return np.zeros(shape=state.shape), {'test': 'success'}
-        params = GaussianExplorerParam(
+        config = GaussianExplorerConfig(
             action_clip_low=clip_low,
             action_clip_high=clip_high,
             sigma=sigma
@@ -34,7 +34,7 @@ class TestRandomGaussianActionStrategy(object):
         explorer = GaussianExplorer(
             env_info=None,
             policy_action_selector=policy_action_selector,
-            params=params
+            config=config
         )
 
         steps = 1

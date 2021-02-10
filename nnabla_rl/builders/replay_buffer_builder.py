@@ -14,18 +14,18 @@
 
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import AlgorithmParam
+from nnabla_rl.algorithm import AlgorithmConfig
 
 
 class ReplayBufferBuilder():
     def __call__(self,
                  env_info: EnvironmentInfo,
-                 algorithm_params: AlgorithmParam,
+                 algorithm_config: AlgorithmConfig,
                  **kwargs) -> ReplayBuffer:
-        return self.build_replay_buffer(env_info, algorithm_params, **kwargs)
+        return self.build_replay_buffer(env_info, algorithm_config, **kwargs)
 
     def build_replay_buffer(self,
                             env_info: EnvironmentInfo,
-                            algorithm_params: AlgorithmParam,
+                            algorithm_config: AlgorithmConfig,
                             **kwargs) -> ReplayBuffer:
         raise NotImplementedError

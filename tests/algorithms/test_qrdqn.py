@@ -39,24 +39,24 @@ class TestQRDQN(object):
         '''
 
         dummy_env = E.DummyDiscreteImg()
-        params = A.QRDQNParam()
-        params.start_timesteps = 5
-        params.batch_size = 5
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
-        qrdqn = A.QRDQN(dummy_env, params=params)
+        config = A.QRDQNConfig()
+        config.start_timesteps = 5
+        config.batch_size = 5
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        qrdqn = A.QRDQN(dummy_env, config=config)
 
         qrdqn.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
-        params = A.QRDQNParam()
-        params.batch_size = batch_size
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
+        config = A.QRDQNConfig()
+        config.batch_size = batch_size
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
 
-        qrdqn = A.QRDQN(dummy_env, params=params)
+        qrdqn = A.QRDQN(dummy_env, config=config)
 
         buffer = ReplayBuffer()
         experiences = generate_dummy_experiences(dummy_env, batch_size)
@@ -76,29 +76,29 @@ class TestQRDQN(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.QRDQNParam(gamma=1.1)
+            A.QRDQNConfig(gamma=1.1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(gamma=-0.1)
+            A.QRDQNConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(batch_size=-1)
+            A.QRDQNConfig(batch_size=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(replay_buffer_size=-1)
+            A.QRDQNConfig(replay_buffer_size=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(learner_update_frequency=-1)
+            A.QRDQNConfig(learner_update_frequency=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(max_explore_steps=-1)
+            A.QRDQNConfig(max_explore_steps=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(learning_rate=-1)
+            A.QRDQNConfig(learning_rate=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(initial_epsilon=-1)
+            A.QRDQNConfig(initial_epsilon=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(final_epsilon=-1)
+            A.QRDQNConfig(final_epsilon=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(test_epsilon=-1)
+            A.QRDQNConfig(test_epsilon=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(num_quantiles=-1)
+            A.QRDQNConfig(num_quantiles=-1)
         with pytest.raises(ValueError):
-            A.QRDQNParam(kappa=-1)
+            A.QRDQNConfig(kappa=-1)
 
 
 if __name__ == "__main__":

@@ -22,13 +22,13 @@ import numpy as np
 from dataclasses import dataclass
 
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingVariables, ModelTrainer, TrainingBatch
+    TrainerConfig, Training, TrainingVariables, ModelTrainer, TrainingBatch
 from nnabla_rl.models import Model, RewardFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 
 @dataclass
-class GAILRewardFunctionTrainerParam(TrainerParam):
+class GAILRewardFunctionTrainerConfig(TrainerConfig):
     batch_size: int = 1024
     learning_rate: float = 3e-4
     entropy_coef: float = 0.001
@@ -38,10 +38,10 @@ class GAILRewardFunctionTrainerParam(TrainerParam):
 
 
 class GAILRewardFunctionTrainer(ModelTrainer):
-    _params: GAILRewardFunctionTrainerParam
+    _config: GAILRewardFunctionTrainerConfig
 
-    def __init__(self, env_info, params=GAILRewardFunctionTrainerParam()):
-        super(GAILRewardFunctionTrainer, self).__init__(env_info, params)
+    def __init__(self, env_info, config=GAILRewardFunctionTrainerConfig()):
+        super(GAILRewardFunctionTrainer, self).__init__(env_info, config)
         self._binary_classification_loss = None
 
     def _update_model(self,
@@ -95,7 +95,7 @@ class GAILRewardFunctionTrainer(ModelTrainer):
             # entropy loss
             logits = NF.concatenate(logits_fake, logits_real, axis=0)
             entropy = NF.mean((1. - NF.sigmoid(logits)) * logits - NF.log_sigmoid(logits))
-            entropy_loss = - self._params.entropy_coef * entropy  # maximize
+            entropy_loss = - self._config.entropy_coef * entropy  # maximize
             self._binary_classification_loss += fake_loss + real_loss + entropy_loss
 
     def _setup_training_variables(self, batch_size):

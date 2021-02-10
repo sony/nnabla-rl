@@ -100,7 +100,7 @@ def GlorotUniform(inmaps, outmaps, kernel=(1, 1)):
 class NormcInitializer(NI.BaseInitializer):
     ''' Create Normc initializer
     See: https://github.com/openai/baselines/blob/master/baselines/common/tf_util.py
-    Parameter initialized with params normalized along 'axis' dimension.
+    Initializes the parameter which normalized along 'axis' dimension.
 
     Args:
         std (float): normalization scaling value. Defaults to 1.

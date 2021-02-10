@@ -14,20 +14,20 @@
 
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import AlgorithmParam
+from nnabla_rl.algorithm import AlgorithmConfig
 
 
 class PreprocessorBuilder():
     def __call__(self,
                  scope_name: str,
                  env_info: EnvironmentInfo,
-                 algorithm_params: AlgorithmParam,
+                 algorithm_config: AlgorithmConfig,
                  **kwargs) -> Preprocessor:
-        return self.build_preprocessor(scope_name, env_info, algorithm_params, **kwargs)
+        return self.build_preprocessor(scope_name, env_info, algorithm_config, **kwargs)
 
     def build_preprocessor(self,
                            scope_name: str,
                            env_info: EnvironmentInfo,
-                           algorithm_params: AlgorithmParam,
+                           algorithm_config: AlgorithmConfig,
                            **kwargs) -> Preprocessor:
         raise NotImplementedError

@@ -24,7 +24,7 @@ from dataclasses import dataclass
 import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import Model, StochasticPolicy, QFunction, VariationalAutoEncoder
 
 
@@ -59,7 +59,7 @@ class AdjustableLagrangeMultiplier(Model):
 
 
 @dataclass
-class BEARPolicyTrainerParam(TrainerParam):
+class BEARPolicyTrainerConfig(TrainerConfig):
     num_mmd_actions: int = 10
     mmd_sigma: float = 20.0
     mmd_type: str = 'gaussian'
@@ -75,7 +75,7 @@ class BEARPolicyTrainer(ModelTrainer):
     '''Bootstrapping Error Accumulation Reduction (BEAR) style Policy Trainer
     '''
 
-    _params: BEARPolicyTrainerParam
+    _config: BEARPolicyTrainerConfig
     _mmd_loss: nn.Variable
     _pi_loss: nn.Variable
     _pi_warmup_loss: nn.Variable
@@ -92,8 +92,8 @@ class BEARPolicyTrainer(ModelTrainer):
                  vae: VariationalAutoEncoder,
                  lagrange_multiplier: AdjustableLagrangeMultiplier,
                  lagrange_solver: Optional[nn.solver.Solver] = None,
-                 params: BEARPolicyTrainerParam = BEARPolicyTrainerParam()):
-        super(BEARPolicyTrainer, self).__init__(env_info, params)
+                 config: BEARPolicyTrainerConfig = BEARPolicyTrainerConfig()):
+        super(BEARPolicyTrainer, self).__init__(env_info, config)
         self._q_ensembles = q_ensembles
         self._vae = vae
 
@@ -110,7 +110,7 @@ class BEARPolicyTrainer(ModelTrainer):
 
         # Optimize actor
         # Always forward pi loss to update the graph
-        pi_loss = self._pi_warmup_loss if self._train_count < self._params.warmup_iterations else self._pi_loss
+        pi_loss = self._pi_warmup_loss if self._train_count < self._config.warmup_iterations else self._pi_loss
         for solver in solvers.values():
             solver.zero_grad()
         nn.forward_all([pi_loss, self._lagrange_loss])
@@ -119,7 +119,7 @@ class BEARPolicyTrainer(ModelTrainer):
             solver.update()
 
         # Update lagrange_multiplier if requested
-        if not self._params.fix_lagrange_multiplier:
+        if not self._config.fix_lagrange_multiplier:
             assert self._lagrange_solver is not None
             self._lagrange_solver.zero_grad()
             self._lagrange_loss.backward()
@@ -137,32 +137,32 @@ class BEARPolicyTrainer(ModelTrainer):
         self._pi_warmup_loss = 0
         for policy in models:
             sampled_actions = self._vae.decode_multiple(
-                self._params.num_mmd_actions, training_variables.s_current)
+                self._config.num_mmd_actions, training_variables.s_current)
             policy_distribution = policy.pi(training_variables.s_current)
             policy_actions = policy_distribution.sample_multiple(
-                num_samples=self._params.num_mmd_actions, noise_clip=(-0.5, 0.5))
+                num_samples=self._config.num_mmd_actions, noise_clip=(-0.5, 0.5))
 
-            if self._params.mmd_type == 'gaussian':
-                mmd_loss = _compute_gaussian_mmd(sampled_actions, policy_actions, sigma=self._params.mmd_sigma)
-            elif self._params.mmd_type == 'laplacian':
-                mmd_loss = _compute_laplacian_mmd(sampled_actions, policy_actions, sigma=self._params.mmd_sigma)
+            if self._config.mmd_type == 'gaussian':
+                mmd_loss = _compute_gaussian_mmd(sampled_actions, policy_actions, sigma=self._config.mmd_sigma)
+            elif self._config.mmd_type == 'laplacian':
+                mmd_loss = _compute_laplacian_mmd(sampled_actions, policy_actions, sigma=self._config.mmd_sigma)
             else:
                 raise ValueError(
-                    'Unknown mmd type: {}'.format(self._params.mmd_type))
+                    'Unknown mmd type: {}'.format(self._config.mmd_type))
             assert mmd_loss.shape == (batch_size, 1)
 
             s_hat = RF.expand_dims(training_variables.s_current, axis=0)
-            s_hat = RF.repeat(s_hat, repeats=self._params.num_mmd_actions, axis=0)
-            s_hat = NF.reshape(s_hat, shape=(batch_size * self._params.num_mmd_actions,
+            s_hat = RF.repeat(s_hat, repeats=self._config.num_mmd_actions, axis=0)
+            s_hat = NF.reshape(s_hat, shape=(batch_size * self._config.num_mmd_actions,
                                              training_variables.s_current.shape[-1]))
             action_shape = policy_actions.shape[-1]
             a_hat = NF.transpose(policy_actions, axes=(1, 0, 2))
-            a_hat = NF.reshape(a_hat, shape=(batch_size * self._params.num_mmd_actions, action_shape))
+            a_hat = NF.reshape(a_hat, shape=(batch_size * self._config.num_mmd_actions, action_shape))
 
             num_q_ensembles = len(self._q_ensembles)
             q_values = NF.stack(*(q.q(s_hat, a_hat) for q in self._q_ensembles))
-            assert q_values.shape == (num_q_ensembles, self._params.num_mmd_actions * batch_size, 1)
-            q_values = NF.reshape(q_values, shape=(num_q_ensembles, self._params.num_mmd_actions, batch_size, 1))
+            assert q_values.shape == (num_q_ensembles, self._config.num_mmd_actions * batch_size, 1)
+            q_values = NF.reshape(q_values, shape=(num_q_ensembles, self._config.num_mmd_actions, batch_size, 1))
             # Compute mean among sampled actions
             q_values = NF.mean(q_values, axis=1)
             assert q_values.shape == (num_q_ensembles, batch_size, 1)
@@ -176,7 +176,7 @@ class BEARPolicyTrainer(ModelTrainer):
             self._pi_warmup_loss += NF.mean(self._lagrange() * mmd_loss)
 
         # Must forward pi_loss before forwarding lagrange_loss
-        self._lagrange_loss = -NF.mean(-q_min + self._lagrange() * (mmd_loss - self._params.epsilon))
+        self._lagrange_loss = -NF.mean(-q_min + self._lagrange() * (mmd_loss - self._config.epsilon))
 
     def _setup_training_variables(self, batch_size):
         # Training input variables
@@ -185,7 +185,7 @@ class BEARPolicyTrainer(ModelTrainer):
 
     def _setup_solver(self):
         super()._setup_solver()
-        if not self._params.fix_lagrange_multiplier:
+        if not self._config.fix_lagrange_multiplier:
             self._lagrange_solver.set_parameters(self._lagrange.get_parameters(), reset=False, retain_state=True)
 
 

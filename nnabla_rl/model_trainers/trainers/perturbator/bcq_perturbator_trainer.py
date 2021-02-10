@@ -21,12 +21,12 @@ from dataclasses import dataclass
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
-    TrainerParam, Training, TrainingBatch, TrainingVariables, ModelTrainer
+    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import VariationalAutoEncoder, Perturbator, QFunction, Model
 
 
 @dataclass
-class BCQPerturbatorTrainerParam(TrainerParam):
+class BCQPerturbatorTrainerConfig(TrainerConfig):
     '''
     Args:
         phi(float): action perturbator noise coefficient
@@ -35,17 +35,17 @@ class BCQPerturbatorTrainerParam(TrainerParam):
 
 
 class BCQPerturbatorTrainer(ModelTrainer):
-    _params: BCQPerturbatorTrainerParam
+    _config: BCQPerturbatorTrainerConfig
     _q_function: QFunction
     _vae: VariationalAutoEncoder
     _perturbator_loss: nn.Variable
 
     def __init__(self,
                  env_info: EnvironmentInfo,
-                 params: BCQPerturbatorTrainerParam,
+                 config: BCQPerturbatorTrainerConfig,
                  q_function: QFunction,
                  vae: VariationalAutoEncoder):
-        super(BCQPerturbatorTrainer, self).__init__(env_info, params)
+        super(BCQPerturbatorTrainer, self).__init__(env_info, config)
         self._q_function = q_function
         self._vae = vae
 
@@ -81,7 +81,7 @@ class BCQPerturbatorTrainer(ModelTrainer):
             action = self._vae.decode(training_variables.s_current)
             action.need_grad = False
 
-            noise = perturbator.generate_noise(training_variables.s_current, action, phi=self._params.phi)
+            noise = perturbator.generate_noise(training_variables.s_current, action, phi=self._config.phi)
 
             xi_loss = -self._q_function.q(training_variables.s_current, action + noise)
             assert xi_loss.shape == (batch_size, 1)

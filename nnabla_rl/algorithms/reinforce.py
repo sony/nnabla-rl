@@ -26,7 +26,7 @@ import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import StochasticPolicyBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
@@ -35,7 +35,7 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 
 
 @dataclass
-class REINFORCEParam(AlgorithmParam):
+class REINFORCEConfig(AlgorithmConfig):
     reward_scale: float = 0.01
     num_rollouts_per_train_iteration: int = 10
     learning_rate: float = 1e-3
@@ -59,24 +59,24 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: REINFORCEParam,
+                    algorithm_config: REINFORCEConfig,
                     **kwargs) -> StochasticPolicy:
         if env_info.is_discrete_action_env():
-            return self._build_discrete_policy(scope_name, env_info, algorithm_params)
+            return self._build_discrete_policy(scope_name, env_info, algorithm_config)
         else:
-            return self._build_continuous_policy(scope_name, env_info, algorithm_params)
+            return self._build_continuous_policy(scope_name, env_info, algorithm_config)
 
     def _build_continuous_policy(self,
                                  scope_name: str,
                                  env_info: EnvironmentInfo,
-                                 algorithm_params: REINFORCEParam,
+                                 algorithm_config: REINFORCEConfig,
                                  **kwargs) -> StochasticPolicy:
-        return REINFORCEContinousPolicy(scope_name, env_info.action_dim, algorithm_params.fixed_ln_var)
+        return REINFORCEContinousPolicy(scope_name, env_info.action_dim, algorithm_config.fixed_ln_var)
 
     def _build_discrete_policy(self,
                                scope_name: str,
                                env_info: EnvironmentInfo,
-                               algorithm_params: REINFORCEParam,
+                               algorithm_config: REINFORCEConfig,
                                **kwargs) -> StochasticPolicy:
         return REINFORCEDiscretePolicy(scope_name, env_info.action_dim)
 
@@ -84,13 +84,13 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
 class DefaultSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: REINFORCEParam,
+                     algorithm_config: REINFORCEConfig,
                      **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.learning_rate)
+        return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class REINFORCE(Algorithm):
-    _params: REINFORCEParam
+    _config: REINFORCEConfig
     _policy: StochasticPolicy
     _policy_solver: nn.solver.Solver
 
@@ -102,12 +102,12 @@ class REINFORCE(Algorithm):
 
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 params: REINFORCEParam = REINFORCEParam(),
+                 config: REINFORCEConfig = REINFORCEConfig(),
                  policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder()):
-        super(REINFORCE, self).__init__(env_or_env_info, params=params)
-        self._policy = policy_builder("pi", self._env_info, self._params)
-        self._policy_solver = policy_solver_builder(self._env_info, self._params)
+        super(REINFORCE, self).__init__(env_or_env_info, config=config)
+        self._policy = policy_builder("pi", self._env_info, self._config)
+        self._policy_solver = policy_solver_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, s):
@@ -121,32 +121,32 @@ class REINFORCE(Algorithm):
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
             return None
-        explorer_params = EE.RawPolicyExplorerParam(
-            reward_scalar=self._params.reward_scale,
+        explorer_config = EE.RawPolicyExplorerConfig(
+            reward_scalar=self._config.reward_scale,
             initial_step_num=self.iteration_num,
             timelimit_as_terminal=False
         )
         explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
                                         env_info=self._env_info,
-                                        params=explorer_params)
+                                        config=explorer_config)
         return explorer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_params = MT.policy_trainers.SPGPolicyTrainerParam(
-            pi_loss_scalar=1.0 / self._params.num_rollouts_per_train_iteration,
-            grad_clip_norm=self._params.clip_grad_norm)
+        policy_trainer_config = MT.policy_trainers.SPGPolicyTrainerConfig(
+            pi_loss_scalar=1.0 / self._config.num_rollouts_per_train_iteration,
+            grad_clip_norm=self._config.clip_grad_norm)
         policy_trainer = MT.policy_trainers.SPGPolicyTrainer(
             env_info=self._env_info,
-            params=policy_trainer_params)
+            config=policy_trainer_config)
 
         training = MT.policy_trainings.REINFORCETraining()
         policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
-        buffer = ReplayBuffer(capacity=self._params.num_rollouts_per_train_iteration)
+        buffer = ReplayBuffer(capacity=self._config.num_rollouts_per_train_iteration)
 
-        for _ in range(self._params.num_rollouts_per_train_iteration):
+        for _ in range(self._config.num_rollouts_per_train_iteration):
             experience = self._environment_explorer.rollout(env)
             buffer.append(experience)
 

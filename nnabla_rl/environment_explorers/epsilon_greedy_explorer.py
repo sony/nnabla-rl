@@ -19,7 +19,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerParam
+from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerConfig
 
 
 def epsilon_greedy_action_selection(state, greedy_action_selector, random_action_selector, epsilon):
@@ -32,7 +32,7 @@ def epsilon_greedy_action_selection(state, greedy_action_selector, random_action
 
 
 @dataclass
-class LinearDecayEpsilonGreedyExplorerParam(EnvironmentExplorerParam):
+class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.05
     max_explore_steps: float = 1000000
@@ -49,8 +49,8 @@ class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
                  greedy_action_selector: Callable[[np.array], Tuple[np.array, Dict]],
                  random_action_selector: Callable[[np.array], Tuple[np.array, Dict]],
                  env_info: EnvironmentInfo,
-                 params: LinearDecayEpsilonGreedyExplorerParam = LinearDecayEpsilonGreedyExplorerParam()):
-        super().__init__(env_info, params)
+                 config: LinearDecayEpsilonGreedyExplorerConfig = LinearDecayEpsilonGreedyExplorerConfig()):
+        super().__init__(env_info, config)
         self._greedy_action_selector = greedy_action_selector
         self._random_action_selector = random_action_selector
 
@@ -64,7 +64,7 @@ class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
 
     def _compute_epsilon(self, step):
         assert 0 <= step
-        delta_epsilon = step / self._params.max_explore_steps \
-            * (self._params.initial_epsilon - self._params.final_epsilon)
-        epsilon = self._params.initial_epsilon - delta_epsilon
-        return max(epsilon, self._params.final_epsilon)
+        delta_epsilon = step / self._config.max_explore_steps \
+            * (self._config.initial_epsilon - self._config.final_epsilon)
+        epsilon = self._config.initial_epsilon - delta_epsilon
+        return max(epsilon, self._config.final_epsilon)

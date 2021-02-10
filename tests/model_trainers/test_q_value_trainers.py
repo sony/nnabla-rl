@@ -36,8 +36,8 @@ class TestQuantileDistributionFunctionTrainer(object):
         env_info = EnvironmentInfo.from_env(dummy_env)
         n_quantiles = 100
 
-        params = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerParam(num_quantiles=n_quantiles)
-        trainer = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(env_info, params=params)
+        config = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerConfig(num_quantiles=n_quantiles)
+        trainer = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(env_info, config=config)
 
         expected = np.empty(shape=(n_quantiles,))
         prev_tau = 0.0

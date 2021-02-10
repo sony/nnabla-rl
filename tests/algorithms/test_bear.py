@@ -51,8 +51,8 @@ class TestBEAR(object):
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
-        params = A.BEARParam(batch_size=batch_size)
-        bear = A.BEAR(dummy_env, params=params)
+        config = A.BEARConfig(batch_size=batch_size)
+        bear = A.BEAR(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -71,21 +71,21 @@ class TestBEAR(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.BEARParam(tau=1.1)
+            A.BEARConfig(tau=1.1)
         with pytest.raises(ValueError):
-            A.BEARParam(tau=-0.1)
+            A.BEARConfig(tau=-0.1)
         with pytest.raises(ValueError):
-            A.BEARParam(gamma=1.1)
+            A.BEARConfig(gamma=1.1)
         with pytest.raises(ValueError):
-            A.BEARParam(gamma=-0.1)
+            A.BEARConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.BEARParam(num_q_ensembles=-100)
+            A.BEARConfig(num_q_ensembles=-100)
         with pytest.raises(ValueError):
-            A.BEARParam(num_mmd_actions=-100)
+            A.BEARConfig(num_mmd_actions=-100)
         with pytest.raises(ValueError):
-            A.BEARParam(num_action_samples=-100)
+            A.BEARConfig(num_action_samples=-100)
         with pytest.raises(ValueError):
-            A.BEARParam(warmup_iterations=-100)
+            A.BEARConfig(warmup_iterations=-100)
 
 
 if __name__ == "__main__":

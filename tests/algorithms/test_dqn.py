@@ -38,12 +38,12 @@ class TestDQN(object):
         Check that no error occurs when calling online training
         '''
         dummy_env = E.DummyDiscreteImg()
-        params = A.DQNParam()
-        params.start_timesteps = 5
-        params.batch_size = 5
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
-        dqn = A.DQN(dummy_env, params=params)
+        config = A.DQNConfig()
+        config.start_timesteps = 5
+        config.batch_size = 5
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        dqn = A.DQN(dummy_env, config=config)
 
         dqn.train_online(dummy_env, total_iterations=10)
 
@@ -53,12 +53,12 @@ class TestDQN(object):
         '''
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
-        params = A.DQNParam()
-        params.batch_size = batch_size
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
+        config = A.DQNConfig()
+        config.batch_size = batch_size
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
 
-        dqn = A.DQN(dummy_env, params=params)
+        dqn = A.DQN(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -77,29 +77,29 @@ class TestDQN(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.DQNParam(gamma=-0.1)
+            A.DQNConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.DQNParam(batch_size=-1)
+            A.DQNConfig(batch_size=-1)
         with pytest.raises(ValueError):
-            A.DQNParam(learning_rate=-0.1)
+            A.DQNConfig(learning_rate=-0.1)
         with pytest.raises(ValueError):
-            A.DQNParam(min_squared_gradient=-0.1)
+            A.DQNConfig(min_squared_gradient=-0.1)
         with pytest.raises(ValueError):
-            A.DQNParam(learner_update_frequency=-1000)
+            A.DQNConfig(learner_update_frequency=-1000)
         with pytest.raises(ValueError):
-            A.DQNParam(target_update_frequency=-1000)
+            A.DQNConfig(target_update_frequency=-1000)
         with pytest.raises(ValueError):
-            A.DQNParam(start_timesteps=-1000)
+            A.DQNConfig(start_timesteps=-1000)
         with pytest.raises(ValueError):
-            A.DQNParam(replay_buffer_size=-1000)
+            A.DQNConfig(replay_buffer_size=-1000)
         with pytest.raises(ValueError):
-            A.DQNParam(initial_epsilon=1.5)
+            A.DQNConfig(initial_epsilon=1.5)
         with pytest.raises(ValueError):
-            A.DQNParam(final_epsilon=1.1)
+            A.DQNConfig(final_epsilon=1.1)
         with pytest.raises(ValueError):
-            A.DQNParam(test_epsilon=-1000)
+            A.DQNConfig(test_epsilon=-1000)
         with pytest.raises(ValueError):
-            A.DQNParam(max_explore_steps=-100)
+            A.DQNConfig(max_explore_steps=-100)
 
 
 if __name__ == "__main__":

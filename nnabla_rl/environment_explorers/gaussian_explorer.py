@@ -20,11 +20,11 @@ import numpy as np
 import sys
 
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerParam
+from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerConfig
 
 
 @dataclass
-class GaussianExplorerParam(EnvironmentExplorerParam):
+class GaussianExplorerConfig(EnvironmentExplorerConfig):
     action_clip_low: float = sys.float_info.min
     action_clip_high: float = sys.float_info.max
     sigma: float = 1.0
@@ -37,14 +37,14 @@ class GaussianExplorer(EnvironmentExplorer):
     def __init__(self,
                  policy_action_selector: Callable[[np.array], Tuple[np.array, Dict]],
                  env_info: EnvironmentInfo,
-                 params: GaussianExplorerParam = GaussianExplorerParam()):
-        super().__init__(env_info, params)
+                 config: GaussianExplorerConfig = GaussianExplorerConfig()):
+        super().__init__(env_info, config)
         self._policy_action_selector = policy_action_selector
 
     def action(self, step, state):
         (action, info) = self._policy_action_selector(state)
-        return self._append_noise(action, self._params.action_clip_low, self._params.action_clip_high), info
+        return self._append_noise(action, self._config.action_clip_low, self._config.action_clip_high), info
 
     def _append_noise(self, action, low, high):
-        noise = np.random.normal(loc=0.0, scale=self._params.sigma, size=action.shape).astype(np.float32)
+        noise = np.random.normal(loc=0.0, scale=self._config.sigma, size=action.shape).astype(np.float32)
         return np.clip(action + noise, low, high)

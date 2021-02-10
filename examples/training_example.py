@@ -47,8 +47,8 @@ def main():
     save_snapshot_hook = H.SaveSnapshotHook('./pendulum_v0_ddpg_results', timing=1000)
 
     train_env = build_env()
-    params = A.DDPGParam(start_timesteps=200)
-    ddpg = A.DDPG(train_env, params=params)
+    config = A.DDPGConfig(start_timesteps=200)
+    ddpg = A.DDPG(train_env, config=config)
     ddpg.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
 
     ddpg.train(train_env, total_iterations=10000)

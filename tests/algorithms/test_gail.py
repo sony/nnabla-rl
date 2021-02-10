@@ -48,13 +48,13 @@ class TestGAIL():
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
         dummy_buffer = self._create_dummy_buffer(dummy_env, batch_size=15)
 
-        params = A.GAILParam(num_steps_per_iteration=5,
-                             pi_batch_size=5,
-                             vf_batch_size=2,
-                             discriminator_batch_size=2,
-                             sigma_kl_divergence_constraint=10.0,
-                             maximum_backtrack_numbers=50)
-        gail = A.GAIL(dummy_env, dummy_buffer, params=params)
+        config = A.GAILConfig(num_steps_per_iteration=5,
+                              pi_batch_size=5,
+                              vf_batch_size=2,
+                              discriminator_batch_size=2,
+                              sigma_kl_divergence_constraint=10.0,
+                              maximum_backtrack_numbers=50)
+        gail = A.GAIL(dummy_env, dummy_buffer, config=config)
         gail.train_online(dummy_env, total_iterations=5)
 
     def test_run_offline_training(self):
@@ -81,33 +81,33 @@ class TestGAIL():
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.GAILParam(gamma=-0.1)
+            A.GAILConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.GAILParam(num_steps_per_iteration=-1)
+            A.GAILConfig(num_steps_per_iteration=-1)
         with pytest.raises(ValueError):
-            A.GAILParam(sigma_kl_divergence_constraint=-0.1)
+            A.GAILConfig(sigma_kl_divergence_constraint=-0.1)
         with pytest.raises(ValueError):
-            A.GAILParam(maximum_backtrack_numbers=-0.1)
+            A.GAILConfig(maximum_backtrack_numbers=-0.1)
         with pytest.raises(ValueError):
-            A.GAILParam(conjugate_gradient_damping=-0.1)
+            A.GAILConfig(conjugate_gradient_damping=-0.1)
         with pytest.raises(ValueError):
-            A.GAILParam(conjugate_gradient_iterations=-5)
+            A.GAILConfig(conjugate_gradient_iterations=-5)
         with pytest.raises(ValueError):
-            A.GAILParam(vf_epochs=-5)
+            A.GAILConfig(vf_epochs=-5)
         with pytest.raises(ValueError):
-            A.GAILParam(vf_batch_size=-5)
+            A.GAILConfig(vf_batch_size=-5)
         with pytest.raises(ValueError):
-            A.GAILParam(vf_learning_rate=-0.5)
+            A.GAILConfig(vf_learning_rate=-0.5)
         with pytest.raises(ValueError):
-            A.GAILParam(discriminator_learning_rate=-0.5)
+            A.GAILConfig(discriminator_learning_rate=-0.5)
         with pytest.raises(ValueError):
-            A.GAILParam(discriminator_batch_size=-5)
+            A.GAILConfig(discriminator_batch_size=-5)
         with pytest.raises(ValueError):
-            A.GAILParam(policy_update_interval=-5)
+            A.GAILConfig(policy_update_interval=-5)
         with pytest.raises(ValueError):
-            A.GAILParam(discriminator_update_interval=-5)
+            A.GAILConfig(discriminator_update_interval=-5)
         with pytest.raises(ValueError):
-            A.GAILParam(adversary_entropy_coef=-0.5)
+            A.GAILConfig(adversary_entropy_coef=-0.5)
 
 
 if __name__ == "__main__":

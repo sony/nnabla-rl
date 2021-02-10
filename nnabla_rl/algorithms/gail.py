@@ -27,7 +27,7 @@ from typing import Union, Optional
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import Algorithm, AlgorithmParam, eval_api
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import VFunctionBuilder, RewardFunctionBuilder, StochasticPolicyBuilder, \
     SolverBuilder, PreprocessorBuilder
 from nnabla_rl.preprocessors import Preprocessor
@@ -45,7 +45,7 @@ import nnabla_rl.preprocessors as RP
 
 
 @dataclass
-class GAILParam(AlgorithmParam):
+class GAILConfig(AlgorithmConfig):
     preprocess_state: bool = True
     act_deterministic_in_eval: bool = True
     discriminator_batch_size: int = 1024
@@ -93,7 +93,7 @@ class DefaultPreprocessorBuilder(PreprocessorBuilder):
     def build_preprocessor(self,  # type: ignore[override]
                            scope_name: str,
                            env_info: EnvironmentInfo,
-                           algorithm_params: GAILParam,
+                           algorithm_config: GAILConfig,
                            **kwargs) -> Preprocessor:
         return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
 
@@ -102,7 +102,7 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: GAILParam,
+                    algorithm_config: GAILConfig,
                     **kwargs) -> StochasticPolicy:
         return GAILPolicy(scope_name, env_info.action_dim)
 
@@ -111,7 +111,7 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: GAILParam,
+                    algorithm_config: GAILConfig,
                     **kwargs) -> VFunction:
         return GAILVFunction(scope_name)
 
@@ -120,7 +120,7 @@ class DefaultRewardFunctionBuilder(RewardFunctionBuilder):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_params: GAILParam,
+                    algorithm_config: GAILConfig,
                     **kwargs) -> RewardFunction:
         return GAILDiscriminator(scope_name)
 
@@ -128,18 +128,18 @@ class DefaultRewardFunctionBuilder(RewardFunctionBuilder):
 class DefaultVFunctionSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: GAILParam,
+                     algorithm_config: GAILConfig,
                      **kwargs) -> nn.solver.Solver:
-        return NS.Adam(alpha=algorithm_params.vf_learning_rate)
+        return NS.Adam(alpha=algorithm_config.vf_learning_rate)
 
 
 class DefaultRewardFunctionSolverBuilder(SolverBuilder):
     def build_solver(self,  # type: ignore[override]
                      env_info: EnvironmentInfo,
-                     algorithm_params: GAILParam,
+                     algorithm_config: GAILConfig,
                      **kwargs) -> nn.solver.Solver:
-        assert isinstance(algorithm_params, GAILParam)
-        return NS.Adam(alpha=algorithm_params.discriminator_learning_rate)
+        assert isinstance(algorithm_config, GAILConfig)
+        return NS.Adam(alpha=algorithm_config.discriminator_learning_rate)
 
 
 class GAIL(Algorithm):
@@ -147,7 +147,7 @@ class GAIL(Algorithm):
         See: https://arxiv.org/abs/1606.03476.pdf
     '''
 
-    _params: GAILParam
+    _config: GAILConfig
     _v_function: VFunction
     _v_function_solver: nn.solver.Solver
     _policy: StochasticPolicy
@@ -165,30 +165,30 @@ class GAIL(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  expert_buffer: ReplayBuffer,
-                 params=GAILParam(),
+                 config=GAILConfig(),
                  v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultVFunctionSolverBuilder(),
                  policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
                  reward_function_builder: RewardFunctionBuilder = DefaultRewardFunctionBuilder(),
                  reward_solver_builder: SolverBuilder = DefaultRewardFunctionSolverBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
-        super(GAIL, self).__init__(env_or_env_info, params=params)
+        super(GAIL, self).__init__(env_or_env_info, config=config)
         if self._env_info.is_discrete_action_env():
             raise NotImplementedError
 
         self._expert_buffer = expert_buffer
 
-        policy = policy_builder("pi", self._env_info, self._params)
-        v_function = v_function_builder("v", self._env_info, self._params)
-        discriminator = reward_function_builder("discriminator", self._env_info, self._params)
+        policy = policy_builder("pi", self._env_info, self._config)
+        v_function = v_function_builder("v", self._env_info, self._config)
+        discriminator = reward_function_builder("discriminator", self._env_info, self._config)
 
-        if self._params.preprocess_state:
+        if self._config.preprocess_state:
             if state_preprocessor_builder is None:
                 raise ValueError('State preprocessing is enabled but no preprocessor builder is given')
-            pi_v_preprocessor = state_preprocessor_builder('pi_v_preprocessor', self._env_info, self._params)
+            pi_v_preprocessor = state_preprocessor_builder('pi_v_preprocessor', self._env_info, self._config)
             v_function = _StatePreprocessedVFunction(v_function=v_function, preprocessor=pi_v_preprocessor)
             policy = _StatePreprocessedPolicy(policy=policy, preprocessor=pi_v_preprocessor)
-            r_preprocessor = state_preprocessor_builder('r_preprocessor', self._env_info, self._params)
+            r_preprocessor = state_preprocessor_builder('r_preprocessor', self._env_info, self._config)
             discriminator = _StatePreprocessedRewardFunction(reward_function=discriminator, preprocessor=r_preprocessor)
             self._pi_v_state_preprocessor = pi_v_preprocessor
             self._r_state_preprocessor = r_preprocessor
@@ -196,8 +196,8 @@ class GAIL(Algorithm):
         self._policy = policy
         self._discriminator = discriminator
 
-        self._v_function_solver = v_solver_builder(self._env_info, self._params)
-        self._discriminator_solver = reward_solver_builder(self._env_info, self._params)
+        self._v_function_solver = v_solver_builder(self._env_info, self._config)
+        self._discriminator_solver = reward_solver_builder(self._env_info, self._config)
 
     def _before_training_start(self, env_or_buffer):
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
@@ -208,23 +208,23 @@ class GAIL(Algorithm):
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
             return None
-        explorer_params = EE.RawPolicyExplorerParam(
+        explorer_config = EE.RawPolicyExplorerConfig(
             initial_step_num=self.iteration_num,
             timelimit_as_terminal=False
         )
         explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
                                         env_info=self._env_info,
-                                        params=explorer_params)
+                                        config=explorer_config)
         return explorer
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_params = MT.v_value_trainers.SquaredTDVFunctionTrainerParam(
+        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=1.0
         )
         v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
             env_info=self._env_info,
-            params=v_function_trainer_params)
+            config=v_function_trainer_config)
 
         training = MT.v_value_trainings.MonteCarloVValueTraining()
         v_function_trainer.setup_training(
@@ -232,26 +232,26 @@ class GAIL(Algorithm):
         return v_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_params = MT.policy_trainers.TRPOPolicyTrainerParam(
-            sigma_kl_divergence_constraint=self._params.sigma_kl_divergence_constraint,
-            maximum_backtrack_numbers=self._params.maximum_backtrack_numbers,
-            conjugate_gradient_damping=self._params.conjugate_gradient_damping,
-            conjugate_gradient_iterations=self._params.conjugate_gradient_iterations)
+        policy_trainer_config = MT.policy_trainers.TRPOPolicyTrainerConfig(
+            sigma_kl_divergence_constraint=self._config.sigma_kl_divergence_constraint,
+            maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
+            conjugate_gradient_damping=self._config.conjugate_gradient_damping,
+            conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
         policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
-                                                              params=policy_trainer_params)
+                                                              config=policy_trainer_config)
         training = MT.model_trainer.Training()
         policy_trainer.setup_training(self._policy, {}, training)
 
         return policy_trainer
 
     def _setup_reward_function_training(self, env_or_buffer):
-        reward_function_trainer_params = MT.reward_trainiers.GAILRewardFunctionTrainerParam(
-            batch_size=self._params.discriminator_batch_size,
-            learning_rate=self._params.discriminator_learning_rate,
-            entropy_coef=self._params.adversary_entropy_coef
+        reward_function_trainer_config = MT.reward_trainiers.GAILRewardFunctionTrainerConfig(
+            batch_size=self._config.discriminator_batch_size,
+            learning_rate=self._config.discriminator_learning_rate,
+            entropy_coef=self._config.adversary_entropy_coef
         )
         reward_function_trainer = MT.reward_trainiers.GAILRewardFunctionTrainer(env_info=self._env_info,
-                                                                                params=reward_function_trainer_params)
+                                                                                config=reward_function_trainer_config)
         training = MT.model_trainer.Training()
         reward_function_trainer.setup_training(
             self._discriminator, {self._discriminator.scope_name: self._discriminator_solver}, training)
@@ -260,17 +260,17 @@ class GAIL(Algorithm):
 
     @eval_api
     def compute_eval_action(self, s):
-        action, _ = self._compute_action(s, act_deterministic=self._params.act_deterministic_in_eval)
+        action, _ = self._compute_action(s, act_deterministic=self._config.act_deterministic_in_eval)
         return action
 
     def _run_online_training_iteration(self, env):
-        if self.iteration_num % self._params.num_steps_per_iteration != 0:
+        if self.iteration_num % self._config.num_steps_per_iteration != 0:
             return
 
-        buffer = ReplayBuffer(capacity=self._params.num_steps_per_iteration)
+        buffer = ReplayBuffer(capacity=self._config.num_steps_per_iteration)
 
         num_steps = 0
-        while num_steps <= self._params.num_steps_per_iteration:
+        while num_steps <= self._config.num_steps_per_iteration:
             experience = self._environment_explorer.rollout(env)
             experience = self._label_experience(experience)
             buffer.append(experience)
@@ -309,21 +309,21 @@ class GAIL(Algorithm):
         buffer_iterator = BufferIterator(buffer, 1, shuffle=False, repeat=False)
 
         # policy learning
-        if self._iteration_num % self._params.policy_update_interval == 0:
+        if self._iteration_num % self._config.policy_update_interval == 0:
             s, a, v_target, advantage = self._align_policy_experiences(buffer_iterator)
 
-            if self._params.preprocess_state:
+            if self._config.preprocess_state:
                 self._pi_v_state_preprocessor.update(s)
 
             self._policy_training(s, a, v_target, advantage)
             self._v_function_training(s, v_target)
 
         # discriminator learning
-        if self._iteration_num % self._params.discriminator_update_interval == 0:
+        if self._iteration_num % self._config.discriminator_update_interval == 0:
             s_curr_expert, a_curr_expert, s_next_expert, s_curr_agent, a_curr_agent, s_next_agent = \
                 self._align_discriminator_experiences(buffer_iterator)
 
-            if self._params.preprocess_state:
+            if self._config.preprocess_state:
                 self._r_state_preprocessor.update(np.concatenate([s_curr_agent, s_curr_expert], axis=0))
 
             self._discriminator_training(s_curr_expert, a_curr_expert, s_next_expert,
@@ -334,10 +334,10 @@ class GAIL(Algorithm):
 
         s_batch, a_batch, _ = self._align_state_and_action(buffer_iterator)
 
-        return s_batch[:self._params.num_steps_per_iteration], \
-            a_batch[:self._params.num_steps_per_iteration], \
-            v_target_batch[:self._params.num_steps_per_iteration], \
-            adv_batch[:self._params.num_steps_per_iteration]
+        return s_batch[:self._config.num_steps_per_iteration], \
+            a_batch[:self._config.num_steps_per_iteration], \
+            v_target_batch[:self._config.num_steps_per_iteration], \
+            adv_batch[:self._config.num_steps_per_iteration]
 
     def _compute_v_target_and_advantage(self, buffer_iterator):
         v_target_batch = []
@@ -347,7 +347,7 @@ class GAIL(Algorithm):
         for experiences, *_ in buffer_iterator:
             # length of experiences is 1
             v_target, adv = compute_v_target_and_advantage(
-                self._v_function, experiences[0], gamma=self._params.gamma, lmb=self._params.lmb)
+                self._v_function, experiences[0], gamma=self._config.gamma, lmb=self._config.lmb)
             v_target_batch.append(v_target.reshape(-1, 1))
             adv_batch.append(adv.reshape(-1, 1))
 
@@ -384,31 +384,31 @@ class GAIL(Algorithm):
 
     def _align_discriminator_experiences(self, buffer_iterator):
         # sample expert data
-        expert_experience, _ = self._expert_buffer.sample(self._params.discriminator_batch_size)
+        expert_experience, _ = self._expert_buffer.sample(self._config.discriminator_batch_size)
         s_expert_batch, a_expert_batch, _, _, s_next_expert_batch, *_ = marshall_experiences(expert_experience)
         # sample agent data
         s_batch, a_batch, s_next_batch = self._align_state_and_action(
-            buffer_iterator, batch_size=self._params.discriminator_batch_size)
+            buffer_iterator, batch_size=self._config.discriminator_batch_size)
 
         return s_expert_batch, a_expert_batch, s_next_expert_batch, s_batch, a_batch, s_next_batch
 
     def _v_function_training(self, s, v_target):
-        num_iterations_per_epoch = self._params.num_steps_per_iteration // self._params.vf_batch_size
+        num_iterations_per_epoch = self._config.num_steps_per_iteration // self._config.vf_batch_size
 
-        for _ in range(self._params.vf_epochs * num_iterations_per_epoch):
-            indices = np.random.randint(0, self._params.num_steps_per_iteration, size=self._params.vf_batch_size)
-            batch = TrainingBatch(batch_size=self._params.vf_batch_size,
+        for _ in range(self._config.vf_epochs * num_iterations_per_epoch):
+            indices = np.random.randint(0, self._config.num_steps_per_iteration, size=self._config.vf_batch_size)
+            batch = TrainingBatch(batch_size=self._config.vf_batch_size,
                                   s_current=s[indices],
                                   extra={'v_target': v_target[indices]})
             self._v_function_trainer.train(batch)
 
     def _policy_training(self, s, a, v_target, advantage):
         extra = {}
-        extra['v_target'] = v_target[:self._params.pi_batch_size]
-        extra['advantage'] = advantage[:self._params.pi_batch_size]
-        batch = TrainingBatch(batch_size=self._params.pi_batch_size,
-                              s_current=s[:self._params.pi_batch_size],
-                              a_current=a[:self._params.pi_batch_size],
+        extra['v_target'] = v_target[:self._config.pi_batch_size]
+        extra['advantage'] = advantage[:self._config.pi_batch_size]
+        batch = TrainingBatch(batch_size=self._config.pi_batch_size,
+                              s_current=s[:self._config.pi_batch_size],
+                              a_current=a[:self._config.pi_batch_size],
                               extra=extra)
 
         self._policy_trainer.train(batch)
@@ -416,14 +416,14 @@ class GAIL(Algorithm):
     def _discriminator_training(self, s_curr_expert, a_curr_expert, s_next_expert,
                                 s_curr_agent, a_curr_agent, s_next_agent):
         extra = {}
-        extra['s_current_agent'] = s_curr_agent[:self._params.discriminator_batch_size]
-        extra['a_current_agent'] = a_curr_agent[:self._params.discriminator_batch_size]
-        extra['s_next_agent'] = s_next_agent[:self._params.discriminator_batch_size]
-        extra['s_current_expert'] = s_curr_expert[:self._params.discriminator_batch_size]
-        extra['a_current_expert'] = a_curr_expert[:self._params.discriminator_batch_size]
-        extra['s_next_expert'] = s_next_expert[:self._params.discriminator_batch_size]
+        extra['s_current_agent'] = s_curr_agent[:self._config.discriminator_batch_size]
+        extra['a_current_agent'] = a_curr_agent[:self._config.discriminator_batch_size]
+        extra['s_next_agent'] = s_next_agent[:self._config.discriminator_batch_size]
+        extra['s_current_expert'] = s_curr_expert[:self._config.discriminator_batch_size]
+        extra['a_current_expert'] = a_curr_expert[:self._config.discriminator_batch_size]
+        extra['s_next_expert'] = s_next_expert[:self._config.discriminator_batch_size]
 
-        batch = TrainingBatch(batch_size=self._params.discriminator_batch_size,
+        batch = TrainingBatch(batch_size=self._config.discriminator_batch_size,
                               extra=extra)
 
         self._discriminator_trainer.train(batch)
@@ -458,9 +458,9 @@ class GAIL(Algorithm):
         models[self._policy.scope_name] = self._policy
         models[self._v_function.scope_name] = self._v_function
         models[self._discriminator.scope_name] = self._discriminator
-        if self._params.preprocess_state and isinstance(self._r_state_preprocessor, Model):
+        if self._config.preprocess_state and isinstance(self._r_state_preprocessor, Model):
             models[self._r_state_preprocessor.scope_name] = self._r_state_preprocessor
-        if self._params.preprocess_state and isinstance(self._pi_v_state_preprocessor, Model):
+        if self._config.preprocess_state and isinstance(self._pi_v_state_preprocessor, Model):
             models[self._pi_v_state_preprocessor.scope_name] = self._pi_v_state_preprocessor
         return models
 

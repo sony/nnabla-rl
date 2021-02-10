@@ -52,8 +52,8 @@ def run_training(args):
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
-        params = A.SACParam(fix_temperature=args.fix_temperature)
-        sac = A.SAC(train_env, params=params)
+        config = A.SACConfig(fix_temperature=args.fix_temperature)
+        sac = A.SAC(train_env, config=config)
     else:
         sac = serializers.load_snapshot(args.snapshot_dir)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
@@ -91,7 +91,7 @@ def main():
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
 
-    # SAC algorithm params
+    # SAC algorithm config
     parser.add_argument('--fix-temperature', action='store_true')
 
     args = parser.parse_args()

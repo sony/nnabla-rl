@@ -28,8 +28,8 @@ from nnabla_rl.logger import logger
 
 
 class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
-    def __call__(self, env_info, algorithm_params, **kwargs):
-        return RB.MemoryEfficientAtariBuffer(capacity=algorithm_params.replay_buffer_size)
+    def __call__(self, env_info, algorithm_config, **kwargs):
+        return RB.MemoryEfficientAtariBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 def run_training(args):
@@ -48,9 +48,9 @@ def run_training(args):
 
     train_env = build_atari_env(args.env, seed=args.seed)
 
-    params = A.DQNParam()
+    config = A.DQNConfig()
     dqn = A.DQN(train_env,
-                params=params,
+                config=config,
                 replay_buffer_builder=MemoryEfficientBufferBuilder())
     dqn.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
 

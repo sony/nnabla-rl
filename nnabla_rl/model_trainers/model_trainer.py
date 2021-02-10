@@ -22,16 +22,16 @@ import numpy as np
 
 import nnabla as nn
 
-from nnabla_rl.parameter import Parameter
+from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import Model
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 
 @dataclass
-class TrainerParam(Parameter):
+class TrainerConfig(Configuration):
     def __post_init__(self):
-        super(TrainerParam, self).__post_init__()
+        super(TrainerConfig, self).__post_init__()
 
 
 class TrainingBatch():
@@ -120,16 +120,16 @@ class TrainingVariables():
 
 class ModelTrainer(metaclass=ABCMeta):
     _env_info: EnvironmentInfo
-    _params: TrainerParam
+    _config: TrainerConfig
     _models: Sequence[Model]
     _solvers: Dict[str, nn.solver.Solver]
     _train_count: int
     _training: 'Training'
     _training_variables: TrainingVariables
 
-    def __init__(self, env_info: EnvironmentInfo, params: TrainerParam):
+    def __init__(self, env_info: EnvironmentInfo, config: TrainerConfig):
         self._env_info = env_info
-        self._params = params
+        self._config = config
 
         self._models = []
         self._solvers = {}

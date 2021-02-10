@@ -39,24 +39,24 @@ class TestIQN(object):
         '''
 
         dummy_env = E.DummyDiscreteImg()
-        params = A.IQNParam()
-        params.start_timesteps = 5
-        params.batch_size = 5
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
-        iqn = A.IQN(dummy_env, params=params)
+        config = A.IQNConfig()
+        config.start_timesteps = 5
+        config.batch_size = 5
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        iqn = A.IQN(dummy_env, config=config)
 
         iqn.train_online(dummy_env, total_iterations=5)
 
     def test_run_offline_training(self):
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
-        params = A.IQNParam()
-        params.batch_size = batch_size
-        params.learner_update_frequency = 1
-        params.target_update_frequency = 1
+        config = A.IQNConfig()
+        config.batch_size = batch_size
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
 
-        iqn = A.IQN(dummy_env, params=params)
+        iqn = A.IQN(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
         buffer = ReplayBuffer()
@@ -75,35 +75,35 @@ class TestIQN(object):
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
-            A.IQNParam(gamma=1.1)
+            A.IQNConfig(gamma=1.1)
         with pytest.raises(ValueError):
-            A.IQNParam(gamma=-0.1)
+            A.IQNConfig(gamma=-0.1)
         with pytest.raises(ValueError):
-            A.IQNParam(batch_size=-1)
+            A.IQNConfig(batch_size=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(replay_buffer_size=-1)
+            A.IQNConfig(replay_buffer_size=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(learner_update_frequency=-1)
+            A.IQNConfig(learner_update_frequency=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(max_explore_steps=-1)
+            A.IQNConfig(max_explore_steps=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(learning_rate=-1)
+            A.IQNConfig(learning_rate=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(initial_epsilon=-1)
+            A.IQNConfig(initial_epsilon=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(final_epsilon=-1)
+            A.IQNConfig(final_epsilon=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(test_epsilon=-1)
+            A.IQNConfig(test_epsilon=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(K=-1)
+            A.IQNConfig(K=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(N=-1)
+            A.IQNConfig(N=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(N_prime=-1)
+            A.IQNConfig(N_prime=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(kappa=-1)
+            A.IQNConfig(kappa=-1)
         with pytest.raises(ValueError):
-            A.IQNParam(embedding_dim=-1)
+            A.IQNConfig(embedding_dim=-1)
 
 
 if __name__ == "__main__":
