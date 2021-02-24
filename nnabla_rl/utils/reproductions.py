@@ -23,7 +23,6 @@ from nnabla import random as nn_random
 import nnabla_rl as rl
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 from nnabla_rl.logger import logger
-from nnabla_rl.replay_buffer import ReplayBuffer
 
 
 def set_global_seed(seed: int):
@@ -60,6 +59,13 @@ def build_mujoco_env(id_or_env, test=False, seed=None, render=False):
     except ModuleNotFoundError:
         # Do nothing if pybullet is not installed
         pass
+    try:
+        # Add d4rl env
+        import d4rl  # noqa
+    except ModuleNotFoundError:
+        # Do nothing if d4rl is not installed
+        pass
+
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
     else:
@@ -75,24 +81,21 @@ def build_mujoco_env(id_or_env, test=False, seed=None, render=False):
     return env
 
 
-def d4rl_dataset_to_buffer(dataset, max_buffer_size=1000000):
-    buffer_size = min(dataset['observations'].shape[0], max_buffer_size)
-    states = dataset['observations'][:buffer_size]
-    actions = dataset['actions'][:buffer_size]
-    rewards = dataset['rewards'][:buffer_size].reshape(buffer_size, 1)
-    non_terminals = 1.0 - \
-        dataset['terminals'][:buffer_size].reshape(buffer_size, 1)
-    next_states = np.concatenate(
-        [states[1:buffer_size, :], np.zeros(shape=states[0].shape)[np.newaxis, :]], axis=0)
-    assert len(states) == buffer_size
+def d4rl_dataset_to_experiences(dataset, size=1000000):
+    size = min(dataset['observations'].shape[0], size)
+    states = dataset['observations'][:size]
+    actions = dataset['actions'][:size]
+    rewards = dataset['rewards'][:size].reshape(size, 1)
+    non_terminals = 1.0 - dataset['terminals'][:size].reshape(size, 1)
+    next_states = np.concatenate([states[1:size, :], np.zeros(shape=states[0].shape)[np.newaxis, :]], axis=0)
+    infos = [{} for _ in range(size)]
+    assert len(states) == size
     assert len(states) == len(actions)
     assert len(states) == len(rewards)
     assert len(states) == len(non_terminals)
-    assert len(next_states) == len(next_states)
-    buffer = ReplayBuffer(capacity=max_buffer_size)
-    buffer.append_all(list(zip(states, actions, rewards,
-                               non_terminals, next_states)))
-    return buffer
+    assert len(states) == len(next_states)
+    assert len(states) == len(infos)
+    return list(zip(states, actions, rewards, non_terminals, next_states, infos))
 
 
 def print_env_info(env):

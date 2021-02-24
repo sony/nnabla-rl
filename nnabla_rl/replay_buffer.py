@@ -81,9 +81,6 @@ class ReplayBuffer(object):
             experiences (array-like): Random num_samples of experiences.
             info (dict): dictionary of information about experiences.
 
-        Raises:
-            ValueError: If num_samples is greater than current buffer size
-
         Notes
         ----
         Sampling strategy depends on the undelying implementation.

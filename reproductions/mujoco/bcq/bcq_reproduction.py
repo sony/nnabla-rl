@@ -21,8 +21,9 @@ import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
-from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed, d4rl_dataset_to_buffer
+from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed, d4rl_dataset_to_experiences
 from nnabla_rl.utils import serializers
+from nnabla_rl.replay_buffer import ReplayBuffer
 
 
 def run_training(args):
@@ -44,7 +45,11 @@ def run_training(args):
 
     train_env = gym.make(args.env)
     train_dataset = train_env.get_dataset()
-    buffer = d4rl_dataset_to_buffer(train_dataset)
+
+    buffer = ReplayBuffer(capacity=1000000)
+    experiences = d4rl_dataset_to_experiences(train_dataset, size=buffer.capacity)
+    buffer.append_all(experiences)
+
     if args.snapshot_dir is None:
         bcq = A.BCQ(train_env)
     else:

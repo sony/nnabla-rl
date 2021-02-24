@@ -48,15 +48,15 @@ import nnabla_rl.preprocessors as RP
 class GAILConfig(AlgorithmConfig):
     preprocess_state: bool = True
     act_deterministic_in_eval: bool = True
-    discriminator_batch_size: int = 1024
-    discriminator_learning_rate: float = 3e-4
+    discriminator_batch_size: int = 50000
+    discriminator_learning_rate: float = 0.01
     policy_update_interval: int = 1
-    discriminator_update_interval: int = 3
+    discriminator_update_interval: int = 1
     adversary_entropy_coef: float = 0.001
     gamma: float = 0.995
     lmb: float = 0.97
-    pi_batch_size: int = 1024
-    num_steps_per_iteration: int = 1024
+    pi_batch_size: int = 50000
+    num_steps_per_iteration: int = 50000
     sigma_kl_divergence_constraint: float = 0.01
     maximum_backtrack_numbers: int = 10
     conjugate_gradient_damping: float = 0.1
