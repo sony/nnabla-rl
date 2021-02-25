@@ -16,8 +16,7 @@ from nnabla_rl.models.mujoco.policies import TD3Policy, SACPolicy, BEARPolicy, T
 from nnabla_rl.models.mujoco.q_functions import TD3QFunction, SACQFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import SACVFunction, TRPOVFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import PPOVFunction as PPOMujocoVFunction  # noqa
-from nnabla_rl.models.mujoco.variational_auto_encoders import UnsquashedVariationalAutoEncoder, \
-                                                              BCQVariationalAutoEncoder  # noqa
+from nnabla_rl.models.mujoco.encoders import UnsquashedVariationalAutoEncoder, BCQVariationalAutoEncoder  # noqa
 from nnabla_rl.models.mujoco.perturbators import BCQPerturbator  # noqa
 from nnabla_rl.models.mujoco.policies import ICML2015TRPOPolicy as ICML2015TRPOMujocoPolicy  # noqa
 from nnabla_rl.models.mujoco.policies import PPOPolicy as PPOMujocoPolicy  # noqa
@@ -44,4 +43,4 @@ from nnabla_rl.models.policy import Policy, DeterministicPolicy, StochasticPolic
 from nnabla_rl.models.q_function import QFunction  # noqa
 from nnabla_rl.models.v_function import VFunction  # noqa
 from nnabla_rl.models.reward_function import RewardFunction  # noqa
-from nnabla_rl.models.variational_auto_encoder import VariationalAutoEncoder  # noqa
+from nnabla_rl.models.encoder import Encoder, VariationalAutoEncoder  # noqa

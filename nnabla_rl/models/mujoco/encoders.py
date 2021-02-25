@@ -19,7 +19,7 @@ import nnabla.parametric_functions as NPF
 
 import nnabla_rl.distributions as D
 import nnabla_rl.functions as RF
-from nnabla_rl.models.variational_auto_encoder import VariationalAutoEncoder
+from nnabla_rl.models.encoder import VariationalAutoEncoder
 
 
 class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):

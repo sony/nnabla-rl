@@ -17,17 +17,19 @@ from abc import ABCMeta, abstractmethod
 from nnabla_rl.models.model import Model
 
 
-class VariationalAutoEncoder(Model, metaclass=ABCMeta):
+class Encoder(Model, metaclass=ABCMeta):
+    @abstractmethod
+    def encode(self, x, **kwargs):
+        raise NotImplementedError
+
+
+class VariationalAutoEncoder(Encoder, metaclass=ABCMeta):
     @abstractmethod
     def __call__(self, *args):
         raise NotImplementedError
 
     @abstractmethod
-    def encode(self, *args):
-        raise NotImplementedError
-
-    @abstractmethod
-    def decode(self, *args):
+    def decode(self, z, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
