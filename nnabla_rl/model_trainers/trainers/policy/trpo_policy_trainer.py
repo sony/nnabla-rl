@@ -141,17 +141,15 @@ class TRPOPolicyTrainer(ModelTrainer):
 
         return {}
 
-    def _total_blocks(self, batch_size):
+    def _gpu_batch_size(self, batch_size):
         # We use gpu_batch_size to reduce one forward gpu calculation memory
         # Usually, gpu_batch_size is the same as batch_size
-        if self._config.gpu_batch_size is not None:
-            if self._config.gpu_batch_size > batch_size:
-                raise ValueError("Invalid gpu_batch_size, gpu_batch_size should be batch_size or less")
-            total_blocks = batch_size // self._config.gpu_batch_size
+        if self._config.gpu_batch_size is None:
+            return batch_size
+        if self._config.gpu_batch_size < batch_size:
+            return self._config.gpu_batch_size
         else:
-            total_blocks = 1
-
-        return total_blocks
+            return batch_size
 
     def _build_training_graph(self, models: Sequence[Model],
                               training: Training,
@@ -214,13 +212,8 @@ class TRPOPolicyTrainer(ModelTrainer):
 
     def _fisher_vector_product(self, policy, s_batch, a_batch, vector, training_variables):
         sum_hessian_multiplied_vector = 0
-
-        if self._config.gpu_batch_size is not None:
-            gpu_batch_size = self._config.gpu_batch_size
-        else:
-            gpu_batch_size = len(s_batch)
-
-        total_blocks = self._total_blocks(len(s_batch))
+        gpu_batch_size = self._gpu_batch_size(len(s_batch))
+        total_blocks = len(s_batch) // gpu_batch_size
 
         for block_index in range(total_blocks):
             start_idx = block_index * gpu_batch_size
@@ -270,13 +263,8 @@ class TRPOPolicyTrainer(ModelTrainer):
         sum_approximate_return = 0.0
         sum_kl_divergence = 0.0
         sum_approximate_return_flat_grad = 0.0
-
-        if self._config.gpu_batch_size is not None:
-            gpu_batch_size = self._config.gpu_batch_size
-        else:
-            gpu_batch_size = len(s_batch)
-
-        total_blocks = self._total_blocks(len(s_batch))
+        gpu_batch_size = self._gpu_batch_size(len(s_batch))
+        total_blocks = len(s_batch) // gpu_batch_size
 
         for block_index in range(total_blocks):
             start_idx = block_index * gpu_batch_size
@@ -298,14 +286,13 @@ class TRPOPolicyTrainer(ModelTrainer):
         return approximate_return, kl_divergence, approximate_return_flat_grads
 
     def _setup_training_variables(self, batch_size: int) -> TrainingVariables:
-        # Training input variables
-        # Use batch_size specied by the user
-        s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
+        gpu_batch_size = self._gpu_batch_size(batch_size)
+        s_current_var = nn.Variable((gpu_batch_size, *self._env_info.state_shape))
         if self._env_info.is_discrete_action_env():
-            a_current_var = nn.Variable((batch_size, 1))
+            a_current_var = nn.Variable((gpu_batch_size, 1))
         else:
-            a_current_var = nn.Variable((batch_size, self._env_info.action_dim))
-        advantage_var = nn.Variable((batch_size, 1))
+            a_current_var = nn.Variable((gpu_batch_size, self._env_info.action_dim))
+        advantage_var = nn.Variable((gpu_batch_size, 1))
         extra = {}
         extra['advantage'] = advantage_var
-        return TrainingVariables(batch_size, s_current_var, a_current_var, extra=extra)
+        return TrainingVariables(gpu_batch_size, s_current_var, a_current_var, extra=extra)
