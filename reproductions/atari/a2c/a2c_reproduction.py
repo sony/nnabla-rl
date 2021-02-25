@@ -14,6 +14,7 @@
 
 import numpy as np
 import argparse
+import os
 
 import nnabla_rl
 import nnabla_rl.algorithms as A
@@ -37,6 +38,8 @@ def run_training(args):
     iteration_num_hook = H.IterationNumHook(timing=100)
 
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     writer = FileWriter(outdir, "evaluation_result")
     evaluator = TimestepEvaluator(num_timesteps=125000)
     evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=250000, writer=writer)
@@ -75,6 +78,7 @@ def run_showcase(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='BreakoutNoFrameskip-v4')
+    parser.add_argument('--save-dir', type=str, default="")
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--render', action='store_true')

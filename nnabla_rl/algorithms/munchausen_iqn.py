@@ -28,7 +28,7 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.builders import StateActionQuantileFunctionBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.copy import copy_network_parameters
+from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch

@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
+
+from nnabla.solver import Solver
+
+
 def copy_network_parameters(origin_params, target_params, tau=1.0):
 
     if not ((0.0 <= tau) & (tau <= 1.0)):
@@ -19,3 +24,11 @@ def copy_network_parameters(origin_params, target_params, tau=1.0):
 
     for key in target_params.keys():
         target_params[key].data.copy_from(origin_params[key].data * tau + target_params[key].data * (1 - tau))
+
+
+def clip_grad_by_global_norm(solver: Solver, max_grad_norm: float):
+    parameters = solver.get_parameters()
+    global_norm = np.linalg.norm([np.linalg.norm(param.g) for param in parameters.values()])
+    scalar = max_grad_norm / global_norm
+    if scalar < 1.0:
+        solver.scale_grad(scalar)

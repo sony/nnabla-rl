@@ -20,15 +20,15 @@ from collections import namedtuple
 from typing import List, Optional
 
 import nnabla as nn
-from nnabla import functions as NF
 from nnabla import solvers as NS
 
 import nnabla_rl.utils.context as context
-import nnabla_rl.functions as RF
+import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import VFunctionBuilder, StochasticPolicyBuilder, SolverBuilder
 from nnabla_rl import environment_explorers as EE
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.utils.data import marshall_experiences, unzip
 from nnabla_rl.models import StochasticPolicy, VFunction, A3CSharedFunctionHead, A3CPolicy, A3CVFunction
 from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
@@ -42,8 +42,8 @@ class A2CConfig(AlgorithmConfig):
     gamma: float = 0.99
     n_steps: int = 5
     learning_rate: float = 7e-4
-    v_function_coef: float = 0.5
-    entropy_coef: float = 0.01
+    entropy_coefficient: float = 0.01
+    value_coefficient: float = 0.5
     decay: float = 0.99
     epsilon: float = 1e-5
     start_timesteps: int = 1
@@ -116,8 +116,9 @@ class A2C(Algorithm):
     _s_current_var: nn.Variable
     _a_current_var: nn.Variable
     _returns_var: nn.Variable
-    _policy_loss: nn.Variable
-    _v_function_loss: nn.Variable
+
+    _policy_trainer: ModelTrainer
+    _v_function_trainer: ModelTrainer
 
     def __init__(self, env_or_env_info,
                  v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
@@ -131,8 +132,8 @@ class A2C(Algorithm):
             context._gpu_id = -1
         super(A2C, self).__init__(env_or_env_info, config=config)
 
-        self._v_function = v_function_builder('v', self._env_info, self._config)
         self._policy = policy_builder('pi', self._env_info, self._config)
+        self._v_function = v_function_builder('v', self._env_info, self._config)
 
         self._policy_solver = policy_solver_builder(self._env_info, self._config)
         self._v_function_solver = v_solver_builder(self._env_info, self._config)
@@ -169,53 +170,42 @@ class A2C(Algorithm):
 
         context._set_nnabla_context()
 
-        self._build_training_graph(env_or_buffer)
-        self._setup_policy_training(env_or_buffer)
-        self._setup_v_function_training(env_or_buffer)
-
-    def _build_training_graph(self, env):
-        n_steps = self._config.n_steps
-        actor_num = self._config.actor_num
-        batch_size = n_steps * actor_num
-
-        state_shape = env.observation_space.shape
-        self._s_current_var = nn.Variable([batch_size, *state_shape])
-        if self._env_info.is_discrete_action_env():
-            action_dim = 1
-        else:
-            action_dim = env.action_space.shape[0]
-        self._a_current_var = nn.Variable([batch_size, action_dim])
-        self._returns_var = nn.Variable([batch_size, 1])
-
-        distribution = self._policy.pi(self._s_current_var)
-        log_prob = distribution.log_prob(self._a_current_var)
-        entropy = distribution.entropy()
-        v_var = self._v_function.v(self._s_current_var)
-
-        advantage = self._returns_var - v_var
-        advantage.need_grad = False
-
-        pi_loss = NF.mean(-advantage * log_prob - self._config.entropy_coef * entropy)
-        v_loss = self._config.v_function_coef * RF.mean_squared_error(self._returns_var, v_var)
-
-        self._policy_loss = pi_loss
-        self._v_function_loss = v_loss
+        self._policy_trainer = self._setup_policy_training(env_or_buffer)
+        self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
 
     def _setup_policy_training(self, env_or_buffer):
-        dummy_state = env_or_buffer.observation_space.sample()
-        dummy_state = nn.Variable.from_numpy_array(np.expand_dims(dummy_state, axis=0))
+        policy_trainer_config = MT.policy_trainers.A2CPolicyTrainerConfig(
+            entropy_coefficient=self._config.entropy_coefficient,
+            max_grad_norm=self._config.max_grad_norm
+        )
+        policy_trainer = MT.policy_trainers.A2CPolicyTrainer(
+            env_info=self._env_info,
+            config=policy_trainer_config)
 
-        self._policy.pi(dummy_state)
-        self._policy_solver.set_parameters(self._policy.get_parameters())
-        return None
+        training = MT.model_trainer.Training()
+        policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
+        return policy_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
-        dummy_state = env_or_buffer.observation_space.sample()
-        dummy_state = nn.Variable.from_numpy_array(np.expand_dims(dummy_state, axis=0))
+        # training input/loss variables
+        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+            reduction_method='mean',
+            v_loss_scalar=self._config.value_coefficient,
+            max_grad_norm=self._config.max_grad_norm
+        )
 
-        self._v_function.v(dummy_state)
-        self._v_function_solver.set_parameters(self._v_function.get_parameters())
-        return None
+        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+            env_info=self._env_info,
+            config=v_function_trainer_config
+        )
+
+        training = MT.v_value_trainings.MonteCarloVValueTraining()
+        v_function_trainer.setup_training(
+            self._v_function,
+            {self._v_function.scope_name: self._v_function_solver},
+            training
+        )
+        return v_function_trainer
 
     def _launch_actor_processes(self, env):
         actors = self._build_a2c_actors(env, v_function=self._v_function, policy=self._policy)
@@ -237,6 +227,12 @@ class A2C(Algorithm):
                               config=self._config)
             actors.append(actor)
         return actors
+
+    def _after_training_finish(self, env_or_buffer):
+        for actor in self._actors:
+            actor.dispose()
+        for process in self._actor_processes:
+            self._kill_actor_processes(process)
 
     def _kill_actor_processes(self, process):
         process.terminate()
@@ -263,37 +259,37 @@ class A2C(Algorithm):
         return (np.concatenate(item, axis=0) for item in unzip(results))
 
     def _a2c_training(self, experiences):
+        s, a, returns = experiences
+        advantage = self._compute_advantage(s, returns)
+        extra = {}
+        extra['advantage'] = advantage
+        extra['v_target'] = returns
+        batch = TrainingBatch(batch_size=len(a),
+                              s_current=s,
+                              a_current=a,
+                              extra=extra)
+
         # lr decay
         alpha = self._config.learning_rate * (1.0 - self._iteration_num / self.max_iterations)
-        self._policy_solver.set_learning_rate(alpha)
-        self._v_function_solver.set_learning_rate(alpha)
-
-        s, a, returns = experiences
-        self._s_current_var.d = s
-        self._a_current_var.d = a
-        self._returns_var.d = returns
+        self._policy_trainer.set_learning_rate(alpha)
+        self._v_function_trainer.set_learning_rate(alpha)
 
         # model update
-        self._policy_solver.zero_grad()
-        self._policy_loss.forward(clear_no_need_grad=True)
-        self._policy_loss.backward(clear_buffer=True)
-        if self._config.max_grad_norm is not None:
-            self._clip_grad_by_global_norm(self._policy_solver, clip_norm=self._config.max_grad_norm)
-        self._policy_solver.update()
+        self._policy_trainer.train(batch)
+        self._v_function_trainer.train(batch)
 
-        self._v_function_solver.zero_grad()
-        self._v_function_loss.forward(clear_no_need_grad=True)
-        self._v_function_loss.backward(clear_buffer=True)
-        if self._config.max_grad_norm is not None:
-            self._clip_grad_by_global_norm(self._v_function_solver, clip_norm=self._config.max_grad_norm)
-        self._v_function_solver.update()
+    def _compute_advantage(self, s, returns):
+        if not hasattr(self, '_state_var_for_advantage'):
+            self._state_var_for_advantage = nn.Variable(s.shape)
+            self._returns_var_for_advantage = nn.Variable(returns.shape)
+            v_for_advantage = self._v_function.v(self._state_var_for_advantage)
+            self._advantage = self._returns_var_for_advantage - v_for_advantage
+            self._advantage.need_grad = False
 
-    def _clip_grad_by_global_norm(self, solver, clip_norm):
-        parameters = solver.get_parameters()
-        global_norm = np.linalg.norm([np.linalg.norm(param.g) for param in parameters.values()])
-        scalar = clip_norm / global_norm
-        if scalar < 1.0:
-            solver.scale_grad(scalar)
+        self._state_var_for_advantage.d = s
+        self._returns_var_for_advantage.d = returns
+        self._advantage.forward(clear_no_need_grad=True)
+        return self._advantage.d
 
     def _models(self):
         models = {}

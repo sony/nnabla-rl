@@ -28,7 +28,7 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import StochasticPolicyBuilder, QFunctionBuilder, SolverBuilder, ReplayBufferBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.copy import copy_network_parameters
+from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.models import SACQFunction, SACPolicy, QFunction, StochasticPolicy
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 import nnabla_rl.environment_explorers as EE

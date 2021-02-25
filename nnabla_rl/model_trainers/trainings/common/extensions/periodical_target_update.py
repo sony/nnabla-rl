@@ -16,7 +16,7 @@ from typing import Sequence, Union
 
 from nnabla_rl.model_trainers.model_trainer import Training, TrainingExtension
 from nnabla_rl.models import Model
-from nnabla_rl.utils.copy import copy_network_parameters
+from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 

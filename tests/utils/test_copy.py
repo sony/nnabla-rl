@@ -21,7 +21,7 @@ import nnabla.parametric_functions as NPF
 import nnabla.initializer as NI
 
 from nnabla_rl.models import Model
-from nnabla_rl.utils.copy import copy_network_parameters
+from nnabla_rl.utils.misc import copy_network_parameters
 
 
 class DummyNetwork(Model):

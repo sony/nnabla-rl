@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nnabla_rl.model_trainers.trainers.policy.a2c_policy_trainer import A2CPolicyTrainer, A2CPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.trainers.policy.bear_policy_trainer import BEARPolicyTrainer, BEARPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.trainers.policy.dpg_policy_trainer import DPGPolicyTrainer, DPGPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.trainers.policy.ppo_policy_trainer import PPOPolicyTrainer, PPOPolicyTrainerConfig  # noqa

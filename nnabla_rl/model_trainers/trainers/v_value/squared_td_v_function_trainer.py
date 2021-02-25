@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Dict, Iterable
+from typing import cast, Dict, Iterable, Optional
 
 import numpy as np
 
@@ -25,12 +25,14 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import \
     TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.models import VFunction, Model
+from nnabla_rl.utils.misc import clip_grad_by_global_norm
 
 
 @dataclass
 class SquaredTDVFunctionTrainerConfig(TrainerConfig):
     reduction_method: str = 'mean'
     v_loss_scalar: float = 1.0
+    max_grad_norm: Optional[float] = None
 
     def __post_init__(self):
         super(SquaredTDVFunctionTrainerConfig, self).__post_init__()
@@ -60,6 +62,8 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
         self._v_loss.forward(clear_no_need_grad=True)
         self._v_loss.backward(clear_buffer=True)
         for solver in solvers.values():
+            if self._config.max_grad_norm is not None:
+                clip_grad_by_global_norm(solver, self._config.max_grad_norm)
             solver.update()
 
         return {}

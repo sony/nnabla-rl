@@ -24,7 +24,7 @@ from nnabla_rl.model_trainers.model_trainer import \
     TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.logger import logger
 from nnabla_rl.utils.optimization import conjugate_gradient
-from nnabla_rl.utils.copy import copy_network_parameters
+from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.models import Model, StochasticPolicy
 from typing import cast, Dict, Optional, Sequence
 
