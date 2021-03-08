@@ -21,41 +21,80 @@ import numpy as np
 
 @dataclass
 class EnvironmentInfo(object):
+    """Environment Information class
+
+    This class contains the basic information of the target training environment.
+    """
     observation_space: gym.spaces.Space
     action_space: gym.spaces.Space
     max_episode_steps: int
 
     @staticmethod
     def from_env(env):
+        """Create env_info from environment
+
+        Args:
+            env (gym.Env): the environment
+
+        Returns:
+            EnvironmentInfo\
+                (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`)
+
+        Example:
+            >>> import gym
+            >>> from nnabla_rl.environments.environment_info import EnvironmentInfo
+            >>> env = gym.make("CartPole-v0")
+            >>> env_info = EnvironmentInfo.from_env(env)
+            >>> env_info.state_shape
+            (4,)
+        """
         return EnvironmentInfo(observation_space=env.observation_space,
                                action_space=env.action_space,
                                max_episode_steps=EnvironmentInfo._extract_max_episode_steps(env))
 
     def is_discrete_action_env(self):
+        '''
+        Check whether the action to execute in the environment is discrete or not
+
+        Returns:
+            bool: True if the action to execute in the environment is discrete. Otherwise False.
+        '''
         return isinstance(self.action_space, gym.spaces.Discrete)
 
     def is_continuous_action_env(self):
+        '''
+        Check whether the action to execute in the environment is continuous or not
+
+        Returns:
+            bool: True if the action to execute in the environment is continuous. Otherwise False.
+        '''
         return not self.is_discrete_action_env()
 
     @property
     def state_shape(self):
+        '''
+        The shape of observation space
+        '''
         return self.observation_space.shape
 
     @property
     def state_dim(self):
         '''
-        Compute the dimension of state assuming that the state is flatten.
+        The dimension of state assuming that the state is flatten.
         '''
         return np.prod(self.observation_space.shape)
 
     @property
     def action_shape(self):
+        '''
+        The shape of action space
+        '''
         return self.action_space.shape
 
     @property
     def action_dim(self):
         '''
-        Compute the dimension of action assuming that the action is flatten.
+        The dimension of action assuming that the action is flatten.
         '''
         if self.is_discrete_action_env():
             return self.action_space.n

@@ -20,9 +20,20 @@ from nnabla_rl.models.model import Model
 
 
 class VFunction(Model, metaclass=ABCMeta):
+    '''Base Value function class
+    '''
+
     def __init__(self, scope_name: str):
         super(VFunction, self).__init__(scope_name)
 
     @abstractmethod
     def v(self, s: nn.Variable) -> nn.Variable:
+        '''Compute the state value (V) for given state
+
+        Args:
+            s (nn.Variable): state variable
+
+        Returns:
+            nn.Variable: State value for given state
+        '''
         raise NotImplementedError

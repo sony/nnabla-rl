@@ -78,12 +78,12 @@ class IQNQuantileFunction(StateActionQuantileFunction):
 
     _embedding_dim: int
 
-    def __init__(self, scope_name: str, n_action: int, embedding_dim: int, K: float,
+    def __init__(self, scope_name: str, n_action: int, embedding_dim: int, K: int,
                  risk_measure_function: Callable[[nn.Variable], nn.Variable]):
         super(IQNQuantileFunction, self).__init__(scope_name, n_action, K, risk_measure_function)
         self._embedding_dim = embedding_dim
 
-    def quantiles(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
+    def return_samples(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
         encoded = self._encode(s, tau.shape[-1])
         embedding = self._compute_embedding(tau, encoded.shape[-1])
 
@@ -95,10 +95,9 @@ class IQNQuantileFunction(StateActionQuantileFunction):
                 h = NPF.affine(h, n_outmaps=512, base_axis=2)
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
-                quantile = NPF.affine(
-                    h, n_outmaps=self._n_action, base_axis=2)
-        assert quantile.shape == (s.shape[0], tau.shape[-1], self._n_action)
-        return quantile
+                return_samples = NPF.affine(h, n_outmaps=self._n_action, base_axis=2)
+        assert return_samples.shape == (s.shape[0], tau.shape[-1], self._n_action)
+        return return_samples
 
     def _encode(self, s: nn.Variable, n_sample: int) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):

@@ -14,14 +14,19 @@
 
 from collections import deque
 
+from typing import Any, Dict, MutableSequence, Optional, Sequence, Tuple, Union
+
 import random
 import numpy as np
 
 from nnabla_rl.utils.data import RingBuffer
+from nnabla_rl.typing import Experience
 
 
 class ReplayBuffer(object):
-    def __init__(self, capacity=None):
+    _buffer: Union[MutableSequence[Experience], RingBuffer]
+
+    def __init__(self, capacity: Optional[int] = None):
         assert capacity is None or capacity >= 0
         self._capacity = capacity
 
@@ -34,13 +39,13 @@ class ReplayBuffer(object):
         return self._buffer[item]
 
     @property
-    def capacity(self):
+    def capacity(self) -> Union[int, None]:
         '''
         Capacity (max length) of this replay buffer otherwise None
         '''
         return self._capacity
 
-    def append(self, experience):
+    def append(self, experience: Experience):
         '''
         Add new experience to the replay buffer.
 
@@ -55,13 +60,12 @@ class ReplayBuffer(object):
         '''
         self._buffer.append(experience)
 
-    def append_all(self, experiences):
+    def append_all(self, experiences: Sequence[Experience]):
         '''
         Add list of experiences to the replay buffer.
 
         Args:
-            experiences (array-like): List of experiences to insert to the buffer
-                Please see to get more information in [Replay buffer documents](replay_buffer.md)
+            experiences (Sequence[Experience]): Sequence of experiences to insert to the buffer
 
         Notes:
             If the replay buffer size is full, the oldest (head of the buffer) experience will be dropped off
@@ -70,7 +74,7 @@ class ReplayBuffer(object):
         for experience in experiences:
             self._buffer.append(experience)
 
-    def sample(self, num_samples=1):
+    def sample(self, num_samples: int = 1) -> Tuple[Sequence[Experience], Dict[str, Any]]:
         '''
         Randomly sample num_samples experiences from the replay buffer.
 
@@ -78,8 +82,8 @@ class ReplayBuffer(object):
             num_samples (int): Number of samples to sample from the replay buffer.
 
         Returns:
-            experiences (array-like): Random num_samples of experiences.
-            info (dict): dictionary of information about experiences.
+            experiences (Sequence[Experience]): Random num_samples of experiences.
+            info (Dict[str, Any]): dictionary of information about experiences.
 
         Notes
         ----
@@ -92,7 +96,7 @@ class ReplayBuffer(object):
         indices = self._random_indices(num_samples=num_samples)
         return self.sample_indices(indices)
 
-    def sample_indices(self, indices):
+    def sample_indices(self, indices: Sequence[int]) -> Tuple[Sequence[Experience], Dict[str, Any]]:
         '''
         Sample experiences for given indices from the replay buffer.
 
@@ -111,12 +115,12 @@ class ReplayBuffer(object):
         weights = np.ones([len(indices), 1])
         return [self.__getitem__(index) for index in indices], dict(weights=weights)
 
-    def update_priorities(self, errors):
+    def update_priorities(self, errors: np.array):
         pass
 
     def __len__(self):
         return len(self._buffer)
 
-    def _random_indices(self, num_samples):
+    def _random_indices(self, num_samples: int) -> Sequence[int]:
         buffer_length = len(self)
         return random.sample(range(buffer_length), k=num_samples)

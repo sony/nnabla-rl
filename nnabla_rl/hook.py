@@ -35,4 +35,11 @@ class Hook(metaclass=ABCMeta):
 
     @abstractmethod
     def on_hook_called(self, algorithm):
+        '''
+        Called every "timing" iteration which is set on Hook's instance creation.
+        Will run additional periodical operation (see each class' documentation) during the training.
+
+        Args:
+            algorithm (nnabla_rl.algorithm.Algorithm): Algorithm instance to perform additional operation.
+        '''
         raise NotImplementedError

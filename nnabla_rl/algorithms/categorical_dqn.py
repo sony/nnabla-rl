@@ -24,7 +24,7 @@ import gym
 from typing import cast, Union
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import ValueDistributionFunctionBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
@@ -32,6 +32,7 @@ from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.models import C51ValueDistributionFunction, ValueDistributionFunction
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
@@ -39,14 +40,43 @@ import nnabla_rl.model_trainers as MT
 
 @dataclass
 class CategoricalDQNConfig(AlgorithmConfig):
-    batch_size: int = 32
+    '''CategoricalDQNConfig
+    List of configurations for CategoricalDQN algorithm.
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.001.
+        batch_size (int): training atch size. Defaults to 32.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.
+            Defaults to 50000.
+        replay_buffer_size (int): the capacity of replay buffer. Defaults to 1000000.
+        learner_update_frequency (float): the interval of learner update. Defaults to 4
+        target_update_frequency (float): the interval of target q-function update. Defaults to 10000.
+        max_explore_steps (int): the number of steps decaying the epsilon value.\
+            The epsilon will be decayed linearly \
+            :math:`\\epsilon=\\epsilon_{init} - step\\times\\frac{\\epsilon_{init} - \
+            \\epsilon_{final}}{max\\_explore\\_steps}`.\
+            Defaults to 1000000.
+        initial_epsilon (float): the initial epsilon value for ε-greedy explorer. Defaults to 1.0.
+        final_epsilon (float): the last epsilon value for ε-greedy explorer. Defaults to 0.01.
+        test_epsilon (float): the epsilon value on testing. Defaults to 0.001.
+        v_min (float): lower limit of the value used in value distribution function. Defaults to -10.0.
+        v_max (float): upper limit of the value used in value distribution function. Defaults to 10.0.
+        num_atoms (int): the number of bins used in value distribution function. Defaults to 51.
+    '''
+
     gamma: float = 0.99
+    learning_rate: float = 0.00025
+    batch_size: int = 32
     start_timesteps: int = 50000
     replay_buffer_size: int = 1000000
     learner_update_frequency: int = 4
     target_update_frequency: int = 10000
     max_explore_steps: int = 1000000
-    learning_rate: float = 0.00025
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.01
     test_epsilon: float = 0.001
@@ -55,7 +85,7 @@ class CategoricalDQNConfig(AlgorithmConfig):
     num_atoms: int = 51
 
 
-class DefaultValueDistFunctionBuilder(ValueDistributionFunctionBuilder):
+class DefaultValueDistFunctionBuilder(ModelBuilder[ValueDistributionFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -85,12 +115,25 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class CategoricalDQN(Algorithm):
-    '''Categorical DQN algorithm implementation.
+    '''Categorical DQN algorithm.
 
     This class implements the Categorical DQN algorithm
     proposed by M. Bellemare, et al. in the paper: "A Distributional Perspective on Reinfocement Learning"
-    For detail see: https://arxiv.org/pdf/1707.06887.pdf
-    '''
+    For details see: https://arxiv.org/abs/1707.06887
+
+    Args:
+        env_or_env_info \
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`CategoricalDQNConfig <nnabla_rl.algorithms.categorical_dqn.CategoricalDQNConfig>`):
+            configuration of the CategoricalDQN algorithm
+        value_distribution_builder (:py:class:`ModelBuilder[ValueDistributionFunctionFunction] \
+            <nnabla_rl.builders.ModelBuilder>`): builder of value distribution function models
+        value_distribution_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of value distribution function solvers
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
+     '''
 
     _config: CategoricalDQNConfig
     _atom_p: ValueDistributionFunction
@@ -105,12 +148,13 @@ class CategoricalDQN(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: CategoricalDQNConfig = CategoricalDQNConfig(),
-                 value_distribution_builder: ValueDistributionFunctionBuilder = DefaultValueDistFunctionBuilder(),
+                 value_distribution_builder: ModelBuilder[ValueDistributionFunction]
+                 = DefaultValueDistFunctionBuilder(),
                  value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(CategoricalDQN, self).__init__(env_or_env_info, config=config)
         if not self._env_info.is_discrete_action_env():
-            raise ValueError('{} only supports discrete action environment'.format(self.__name__))
+            raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
         self._atom_p = value_distribution_builder('atom_p_train', self._env_info, self._config)
         self._atom_p_solver = value_distribution_solver_builder(self._env_info, self._config)

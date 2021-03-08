@@ -12,184 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.models import Model, VFunction, QFunction, RewardFunction, StochasticPolicy, DeterministicPolicy, \
-    VariationalAutoEncoder, StateActionQuantileFunction, QuantileDistributionFunction, ValueDistributionFunction, \
-    Perturbator
+from typing import TypeVar, Generic
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import AlgorithmConfig
 
+T = TypeVar('T')
 
-class ModelBuilder():
+
+class ModelBuilder(Generic[T]):
+    """Model builder interface class
+    """
+
     def __call__(self,
                  scope_name: str,
                  env_info: EnvironmentInfo,
                  algorithm_config: AlgorithmConfig,
-                 **kwargs) -> Model:
+                 **kwargs) -> T:
         return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
 
     def build_model(self,
                     scope_name: str,
                     env_info: EnvironmentInfo,
                     algorithm_config: AlgorithmConfig,
-                    **kwargs) -> Model:
-        raise NotImplementedError
+                    **kwargs) -> T:
+        """Build model.
 
+        Args:
+            scope_name (str): the scope name of model
+            env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):\
+                environment information
+            algorithm_config (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`): \
+                configuration class of target algorithm. Actual type differs depending on the algorithm.
 
-class VFunctionBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> VFunction:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> VFunction:
-        raise NotImplementedError
-
-
-class QFunctionBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> QFunction:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> QFunction:
-        raise NotImplementedError
-
-
-class RewardFunctionBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> RewardFunction:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> RewardFunction:
-        raise NotImplementedError
-
-
-class StochasticPolicyBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> StochasticPolicy:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> StochasticPolicy:
-        raise NotImplementedError
-
-
-class DeterministicPolicyBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> DeterministicPolicy:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> DeterministicPolicy:
-        raise NotImplementedError
-
-
-class StateActionQuantileFunctionBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> StateActionQuantileFunction:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> StateActionQuantileFunction:
-        raise NotImplementedError
-
-
-class ValueDistributionFunctionBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> ValueDistributionFunction:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> ValueDistributionFunction:
-        raise NotImplementedError
-
-
-class QuantileDistributionFunctionBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> QuantileDistributionFunction:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> QuantileDistributionFunction:
-        raise NotImplementedError
-
-
-class VariationalAutoEncoderBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> VariationalAutoEncoder:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> VariationalAutoEncoder:
-        raise NotImplementedError
-
-
-class PerturbatorBuilder(ModelBuilder):
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> Perturbator:
-        return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
-
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> Perturbator:
+        Returns:
+            T: model instance. The type of the model depends on the builder's generic type.
+        """
         raise NotImplementedError

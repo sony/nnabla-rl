@@ -24,7 +24,17 @@ from nnabla_rl.distributions import common_utils
 
 class SquashedGaussian(Distribution):
     '''
-    Gaussian distribution which squashed the output sampled from N(mu, var) with tanh.
+    Gaussian distribution which its output is squashed with tanh.
+
+    :math:`z \\sim \\mathcal{N}(\\mu,\\,\\sigma^{2})`. :math:`out = \\tanh{z}`.
+
+    Args:
+        mean (nn.Variable): mean :math:`\\mu` of underlying gaussian distribution.
+        ln_var (nn.Variable): logarithm of the variance :math:`\\sigma^{2}`. (i.e. ln_var is :math:`\\log{\\sigma^{2}}`)
+
+    Note:
+        The log probability and kl_divergence of this distribution is different from
+        :py:class:`Gaussian distribution <nnabla_rl.distributions.Gaussian>` because the output is squashed.
     '''
 
     def __init__(self, mean, ln_var):
@@ -37,6 +47,11 @@ class SquashedGaussian(Distribution):
         self._mean = mean
         self._var = NF.exp(ln_var)
         self._ln_var = ln_var
+        self._ndim = mean.shape[-1]
+
+    @property
+    def ndim(self):
+        return self._ndim
 
     def sample(self, noise_clip=None):
         x = RF.sample_gaussian(mean=self._mean,

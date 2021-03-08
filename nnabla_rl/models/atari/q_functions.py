@@ -26,6 +26,10 @@ class DQNQFunction(QFunction):
     '''
     Q function proposed by DeepMind in DQN paper for atari environment.
     See: https://deepmind.com/research/publications/human-level-control-through-deep-reinforcement-learning
+
+    Args:
+        scope_name (str): the scope name
+        n_action (int): the number of discrete action
     '''
 
     _n_action: int

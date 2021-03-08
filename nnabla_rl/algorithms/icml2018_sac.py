@@ -24,10 +24,10 @@ import nnabla_rl.environment_explorers as EE
 import nnabla as nn
 import nnabla.solvers as NS
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import StochasticPolicyBuilder, QFunctionBuilder, VFunctionBuilder, \
-    SolverBuilder, ReplayBufferBuilder
+from nnabla_rl.builders import ModelBuilder, SolverBuilder, ReplayBufferBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
@@ -37,13 +37,34 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 
 @dataclass
 class ICML2018SACConfig(AlgorithmConfig):
-    tau: float = 0.005
+    '''ICML2018SACConfig
+    List of configurations for ICML2018SAC algorithm.
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.0003.
+        batch_size(int): training batch size. Defaults to 256.
+        tau (float): target network's parameter update coefficient. Defaults to 0.005.
+        environment_steps (int): Number of steps to interact with the environment on each iteration. Defaults to 1.
+        gradient_steps (int): Number of parameter updates to perform on each iteration. Defaults to 1.
+        reward_scalar (float): Reward scaling factor. Obtained reward will be multiplied by this value. Defaults to 5.0.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.\
+            Defaults to 10000.
+        replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
+        target_update_interval (float): the interval of target v function parameter's update. Defaults to 1.
+    '''
+
     gamma: float = 0.99
     learning_rate: float = 3.0*1e-4
+    batch_size: int = 256
+    tau: float = 0.005
     environment_steps: int = 1
     gradient_steps: int = 1
     reward_scalar: float = 5.0
-    batch_size: int = 256
     start_timesteps: int = 10000
     replay_buffer_size: int = 1000000
     target_update_interval: int = 1
@@ -59,11 +80,10 @@ class ICML2018SACConfig(AlgorithmConfig):
         self._assert_positive(self.gradient_steps, 'gradient_steps')
         self._assert_positive(self.environment_steps, 'environment_steps')
         self._assert_positive(self.start_timesteps, 'start_timesteps')
-        self._assert_positive(self.target_update_interval,
-                              'target_update_interval')
+        self._assert_positive(self.target_update_interval, 'target_update_interval')
 
 
-class DefaultVFunctionBuilder(VFunctionBuilder):
+class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -72,7 +92,7 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
         return SACVFunction(scope_name)
 
 
-class DefaultQFunctionBuilder(QFunctionBuilder):
+class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -81,7 +101,7 @@ class DefaultQFunctionBuilder(QFunctionBuilder):
         return SACQFunction(scope_name)
 
 
-class DefaultPolicyBuilder(StochasticPolicyBuilder):
+class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -109,16 +129,37 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
 
 
 class ICML2018SAC(Algorithm):
-    '''Soft Actor-Critic (SAC) algorithm implementation.
+    '''Soft Actor-Critic (SAC) algorithm.
 
     This class implements the ICML2018 version of Soft Actor Critic (SAC) algorithm proposed by T. Haarnoja, et al.
     in the paper: "Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor"
-    For detail see: https://arxiv.org/pdf/1801.01290.pdf
+    For detail see: https://arxiv.org/abs/1801.01290
 
     This implementation slightly differs from the implementation of Soft Actor-Critic algorithm presented
-    also by T. Haarnoja, et al. in the following paper: https://arxiv.org/pdf/1812.05905.pdf
+    also by T. Haarnoja, et al. in the following paper: https://arxiv.org/abs/1812.05905
 
     You will need to scale the reward received from the environment properly to get the algorithm work.
+
+    Args:
+        env_or_env_info \
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`ICML2018SACConfig <nnabla_rl.algorithms.icml2018_sac.ICML2018SACConfig>`):
+            configuration of the ICML2018SAC algorithm
+        v_function_builder (:py:class:`ModelBuilder[VFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of v function models
+        v_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of v function solvers
+        q_function_builder (:py:class:`ModelBuilder[QFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of q function models
+        q_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of q function solvers
+        policy_builder (:py:class:`ModelBuilder[StochasticPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of actor models
+        policy_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of policy solvers
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
     '''
 
     _config: ICML2018SACConfig
@@ -140,15 +181,16 @@ class ICML2018SAC(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: ICML2018SACConfig = ICML2018SACConfig(),
-                 v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
+                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 q_function_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
+                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
+                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
-
         super(ICML2018SAC, self).__init__(env_or_env_info, config=config)
+        if self._env_info.is_discrete_action_env():
+            raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
         self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_config=self._config)
         self._v_solver = v_solver_builder(env_info=self._env_info, algorithm_config=self._config)

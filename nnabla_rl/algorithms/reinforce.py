@@ -27,7 +27,7 @@ import nnabla_rl.model_trainers as MT
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import StochasticPolicyBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.models import StochasticPolicy, REINFORCEContinousPolicy, REINFORCEDiscretePolicy
@@ -36,6 +36,19 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 
 @dataclass
 class REINFORCEConfig(AlgorithmConfig):
+    '''REINFORCE config
+    Args:
+        reward_scale (float): Scale of reward. Defaults to 0.01.
+        num_rollouts_per_train_iteration (int): Number of rollout per each training iteration \
+            for collecting on-policy experinces.Increasing this step size is effective to get precise parameters \
+            of policy function updating, but computational time of each iteration will increase. Defaults to 10.
+        learning_rate (float): Learning rate which is set to the solvers of policy function. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. Defaults to 0.001.
+        clip_grad_norm (float): Clip to the norm of gradient to this value. Defaults to 1.0.
+        fixed_ln_var (float): Fixed log variance of the policy.\
+            This configuration is only valid when the enviroment is continuous. Defaults to 1.0.
+    '''
     reward_scale: float = 0.01
     num_rollouts_per_train_iteration: int = 10
     learning_rate: float = 1e-3
@@ -55,7 +68,7 @@ class REINFORCEConfig(AlgorithmConfig):
         self._assert_positive(self.clip_grad_norm, 'clip_grad_norm')
 
 
-class DefaultPolicyBuilder(StochasticPolicyBuilder):
+class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -90,6 +103,25 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class REINFORCE(Algorithm):
+    '''episodic REINFORCE implementation.
+
+    This class implements the episodic REINFORCE algorithm proposed by Ronald J. Williams.
+    in the paper: "Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning"
+    For detail see: https://link.springer.com/content/pdf/10.1007/BF00992696.pdf
+
+    This algorithm only supports online training.
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`REINFORCEConfig <nnabla_rl.algorithms.reinforce.REINFORCEConfig>`):
+            configuration of REINFORCE algorithm
+        policy_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder for policy function solvers
+        policy_builder (:py:class:`ModelBuilder[StochasicPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of policy models
+    '''
     _config: REINFORCEConfig
     _policy: StochasticPolicy
     _policy_solver: nn.solver.Solver
@@ -103,7 +135,7 @@ class REINFORCE(Algorithm):
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: REINFORCEConfig = REINFORCEConfig(),
-                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
+                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder()):
         super(REINFORCE, self).__init__(env_or_env_info, config=config)
         self._policy = policy_builder("pi", self._env_info, self._config)

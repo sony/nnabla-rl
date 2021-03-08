@@ -33,6 +33,15 @@ class TestTD3(object):
 
         assert td3.__name__ == 'TD3'
 
+    def test_discrete_env_unsupported(self):
+        '''
+        Check that error occurs when training on discrete env
+        '''
+
+        dummy_env = E.DummyDiscrete()
+        with pytest.raises(Exception):
+            A.TD3(dummy_env)
+
     def test_run_online_training(self):
         '''
         Check that no error occurs when calling online training

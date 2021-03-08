@@ -25,29 +25,52 @@ from typing import cast, Dict, List, Union
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import DeterministicPolicyBuilder, QFunctionBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.model_trainers.model_trainer import Training
 from nnabla_rl.models import TD3QFunction, TD3Policy, QFunction, DeterministicPolicy
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
 @dataclass
 class TD3Config(AlgorithmConfig):
-    d: int = 2
-    tau: float = 0.005
+    '''TD3Config
+    List of configurations for TD3 algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.003.
+        batch_size(int): training batch size. Defaults to 100.
+        tau (float): target network's parameter update coefficient. Defaults to 0.005.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.\
+            Defaults to 10000.
+        replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
+        d (int): Interval of the policy update. The policy will be updated every d q-function updates. Defaults to 2.
+        exploration_noise_sigma (float): Standard deviation of the gaussian exploration noise. Defaults to 0.1.
+        train_action_noise_sigma (float): Standard deviation of the gaussian action noise used in the training.\
+            Defaults to 0.2.
+        train_action_noise_abs (float): Absolute limit value of action noise used in the training. Defaults to 0.5.
+    '''
+
     gamma: float = 0.99
     learning_rate: float = 1.0*1e-3
+    batch_size: int = 100
+    tau: float = 0.005
+    start_timesteps: int = 10000
+    replay_buffer_size: int = 1000000
+    d: int = 2
     exploration_noise_sigma: float = 0.1
     train_action_noise_sigma: float = 0.2
     train_action_noise_abs: float = 0.5
-    batch_size: int = 100
-    start_timesteps: int = 10000
-    replay_buffer_size: int = 1000000
 
     def __post_init__(self):
         '''__post_init__
@@ -55,18 +78,18 @@ class TD3Config(AlgorithmConfig):
         Check the set values are in valid range.
 
         '''
-        self._assert_positive(self.d, 'd')
-        self._assert_between(self.tau, 0.0, 1.0, 'tau')
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
+        self._assert_positive(self.batch_size, 'batch_size')
+        self._assert_between(self.tau, 0.0, 1.0, 'tau')
+        self._assert_positive(self.start_timesteps, 'start_timesteps')
+        self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
+        self._assert_positive(self.d, 'd')
         self._assert_positive(self.exploration_noise_sigma, 'exploration_noise_sigma')
         self._assert_positive(self.train_action_noise_sigma, 'train_action_noise_sigma')
         self._assert_positive(self.train_action_noise_abs, 'train_action_noise_abs')
-        self._assert_positive(self.batch_size, 'batch_size')
-        self._assert_positive(self.start_timesteps, 'start_timesteps')
-        self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
 
 
-class DefaultCriticBuilder(QFunctionBuilder):
+class DefaultCriticBuilder(ModelBuilder[QFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -76,7 +99,7 @@ class DefaultCriticBuilder(QFunctionBuilder):
         return TD3QFunction(scope_name, optimal_policy=target_policy)
 
 
-class DefaultActorBuilder(DeterministicPolicyBuilder):
+class DefaultActorBuilder(ModelBuilder[DeterministicPolicy]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -103,6 +126,30 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
 
 
 class TD3(Algorithm):
+    '''Twin Delayed Deep Deterministic policy gradient (TD3) algorithm.
+
+    This class implements the Twin Delayed Deep Deteministic policy gradien (TD3) algorithm
+    proposed by S. Fujimoto, et al. in the paper: "Addressing Function Approximation Error in Actor-Critic Methods"
+    For detail see: https://arxiv.org/abs/1802.09477
+
+    Args:
+        env_or_env_info \
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`TD3Config <nnabla_rl.algorithms.td3.TD3Config>`):
+            configuration of the TD3 algorithm
+        critic_builder (:py:class:`ModelBuilder[QFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of critic models
+        critic_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of critic solvers
+        actor_builder (:py:class:`ModelBuilder[DeterministicPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of actor models
+        actor_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of actor solvers
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
+    '''
+
     _config: TD3Config
     _q1: QFunction
     _q2: QFunction
@@ -123,12 +170,14 @@ class TD3(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: TD3Config = TD3Config(),
-                 critic_builder: QFunctionBuilder = DefaultCriticBuilder(),
+                 critic_builder: ModelBuilder[QFunction] = DefaultCriticBuilder(),
                  critic_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 actor_builder: DeterministicPolicyBuilder = DefaultActorBuilder(),
+                 actor_builder: ModelBuilder[DeterministicPolicy] = DefaultActorBuilder(),
                  actor_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(TD3, self).__init__(env_or_env_info, config=config)
+        if self._env_info.is_discrete_action_env():
+            raise UnsupportedEnvironmentException
 
         self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
         self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)

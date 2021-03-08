@@ -19,6 +19,13 @@ from nnabla_rl.logger import logger
 
 
 class TimeMeasuringHook(Hook):
+    '''
+    Hook to measure and print the actual time spent to run the iteration(s).
+
+    Args:
+        timing (int): Measuring interval. Defaults to 1 iteration.
+    '''
+
     def __init__(self, timing=1):
         super(TimeMeasuringHook, self).__init__(timing=timing)
         self._prev_time = time.time()

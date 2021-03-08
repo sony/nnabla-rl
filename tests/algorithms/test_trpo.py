@@ -32,6 +32,15 @@ class TestTRPO():
 
         assert trpo.__name__ == 'TRPO'
 
+    def test_discrete_env_unsupported(self):
+        '''
+        Check that error occurs when training on discrete env
+        '''
+
+        dummy_env = E.DummyDiscrete()
+        with pytest.raises(NotImplementedError):
+            A.TRPO(dummy_env)
+
     def test_run_online_training(self):
         '''
         Check that no error occurs when calling online training

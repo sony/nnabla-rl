@@ -19,10 +19,10 @@ import numpy as np
 from dataclasses import dataclass
 
 import gym
-from typing import Union
+from typing import Union, Optional
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import StochasticPolicyBuilder
+from nnabla_rl.builders import ModelBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
@@ -36,10 +36,27 @@ import nnabla_rl.model_trainers as MT
 
 @dataclass
 class ICML2015TRPOConfig(AlgorithmConfig):
+    '''ICML2015TRPO config
+    Args:
+        gamma (float): Discount factor of rewards. Defaults to 0.99.
+        num_steps_per_iteration (int): Number of steps per each training iteration for collecting on-policy experinces.\
+            Increasing this step size is effective to get precise parameters of policy and value function updating, \
+            but computational time of each iteration will increase. Defaults to 100000.
+        batch_size (int): Trainig batch size of policy. \
+            Usually, batch_size is the same as num_steps_per_iteration. Defaults to 100000.
+        gpu_batch_size (int, optional): Actual batch size to reduce one forward gpu calculation memory. \
+            As long as gpu memory size is enough, this configuration should not be specified. If not specified,  \
+            gpu_batch_size is the same as pi_batch_size. Defaults to None.
+        sigma_kl_divergence_constraint (float): Constraint size of kl divergence \
+            between previous policy and updated policy. Defaults to 0.01.
+        maximum_backtrack_numbers (int): Maximum backtrack numbers of linesearch. Defaults to 10.
+        conjugate_gradient_damping (float): Damping size of conjugate gradient method. Defaults to 0.1.
+        conjugate_gradient_iterations (int): Number of iterations of conjugate gradient method. Defaults to 20.
+    '''
     gamma: float = 0.99
     num_steps_per_iteration: int = int(1e5)
-    gpu_batch_size: int = 2500
     batch_size: int = int(1e5)
+    gpu_batch_size: Optional[int] = None
     sigma_kl_divergence_constraint: float = 0.01
     maximum_backtrack_numbers: int = 10
     conjugate_gradient_damping: float = 0.001
@@ -52,7 +69,6 @@ class ICML2015TRPOConfig(AlgorithmConfig):
 
         '''
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.gpu_batch_size, 'gpu_batch_size')
         self._assert_between(self.batch_size, 0, self.num_steps_per_iteration, 'batch_size')
         self._assert_positive(self.num_steps_per_iteration, 'num_steps_per_iteration')
         self._assert_positive(self.sigma_kl_divergence_constraint, 'sigma_kl_divergence_constraint')
@@ -60,7 +76,7 @@ class ICML2015TRPOConfig(AlgorithmConfig):
         self._assert_positive(self.conjugate_gradient_damping, 'conjugate_gradient_damping')
 
 
-class DefaultPolicyBuilder(StochasticPolicyBuilder):
+class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -87,10 +103,20 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
 
 
 class ICML2015TRPO(Algorithm):
-    ''' Trust Region Policy Optimiation method, this implements pure one.
-        Please note that original TRPO use Single Path method to estimate Q value
-        instead of Generalized Advantage Estimation (GAE).
-        See: https://arxiv.org/pdf/1502.05477.pdf
+    '''Trust Region Policy Optimiation method with Single Path algorithm.
+
+    This class implements the Trust Region Policy Optimiation (TRPO)
+    with Single Path algorithm proposed by J. Schulman, et al. in the paper: "Trust Region Policy Optimization"
+    For detail see: https://arxiv.org/abs/1502.05477
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`ICML2015TRPOConfig <nnabla_rl.algorithms.icml2015_trpo.ICML2015TRPOConfig>`):
+            configuration of ICML2015TRPO algorithm
+        policy_builder (:py:class:`ModelBuilder[StochasicPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of policy models
     '''
 
     _config: ICML2015TRPOConfig
@@ -102,7 +128,7 @@ class ICML2015TRPO(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
-                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder()):
+                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder()):
         super(ICML2015TRPO, self).__init__(env_or_env_info, config=config)
         self._policy = policy_builder("pi", self._env_info, self._config)
 

@@ -31,7 +31,7 @@ import nnabla_rl.preprocessors as RP
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.utils.context as context
-from nnabla_rl.builders import StochasticPolicyBuilder, VFunctionBuilder, SolverBuilder, PreprocessorBuilder
+from nnabla_rl.builders import ModelBuilder, SolverBuilder, PreprocessorBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
@@ -53,11 +53,69 @@ from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
 from nnabla_rl.utils.reproductions import set_global_seed
 
 
-class DefaultPolicyBuilder(StochasticPolicyBuilder):
-    def build_model(self,
+@dataclass
+class PPOConfig(AlgorithmConfig):
+    '''PPOConfig
+    List of configurations for PPO algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.00025.
+        batch_size(int): training batch size. Defaults to 256.
+        lmb (float): scalar of lambda return's computation in GAE. Defaults to 0.95.
+        entropy_coefficient (float): scalar of entropy regularization term. Defaults to 0.01.
+        value_coefficient (float): scalar of value loss. Defaults to 1.0.
+        actor_num (int): Number of parallel actors. Defaults to 8.
+        epochs (int): Number of epochs to perform in each training iteration. Defaults to 3.
+        actor_timesteps (int): Number of timesteps to interact with the environment by the actors. Defaults to 128.
+        total_timesteps (int): Total number of timesteps to interact with the environment. Defaults to 10000.
+        decrease_alpha (bool): Flag to control whether to decrease the learning rate linearly during the training.\
+            Defaults to True.
+        timelimit_as_terminal (bool): Treat as done if the environment reaches the \
+            `timelimit <https://github.com/openai/gym/blob/master/gym/wrappers/time_limit.py>`_.\
+            Defaults to False.
+        seed (int): base seed of random number generator used by the actors. Defaults to 1.
+        preprocess_state (bool): Enable preprocessing the states in the collected experiences\
+            before feeding as training batch. Defaults to True.
+    '''
+
+    gamma: float = 0.99
+    learning_rate: float = 2.5*1e-4
+    lmb: float = 0.95
+    entropy_coefficient: float = 0.01
+    value_coefficient: float = 1.0
+    actor_num: int = 8
+    epochs: int = 3
+    batch_size: int = 32 * 8
+    actor_timesteps: int = 128
+    total_timesteps: int = 10000
+    decrease_alpha: bool = True
+    timelimit_as_terminal: bool = False
+    seed: int = 1
+    preprocess_state: bool = True
+
+    def __post_init__(self):
+        '''__post_init__
+
+        Check the set values are in valid range.
+
+        '''
+        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
+        self._assert_positive(self.actor_num, 'actor num')
+        self._assert_positive(self.epochs, 'epochs')
+        self._assert_positive(self.batch_size, 'batch_size')
+        self._assert_positive(self.actor_timesteps, 'actor_timesteps')
+        self._assert_positive(self.total_timesteps, 'total_timesteps')
+
+
+class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
+    def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
+                    algorithm_config: PPOConfig,
                     **kwargs) -> StochasticPolicy:
         if env_info.is_discrete_action_env():
             # scope name is same as that of v-function -> parameter is shared across models automatically
@@ -68,7 +126,7 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def _build_shared_policy(self,
                              scope_name: str,
                              env_info: EnvironmentInfo,
-                             algorithm_config: AlgorithmConfig,
+                             algorithm_config: PPOConfig,
                              **kwargs) -> StochasticPolicy:
         _shared_function_head = PPOSharedFunctionHead(scope_name=scope_name,
                                                       state_shape=env_info.state_shape,
@@ -78,16 +136,16 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
     def _build_mujoco_policy(self,
                              scope_name: str,
                              env_info: EnvironmentInfo,
-                             algorithm_config: AlgorithmConfig,
+                             algorithm_config: PPOConfig,
                              **kwargs) -> StochasticPolicy:
         return PPOMujocoPolicy(scope_name=scope_name, action_dim=env_info.action_dim)
 
 
-class DefaultVFunctionBuilder(VFunctionBuilder):
-    def build_model(self,
+class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
+    def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
+                    algorithm_config: PPOConfig,
                     **kwargs) -> VFunction:
         if env_info.is_discrete_action_env():
             # scope name is same as that of policy -> parameter is shared across models automatically
@@ -98,7 +156,7 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
     def _build_shared_v_function(self,
                                  scope_name: str,
                                  env_info: EnvironmentInfo,
-                                 algorithm_config: AlgorithmConfig,
+                                 algorithm_config: PPOConfig,
                                  **kwargs) -> VFunction:
         _shared_function_head = PPOSharedFunctionHead(scope_name=scope_name,
                                                       state_shape=env_info.state_shape,
@@ -108,7 +166,7 @@ class DefaultVFunctionBuilder(VFunctionBuilder):
     def _build_mujoco_v_function(self,
                                  scope_name: str,
                                  env_info: EnvironmentInfo,
-                                 algorithm_config: AlgorithmConfig,
+                                 algorithm_config: PPOConfig,
                                  **kwargs) -> VFunction:
         return PPOMujocoVFunction(scope_name=scope_name)
 
@@ -131,46 +189,28 @@ class DefaultPreprocessorBuilder(PreprocessorBuilder):
         return RP.RunningMeanNormalizer('preprocessor', env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
-@dataclass
-class PPOConfig(AlgorithmConfig):
-    gamma: float = 0.99
-    learning_rate: float = 2.5*1e-4
-    lmb: float = 0.95
-    epsilon: float = 0.1
-    entropy_coefficient: float = 0.01
-    value_coefficient: float = 1.0
-    actor_num: int = 8
-    epochs: int = 3
-    batch_size: int = 32 * 8
-    actor_timesteps: int = 128
-    total_timesteps: int = 10000
-    decrease_alpha: bool = True
-    timelimit_as_terminal: bool = False
-    seed: int = -1
-    preprocess_state: bool = True
-
-    def __post_init__(self):
-        '''__post_init__
-
-        Check the set values are in valid range.
-
-        '''
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.actor_num, 'actor num')
-        self._assert_positive(self.epochs, 'epochs')
-        self._assert_positive(self.batch_size, 'batch_size')
-        self._assert_positive(self.actor_timesteps, 'actor_timesteps')
-        self._assert_positive(self.total_timesteps, 'total_timesteps')
-
-
 class PPO(Algorithm):
     '''Proximal Policy Optimization (PPO) algorithm implementation.
 
     This class implements the Proximal Policy Optimization (PPO) algorithm
     proposed by J. Schulman, et al. in the paper: "Proximal Policy Optimization Algorithms"
-    For detail see: https://arxiv.org/pdf/1707.06347.pdf
+    For detail see: https://arxiv.org/abs/1707.06347
 
     This algorithm only supports online training.
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`PPOConfig <nnabla_rl.algorithms.ppo.PPOConfig>`): configuration of PPO algorithm
+        v_function_builder (:py:class:`ModelBuilder[VFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of v function models
+        v_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for v function solvers
+        policy_builder (:py:class:`ModelBuilder[StochasicPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of policy models
+        policy_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for policy solvers
+        state_preprocessor_builder (None or :py:class:`PreprocessorBuilder <nnabla_rl.builders.PreprocessorBuilder>`):
+            state preprocessor builder to preprocess the states
     '''
     _config: PPOConfig
 
@@ -189,9 +229,9 @@ class PPO(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: PPOConfig = PPOConfig(),
-                 v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
+                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
+                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
         self._gpu_id = context._gpu_id

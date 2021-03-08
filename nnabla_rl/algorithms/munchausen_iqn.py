@@ -25,12 +25,13 @@ from typing import cast, Callable, Union
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.builders import StateActionQuantileFunctionBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
@@ -38,14 +39,48 @@ import nnabla_rl.model_trainers as MT
 
 @dataclass
 class MunchausenIQNConfig(AlgorithmConfig):
-    batch_size: int = 32
+    """
+    List of configurations for Munchausen IQN algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.00005.
+        batch_size (int): training atch size. Defaults to 32.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.
+            Defaults to 50000.
+        replay_buffer_size (int): the capacity of replay buffer. Defaults to 1000000.
+        learner_update_frequency (int): the interval of learner update. Defaults to 4.
+        target_update_frequency (int): the interval of target q-function update. Defaults to 10000.
+        max_explore_steps (int): the number of steps decaying the epsilon value.\
+            The epsilon will be decayed linearly \
+            :math:`\\epsilon=\\epsilon_{init} - step\\times\\frac{\\epsilon_{init} - \
+            \\epsilon_{final}}{max\\_explore\\_steps}`.\
+            Defaults to 1000000.
+        initial_epsilon (float): the initial epsilon value for ε-greedy explorer. Defaults to 1.0.
+        final_epsilon (float): the last epsilon value for ε-greedy explorer. Defaults to 0.01.
+        test_epsilon (float): the epsilon value on testing. Defaults to 0.001.
+        N (int): Number of samples to compute the current state's quantile values. Defaults to 64.
+        N_prime (int): Number of samples to compute the target state's quantile values. Defaults to 64.
+        K (int): Number of samples to compute greedy next action. Defaults to 32.
+        kappa (float): threshold value of quantile huber loss. Defaults to 1.0.
+        embedding_dim (int): dimension of embedding for the sample point. Defaults to 64.
+        entropy_temperature (float): temperature parameter of softmax policy distribution. Defaults to 0.03.
+        munchausen_scaling_term (float): scalar of scaled log policy. Defaults to 0.9.
+        clipping_value (float): Lower value of the logarithm of policy distribution. Defaults to -1.
+    """
+
     gamma: float = 0.99
+    learning_rate: float = 0.00005
+    batch_size: int = 32
     start_timesteps: int = 50000
     replay_buffer_size: int = 1000000
     learner_update_frequency: int = 4
     target_update_frequency: int = 10000
     max_explore_steps: int = 1000000
-    learning_rate: float = 0.00005
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.01
     test_epsilon: float = 0.001
@@ -88,7 +123,7 @@ def risk_neutral_measure(tau):
     return tau
 
 
-class DefaultQuantileFunctionBuilder(StateActionQuantileFunctionBuilder):
+class DefaultQuantileFunctionBuilder(ModelBuilder[StateActionQuantileFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -126,7 +161,21 @@ class MunchausenIQN(Algorithm):
 
     This class implements the Munchausen-IQN (Munchausen Implicit Quantile Network) algorithm
     proposed by N. Vieillard, et al. in the paper: "Munchausen Reinforcement Learning"
-    For detail see: https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf
+    For details see: https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`MunchausenIQNConfig <nnabla_rl.algorithms.munchausen_iqn.MunchausenIQNConfig>`):
+            configuration of MunchausenIQN algorithm
+        risk_measure_function (Callable[[nn.Variable], nn.Variable]): risk measure function to apply to the quantiles.
+        quantile_function_builder (:py:class:`ModelBuilder[StateActionQuantileFunction] \
+            <nnabla_rl.builders.ModelBuilder>`): builder of state-action quantile function models
+        quantile_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder for state action quantile function solvers
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
     '''
 
     _config: MunchausenIQNConfig
@@ -145,13 +194,13 @@ class MunchausenIQN(Algorithm):
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: MunchausenIQNConfig = MunchausenIQNConfig(),
                  risk_measure_function: Callable[[nn.Variable], nn.Variable] = risk_neutral_measure,
-                 quantile_function_builder: StateActionQuantileFunctionBuilder = DefaultQuantileFunctionBuilder(),
+                 quantile_function_builder: ModelBuilder[StateActionQuantileFunction]
+                 = DefaultQuantileFunctionBuilder(),
                  quantile_solver_builder: SolverBuilder = DefaultQuantileSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(MunchausenIQN, self).__init__(env_or_env_info, config=config)
-
         if not self._env_info.is_discrete_action_env():
-            raise ValueError('{} only supports discrete action environment'.format(self.__name__))
+            raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
         kwargs = {}
         kwargs['risk_measure_function'] = risk_measure_function

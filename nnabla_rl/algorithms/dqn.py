@@ -23,13 +23,14 @@ import numpy as np
 from typing import cast, Union
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import QFunctionBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.models import DQNQFunction, QFunction
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 import nnabla_rl.environment_explorers as EE
@@ -38,14 +39,34 @@ import nnabla_rl.model_trainers as MT
 
 @dataclass
 class DQNConfig(AlgorithmConfig):
+    """
+    List of configurations for DQN algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.00025.
+        batch_size (int): training atch size. Defaults to 32.
+        learner_update_frequency (int): the interval of learner update. Defaults to 4.
+        target_update_frequency (int): the interval of target q-function update. Defaults to 10000.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.
+            Defaults to 50000.
+        replay_buffer_size (int): the capacity of replay buffer. Defaults to 1000000.
+        max_explore_steps (int): the number of steps decaying the epsilon value.\
+            The epsilon will be decayed linearly \
+            :math:`\\epsilon=\\epsilon_{init} - step\\times\\frac{\\epsilon_{init} - \
+            \\epsilon_{final}}{max\\_explore\\_steps}`.\
+            Defaults to 1000000.
+        initial_epsilon (float): the initial epsilon value for ε-greedy explorer. Defaults to 1.0.
+        final_epsilon (float): the last epsilon value for ε-greedy explorer. Defaults to 0.1.
+        test_epsilon (float): the epsilon value on testing. Defaults to 0.05.
+    """
     gamma: float = 0.99
-    batch_size: int = 32
-    # optimizer
     learning_rate: float = 2.5e-4
-    # this decay is equivalent to 'gradient momentum' and 'squared gradient momentum' of the nature paper
-    decay: float = 0.95
-    momentum: float = 0.0
-    min_squared_gradient: float = 0.01
+    batch_size: int = 32
     # network update
     learner_update_frequency: float = 4
     target_update_frequency: float = 10000
@@ -53,10 +74,10 @@ class DQNConfig(AlgorithmConfig):
     start_timesteps: int = 50000
     replay_buffer_size: int = 1000000
     # explore
+    max_explore_steps: int = 1000000
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.1
     test_epsilon: float = 0.05
-    max_explore_steps: int = 1000000
 
     def __post_init__(self):
         '''__post_init__
@@ -67,8 +88,6 @@ class DQNConfig(AlgorithmConfig):
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.batch_size, 'batch_size')
         self._assert_positive(self.learning_rate, 'learning_rate')
-        self._assert_positive(self.decay, 'decay')
-        self._assert_positive(self.min_squared_gradient, 'min_squared_gradient')
         self._assert_positive(self.learner_update_frequency, 'learner_update_frequency')
         self._assert_positive(self.target_update_frequency, 'target_update_frequency')
         self._assert_positive(self.start_timesteps, 'start_timesteps')
@@ -80,7 +99,7 @@ class DQNConfig(AlgorithmConfig):
         self._assert_positive(self.max_explore_steps, 'max_explore_steps')
 
 
-class DefaultQFunctionBuilder(QFunctionBuilder):
+class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -94,9 +113,12 @@ class DefaultSolverBuilder(SolverBuilder):
                      env_info: EnvironmentInfo,
                      algorithm_config: DQNConfig,
                      **kwargs) -> nn.solver.Solver:
-        solver = NS.RMSpropGraves(
-            lr=algorithm_config.learning_rate, decay=algorithm_config.decay,
-            momentum=algorithm_config.momentum, eps=algorithm_config.min_squared_gradient)
+        # this decay is equivalent to 'gradient momentum' and 'squared gradient momentum' of the nature paper
+        decay: float = 0.95
+        momentum: float = 0.0
+        min_squared_gradient: float = 0.01
+        solver = NS.RMSpropGraves(lr=algorithm_config.learning_rate, decay=decay,
+                                  momentum=momentum, eps=min_squared_gradient)
         return solver
 
 
@@ -109,6 +131,28 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
 
 
 class DQN(Algorithm):
+    '''DQN algorithm.
+
+    This class implements the Deep Q-Network (DQN) algorithm
+    proposed by V. Mnih, et al. in the paper: "Human-level control through deep reinforcement learning"
+    For details see: https://www.nature.com/articles/nature14236
+
+    Note that default solver used in this implementation is RMSPropGraves as in the original paper.
+    However, in practical applications, we recommend using Adam as the optimizer of DQN.
+    You can replace the solver by implementing a (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) and
+    pass the solver on DQN class instantiation.
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        params (:py:class:`DQNParam <nnabla_rl.algorithms.dqn.DQNParam>`):
+            the parameter for DQN training
+        q_func_builder (:py:class:`ModelBuilder <nnabla_rl.builders.ModelBuilder>`): builder of q function model
+        q_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder of q function solver
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
+    '''
     _config: DQNConfig
     _q: QFunction
     _q_solver: nn.solver.Solver
@@ -121,13 +165,12 @@ class DQN(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: DQNConfig = DQNConfig(),
-                 q_func_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
+                 q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(DQN, self).__init__(env_or_env_info, config=config)
-
         if not self._env_info.is_discrete_action_env():
-            raise ValueError('Invalid env_info. Action space of DQN must be {}' .format(gym.spaces.Discrete))
+            raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
         self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_config=self._config)
         self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)

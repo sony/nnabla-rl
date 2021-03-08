@@ -17,6 +17,7 @@ from abc import ABCMeta, abstractmethod
 import nnabla as nn
 
 from nnabla_rl.models.model import Model
+from nnabla_rl.distributions.distribution import Distribution
 
 
 class Policy(Model, metaclass=ABCMeta):
@@ -28,7 +29,7 @@ class DeterministicPolicy(Policy, metaclass=ABCMeta):
     ''' DeterministicPolicy
     Abstract class for deterministic policy
 
-    By calling this policy, it will return an action for the given state.
+    This policy returns an action for the given state.
     '''
     @abstractmethod
     def pi(self, s: nn.Variable) -> nn.Variable:
@@ -47,10 +48,10 @@ class StochasticPolicy(Policy, metaclass=ABCMeta):
     ''' StochasticPolicy
     Abstract class for stochastic policy
 
-    By calling this policy, it will return a probability distribution of action for the given state.
+    This policy returns a probability distribution of action for the given state.
     '''
     @abstractmethod
-    def pi(self, s: nn.Variable) -> nn.Variable:
+    def pi(self, s: nn.Variable) -> Distribution:
         '''pi
 
         Args:

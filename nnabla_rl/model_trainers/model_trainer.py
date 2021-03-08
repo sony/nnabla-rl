@@ -30,11 +30,29 @@ from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 @dataclass
 class TrainerConfig(Configuration):
+    """Configuration class for ModelTrainer
+    """
+
     def __post_init__(self):
         super(TrainerConfig, self).__post_init__()
 
 
 class TrainingBatch():
+    """Mini-Batch class for train
+
+    Args:
+       batch_size (int): the size of mini-batch
+       s_current (Optional[np.array]): the current state array
+       a_current (Optional[np.array]): the current action array
+       reward (Optional[np.array]): the reward value array
+       gamma (Optional[float]): gamma value
+       non_terminal (Optional[np.array]): the non_terminal flag array
+       s_next (Optional[np.array]): the next state array
+       weight (Optional[np.array]): the weight of loss array
+       extra (Dict[str, np.array]): the extra information
+       next_step_batch (Optional[:py:class:`TrainingBatch <nnabla_rl.model_trainers.model_trainer.TrainingBatch>`]):\
+           the mini-batch for next step (used in n-step learning)
+    """
     batch_size: int
     s_current: np.array
     a_current: np.array
@@ -44,7 +62,6 @@ class TrainingBatch():
     s_next: np.array
     weight: np.array
     extra: Dict[str, np.array]
-
     # Used in n-step learning
     next_step_batch: Optional['TrainingBatch']
 

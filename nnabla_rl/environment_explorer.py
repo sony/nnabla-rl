@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Tuple
+from typing import cast, Any, Dict, List, Optional, Tuple
 
 from abc import abstractmethod, ABCMeta
 
@@ -24,8 +24,7 @@ from dataclasses import dataclass
 
 from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-
-Experience = Tuple[np.array, np.array, float, float, np.array, Dict[str, Any]]
+from nnabla_rl.typing import Experience
 
 
 @dataclass
@@ -40,6 +39,13 @@ class EnvironmentExplorer(metaclass=ABCMeta):
     '''
     Base class for environment exploration methods.
     '''
+
+    _env_info: EnvironmentInfo
+    _config: EnvironmentExplorerConfig
+    _state: Optional[np.array]
+    _action: Optional[np.array]
+    _next_state: Optional[np.array]
+    _steps: int
 
     def __init__(self,
                  env_info: EnvironmentInfo,
@@ -76,8 +82,8 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             n(int): Number of timesteps to act in the environment
 
         Returns:
-            List[Tuple[np.array, np.array, float, float, np.array, Dict]]:
-                List of tuple which consist of (state, action, reward, terminal flag, next state and extra info).
+            List[Experience]: List of experience.
+                Experience consists of (state, action, reward, terminal flag, next state and extra info).
         '''
         assert 0 < n
         experiences = []
@@ -100,8 +106,8 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             env(gym.Env): Environment
 
         Returns:
-            List[Tuple[np.array, np.array, float, float, np.array, Dict]]:
-                List of tuple which consist of (state, action, reward, terminal flag, next state and extra info).
+            List[Experience]: List of experience.
+                Experience consists of (state, action, reward, terminal flag, next state and extra info).
         '''
         self._state = env.reset()
 
@@ -132,11 +138,15 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         else:
             non_terminal = 1.0
 
-        extra_info = {}
+        extra_info: Dict[str, Any] = {}
         extra_info.update(action_info)
         extra_info.update(step_info)
-        experience = (self._state, self._action, r * self._config.reward_scalar,
-                      non_terminal, self._next_state, extra_info)
+        experience = (cast(np.array, self._state),
+                      cast(np.array, self._action),
+                      r * self._config.reward_scalar,
+                      non_terminal,
+                      cast(np.array, self._next_state),
+                      extra_info)
 
         if done:
             self._state = env.reset()

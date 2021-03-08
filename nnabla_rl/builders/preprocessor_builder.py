@@ -18,6 +18,9 @@ from nnabla_rl.algorithm import AlgorithmConfig
 
 
 class PreprocessorBuilder():
+    """Preprocessor builder interface class
+    """
+
     def __call__(self,
                  scope_name: str,
                  env_info: EnvironmentInfo,
@@ -30,4 +33,16 @@ class PreprocessorBuilder():
                            env_info: EnvironmentInfo,
                            algorithm_config: AlgorithmConfig,
                            **kwargs) -> Preprocessor:
+        """Build preprocessor
+
+        Args:
+            scope_name (str): the scope name of model
+            env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):\
+                environment information
+            algorithm_config (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`): \
+                configuration class of target algorithm. Actual type differs depending on the algorithm.
+
+        Returns:
+            Preprocessor: preprocessor instance.
+        """
         raise NotImplementedError

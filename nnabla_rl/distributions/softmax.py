@@ -24,7 +24,12 @@ import nnabla_rl.functions as RF
 
 class Softmax(Distribution):
     '''
-    Softmax distribution
+    Softmax distribution which samples a class index :math:`i` according to the following probability.
+
+    :math:`i \\sim \\frac{\\exp{z_{i}}}{\\sum_{j}\\exp{z_{j}}}`.
+
+    Args:
+        z (nn.Variable): logits :math:`z`. Logits' dimension should be same as the number of class to sample.
     '''
 
     def __init__(self, z):
@@ -42,6 +47,10 @@ class Softmax(Distribution):
         self._labels = nn.Variable.from_numpy_array(labels)
         self._actions = NF.stack(
             *[self._labels for _ in range(self._batch_size)])
+
+    @property
+    def ndim(self):
+        return 1
 
     def sample(self, noise_clip=None):
         return RF.random_choice(self._actions, w=self._distribution)

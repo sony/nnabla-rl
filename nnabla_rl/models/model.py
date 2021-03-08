@@ -23,6 +23,11 @@ import pathlib
 
 
 class Model(object):
+    """Model Class
+
+    Args:
+        scope_name (str): the scope name of model
+    """
 
     _scope_name: str
 

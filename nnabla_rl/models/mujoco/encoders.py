@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import nnabla as nn
 
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 
 import nnabla_rl.distributions as D
+from nnabla_rl.distributions import Distribution
 import nnabla_rl.functions as RF
 from nnabla_rl.models.encoder import VariationalAutoEncoder
 
@@ -35,43 +38,32 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
         self._action_dim = action_dim
         self._latent_dim = latent_dim
 
-    def __call__(self, *args):
-        assert len(args) == 2
-        (s, a) = args
-        latent_distribution = self.latent_distribution(*args)
+    def encode_and_decode(self, x: nn.Variable, **kwargs) -> Tuple[Distribution, nn.Variable]:
+        '''
+        Args:
+            x (nn.Variable): encoder input.
+
+        Returns:
+            [Distribution, nn.Variable]: Reconstructed input and latent distribution
+        '''
+        a = kwargs['action']
+        h = NF.concatenate(x, a)
+        latent_distribution = self.latent_distribution(h)
         z = latent_distribution.sample()
-        reconstructed = self.decode(s, z)
+        reconstructed = self.decode(z, state=x)
         return latent_distribution, reconstructed
 
-    def latent_distribution(self, *args):
-        assert len(args) == 2
-        x = NF.concatenate(*args)
-        with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(x, n_outmaps=750, name="linear1")
-            h = NF.relu(x=h)
-            h = NPF.affine(h, n_outmaps=750, name="linear2")
-            h = NF.relu(x=h)
-            h = NPF.affine(h, n_outmaps=self._latent_dim*2, name="linear3")
-            reshaped = NF.reshape(h, shape=(-1, 2, self._latent_dim))
-            mean, ln_var = NF.split(reshaped, axis=1)
-            # Clip for numerical stability
-            ln_var = NF.clip_by_value(ln_var, min=-8, max=30)
-        return D.Gaussian(mean, ln_var)
-
-    def encode(self, *args):
-        assert len(args) == 2
-        x = NF.concatenate(*args)
+    def encode(self, x: nn.Variable, **kwargs) -> nn.Variable:
+        a = kwargs['action']
+        x = NF.concatenate(x, a)
         latent_distribution = self.latent_distribution(x)
         return latent_distribution.sample()
 
-    def decode(self, *args):
-        assert (len(args) == 1) or (len(args) == 2)
-        if len(args) == 1:
-            s, *_ = args
+    def decode(self, z: nn.Variable, **kwargs) -> nn.Variable:
+        s = kwargs['state']
+        if z is None:
             z = RF.randn(shape=(s.shape[0], self._latent_dim))
             z = NF.clip_by_value(z, -0.5, 0.5)
-        else:
-            (s, z) = args
         with nn.parameter_scope(self.scope_name):
             x = NF.concatenate(s, z)
             h = NPF.affine(x, n_outmaps=750, name="linear4")
@@ -81,14 +73,11 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
             h = NPF.affine(h, n_outmaps=self._action_dim, name="linear6")
         return h
 
-    def decode_multiple(self, decode_num, *args):
-        assert (len(args) == 1) or (len(args) == 2)
-        if len(args) == 1:
-            (s, ) = args
+    def decode_multiple(self, z: nn.Variable, decode_num: int, **kwargs) -> nn.Variable:
+        s = kwargs['state']
+        if z is None:
             z = RF.randn(shape=(s.shape[0], decode_num, self._latent_dim))
             z = NF.clip_by_value(z, -0.5, 0.5)
-        else:
-            (s, z) = args
         s = RF.expand_dims(s, axis=0)
         s = RF.repeat(s, repeats=decode_num, axis=0)
         s = NF.transpose(s, axes=(1, 0, 2))
@@ -105,6 +94,19 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
             h = NF.reshape(h, shape=(-1, decode_num, h.shape[-1]))
         return h
 
+    def latent_distribution(self, x: nn.Variable, **kwargs) -> Distribution:
+        with nn.parameter_scope(self.scope_name):
+            h = NPF.affine(x, n_outmaps=750, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=750, name="linear2")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=self._latent_dim*2, name="linear3")
+            reshaped = NF.reshape(h, shape=(-1, 2, self._latent_dim))
+            mean, ln_var = NF.split(reshaped, axis=1)
+            # Clip for numerical stability
+            ln_var = NF.clip_by_value(ln_var, min=-8, max=30)
+        return D.Gaussian(mean, ln_var)
+
 
 class BCQVariationalAutoEncoder(UnsquashedVariationalAutoEncoder):
     '''
@@ -113,15 +115,13 @@ class BCQVariationalAutoEncoder(UnsquashedVariationalAutoEncoder):
     '''
 
     def __init__(self, scope_name, state_dim, action_dim, latent_dim, max_action_value):
-        super(BCQVariationalAutoEncoder, self).__init__(
-            scope_name, state_dim, action_dim, latent_dim)
+        super(BCQVariationalAutoEncoder, self).__init__(scope_name, state_dim, action_dim, latent_dim)
         self._max_action_value = max_action_value
 
-    def decode(self, *args):
-        unsquashed = super(BCQVariationalAutoEncoder, self).decode(*args)
+    def decode(self, z: nn.Variable, **kwargs) -> nn.Variable:
+        unsquashed = super(BCQVariationalAutoEncoder, self).decode(z, **kwargs)
         return NF.tanh(unsquashed) * self._max_action_value
 
-    def decode_multiple(self, decode_num, *args):
-        unsquashed = super(BCQVariationalAutoEncoder,
-                           self).decode_multiple(decode_num, *args)
+    def decode_multiple(self, z: nn.Variable, decode_num: int, **kwargs) -> nn.Variable:
+        unsquashed = super(BCQVariationalAutoEncoder, self).decode_multiple(z, decode_num, **kwargs)
         return NF.tanh(unsquashed) * self._max_action_value

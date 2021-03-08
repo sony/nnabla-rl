@@ -33,6 +33,16 @@ class TestMunchausenDQN(object):
 
         assert dqn.__name__ == 'MunchausenDQN'
 
+    def test_continuous_env_unsupported(self):
+        '''
+        Check that error occurs when training on continuous env
+        '''
+
+        dummy_env = E.DummyContinuous()
+        config = A.MunchausenDQNConfig()
+        with pytest.raises(Exception):
+            A.MunchausenDQN(dummy_env, config=config)
+
     def test_run_online_training(self):
         '''
         Check that no error occurs when calling online training

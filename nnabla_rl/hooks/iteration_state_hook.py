@@ -19,6 +19,15 @@ import pprint
 
 
 class IterationStateHook(Hook):
+    '''
+    Hook which retrieves the iteration state to print/save the training status through writer.
+
+    Args:
+        timing (int): Retriving interval. Defaults to 1000 iteration.
+        writer (nnabla_rl.writer.Writer, optional): Writer instance to save/print the iteration states.
+            Defaults to None.
+    '''
+
     def __init__(self, writer=None, timing=1000):
         self._timing = timing
         self._writer = writer

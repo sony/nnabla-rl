@@ -20,15 +20,50 @@ from nnabla_rl.models.model import Model
 
 
 class QFunction(Model, metaclass=ABCMeta):
+    """Base QFunction Class
+    """
     @abstractmethod
     def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        """Compute Q-value for given state and action
+
+        Args:
+            s (nn.Variable): state variable
+            a (nn.Variable): action variable
+
+        Returns:
+            nn.Variable: Q-value for given state and action
+        """
         raise NotImplementedError
 
     def all_q(self, s: nn.Variable) -> nn.Variable:
+        """Compute Q-values for each action for given state
+
+        Args:
+            s (nn.Variable): state variable
+
+        Returns:
+            nn.Variable: Q-values for each action for given state
+        """
         raise NotImplementedError
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
+        """Compute maximum Q-value for given state
+
+        Args:
+            s (nn.Variable): state variable
+
+        Returns:
+            nn.Variable: maximum Q-value value for given state
+        """
         raise NotImplementedError
 
     def argmax_q(self, s: nn.Variable) -> nn.Variable:
+        """Compute the action which maximizes the Q-value for given state
+
+        Args:
+            s (nn.Variable): state variable
+
+        Returns:
+            nn.Variable: action which maximizes the Q-value for given state
+        """
         raise NotImplementedError

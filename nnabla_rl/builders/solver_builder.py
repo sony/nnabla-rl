@@ -19,6 +19,9 @@ from nnabla_rl.algorithm import AlgorithmConfig
 
 
 class SolverBuilder():
+    """Solver builder interface class
+    """
+
     def __call__(self,
                  env_info: EnvironmentInfo,
                  algorithm_config: AlgorithmConfig,
@@ -29,4 +32,15 @@ class SolverBuilder():
                      env_info: EnvironmentInfo,
                      algorithm_config: AlgorithmConfig,
                      **kwargs) -> nn.solver.Solver:
+        """Build solver function
+
+        Args:
+            env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):\
+                environment information
+            algorithm_params (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`): \
+                configuration class of the target algorithm
+
+        Returns:
+            Solver: solver instance.
+        """
         raise NotImplementedError

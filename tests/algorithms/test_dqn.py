@@ -33,6 +33,16 @@ class TestDQN(object):
 
         assert dqn.__name__ == 'DQN'
 
+    def test_continuous_env_unsupported(self):
+        '''
+        Check that error occurs when training on continuous env
+        '''
+
+        dummy_env = E.DummyContinuous()
+        config = A.DQNConfig()
+        with pytest.raises(Exception):
+            A.DQN(dummy_env, config=config)
+
     def test_run_online_training(self):
         '''
         Check that no error occurs when calling online training
@@ -82,8 +92,6 @@ class TestDQN(object):
             A.DQNConfig(batch_size=-1)
         with pytest.raises(ValueError):
             A.DQNConfig(learning_rate=-0.1)
-        with pytest.raises(ValueError):
-            A.DQNConfig(min_squared_gradient=-0.1)
         with pytest.raises(ValueError):
             A.DQNConfig(learner_update_frequency=-1000)
         with pytest.raises(ValueError):

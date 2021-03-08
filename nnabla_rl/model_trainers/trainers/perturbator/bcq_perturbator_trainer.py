@@ -78,7 +78,7 @@ class BCQPerturbatorTrainer(ModelTrainer):
 
         self._perturbator_loss = 0
         for perturbator in models:
-            action = self._vae.decode(training_variables.s_current)
+            action = self._vae.decode(z=None, state=training_variables.s_current)
             action.need_grad = False
 
             noise = perturbator.generate_noise(training_variables.s_current, action, phi=self._config.phi)

@@ -103,9 +103,9 @@ class TestGAIL():
         with pytest.raises(ValueError):
             A.GAILConfig(discriminator_batch_size=-5)
         with pytest.raises(ValueError):
-            A.GAILConfig(policy_update_interval=-5)
+            A.GAILConfig(policy_update_frequency=-5)
         with pytest.raises(ValueError):
-            A.GAILConfig(discriminator_update_interval=-5)
+            A.GAILConfig(discriminator_update_frequency=-5)
         with pytest.raises(ValueError):
             A.GAILConfig(adversary_entropy_coef=-0.5)
 

@@ -132,12 +132,12 @@ class _StateActionQuantileFunctionDQNTraining(Training):
         batch_size = s_next.shape[0]
 
         tau_k = self._target_function._sample_risk_measured_tau(shape=(batch_size, K))
-        policy_quantiles = self._target_function.quantiles(s_next, tau_k)
-        a_star = self._target_function.argmax_q_from_quantiles(policy_quantiles)
+        return_samples = self._target_function.return_samples(s_next, tau_k)
+        a_star = self._target_function.argmax_q_from_return_samples(return_samples)
 
         tau_j = self._target_function._sample_tau(shape=(batch_size, N_prime))
-        target_quantiles = self._target_function.quantiles(s_next, tau_j)
-        Z_tau_j = self._target_function._quantiles_of(target_quantiles, a_star)
+        target_returns_samples = self._target_function.return_samples(s_next, tau_j)
+        Z_tau_j = self._target_function._return_samples_of(target_returns_samples, a_star)
         assert Z_tau_j.shape == (batch_size, N_prime)
         target = reward + non_terminal * gamma * Z_tau_j
         return target

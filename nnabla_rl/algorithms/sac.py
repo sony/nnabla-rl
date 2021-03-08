@@ -25,27 +25,50 @@ from typing import cast, Dict, List, Optional, Union
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import StochasticPolicyBuilder, QFunctionBuilder, SolverBuilder, ReplayBufferBuilder
+from nnabla_rl.builders import ModelBuilder, SolverBuilder, ReplayBufferBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.models import SACQFunction, SACPolicy, QFunction, StochasticPolicy
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 
 
 @dataclass
 class SACConfig(AlgorithmConfig):
-    tau: float = 0.005
+    '''SACConfig
+    List of configurations for SAC algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.0003.
+        batch_size(int): training batch size. Defaults to 256.
+        tau (float): target network's parameter update coefficient. Defaults to 0.005.
+        environment_steps (int): Number of steps to interact with the environment on each iteration. Defaults to 1.
+        gradient_steps (int): Number of parameter updates to perform on each iteration. Defaults to 1.
+        target_entropy (float, optional): Target entropy value. Defaults to None.
+        initial_temperature (float, optional): Initial value of temperature parameter. Defaults to None.
+        fix_temperature (bool): If true the temperature parameter will not be trained. Defaults to False.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.\
+            Defaults to 10000.
+        replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
+    '''
+
     gamma: float = 0.99
     learning_rate: float = 3.0*1e-4
+    batch_size: int = 256
+    tau: float = 0.005
     environment_steps: int = 1
     gradient_steps: int = 1
     target_entropy: Optional[float] = None
     initial_temperature: Optional[float] = None
     fix_temperature: bool = False
-    batch_size: int = 256
     start_timesteps: int = 10000
     replay_buffer_size: int = 1000000
 
@@ -62,7 +85,7 @@ class SACConfig(AlgorithmConfig):
         self._assert_positive(self.start_timesteps, 'start_timesteps')
 
 
-class DefaultQFunctionBuilder(QFunctionBuilder):
+class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -71,7 +94,7 @@ class DefaultQFunctionBuilder(QFunctionBuilder):
         return SACQFunction(scope_name)
 
 
-class DefaultPolicyBuilder(StochasticPolicyBuilder):
+class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -101,14 +124,31 @@ class SAC(Algorithm):
 
     This class implements the extended version of Soft Actor Critic (SAC) algorithm
     proposed by T. Haarnoja, et al. in the paper: "Soft Actor-Critic Algorithms and Applications"
-    For detail see: https://arxiv.org/pdf/1812.05905.pdf
+    For detail see: https://arxiv.org/abs/1812.05905
 
     This algorithm is slightly differs from the implementation of Soft Actor-Critic algorithm presented
-    also by T. Haarnoja, et al. in the following paper:  https://arxiv.org/pdf/1801.01290.pdf
+    also by T. Haarnoja, et al. in the following paper:  https://arxiv.org/abs/1801.01290
 
     The temperature parameter is adjusted automatically instead of providing reward scalar as a
     hyper parameter.
 
+    Args:
+        env_or_env_info \
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`SACConfig <nnabla_rl.algorithms.sac.ICML2018SACConfig>`): configuration of the SAC algorithm
+        q_function_builder (:py:class:`ModelBuilder[QFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of q function models
+        q_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of q function solvers
+        policy_builder (:py:class:`ModelBuilder[StochasticPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of actor models
+        policy_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of policy solvers
+        temperature_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of temperature solvers
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
     '''
 
     _config: SACConfig
@@ -132,13 +172,15 @@ class SAC(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: SACConfig = SACConfig(),
-                 q_function_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
+                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
+                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(SAC, self).__init__(env_or_env_info, config=config)
+        if self._env_info.is_discrete_action_env():
+            raise UnsupportedEnvironmentException
 
         self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
         self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)

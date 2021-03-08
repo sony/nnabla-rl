@@ -33,6 +33,15 @@ class TestICML2018SAC(object):
 
         assert sac.__name__ == 'ICML2018SAC'
 
+    def test_discrete_env_unsupported(self):
+        '''
+        Check that error occurs when training on discrete env
+        '''
+
+        dummy_env = E.DummyDiscrete()
+        with pytest.raises(Exception):
+            A.ICML2018SAC(dummy_env)
+
     def test_run_online_training(self):
         '''
         Check that no error occurs when calling online training

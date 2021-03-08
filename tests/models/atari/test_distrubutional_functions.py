@@ -171,10 +171,10 @@ class TestIQNQuantileFunction(object):
             np.random.rand(1, *state_shape))
         tau = nn.Variable.from_numpy_array(
             np.random.rand(1, 10))
-        model.quantiles(input_state, tau)
+        model.return_samples(input_state, tau)
         assert len(model.get_parameters()) == 12
 
-    def test_quantiles(self):
+    def test_return_samples(self):
         nn.clear_parameters()
 
         state_shape = (4, 84, 84)
@@ -193,10 +193,10 @@ class TestIQNQuantileFunction(object):
         input_state = nn.Variable.from_numpy_array(
             np.random.rand(1, *state_shape))
         tau = nn.Variable.from_numpy_array(np.random.rand(1, n_sample))
-        quantiles = model.quantiles(input_state, tau)
-        quantiles.forward()
+        return_samples = model.return_samples(input_state, tau)
+        return_samples.forward()
 
-        assert quantiles.shape == (1, n_sample, n_action)
+        assert return_samples.shape == (1, n_sample, n_action)
 
     def test_encode(self):
         nn.clear_parameters()

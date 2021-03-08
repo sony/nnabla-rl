@@ -46,6 +46,15 @@ class AlgorithmConfig(Configuration):
 
 
 class Algorithm(metaclass=ABCMeta):
+    """Base Algorithm class
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`)
+            : environment or environment info
+        params (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`):
+            configuration of the algorithm
+    """
     _env_info: EnvironmentInfo
     _config: AlgorithmConfig
     _iteration_num: int

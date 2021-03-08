@@ -33,6 +33,16 @@ class TestBEAR(object):
 
         assert bear.__name__ == 'BEAR'
 
+    def test_discrete_env_unsupported(self):
+        '''
+        Check that error occurs when training on discrete env
+        '''
+
+        dummy_env = E.DummyDiscrete()
+        config = A.BEARConfig()
+        with pytest.raises(Exception):
+            A.BEAR(dummy_env, config=config)
+
     def test_run_online_training(self):
         '''
         Check that error occurs when calling online training

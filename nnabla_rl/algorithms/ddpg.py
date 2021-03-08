@@ -24,9 +24,10 @@ import gym
 from typing import cast, Union
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import QFunctionBuilder, DeterministicPolicyBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
@@ -39,16 +40,34 @@ import nnabla_rl.model_trainers as MT
 
 @dataclass
 class DDPGConfig(AlgorithmConfig):
-    tau: float = 0.005
+    '''DDPGConfig
+    List of configurations for DDPG algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.001.
+        batch_size(int): training batch size. Defaults to 100.
+        tau (float): target network's parameter update coefficient. Defaults to 0.005.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.\
+            Defaults to 10000.
+        replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
+        exploration_noise_sigma (float): standard deviation of gaussian exploration noise. Defaults to 0.1.
+    '''
+
     gamma: float = 0.99
     learning_rate: float = 1.0*1e-3
     batch_size: int = 100
+    tau: float = 0.005
     start_timesteps: int = 10000
     replay_buffer_size: int = 1000000
     exploration_noise_sigma: float = 0.1
 
 
-class DefaultCriticBuilder(QFunctionBuilder):
+class DefaultCriticBuilder(ModelBuilder[QFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -58,7 +77,7 @@ class DefaultCriticBuilder(QFunctionBuilder):
         return TD3QFunction(scope_name, optimal_policy=target_policy)
 
 
-class DefaultActorBuilder(DeterministicPolicyBuilder):
+class DefaultActorBuilder(ModelBuilder[DeterministicPolicy]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -85,6 +104,33 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
 
 
 class DDPG(Algorithm):
+    '''Deep Deterministic Policy Gradient (DDPG) algorithm.
+
+    This class implements the modified version of the Deep Deterministic Policy Gradient (DDPG) algorithm
+    proposed by T. P.  Lillicrap, et al. in the paper: "Continuous control with deep reinforcement learning"
+    For details see: https://arxiv.org/abs/1509.02971
+    We use gaussian noise instead of Ornstein-Uhlenbeck process to explore in the environment.
+    The effectiveness of using gaussian noise for DDPG is reported in the paper:
+    "Addressing Funciton Approximaiton Error in Actor-Critic Methods". see https://arxiv.org/abs/1802.09477
+
+    Args:
+        env_or_env_info \
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`DDPGConfig <nnabla_rl.algorithms.ddpg.DDPGConfig>`):
+            configuration of the DDPG algorithm
+        critic_builder (:py:class:`ModelBuilder[QFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of critic models
+        critic_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of critic solvers
+        actor_builder (:py:class:`ModelBuilder[DeterministicPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of actor models
+        actor_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder of actor solvers
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
+    '''
+
     _config: DDPGConfig
     _q: QFunction
     _q_solver: nn.solver.Solver
@@ -99,12 +145,14 @@ class DDPG(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: DDPGConfig = DDPGConfig(),
-                 critic_builder: QFunctionBuilder = DefaultCriticBuilder(),
+                 critic_builder: ModelBuilder[QFunction] = DefaultCriticBuilder(),
                  critic_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 actor_builder: DeterministicPolicyBuilder = DefaultActorBuilder(),
+                 actor_builder: ModelBuilder[DeterministicPolicy] = DefaultActorBuilder(),
                  actor_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(DDPG, self).__init__(env_or_env_info, config=config)
+        if self._env_info.is_discrete_action_env():
+            raise UnsupportedEnvironmentException
 
         self._q = critic_builder(scope_name="q", env_info=self._env_info, algorithm_config=self._config)
         self._q_solver = critic_solver_builder(env_info=self._env_info, algorithm_config=self._config)

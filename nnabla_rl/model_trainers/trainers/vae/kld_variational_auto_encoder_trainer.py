@@ -71,9 +71,10 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
 
         self._vae_loss = 0
         for vae in models:
-            latent_distribution, reconstructed_action = vae(training_variables.s_current, training_variables.a_current)
+            latent_distribution, reconstructed_action = vae.encode_and_decode(training_variables.s_current,
+                                                                              action=training_variables.a_current)
 
-            latent_shape = (batch_size, *latent_distribution._data_dim)
+            latent_shape = (batch_size, latent_distribution.ndim)
             target_latent_distribution = Gaussian(mean=np.zeros(shape=latent_shape, dtype=np.float32),
                                                   ln_var=np.zeros(shape=latent_shape, dtype=np.float32))
 

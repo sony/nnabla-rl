@@ -136,8 +136,9 @@ class BEARPolicyTrainer(ModelTrainer):
         self._pi_loss = 0
         self._pi_warmup_loss = 0
         for policy in models:
-            sampled_actions = self._vae.decode_multiple(
-                self._config.num_mmd_actions, training_variables.s_current)
+            sampled_actions = self._vae.decode_multiple(z=None,
+                                                        decode_num=self._config.num_mmd_actions,
+                                                        state=training_variables.s_current)
             policy_distribution = policy.pi(training_variables.s_current)
             policy_actions = policy_distribution.sample_multiple(
                 num_samples=self._config.num_mmd_actions, noise_clip=(-0.5, 0.5))

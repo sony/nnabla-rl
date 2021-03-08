@@ -18,6 +18,9 @@ from nnabla_rl.algorithm import AlgorithmConfig
 
 
 class ReplayBufferBuilder():
+    """ReplayBuffer builder interface class
+    """
+
     def __call__(self,
                  env_info: EnvironmentInfo,
                  algorithm_config: AlgorithmConfig,
@@ -28,4 +31,16 @@ class ReplayBufferBuilder():
                             env_info: EnvironmentInfo,
                             algorithm_config: AlgorithmConfig,
                             **kwargs) -> ReplayBuffer:
+        """Build replay buffer
+
+        Args:
+            env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):\
+                environment information
+            algorithm_config (:py:class:`AlgorithmParam <nnabla_rl.algorithm.AlgorithmConfig>`): \
+                configuration class of the algorithm
+
+        Returns:
+            ReplayBuffer: replay buffer instance.
+        """
+
         raise NotImplementedError

@@ -33,6 +33,16 @@ class TestDDPG(object):
 
         assert ddpg.__name__ == 'DDPG'
 
+    def test_discrete_env_unsupported(self):
+        '''
+        Check that error occurs when training on discrete env
+        '''
+
+        dummy_env = E.DummyDiscrete()
+        config = A.DDPGConfig()
+        with pytest.raises(Exception):
+            A.DDPG(dummy_env, config=config)
+
     def test_run_online_training(self):
         '''
         Check that no error occurs when calling online training

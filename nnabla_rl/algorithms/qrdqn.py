@@ -25,8 +25,9 @@ from typing import cast, Union
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import QuantileDistributionFunctionBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
@@ -39,14 +40,42 @@ import nnabla_rl.model_trainers as MT
 
 @dataclass
 class QRDQNConfig(AlgorithmConfig):
-    batch_size: int = 32
+    '''
+    List of configurations for QRDQN algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.00005.
+        batch_size (int): training atch size. Defaults to 32.
+        learner_update_frequency (int): the interval of learner update. Defaults to 4.
+        target_update_frequency (int): the interval of target q-function update. Defaults to 10000.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.
+            Defaults to 50000.
+        replay_buffer_size (int): the capacity of replay buffer. Defaults to 1000000.
+        max_explore_steps (int): the number of steps decaying the epsilon value.\
+            The epsilon will be decayed linearly \
+            :math:`\\epsilon=\\epsilon_{init} - step\\times\\frac{\\epsilon_{init} - \
+            \\epsilon_{final}}{max\\_explore\\_steps}`.\
+            Defaults to 1000000.
+        initial_epsilon (float): the initial epsilon value for ε-greedy explorer. Defaults to 1.0.
+        final_epsilon (float): the last epsilon value for ε-greedy explorer. Defaults to 0.01.
+        test_epsilon (float): the epsilon value on testing. Defaults to 0.001.
+        num_quantiles (int): Number of quantile points. Defaults to 200.
+        kappa (float): threshold value of quantile huber loss. Defaults to 1.0.
+    '''
+
     gamma: float = 0.99
-    start_timesteps: int = 50000
-    replay_buffer_size: int = 1000000
+    learning_rate: float = 0.00005
+    batch_size: int = 32
     learner_update_frequency: int = 4
     target_update_frequency: int = 10000
+    start_timesteps: int = 50000
+    replay_buffer_size: int = 1000000
     max_explore_steps: int = 1000000
-    learning_rate: float = 0.00005
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.01
     test_epsilon: float = 0.001
@@ -73,7 +102,7 @@ class QRDQNConfig(AlgorithmConfig):
         self._assert_positive(self.kappa, 'kappa')
 
 
-class DefaultQuantileBuilder(QuantileDistributionFunctionBuilder):
+class DefaultQuantileBuilder(ModelBuilder[QuantileDistributionFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -99,11 +128,24 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
 
 
 class QRDQN(Algorithm):
-    '''Quantile Regression DQN algorithm implementation.
+    '''Quantile Regression DQN algorithm.
 
     This class implements the Quantile Regression DQN algorithm
     proposed by W. Dabney, et al. in the paper: "Distributional Reinforcement Learning with Quantile Regression"
-    For detail see: https://arxiv.org/pdf/1710.10044.pdf
+    For details see: https://arxiv.org/abs/1710.10044
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`QRDQNConfig <nnabla_rl.algorithms.qrdqn.QRDQNConfig>`):
+            configuration of QRDQN algorithm
+        quantile_dist_function_builder (:py:class:`ModelBuilder[QuantileDistributionFunction] \
+            <nnabla_rl.builders.ModelBuilder>`): builder of quantile distribution function models
+        quantile_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder for quantile distribution function solvers
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
     '''
 
     _config: QRDQNConfig
@@ -121,13 +163,13 @@ class QRDQN(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: QRDQNConfig = QRDQNConfig(),
-                 quantile_dist_function_builder: QuantileDistributionFunctionBuilder = DefaultQuantileBuilder(),
+                 quantile_dist_function_builder: ModelBuilder[QuantileDistributionFunction] = DefaultQuantileBuilder(),
                  quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(QRDQN, self).__init__(env_or_env_info, config=config)
 
         if not self._env_info.is_discrete_action_env():
-            raise ValueError('{} only supports discrete action environment'.format(self.__name__))
+            raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
         self._quantile_dist = quantile_dist_function_builder('quantile_dist_train', self._env_info, self._config)
         self._quantile_dist_solver = quantile_solver_builder(self._env_info, self._config)

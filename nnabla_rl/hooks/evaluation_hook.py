@@ -20,11 +20,21 @@ import numpy as np
 
 
 class EvaluationHook(Hook):
+    '''
+    Hook to run evaluation during training.
+
+    Args:
+        env (gym.Env): Environment to run the evaluation
+        evaluator (Callable[[nnabla_rl.algorithm.Algorithm, gym.Env], List[float]]):
+            Evaluator which runs the actual evaluation.
+            Defaults to :py:class:`EpisodicEvaluator <nnabla_rl.utils.evaluator.EpisodicEvaluator>`.
+        timing (int): Evaluation interval. Defaults to 1000 iteration.
+        writer (nnabla_rl.writer.Writer, optional): Writer instance to save/print the evaluation results.
+            Defaults to None.
+    '''
+
     def __init__(self, env, evaluator=EpisodicEvaluator(), timing=1000, writer=None):
         super(EvaluationHook, self).__init__(timing=timing)
-        '''
-        Hook to run evaluation during training.
-        '''
         self._env = env
         self._evaluator = evaluator
         self._timing = timing

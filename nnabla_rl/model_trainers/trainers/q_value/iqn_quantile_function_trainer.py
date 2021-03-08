@@ -87,8 +87,8 @@ class IQNQuantileFunctionTrainer(ModelTrainer):
         self._quantile_huber_loss = 0
         for model in models:
             tau_i = model._sample_tau(shape=(batch_size, self._config.N))
-            quantiles = model.quantiles(training_variables.s_current, tau_i)
-            Z_tau_i = model._quantiles_of(quantiles, training_variables.a_current)
+            samples = model.return_samples(training_variables.s_current, tau_i)
+            Z_tau_i = model._return_samples_of(samples, training_variables.a_current)
             Z_tau_i = RF.expand_dims(Z_tau_i, axis=2)
             tau_i = RF.expand_dims(tau_i, axis=2)
             assert Z_tau_i.shape == (batch_size, self._config.N, 1)

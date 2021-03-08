@@ -25,13 +25,14 @@ import gym
 import numpy as np
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import QFunctionBuilder, StochasticPolicyBuilder, VariationalAutoEncoderBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 from nnabla_rl.models import TD3QFunction, BEARPolicy, UnsquashedVariationalAutoEncoder, \
     DeterministicPolicy, StochasticPolicy, QFunction, VariationalAutoEncoder
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.functions as RF
 
@@ -39,26 +40,36 @@ import nnabla_rl.functions as RF
 @dataclass
 class BEARConfig(AlgorithmConfig):
     '''BEARConfig
-    Configurations used in BEAR algorithm.
+    List of configurations for BEAR algorithm.
 
     Args:
-        tau(float): soft network parameter update coefficient. Defaults to 0.005.
-        gamma(float): reward decay. Defaults to 0.99.
-        learning_rate(float): learning rate which is set for solvers. Defaults to 1.0*1e-3.
-        lmb(float): weight used for balancing the ratio of minQ and maxQ during q update. Defaults to 0.75.
-        epsilon(float): inequality constraint constant used during dual gradient descent. Defaults to 0.05.
-        num_q_ensembles(int): number of q ensembles . Defaults to 2.
-        num_mmd_actions(int): number of actions to sample for computing maximum mean discrepancy (MMD). Defaults to 5.
-        num_action_sampoles(int): number of actions to sample for computing target q values. Defaults to 10.
-        mmd_type(str): kernel type used for MMD computation. laplacian or gaussian is supported. Defaults to gaussian.
-        mmd_sigma(float): parameter used for adjusting the  MMD. Defaults to 20.0.
-        warmup_iterations(int): Number of iterations until start updating the policy. Defaults to 20000
-        batch_size(int or None): Number of iterations starting to train the networks. Defaults to None.
-        use_mean_for_eval(bool): Use mean value instead of best action among the samples for evaluation
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.001.
+        batch_size (int): training batch size. Defaults to 100.
+        tau (float): target network's parameter update coefficient. Defaults to 0.005.
+        lmb (float): weight :math:`\\lambda` used for balancing the ratio between :math:`\\min{Q}` and :math:`\\max{Q}`\
+            on target q value generation (i.e. :math:`\\lambda\\min{Q} + (1 - \\lambda)\\max{Q}`).\
+            Defaults to 0.75.
+        epsilon (float): inequality constraint of dual gradient descent. Defaults to 0.05.
+        num_q_ensembles (int): number of q ensembles . Defaults to 2.
+        num_mmd_actions (int): number of actions to sample for computing maximum mean discrepancy (MMD). Defaults to 5.
+        num_action_samples (int): number of actions to sample for computing target q values. Defaults to 10.
+        mmd_type (str): kernel type used for MMD computation. laplacian or gaussian is supported. Defaults to gaussian.
+        mmd_sigma (float): parameter used for adjusting the  MMD. Defaults to 20.0.
+        initial_lagrange_multiplier (float, optional): Initial value of lagrange multiplier. \
+            If not specified, random value sampled from normal distribution will be used instead.
+        fix_lagrange_multiplier (bool): Either to fix the lagrange multiplier or not. Defaults to False.
+        warmup_iterations (int): Number of iterations until start updating the policy. Defaults to 20000
+        use_mean_for_eval (bool): Use mean value instead of best action among the samples for evaluation.\
+            Defaults to False.
     '''
-    tau: float = 0.005
     gamma: float = 0.99
     learning_rate: float = 1e-3
+    batch_size: int = 100
+    tau: float = 0.005
     lmb: float = 0.75
     epsilon: float = 0.05
     num_q_ensembles: int = 2
@@ -69,7 +80,6 @@ class BEARConfig(AlgorithmConfig):
     initial_lagrange_multiplier: Optional[float] = None
     fix_lagrange_multiplier: bool = False
     warmup_iterations: int = 20000
-    batch_size: int = 100
     use_mean_for_eval: bool = False
 
     def __post_init__(self):
@@ -94,8 +104,8 @@ class BEARConfig(AlgorithmConfig):
             raise ValueError('batch size must not be negative')
 
 
-class DefaultQFunctionBuilder(QFunctionBuilder):
-    def build_model(self,   # type: ignore[override]
+class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
+    def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
                     algorithm_config: BEARConfig,
@@ -103,8 +113,8 @@ class DefaultQFunctionBuilder(QFunctionBuilder):
         return TD3QFunction(scope_name)
 
 
-class DefaultPolicyBuilder(StochasticPolicyBuilder):
-    def build_model(self,   # type: ignore[override]
+class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
+    def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
                     algorithm_config: BEARConfig,
@@ -112,8 +122,8 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
         return BEARPolicy(scope_name, env_info.action_dim)
 
 
-class DefaultVAEBuilder(VariationalAutoEncoderBuilder):
-    def build_model(self,   # type: ignore[override]
+class DefaultVAEBuilder(ModelBuilder[VariationalAutoEncoder]):
+    def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
                     algorithm_config: BEARConfig,
@@ -133,12 +143,34 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class BEAR(Algorithm):
-    '''Bootstrapping Error Accumulation Reduction (BEAR) algorithm implementation.
+    '''Bootstrapping Error Accumulation Reduction (BEAR) algorithm.
 
     This class implements the Bootstrapping Error Accumulation Reduction (BEAR) algorithm
     proposed by A. Kumar, et al. in the paper: "Stabilizing Off-Policy Q-learning via Bootstrapping Error Reduction"
-    For detail see: https://arxiv.org/pdf/1906.00949.pdf
+    For details see: https://arxiv.org/abs/1906.00949
 
+    This algorithm only supports offline training.
+
+    Args:
+        env_or_env_info \
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`BEARConfig <nnabla_rl.algorithms.bear.BEARConfig>`):
+            configuration of the BEAR algorithm
+        q_function_builder (:py:class:`ModelBuilder[QFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of q-function models
+        q_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder for q-function solvers
+        pi_function_builder (:py:class:`ModelBuilder[StochasticPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of policy models
+        pi_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder for policy solvers
+        vae_builder (:py:class:`ModelBuilder[VariationalAutoEncoder] <nnabla_rl.builders.ModelBuilder>`):
+            builder of variational auto encoder models
+        vae_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder for variational auto encoder solvers
+        lagrange_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder for lagrange multiplier solver
     '''
 
     _config: BEARConfig
@@ -161,14 +193,16 @@ class BEAR(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: BEARConfig = BEARConfig(),
-                 q_function_builder: QFunctionBuilder = DefaultQFunctionBuilder(),
+                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 pi_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
+                 pi_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  pi_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 vae_builder: VariationalAutoEncoderBuilder = DefaultVAEBuilder(),
+                 vae_builder: ModelBuilder[VariationalAutoEncoder] = DefaultVAEBuilder(),
                  vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  lagrange_solver_builder: SolverBuilder = DefaultSolverBuilder()):
         super(BEAR, self).__init__(env_or_env_info, config=config)
+        if self._env_info.is_discrete_action_env():
+            raise UnsupportedEnvironmentException
 
         self._q_ensembles = []
         self._q_solvers = {}
@@ -235,8 +269,8 @@ class BEAR(Algorithm):
                 super().__init__(original_vae.scope_name)
                 self._original_vae = original_vae
 
-            def __call__(self, *args):
-                latent_distribution, reconstructed = self._original_vae(*args)
+            def encode_and_decode(self, s, **kwargs):
+                latent_distribution, reconstructed = self._original_vae.encode_and_decode(s, **kwargs)
                 return latent_distribution, NF.tanh(reconstructed)
 
             def encode(self, *args): raise NotImplementedError

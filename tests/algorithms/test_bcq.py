@@ -45,6 +45,16 @@ class TestBCQ(object):
         with pytest.raises(NotImplementedError):
             bcq.train_online(dummy_env, total_iterations=10)
 
+    def test_discrete_env_unsupported(self):
+        '''
+        Check that error occurs when training on discrete env
+        '''
+
+        dummy_env = E.DummyDiscrete()
+        config = A.BCQConfig()
+        with pytest.raises(Exception):
+            A.BCQ(dummy_env, config=config)
+
     def test_run_offline_training(self):
         '''
         Check that no error occurs when calling offline training

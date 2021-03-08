@@ -25,8 +25,9 @@ from typing import cast, Union
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import StateActionQuantileFunctionBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
@@ -39,14 +40,44 @@ import nnabla_rl.model_trainers as MT
 
 @dataclass
 class IQNConfig(AlgorithmConfig):
-    batch_size: int = 32
+    '''
+    List of configurations for IQN algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.00005.
+        batch_size (int): training atch size. Defaults to 32.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.
+            Defaults to 50000.
+        replay_buffer_size (int): the capacity of replay buffer. Defaults to 1000000.
+        learner_update_frequency (int): the interval of learner update. Defaults to 4.
+        target_update_frequency (int): the interval of target q-function update. Defaults to 10000.
+        max_explore_steps (int): the number of steps decaying the epsilon value.\
+            The epsilon will be decayed linearly \
+            :math:`\\epsilon=\\epsilon_{init} - step\\times\\frac{\\epsilon_{init} - \
+            \\epsilon_{final}}{max\\_explore\\_steps}`.\
+            Defaults to 1000000.
+        initial_epsilon (float): the initial epsilon value for ε-greedy explorer. Defaults to 1.0.
+        final_epsilon (float): the last epsilon value for ε-greedy explorer. Defaults to 0.01.
+        test_epsilon (float): the epsilon value on testing. Defaults to 0.001.
+        N (int): Number of samples to compute the current state's quantile values. Defaults to 64.
+        N_prime (int): Number of samples to compute the target state's quantile values. Defaults to 64.
+        K (int): Number of samples to compute greedy next action. Defaults to 32.
+        kappa (float): threshold value of quantile huber loss. Defaults to 1.0.
+        embedding_dim (int): dimension of embedding for the sample point. Defaults to 64.
+    '''
     gamma: float = 0.99
+    learning_rate: float = 0.00005
+    batch_size: int = 32
     start_timesteps: int = 50000
     replay_buffer_size: int = 1000000
     learner_update_frequency: int = 4
     target_update_frequency: int = 10000
     max_explore_steps: int = 1000000
-    learning_rate: float = 0.00005
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.01
     test_epsilon: float = 0.001
@@ -83,7 +114,7 @@ def risk_neutral_measure(tau):
     return tau
 
 
-class DefaultQuantileFunctionBuilder(StateActionQuantileFunctionBuilder):
+class DefaultQuantileFunctionBuilder(ModelBuilder[StateActionQuantileFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -116,11 +147,23 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
 
 
 class IQN(Algorithm):
-    '''Implicit Quantile Network algorithm implementation.
+    '''Implicit Quantile Network algorithm.
 
     This class implements the Implicit Quantile Network (IQN) algorithm
     proposed by W. Dabney, et al. in the paper: "Implicit Quantile Networks for Distributional Reinforcement Learning"
-    For detail see: https://arxiv.org/pdf/1806.06923.pdf
+    For details see: https://arxiv.org/pdf/1806.06923.pdf
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`IQNConfig <nnabla_rl.algorithms.iqn.IQNConfig>`): configuration of IQN algorithm
+        quantile_function_builder (:py:class:`ModelBuilder[StateActionQuantileFunction] \
+            <nnabla_rl.builders.ModelBuilder>`): buider of state-action quantile function models
+        quantile_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
+            builder for state action quantile function solvers
+        replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
+            builder of replay_buffer
     '''
 
     _config: IQNConfig
@@ -137,13 +180,14 @@ class IQN(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: IQNConfig = IQNConfig(),
-                 quantile_function_builder: StateActionQuantileFunctionBuilder = DefaultQuantileFunctionBuilder(),
+                 quantile_function_builder: ModelBuilder[StateActionQuantileFunction]
+                 = DefaultQuantileFunctionBuilder(),
                  quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(IQN, self).__init__(env_or_env_info, config=config)
 
         if not self._env_info.is_discrete_action_env():
-            raise ValueError('{} only supports discrete action environment'.format(self.__name__))
+            raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
         self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._config)
         self._target_quantile_function = cast(StateActionQuantileFunction,

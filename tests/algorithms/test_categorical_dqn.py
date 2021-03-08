@@ -33,6 +33,16 @@ class TestCategoricalDQN(object):
 
         assert categorical_dqn.__name__ == 'CategoricalDQN'
 
+    def test_continuous_env_unsupported(self):
+        '''
+        Check that error occurs when training on continuous env
+        '''
+
+        dummy_env = E.DummyContinuous()
+        config = A.CategoricalDQNConfig()
+        with pytest.raises(Exception):
+            A.CategoricalDQN(dummy_env, config=config)
+
     def test_run_online_training(self):
         '''
         Check that no error occurs when calling online training

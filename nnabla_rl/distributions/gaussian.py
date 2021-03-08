@@ -24,6 +24,12 @@ from nnabla_rl.distributions import Distribution, common_utils
 class Gaussian(Distribution):
     '''
     Gaussian distribution
+
+    :math:`\\mathcal{N}(\\mu,\\,\\sigma^{2})`
+
+    Args:
+        mean (nn.Variable): mean :math:`\\mu` of gaussian distribution.
+        ln_var (nn.Variable): logarithm of the variance :math:`\\sigma^{2}`. (i.e. ln_var is :math:`\\log{\\sigma^{2}}`)
     '''
 
     def __init__(self, mean, ln_var):
@@ -38,6 +44,11 @@ class Gaussian(Distribution):
         self._ln_var = ln_var
         self._batch_size = mean.shape[0]
         self._data_dim = mean.shape[1:]
+        self._ndim = mean.shape[-1]
+
+    @property
+    def ndim(self):
+        return self._ndim
 
     def sample(self, noise_clip=None):
         return RF.sample_gaussian(self._mean,

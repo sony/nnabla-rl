@@ -28,6 +28,9 @@ class MemoryEfficientAtariBuffer(ReplayBuffer):
     This replay buffer reduces the size of experience by casting the images to uint8 and
     removing old frames concatenated to the observation.
     By using this buffer, you can hold 1M experiences using only 20GB(approx.) of memory.
+
+    Note that this class is designed only for DQN style training on atari environment.
+    (i.e. State consists of 4 concatenated grayscaled frames and its values are normalized between 0 and 1)
     '''
 
     def __init__(self, capacity):

@@ -25,7 +25,7 @@ from nnabla import solvers as NS
 import nnabla_rl.utils.context as context
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import VFunctionBuilder, StochasticPolicyBuilder, SolverBuilder
+from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl import environment_explorers as EE
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
@@ -39,6 +39,30 @@ from nnabla_rl.utils.reproductions import set_global_seed
 
 @dataclass
 class A2CConfig(AlgorithmConfig):
+    """
+    List of configurations for A2C algorithm
+
+    Args:
+        gamma (float): discount factor of rewards. Defaults to 0.99.
+        n_steps (int): number of rollout steps. Defaults to 5.
+        learning_rate (float): learning rate which is set to all solvers. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.0007.
+        entropy_coefficient (float): scalar of entropy regularization term. Defaults to 0.01.
+        value_coefficient (float): scalar of value loss. Defaults to 0.5.
+        decay (float): decay parameter of Adam solver. Defaults to 0.99.
+        epsilon (float): epislon of Adam solver. Defaults to 0.00001.
+        start_timesteps (int): the timestep when training starts.\
+            The algorithm will collect experiences from the environment by acting randomly until this timestep.
+            Defaults to 1.
+        actor_num (int): number of parallel actors. Defaults to 8.
+        timelimit_as_terminal (bool): Treat as done if the environment reaches the \
+            `timelimit <https://github.com/openai/gym/blob/master/gym/wrappers/time_limit.py>`_.\
+            Defaults to False.
+        max_grad_norm (float): threshold value for clipping gradient. Defaults to 0.5.
+        seed (int): base seed of random number generator used by the actors. Defaults to 1.
+    """
     gamma: float = 0.99
     n_steps: int = 5
     learning_rate: float = 7e-4
@@ -65,7 +89,7 @@ class A2CConfig(AlgorithmConfig):
         self._assert_positive(self.max_grad_norm, 'max_grad_norm')
 
 
-class DefaultPolicyBuilder(StochasticPolicyBuilder):
+class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -79,7 +103,7 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
                          action_dim=env_info.action_dim)
 
 
-class DefaultVFunctionBuilder(VFunctionBuilder):
+class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -103,6 +127,27 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class A2C(Algorithm):
+    '''Advantage Actor-Critic (A2C) algorithm implementation.
+
+    This class implements the Advantage Actor-Critic (A2C) algorithm.
+    A2C is the synchronous version of A3C, Asynchronous Advantage Actor-Critic.
+    A3C was proposed by V. Mnih, et al. in the paper: "Asynchronous Methods for Deep Reinforcement Learning"
+    For detail see: https://arxiv.org/abs/1602.01783
+
+    This algorithm only supports online training.
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        v_function_builder (:py:class:`ModelBuilder[VFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of v function models
+        v_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for v function solvers
+        policy_builder (:py:class:`ModelBuilder[StochasicPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of policy models
+        policy_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for policy solvers
+        config (:py:class:`A2CConfig <nnabla_rl.algorithms.a2c.A2Config>`): configuration of PPO algorithm
+    '''
     _config: A2CConfig
     _gpu_id: int
     _v_function: VFunction
@@ -121,11 +166,14 @@ class A2C(Algorithm):
     _v_function_trainer: ModelTrainer
 
     def __init__(self, env_or_env_info,
-                 v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
+                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
+                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  config=A2CConfig()):
+        if self._env_info.is_continuous_action_env():
+            raise NotImplementedError
+
         self._gpu_id = context._gpu_id
         # Prevent setting context by the Algorithm class
         if 0 <= self._gpu_id:

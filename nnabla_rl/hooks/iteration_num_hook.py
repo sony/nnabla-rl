@@ -17,6 +17,14 @@ from nnabla_rl.logger import logger
 
 
 class IterationNumHook(Hook):
+    '''
+    Hook to print the iteration number periodically.
+    This hook just prints the iteration number of training.
+
+    Args:
+        timing (int): Printing interval. Defaults to 1 iteration.
+    '''
+
     def __init__(self, timing=1):
         super(IterationNumHook, self).__init__(timing=timing)
 

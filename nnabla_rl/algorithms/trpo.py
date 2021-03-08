@@ -26,7 +26,7 @@ from typing import Optional, Union
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import StochasticPolicyBuilder, VFunctionBuilder, SolverBuilder, PreprocessorBuilder
+from nnabla_rl.builders import ModelBuilder, SolverBuilder, PreprocessorBuilder
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
@@ -42,11 +42,39 @@ import nnabla_rl.preprocessors as RP
 
 @dataclass
 class TRPOConfig(AlgorithmConfig):
-    gpu_batch_size: Optional[int] = None
+    '''TRPO config
+    Args:
+        gamma (float): Discount factor of rewards. Defaults to 0.995.
+        lmb (float): Scalar of lambda return's computation in GAE. Defaults to 0.97.\
+            This configuration is related to bias and variance of estimated value. \
+            If it is close to 0, estimated value is low-variance but biased.\
+            If it is close to 1, estimated value is unbiased but high-variance.
+        num_steps_per_iteration (int): Number of steps per each training iteration for collecting on-policy experinces.\
+            Increasing this step size is effective to get precise parameters of policy and value function updating, \
+            but computational time of each iteration will increase. Defaults to 5000.
+        pi_batch_size (int): Trainig batch size of policy. \
+            Usually, pi_batch_size is the same as num_steps_per_iteration. Defaults to 5000.
+        sigma_kl_divergence_constraint (float): Constraint size of kl divergence \
+            between previous policy and updated policy. Defaults to 0.01.
+        maximum_backtrack_numbers (int): Maximum backtrack numbers of linesearch. Defaults to 10.
+        conjugate_gradient_damping (float): Damping size of conjugate gradient method. Defaults to 0.1.
+        conjugate_gradient_iterations (int): Number of iterations of conjugate gradient method. Defaults to 20.
+        vf_epochs (int): Number of epochs in each iteration. Defaults to 5.
+        vf_batch_size (int): Training batch size of value function. Defaults to 64.
+        vf_learning_rate (float): Learning rate which is set to the solvers of value function. \
+            You can customize/override the learning rate for each solver by implementing the \
+            (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
+            Defaults to 0.001.
+        preprocess_state (bool): Enable preprocessing the states in the collected experiences \
+            before feeding as training batch. Defaults to True.
+        gpu_batch_size (int, optional): Actual batch size to reduce one forward gpu calculation memory. \
+            As long as gpu memory size is enough, this configuration should not be specified. If not specified,  \
+            gpu_batch_size is the same as pi_batch_size. Defaults to None.
+    '''
     gamma: float = 0.995
     lmb: float = 0.97
-    pi_batch_size: int = 5000
     num_steps_per_iteration: int = 5000
+    pi_batch_size: int = 5000
     sigma_kl_divergence_constraint: float = 0.01
     maximum_backtrack_numbers: int = 10
     conjugate_gradient_damping: float = 0.1
@@ -55,6 +83,7 @@ class TRPOConfig(AlgorithmConfig):
     vf_batch_size: int = 64
     vf_learning_rate: float = 1e-3
     preprocess_state: bool = True
+    gpu_batch_size: Optional[int] = None
 
     def __post_init__(self):
         '''__post_init__
@@ -76,7 +105,7 @@ class TRPOConfig(AlgorithmConfig):
         self._assert_positive(self.vf_learning_rate, 'vf_learning_rate')
 
 
-class DefaultPolicyBuilder(StochasticPolicyBuilder):
+class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -85,7 +114,7 @@ class DefaultPolicyBuilder(StochasticPolicyBuilder):
         return TRPOPolicy(scope_name, env_info.action_dim)
 
 
-class DefaultVFunctionBuilder(VFunctionBuilder):
+class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
     def build_model(self,  # type: ignore[override]
                     scope_name: str,
                     env_info: EnvironmentInfo,
@@ -103,18 +132,37 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class DefaultPreprocessorBuilder(PreprocessorBuilder):
-    def build_preprocessor(self,
+    def build_preprocessor(self,  # type: ignore[override]
                            scope_name: str,
                            env_info: EnvironmentInfo,
-                           algorithm_config: AlgorithmConfig,
+                           algorithm_config: TRPOConfig,
                            **kwargs) -> Preprocessor:
         return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
 class TRPO(Algorithm):
-    ''' Trust Region Policy Optimiation method
-        with Generalized Advantage Estimation (GAE)
-        See: https://arxiv.org/pdf/1502.05477.pdf and https://arxiv.org/pdf/1506.02438.pdf
+    '''Trust Region Policy Optimiation method with Generalized Advantage Estimation (GAE) implementation.
+
+    This class implements the Trust Region Policy Optimiation (TRPO)
+    with Generalized Advantage Estimation (GAE) algorithm proposed by J. Schulman, et al.
+    in the paper: "Trust Region Policy Optimization" and
+    "High-Dimensional Continuous Control Using Generalized Advantage Estimation"
+    For detail see: https://arxiv.org/abs/1502.05477 and https://arxiv.org/abs/1506.02438
+
+    This algorithm only supports online training.
+
+    Args:
+        env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            the environment to train or environment info
+        config (:py:class:`PPOConfig <nnabla_rl.algorithms.trpo.TRPOConfig>`): configuration of TRPO algorithm
+        v_function_builder (:py:class:`ModelBuilder[VFunction] <nnabla_rl.builders.ModelBuilder>`):
+            builder of v function models
+        v_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for v function solvers
+        policy_builder (:py:class:`ModelBuilder[StochasicPolicy] <nnabla_rl.builders.ModelBuilder>`):
+            builder of policy models
+        state_preprocessor_builder (None or :py:class:`PreprocessorBuilder <nnabla_rl.builders.PreprocessorBuilder>`):
+            state preprocessor builder to preprocess the states
     '''
 
     _config: TRPOConfig
@@ -131,9 +179,9 @@ class TRPO(Algorithm):
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: TRPOConfig = TRPOConfig(),
-                 v_function_builder: VFunctionBuilder = DefaultVFunctionBuilder(),
+                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: StochasticPolicyBuilder = DefaultPolicyBuilder(),
+                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
         super(TRPO, self).__init__(env_or_env_info, config=config)
         if self._env_info.is_discrete_action_env():
