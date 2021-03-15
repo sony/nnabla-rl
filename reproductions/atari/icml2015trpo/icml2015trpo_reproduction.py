@@ -37,7 +37,7 @@ def run_training(args):
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=int(1e5))
     iteration_num_hook = H.IterationNumHook(timing=int(1e5))
 
-    config = A.ICML2015TRPOConfig(gpu_batch_size=5000)
+    config = A.ICML2015TRPOConfig(gpu_batch_size=args.gpu_batch_size)
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
     if args.snapshot_dir is None:
@@ -70,8 +70,9 @@ def run_showcase(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str,
-                        default='BeamRiderNoFrameskip-v4')
+                        default='PongNoFrameskip-v4')
     parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--gpu_batch_size', type=int, default=2500)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')

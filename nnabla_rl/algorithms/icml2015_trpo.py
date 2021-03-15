@@ -200,7 +200,7 @@ class ICML2015TRPO(Algorithm):
         for experiences in buffer_iterator:
             experience, *_ = experiences
             s_seq, a_seq, r_seq, *_ = marshall_experiences(experience[0])
-            accumulated_reward = self._compute_accumulated_reward(r_seq, self._config.gamma)
+            accumulated_reward = self._compute_accumulated_reward(r_seq.flatten(), self._config.gamma)
             s_batch.append(s_seq)
             a_batch.append(a_seq)
             accumulated_reward_batch.append(accumulated_reward)
@@ -214,6 +214,8 @@ class ICML2015TRPO(Algorithm):
             accumulated_reward_batch[:self._config.num_steps_per_iteration]
 
     def _compute_accumulated_reward(self, reward_sequence, gamma):
+        if not reward_sequence.ndim == 1:
+            raise ValueError("Invalid reward_sequence dimension")
         episode_length = len(reward_sequence)
         gamma_seq = np.array(
             [gamma**i for i in range(episode_length)])

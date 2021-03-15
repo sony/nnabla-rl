@@ -99,6 +99,17 @@ class TestICML2015TRPO(object):
 
         assert expect == pytest.approx(accumulated_reward.flatten())
 
+    def test_compute_accumulated_reward_raise_value_error(self):
+        gamma = 0.99
+        episode_length = 3
+        reward_sequence = np.arange(episode_length).reshape((1, -1))
+
+        dummy_envinfo = E.DummyContinuous()
+        icml2015_trpo = A.ICML2015TRPO(dummy_envinfo)
+
+        with pytest.raises(ValueError):
+            icml2015_trpo._compute_accumulated_reward(reward_sequence, gamma)
+
 
 if __name__ == "__main__":
     import sys
