@@ -20,6 +20,8 @@ from nnabla_rl.algorithms.categorical_dqn import CategoricalDQN, CategoricalDQNC
 from nnabla_rl.algorithms.ddpg import DDPG, DDPGConfig
 from nnabla_rl.algorithms.dqn import DQN, DQNConfig
 from nnabla_rl.algorithms.dummy import Dummy, DummyConfig
+from nnabla_rl.algorithms.gail import GAIL, GAILConfig
+from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOConfig
 from nnabla_rl.algorithms.icml2018_sac import ICML2018SAC, ICML2018SACConfig
 from nnabla_rl.algorithms.iqn import IQN, IQNConfig
 from nnabla_rl.algorithms.munchausen_dqn import MunchausenDQN, MunchausenDQNConfig
@@ -29,9 +31,7 @@ from nnabla_rl.algorithms.qrdqn import QRDQN, QRDQNConfig
 from nnabla_rl.algorithms.reinforce import REINFORCE, REINFORCEConfig
 from nnabla_rl.algorithms.sac import SAC, SACConfig
 from nnabla_rl.algorithms.td3 import TD3, TD3Config
-from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOConfig
 from nnabla_rl.algorithms.trpo import TRPO, TRPOConfig
-from nnabla_rl.algorithms.gail import GAIL, GAILConfig
 
 # Do NOT manipulate this dictionary directly.
 # Use register_algorithm() instead.

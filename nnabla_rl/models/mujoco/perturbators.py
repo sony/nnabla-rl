@@ -15,7 +15,6 @@
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-
 from nnabla_rl.models.perturbator import Perturbator
 
 

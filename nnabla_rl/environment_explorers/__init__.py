@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.environment_explorers.epsilon_greedy_explorer import \
-    LinearDecayEpsilonGreedyExplorer, LinearDecayEpsilonGreedyExplorerConfig  # noqa
+from nnabla_rl.environment_explorers.epsilon_greedy_explorer import (LinearDecayEpsilonGreedyExplorer,  # noqa
+                                                                     LinearDecayEpsilonGreedyExplorerConfig)
+
 from nnabla_rl.environment_explorers.gaussian_explorer import GaussianExplorer, GaussianExplorerConfig  # noqa
 from nnabla_rl.environment_explorers.raw_policy_explorer import RawPolicyExplorer, RawPolicyExplorerConfig  # noqa

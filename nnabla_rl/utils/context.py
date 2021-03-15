@@ -16,7 +16,6 @@ import warnings
 
 import nnabla as nn
 from nnabla.ext_utils import get_extension_context
-
 from nnabla_rl.logger import logger
 
 _gpu_id = -1

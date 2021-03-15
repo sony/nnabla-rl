@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
 import nnabla as nn
-
-import numpy as np
-
-from nnabla_rl.replay_buffer import ReplayBuffer
-import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
+import nnabla_rl.environments as E
+from nnabla_rl.replay_buffer import ReplayBuffer
 
 
 class TestIQN(object):

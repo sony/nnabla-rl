@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
+import argparse
 import pathlib
 import shutil
 import subprocess
+from csv import reader
 
 import numpy as np
-
-import argparse
-
-from csv import reader
 
 import nnabla_rl.writers as W
 

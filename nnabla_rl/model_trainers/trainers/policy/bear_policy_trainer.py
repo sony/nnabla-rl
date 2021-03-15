@@ -12,20 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Dict, Optional, Sequence
+from dataclasses import dataclass
+from typing import Dict, Optional, Sequence, cast
 
 import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
-
-from dataclasses import dataclass
-
 import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import \
-    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
-from nnabla_rl.models import Model, StochasticPolicy, QFunction, VariationalAutoEncoder
+from nnabla_rl.model_trainers.model_trainer import (ModelTrainer, TrainerConfig, Training, TrainingBatch,
+                                                    TrainingVariables)
+from nnabla_rl.models import Model, QFunction, StochasticPolicy, VariationalAutoEncoder
 
 
 class AdjustableLagrangeMultiplier(Model):

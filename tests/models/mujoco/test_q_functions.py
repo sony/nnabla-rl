@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
 import nnabla as nn
-import numpy as np
-
 from nnabla_rl.models.mujoco.q_functions import TD3QFunction
 
 

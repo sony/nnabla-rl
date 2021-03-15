@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 from collections import deque
-
 from typing import Any, Dict, MutableSequence, Optional, Sequence, Tuple, Union
 
-import random
 import numpy as np
 
-from nnabla_rl.utils.data import RingBuffer
 from nnabla_rl.typing import Experience
+from nnabla_rl.utils.data import RingBuffer
 
 
 class ReplayBuffer(object):

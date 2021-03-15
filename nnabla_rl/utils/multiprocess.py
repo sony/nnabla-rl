@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-
 from multiprocessing import sharedctypes
+
+import numpy as np
 
 
 def mp_array_from_np_array(np_array):

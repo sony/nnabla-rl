@@ -17,7 +17,6 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla.initializer as NI
-
 from nnabla_rl.models.model import Model
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 

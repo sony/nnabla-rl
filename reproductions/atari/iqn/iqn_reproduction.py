@@ -20,9 +20,9 @@ import nnabla_rl.hooks as H
 import nnabla_rl.replay_buffers as RB
 import nnabla_rl.writers as W
 from nnabla_rl.builders import ReplayBufferBuilder
-from nnabla_rl.utils.evaluator import TimestepEvaluator, EpisodicEvaluator
-from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
 from nnabla_rl.utils import serializers
+from nnabla_rl.utils.evaluator import EpisodicEvaluator, TimestepEvaluator
+from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
 
 
 class MemoryEfficientAtariBufferBuilder(ReplayBufferBuilder):

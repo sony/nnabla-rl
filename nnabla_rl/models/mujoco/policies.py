@@ -15,14 +15,12 @@
 import numpy as np
 
 import nnabla as nn
-
 import nnabla.functions as NF
-import nnabla.parametric_functions as NPF
 import nnabla.initializer as NI
-from nnabla.parameter import get_parameter_or_create
-
+import nnabla.parametric_functions as NPF
 import nnabla_rl.distributions as D
 import nnabla_rl.initializers as RI
+from nnabla.parameter import get_parameter_or_create
 from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy
 
 

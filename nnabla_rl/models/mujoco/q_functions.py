@@ -15,13 +15,11 @@
 from typing import Optional
 
 import nnabla as nn
-
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-
 import nnabla_rl.initializers as RI
-from nnabla_rl.models.q_function import QFunction
 from nnabla_rl.models.policy import DeterministicPolicy
+from nnabla_rl.models.q_function import QFunction
 
 
 class TD3QFunction(QFunction):

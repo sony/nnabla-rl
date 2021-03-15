@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 import pathlib
 
 import numpy as np
+import pytest
 
 import nnabla_rl.algorithms as A
 from nnabla_rl.utils.serializers import load_snapshot

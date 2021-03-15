@@ -14,14 +14,13 @@
 
 from typing import Callable
 
-import nnabla as nn
+import numpy as np
 
+import nnabla as nn
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-
-from nnabla_rl.models import ValueDistributionFunction, QuantileDistributionFunction, StateActionQuantileFunction
 import nnabla_rl.functions as RF
-import numpy as np
+from nnabla_rl.models import QuantileDistributionFunction, StateActionQuantileFunction, ValueDistributionFunction
 
 
 class C51ValueDistributionFunction(ValueDistributionFunction):

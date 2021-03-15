@@ -14,10 +14,9 @@
 
 import nnabla as nn
 import nnabla.parametric_functions as NPF
-
 import nnabla_rl.initializers as RI
-from nnabla_rl.models.v_function import VFunction
 from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead
+from nnabla_rl.models.v_function import VFunction
 
 
 class PPOVFunction(VFunction):

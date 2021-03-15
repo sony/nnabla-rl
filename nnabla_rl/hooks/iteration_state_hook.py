@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pprint
+
 from nnabla_rl.hook import Hook
 from nnabla_rl.logger import logger
-
-import pprint
 
 
 class IterationStateHook(Hook):

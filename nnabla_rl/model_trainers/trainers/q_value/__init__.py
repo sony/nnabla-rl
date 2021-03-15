@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.model_trainers.trainers.q_value.c51_value_distribution_function_trainer import \
-    C51ValueDistributionFunctionTrainer, C51ValueDistributionFunctionTrainerConfig  # noqa
-from nnabla_rl.model_trainers.trainers.q_value.iqn_quantile_function_trainer import \
-    IQNQuantileFunctionTrainer, IQNQuantileFunctionTrainerConfig  # noqa
-from nnabla_rl.model_trainers.trainers.q_value.qrdqn_quantile_distribution_function_trainer import \
-    QRDQNQuantileDistributionFunctionTrainer, QRDQNQuantileDistributionFunctionTrainerConfig  # noqa
-from nnabla_rl.model_trainers.trainers.q_value.squared_td_q_function_trainer import \
-    SquaredTDQFunctionTrainer, SquaredTDQFunctionTrainerConfig  # noqa
+from nnabla_rl.model_trainers.trainers.q_value.c51_value_distribution_function_trainer import (  # noqa
+    C51ValueDistributionFunctionTrainer, C51ValueDistributionFunctionTrainerConfig)
+from nnabla_rl.model_trainers.trainers.q_value.iqn_quantile_function_trainer import (IQNQuantileFunctionTrainer,  # noqa
+                                                                                     IQNQuantileFunctionTrainerConfig)
+from nnabla_rl.model_trainers.trainers.q_value.qrdqn_quantile_distribution_function_trainer import (  # noqa
+    QRDQNQuantileDistributionFunctionTrainer, QRDQNQuantileDistributionFunctionTrainerConfig)
+from nnabla_rl.model_trainers.trainers.q_value.squared_td_q_function_trainer import (SquaredTDQFunctionTrainer,  # noqa
+                                                                                     SquaredTDQFunctionTrainerConfig)

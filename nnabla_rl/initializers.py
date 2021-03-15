@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import nnabla.initializer as NI
-
 import numpy as np
+
+import nnabla.initializer as NI
 
 
 def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):

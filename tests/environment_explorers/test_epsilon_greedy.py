@@ -13,13 +13,13 @@
 # limitations under the License.
 
 from unittest import mock
-import pytest
 
 import numpy as np
+import pytest
 
-from nnabla_rl.environment_explorers.epsilon_greedy_explorer import \
-    LinearDecayEpsilonGreedyExplorer, LinearDecayEpsilonGreedyExplorerConfig
-from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
+from nnabla_rl.environment_explorers.epsilon_greedy_explorer import (LinearDecayEpsilonGreedyExplorer,
+                                                                     LinearDecayEpsilonGreedyExplorerConfig,
+                                                                     epsilon_greedy_action_selection)
 
 
 class TestEpsilonGreedyActionStrategy(object):

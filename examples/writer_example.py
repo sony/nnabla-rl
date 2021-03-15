@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import gym
-from nnabla.monitor import Monitor, MonitorSeries
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
-from nnabla_rl.writer import Writer
+from nnabla.monitor import Monitor, MonitorSeries
 from nnabla_rl.environments.wrappers import NumpyFloat32Env
 from nnabla_rl.utils.files import create_dir_if_not_exist
-
-import os
+from nnabla_rl.writer import Writer
 
 
 class MyScalarWriter(Writer):

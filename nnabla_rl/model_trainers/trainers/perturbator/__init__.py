@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.model_trainers.trainers.perturbator.bcq_perturbator_trainer import \
-    BCQPerturbatorTrainer, BCQPerturbatorTrainerConfig  # noqa
+from nnabla_rl.model_trainers.trainers.perturbator.bcq_perturbator_trainer import (BCQPerturbatorTrainer,  # noqa
+                                                                                   BCQPerturbatorTrainerConfig)

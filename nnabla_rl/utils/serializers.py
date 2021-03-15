@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pathlib
-
 import json
-
+import pathlib
 import pickle
 
-from nnabla_rl.algorithm import Algorithm
 import nnabla_rl.algorithms as A
 import nnabla_rl.utils.files as files
+from nnabla_rl.algorithm import Algorithm
 
 _TRAINING_INFO_FILENAME = 'training_info.json'
 _ENV_INFO_FILENAME = 'env_info.pickle'

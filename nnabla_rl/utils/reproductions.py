@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gym
-
-import numpy as np
-
 import random as py_random
 
-from nnabla import random as nn_random
+import gym
+import numpy as np
 
 import nnabla_rl as rl
+from nnabla import random as nn_random
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 from nnabla_rl.logger import logger
 

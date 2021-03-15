@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import numpy as np
+import pytest
 
 import nnabla as nn
-
-import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
+import nnabla_rl.environments as E
 
 
 class TestICML2015TRPO(object):

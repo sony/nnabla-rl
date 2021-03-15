@@ -12,17 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
-from unittest.mock import patch
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
+import pytest
 
+import nnabla_rl as rl
+import nnabla_rl.environments as E
 from nnabla_rl.algorithm import Algorithm, eval_api
 from nnabla_rl.replay_buffer import ReplayBuffer
-import nnabla_rl.environments as E
-import nnabla_rl as rl
 
 
 class TestAlgorithm(object):

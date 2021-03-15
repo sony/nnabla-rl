@@ -14,10 +14,9 @@
 
 import gym
 
+from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv
 from nnabla_rl.utils import serializers
 from nnabla_rl.utils.evaluator import EpisodicEvaluator
-
-from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv
 
 
 def build_env():

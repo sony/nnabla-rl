@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Sequence, Union
+from typing import Sequence, Union, cast
 
 import nnabla as nn
-
 import nnabla_rl.functions as RNF
 from nnabla_rl.model_trainers.model_trainer import Training, TrainingVariables
-from nnabla_rl.models import QFunction, VFunction, Model
+from nnabla_rl.models import Model, QFunction, VFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 

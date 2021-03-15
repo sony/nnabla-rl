@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 from collections import deque
+
+import numpy as np
 
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import RingBuffer

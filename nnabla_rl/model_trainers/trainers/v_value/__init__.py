@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.model_trainers.trainers.v_value.squared_td_v_function_trainer import \
-    SquaredTDVFunctionTrainer, SquaredTDVFunctionTrainerConfig  # noqa
+from nnabla_rl.model_trainers.trainers.v_value.squared_td_v_function_trainer import (SquaredTDVFunctionTrainer,  # noqa
+                                                                                     SquaredTDVFunctionTrainerConfig)

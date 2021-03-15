@@ -12,17 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
 import nnabla as nn
-import nnabla.parametric_functions as NPF
 import nnabla.initializer as NI
-
-import numpy as np
-
-from nnabla_rl.utils.multiprocess import mp_array_from_np_array, np_to_mp_array, mp_to_np_array, \
-    new_mp_arrays_from_params, copy_params_to_mp_arrays, copy_mp_arrays_to_params
+import nnabla.parametric_functions as NPF
 from nnabla_rl.models import Model
+from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
+                                          mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 
 
 class TestModel(Model):

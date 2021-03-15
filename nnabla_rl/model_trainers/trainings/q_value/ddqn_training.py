@@ -16,9 +16,8 @@ import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
-
-from nnabla_rl.models import QFunction, ValueDistributionFunction, Model
 from nnabla_rl.model_trainers.model_trainer import Training, TrainingVariables
+from nnabla_rl.models import Model, QFunction, ValueDistributionFunction
 
 
 class _QFunctionDDQNTraining(Training):

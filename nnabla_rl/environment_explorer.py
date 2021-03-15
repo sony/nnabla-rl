@@ -12,15 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Any, Dict, List, Optional, Tuple
-
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import gym
-
 import numpy as np
-
-from dataclasses import dataclass
 
 from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo

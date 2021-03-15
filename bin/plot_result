@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-from datetime import datetime as dt
-import sys
+import argparse
 import pathlib
-import numpy as np
+import sys
+from datetime import datetime as dt
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.ticker import ScalarFormatter
-
-import argparse
 
 
 def load_data(path):

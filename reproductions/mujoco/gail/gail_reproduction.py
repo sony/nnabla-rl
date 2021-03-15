@@ -18,10 +18,10 @@ import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
-from nnabla_rl.utils.evaluator import EpisodicEvaluator
-from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed, d4rl_dataset_to_experiences
-from nnabla_rl.utils import serializers
 from nnabla_rl.replay_buffers import ReplacementSamplingReplayBuffer
+from nnabla_rl.utils import serializers
+from nnabla_rl.utils.evaluator import EpisodicEvaluator
+from nnabla_rl.utils.reproductions import build_mujoco_env, d4rl_dataset_to_experiences, set_global_seed
 
 
 def run_training(args):

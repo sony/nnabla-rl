@@ -12,26 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import nnabla as nn
-import nnabla.solvers as NS
-
 from dataclasses import dataclass
-
-import numpy as np
-
-import gym
 from typing import Union
 
+import gym
+import numpy as np
+
+import nnabla as nn
+import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.environment_explorer import EnvironmentExplorer
-from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import ModelBuilder, SolverBuilder
+from nnabla_rl.environment_explorer import EnvironmentExplorer
+from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
+from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.models import StochasticPolicy, REINFORCEContinousPolicy, REINFORCEDiscretePolicy
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 
 
 @dataclass

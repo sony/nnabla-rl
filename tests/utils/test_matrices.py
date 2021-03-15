@@ -12,17 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
-import numpy as np
-
 import nnabla as nn
-import nnabla.parametric_functions as NPF
 import nnabla.functions as NF
 import nnabla.initializer as NI
-
-from nnabla_rl.utils.matrices import compute_hessian
+import nnabla.parametric_functions as NPF
 from nnabla.parameter import get_parameter_or_create
+from nnabla_rl.utils.matrices import compute_hessian
 
 
 class TestComputeHessian():

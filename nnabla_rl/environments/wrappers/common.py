@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import gym
-
 import numpy as np
 
 

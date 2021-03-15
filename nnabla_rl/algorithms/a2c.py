@@ -13,27 +13,26 @@
 # limitations under the License.
 
 import multiprocessing as mp
-import numpy as np
 import os
-from dataclasses import dataclass
 from collections import namedtuple
+from dataclasses import dataclass
 from typing import List, Optional
 
-import nnabla as nn
-from nnabla import solvers as NS
+import numpy as np
 
-import nnabla_rl.utils.context as context
+import nnabla as nn
 import nnabla_rl.model_trainers as MT
+import nnabla_rl.utils.context as context
+from nnabla import solvers as NS
+from nnabla_rl import environment_explorers as EE
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import ModelBuilder, SolverBuilder
-from nnabla_rl import environment_explorers as EE
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
+from nnabla_rl.models import A3CPolicy, A3CSharedFunctionHead, A3CVFunction, StochasticPolicy, VFunction
 from nnabla_rl.utils.data import marshall_experiences, unzip
-from nnabla_rl.models import StochasticPolicy, VFunction, A3CSharedFunctionHead, A3CPolicy, A3CVFunction
-from nnabla_rl.utils.multiprocess import (mp_to_np_array, np_to_mp_array,
-                                          mp_array_from_np_array, new_mp_arrays_from_params,
-                                          copy_mp_arrays_to_params, copy_params_to_mp_arrays)
+from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
+                                          mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
 
 

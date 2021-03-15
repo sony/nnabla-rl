@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
 import nnabla as nn
-import numpy as np
-
 import nnabla_rl.environments as E
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.environments.environment_info import EnvironmentInfo

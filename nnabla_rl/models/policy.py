@@ -15,9 +15,8 @@
 from abc import ABCMeta, abstractmethod
 
 import nnabla as nn
-
-from nnabla_rl.models.model import Model
 from nnabla_rl.distributions.distribution import Distribution
+from nnabla_rl.models.model import Model
 
 
 class Policy(Model, metaclass=ABCMeta):

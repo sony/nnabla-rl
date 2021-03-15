@@ -13,9 +13,8 @@
 # limitations under the License.
 
 import gym
-from gym.envs.registration import EnvSpec
-
 import numpy as np
+from gym.envs.registration import EnvSpec
 
 
 class AbstractDummyEnv(gym.Env):

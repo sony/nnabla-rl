@@ -13,13 +13,11 @@
 # limitations under the License.
 
 import copy
+import pathlib
 from typing import Dict, Union
 
 import nnabla as nn
-
 from nnabla_rl.logger import logger
-
-import pathlib
 
 
 class Model(object):

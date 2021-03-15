@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import math
-import numpy as np
 from dataclasses import dataclass
+
+import numpy as np
 
 from nnabla_rl.replay_buffer import ReplayBuffer
 

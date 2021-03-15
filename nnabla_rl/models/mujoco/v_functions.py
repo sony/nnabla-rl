@@ -15,13 +15,11 @@
 import numpy as np
 
 import nnabla as nn
-
 import nnabla.functions as NF
-import nnabla.parametric_functions as NPF
 import nnabla.initializer as NI
-
-from nnabla_rl.models.v_function import VFunction
+import nnabla.parametric_functions as NPF
 import nnabla_rl.initializers as RI
+from nnabla_rl.models.v_function import VFunction
 
 
 class SACVFunction(VFunction):

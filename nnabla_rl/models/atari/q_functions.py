@@ -13,12 +13,10 @@
 # limitations under the License.
 
 import nnabla as nn
-
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-
-import nnabla_rl.initializers as RI
 import nnabla_rl.functions as RF
+import nnabla_rl.initializers as RI
 from nnabla_rl.models.q_function import QFunction
 
 

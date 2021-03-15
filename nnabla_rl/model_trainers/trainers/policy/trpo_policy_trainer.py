@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
+from typing import Dict, Optional, Sequence, cast
+
 import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
-
-from dataclasses import dataclass
-
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import \
-    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
 from nnabla_rl.logger import logger
-from nnabla_rl.utils.optimization import conjugate_gradient
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.model_trainers.model_trainer import (ModelTrainer, TrainerConfig, Training, TrainingBatch,
+                                                    TrainingVariables)
 from nnabla_rl.models import Model, StochasticPolicy
-from typing import cast, Dict, Optional, Sequence
+from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.optimization import conjugate_gradient
 
 
 def _hessian_vector_product(flat_grads, params, vector):

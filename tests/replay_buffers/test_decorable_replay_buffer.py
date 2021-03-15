@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from unittest.mock import create_autospec
+
+import pytest
 
 from nnabla_rl.replay_buffers.decorable_replay_buffer import DecorableReplayBuffer
 

@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 import numpy as np
+import pytest
 import scipy.stats as stats
 
 import nnabla as nn
-
 import nnabla_rl.distributions.common_utils as common_utils
 
 

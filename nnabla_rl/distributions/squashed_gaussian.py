@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import nnabla as nn
-import nnabla.functions as NF
-
 import numpy as np
 
+import nnabla as nn
+import nnabla.functions as NF
 import nnabla_rl.functions as RF
-from nnabla_rl.distributions import Distribution
-from nnabla_rl.distributions import common_utils
+from nnabla_rl.distributions import Distribution, common_utils
 
 
 class SquashedGaussian(Distribution):

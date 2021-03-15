@@ -13,9 +13,8 @@
 # limitations under the License.
 
 import nnabla as nn
-
-from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import AlgorithmConfig
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 
 class SolverBuilder():

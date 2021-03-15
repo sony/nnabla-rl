@@ -12,15 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
-import numpy as np
-
 import nnabla as nn
-
-from nnabla_rl.models.atari.distributional_functions import C51ValueDistributionFunction, \
-    QRDQNQuantileDistributionFunction, \
-    IQNQuantileFunction
+from nnabla_rl.models.atari.distributional_functions import (C51ValueDistributionFunction, IQNQuantileFunction,
+                                                             QRDQNQuantileDistributionFunction)
 
 
 class TestC51ValueDistributionFunction(object):

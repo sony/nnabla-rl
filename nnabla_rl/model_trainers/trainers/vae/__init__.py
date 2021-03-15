@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.model_trainers.trainers.vae.kld_variational_auto_encoder_trainer import \
-    KLDVariationalAutoEncoderTrainer, KLDVariationalAutoEncoderTrainerConfig  # noqa
+from nnabla_rl.model_trainers.trainers.vae.kld_variational_auto_encoder_trainer import (  # noqa
+    KLDVariationalAutoEncoderTrainer, KLDVariationalAutoEncoderTrainerConfig)

@@ -12,5 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.environments.dummy \
-    import DummyContinuous, DummyDiscrete, DummyDiscreteImg, DummyAtariEnv  # noqa
+from nnabla_rl.environments.dummy import DummyAtariEnv, DummyContinuous, DummyDiscrete, DummyDiscreteImg  # noqa

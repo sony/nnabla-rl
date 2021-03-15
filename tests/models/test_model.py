@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 import numpy as np
+import pytest
 
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-
 from nnabla_rl.models.model import Model
 
 

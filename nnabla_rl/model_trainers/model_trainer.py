@@ -13,15 +13,12 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-
-from typing import Dict, Optional, Sequence, Union
-
 from dataclasses import dataclass
+from typing import Dict, Optional, Sequence, Union
 
 import numpy as np
 
 import nnabla as nn
-
 from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import Model

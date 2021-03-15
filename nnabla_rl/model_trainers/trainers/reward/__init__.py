@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.model_trainers.trainers.reward.gail_reward_function_trainer \
-    import GAILRewardFunctionTrainer, GAILRewardFunctionTrainerConfig  # noqa
+from nnabla_rl.model_trainers.trainers.reward.gail_reward_function_trainer import (GAILRewardFunctionTrainer,  # noqa
+                                                                                   GAILRewardFunctionTrainerConfig)

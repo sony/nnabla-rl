@@ -12,18 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, Iterable, Optional
 
 import numpy as np
 
 import nnabla as nn
-
-from nnabla_rl.models.model import Model
-from nnabla_rl.models.q_function import QFunction
-
 import nnabla.functions as NF
 import nnabla_rl.functions as RF
+from nnabla_rl.models.model import Model
+from nnabla_rl.models.q_function import QFunction
 
 
 class ValueDistributionFunction(Model, metaclass=ABCMeta):

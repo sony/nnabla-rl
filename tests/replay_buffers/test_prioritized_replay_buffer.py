@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
-import numpy as np
-
-from nnabla_rl.replay_buffers.prioritized_replay_buffer \
-    import SumTree, PrioritizedReplayBuffer
+from nnabla_rl.replay_buffers.prioritized_replay_buffer import PrioritizedReplayBuffer, SumTree
 
 
 class TestSumTree(object):

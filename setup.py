@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import find_packages
-from setuptools import setup
+from setuptools import find_packages, setup
 
 install_requires = ['nnabla>=1.14', 'gym', 'dataclasses;python_version=="3.6"', 'opencv-python']
 

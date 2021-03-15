@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
+
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla_rl.functions as NRF
-
-import numpy as np
-
-from nnabla_rl.distributions import Distribution
 import nnabla_rl.functions as RF
+from nnabla_rl.distributions import Distribution
 
 
 class Softmax(Distribution):

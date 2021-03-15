@@ -15,9 +15,8 @@
 import pytest
 
 import nnabla as nn
-
-import nnabla_rl.environments as E
 import nnabla_rl.algorithms as A
+import nnabla_rl.environments as E
 
 
 class TestPPO(object):

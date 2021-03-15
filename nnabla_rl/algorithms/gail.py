@@ -12,35 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import nnabla as nn
-
-import nnabla.solvers as NS
-import nnabla.functions as NF
-
-import numpy as np
-
-from dataclasses import dataclass
 import random
+from dataclasses import dataclass
+from typing import Optional, Union
 
 import gym
-from typing import Union, Optional
+import numpy as np
 
+import nnabla as nn
+import nnabla.functions as NF
+import nnabla.solvers as NS
+import nnabla_rl.environment_explorers as EE
+import nnabla_rl.model_trainers as MT
+import nnabla_rl.preprocessors as RP
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import (_StatePreprocessedPolicy, _StatePreprocessedRewardFunction,
+                                               _StatePreprocessedVFunction, compute_v_target_and_advantage)
+from nnabla_rl.builders import ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import ModelBuilder, PreprocessorBuilder, SolverBuilder
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
+from nnabla_rl.models import (GAILDiscriminator, GAILPolicy, GAILVFunction, Model, RewardFunction, StochasticPolicy,
+                              VFunction)
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.algorithms.common_utils import compute_v_target_and_advantage, _StatePreprocessedPolicy,\
-    _StatePreprocessedVFunction, _StatePreprocessedRewardFunction
-from nnabla_rl.models \
-    import GAILPolicy, GAILVFunction, GAILDiscriminator, StochasticPolicy, VFunction, RewardFunction, Model
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
-import nnabla_rl.environment_explorers as EE
-import nnabla_rl.model_trainers as MT
-import nnabla_rl.preprocessors as RP
 
 
 @dataclass

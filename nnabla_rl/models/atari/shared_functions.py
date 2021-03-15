@@ -13,12 +13,10 @@
 # limitations under the License.
 
 import nnabla as nn
-
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-
-from nnabla_rl.models.model import Model
 import nnabla_rl.initializers as RI
+from nnabla_rl.models.model import Model
 
 
 class PPOSharedFunctionHead(Model):

@@ -16,8 +16,8 @@ import pathlib
 
 import numpy as np
 
-from nnabla_rl.writer import Writer
 import nnabla_rl.utils.files as files
+from nnabla_rl.writer import Writer
 
 
 class FileWriter(Writer):

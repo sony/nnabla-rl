@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
-import numpy as np
-
 import nnabla as nn
-
+from nnabla_rl.algorithms.common_utils import (_StatePreprocessedPolicy, _StatePreprocessedVFunction,
+                                               compute_v_target_and_advantage)
 from nnabla_rl.models import VFunction
-from nnabla_rl.algorithms.common_utils import \
-    compute_v_target_and_advantage, _StatePreprocessedVFunction, _StatePreprocessedPolicy
 
 
 class DummyVFunction(VFunction):

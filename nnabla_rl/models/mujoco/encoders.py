@@ -15,13 +15,11 @@
 from typing import Tuple
 
 import nnabla as nn
-
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-
 import nnabla_rl.distributions as D
-from nnabla_rl.distributions import Distribution
 import nnabla_rl.functions as RF
+from nnabla_rl.distributions import Distribution
 from nnabla_rl.models.encoder import VariationalAutoEncoder
 
 

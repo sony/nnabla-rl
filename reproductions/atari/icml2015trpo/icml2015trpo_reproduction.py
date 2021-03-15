@@ -17,8 +17,8 @@ import argparse
 import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
-from nnabla_rl.utils.evaluator import EpisodicEvaluator
 from nnabla_rl.utils import serializers
+from nnabla_rl.utils.evaluator import EpisodicEvaluator
 from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
 from nnabla_rl.writers import FileWriter
 

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from nnabla_rl.hook import Hook
-
 from nnabla_rl.utils.serializers import save_snapshot
 
 

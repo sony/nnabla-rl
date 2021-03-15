@@ -12,29 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
+
+import gym
+import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla.solvers as NS
-
-from dataclasses import dataclass
-
-import gym
-
-import numpy as np
-
+import nnabla_rl.functions as RF
+import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import ModelBuilder, SolverBuilder
-from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
-from nnabla_rl.models import TD3QFunction, BEARPolicy, UnsquashedVariationalAutoEncoder, \
-    DeterministicPolicy, StochasticPolicy, QFunction, VariationalAutoEncoder
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedEnvironmentException
-import nnabla_rl.model_trainers as MT
-import nnabla_rl.functions as RF
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
+from nnabla_rl.models import (BEARPolicy, DeterministicPolicy, QFunction, StochasticPolicy, TD3QFunction,
+                              UnsquashedVariationalAutoEncoder, VariationalAutoEncoder)
+from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.utils.misc import copy_network_parameters
 
 
 @dataclass

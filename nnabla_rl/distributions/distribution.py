@@ -13,8 +13,7 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import nnabla as nn
 

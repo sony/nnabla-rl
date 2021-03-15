@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 import numpy as np
+import pytest
 
 import nnabla_rl as rl
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator

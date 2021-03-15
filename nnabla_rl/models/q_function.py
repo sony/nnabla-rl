@@ -15,7 +15,6 @@
 from abc import ABCMeta, abstractmethod
 
 import nnabla as nn
-
 from nnabla_rl.models.model import Model
 
 

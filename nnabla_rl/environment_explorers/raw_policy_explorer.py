@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Tuple
-
 from dataclasses import dataclass
+from typing import Callable, Dict, Tuple
 
 import numpy as np
 
-from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerConfig
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 
 @dataclass

@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import numpy as np
-import nnabla as nn
 
+import nnabla as nn
 from nnabla_rl.models.classic_control.policies import REINFORCEContinousPolicy, REINFORCEDiscretePolicy
 
 

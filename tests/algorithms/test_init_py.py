@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 from dataclasses import dataclass
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmConfig
+import pytest
+
 import nnabla_rl.algorithms as A
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig
 
 
 @dataclass

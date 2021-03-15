@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
-import numpy as np
-
-from nnabla_rl.replay_buffers.memory_efficient_atari_buffer import MemoryEfficientAtariBuffer
 from nnabla_rl.environments.dummy import DummyAtariEnv
-from nnabla_rl.environments.wrappers.atari import NoopResetEnv, MaxAndSkipEnv
+from nnabla_rl.environments.wrappers.atari import MaxAndSkipEnv, NoopResetEnv
+from nnabla_rl.replay_buffers.memory_efficient_atari_buffer import MemoryEfficientAtariBuffer
 from nnabla_rl.utils.reproductions import build_atari_env
 
 

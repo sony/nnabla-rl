@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.preprocessors.preprocessor import Preprocessor
-from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.algorithm import AlgorithmConfig
+from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.preprocessors.preprocessor import Preprocessor
 
 
 class PreprocessorBuilder():

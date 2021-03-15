@@ -13,22 +13,21 @@
 # limitations under the License.
 
 from abc import ABCMeta
-import pytest
 
 import numpy as np
+import pytest
 
 import nnabla as nn
-import nnabla.parametric_functions as NPF
 import nnabla.functions as NF
 import nnabla.initializer as NI
-
-
+import nnabla.parametric_functions as NPF
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.model_trainers.trainers.policy.trpo_policy_trainer import _hessian_vector_product, \
-    _concat_network_params_in_ndarray, _update_network_params_by_flat_params
 from nnabla_rl.model_trainers.trainers.policy.soft_policy_trainer import AdjustableTemperature
-from nnabla_rl.utils.optimization import conjugate_gradient
+from nnabla_rl.model_trainers.trainers.policy.trpo_policy_trainer import (_concat_network_params_in_ndarray,
+                                                                          _hessian_vector_product,
+                                                                          _update_network_params_by_flat_params)
 from nnabla_rl.utils.matrices import compute_hessian
+from nnabla_rl.utils.optimization import conjugate_gradient
 
 
 class TrainerTest(metaclass=ABCMeta):

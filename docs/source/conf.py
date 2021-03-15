@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sphinx_rtd_theme
 import os
 import sys
+
+import sphinx_rtd_theme
 
 sys.path.insert(0, os.path.abspath('../../'))
 

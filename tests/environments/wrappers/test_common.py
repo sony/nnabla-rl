@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
-import numpy as np
-
-from nnabla_rl.environments.wrappers.common import NumpyFloat32Env
 import nnabla_rl.environments as E
+from nnabla_rl.environments.wrappers.common import NumpyFloat32Env
 
 
 class TestCommon(object):

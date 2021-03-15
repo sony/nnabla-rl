@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
 import nnabla.initializer as NI
-import numpy as np
-
-import nnabla_rl.utils.reproductions as reproductions
 import nnabla_rl.functions as RF
+import nnabla_rl.utils.reproductions as reproductions
 
 
 class TestReproductions():

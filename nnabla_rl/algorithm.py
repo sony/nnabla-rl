@@ -13,24 +13,21 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-
+from dataclasses import dataclass
 from typing import Any, Dict, Sequence, Union
 
-from dataclasses import dataclass
-
-import nnabla.solvers
-import nnabla as nn
-
-import numpy as np
 import gym
+import numpy as np
 
+import nnabla as nn
+import nnabla.solvers
+import nnabla_rl as rl
+import nnabla_rl.utils.context as context
 from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedTrainingException
-from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.hook import Hook
-import nnabla_rl.utils.context as context
-import nnabla_rl as rl
+from nnabla_rl.replay_buffer import ReplayBuffer
 
 
 def eval_api(f):

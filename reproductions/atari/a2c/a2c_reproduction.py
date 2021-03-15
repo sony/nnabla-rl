@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import argparse
 import os
+
+import numpy as np
 
 import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
-from nnabla_rl.utils.evaluator import TimestepEvaluator, EpisodicEvaluator
-from nnabla_rl.utils.reproductions import build_atari_env
-from nnabla_rl.utils import serializers
-from nnabla_rl.writers import FileWriter
 from nnabla_rl.logger import logger
-from nnabla_rl.utils.reproductions import set_global_seed
+from nnabla_rl.utils import serializers
+from nnabla_rl.utils.evaluator import EpisodicEvaluator, TimestepEvaluator
+from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
+from nnabla_rl.writers import FileWriter
 
 
 def run_training(args):

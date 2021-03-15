@@ -12,21 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Iterable, Dict
-
-import nnabla as nn
-import nnabla.functions as NF
+from dataclasses import dataclass
+from typing import Dict, Iterable, cast
 
 import numpy as np
 
-from dataclasses import dataclass
-
+import nnabla as nn
+import nnabla.functions as NF
 import nnabla_rl.functions as RNF
-from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import \
-    TrainerConfig, Training, TrainingBatch, TrainingVariables, ModelTrainer
-from nnabla_rl.models import VariationalAutoEncoder, Model
 from nnabla_rl.distributions import Gaussian
+from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.model_trainers.model_trainer import (ModelTrainer, TrainerConfig, Training, TrainingBatch,
+                                                    TrainingVariables)
+from nnabla_rl.models import Model, VariationalAutoEncoder
 
 
 @dataclass

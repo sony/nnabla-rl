@@ -13,8 +13,7 @@
 # limitations under the License.
 
 import nnabla as nn
-
-from nnabla_rl.model_trainers.model_trainer import TrainingVariables, Training, TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import Training, TrainingBatch, TrainingVariables
 
 
 class MonteCarloVValueTraining(Training):

@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import nnabla as nn
 import numpy as np
 
-from nnabla_rl.models import VFunction, StochasticPolicy, Model, RewardFunction
+import nnabla as nn
+from nnabla_rl.models import Model, RewardFunction, StochasticPolicy, VFunction
 from nnabla_rl.preprocessors import Preprocessor
 
 

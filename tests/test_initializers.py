@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from unittest import mock
 
 import numpy as np
+import pytest
 
 import nnabla_rl.initializers as RI
 

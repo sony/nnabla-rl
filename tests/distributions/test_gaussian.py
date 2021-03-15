@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
-import numpy as np
-
 from unittest import mock
 
-import nnabla as nn
+import numpy as np
+import pytest
 
+import nnabla as nn
 import nnabla_rl.distributions as D
 
 

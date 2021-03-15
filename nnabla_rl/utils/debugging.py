@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import nnabla.experimental.viewers as V
-
 from nnabla_rl.hook import Hook
 from nnabla_rl.logger import logger
 

@@ -12,17 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Iterable, Dict, Union, Sequence
-
-import nnabla as nn
-import nnabla.functions as NF
+from dataclasses import dataclass
+from typing import Dict, Iterable, Sequence, Union, cast
 
 import numpy as np
 
-from dataclasses import dataclass
-
-from nnabla_rl.model_trainers.model_trainer import \
-    TrainerConfig, Training, TrainingVariables, ModelTrainer, TrainingBatch
+import nnabla as nn
+import nnabla.functions as NF
+from nnabla_rl.model_trainers.model_trainer import (ModelTrainer, TrainerConfig, Training, TrainingBatch,
+                                                    TrainingVariables)
 from nnabla_rl.models import Model, RewardFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 

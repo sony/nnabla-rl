@@ -13,13 +13,11 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-
 from typing import Optional, Tuple
 
 import nnabla as nn
-
-from nnabla_rl.models.model import Model
 from nnabla_rl.distributions import Distribution
+from nnabla_rl.models.model import Model
 
 
 class Encoder(Model, metaclass=ABCMeta):

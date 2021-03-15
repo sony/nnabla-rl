@@ -18,9 +18,9 @@ import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
-from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
-from nnabla_rl.utils.evaluator import TimestepEvaluator, EpisodicEvaluator
 from nnabla_rl.utils import serializers
+from nnabla_rl.utils.evaluator import EpisodicEvaluator, TimestepEvaluator
+from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
 
 
 def run_training(args):

@@ -12,28 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import nnabla as nn
-import nnabla.solvers as NS
-
 from dataclasses import dataclass
-
-import numpy as np
+from typing import Dict, List, Optional, Union, cast
 
 import gym
-from typing import cast, Dict, List, Optional, Union
+import numpy as np
 
+import nnabla as nn
+import nnabla.solvers as NS
+import nnabla_rl.environment_explorers as EE
+import nnabla_rl.model_trainers as MT
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import ModelBuilder, SolverBuilder, ReplayBufferBuilder
+from nnabla_rl.exceptions import UnsupportedEnvironmentException
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
+from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
-from nnabla_rl.models import SACQFunction, SACPolicy, QFunction, StochasticPolicy
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
-from nnabla_rl.exceptions import UnsupportedEnvironmentException
-import nnabla_rl.environment_explorers as EE
-import nnabla_rl.model_trainers as MT
 
 
 @dataclass

@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 from unittest import mock
 
-import nnabla_rl.environments as E
+import pytest
+
 import nnabla_rl.algorithms as A
+import nnabla_rl.environments as E
 from nnabla_rl.utils.evaluator import EpisodicEvaluator, TimestepEvaluator
 
 

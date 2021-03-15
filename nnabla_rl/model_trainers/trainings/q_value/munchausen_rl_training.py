@@ -14,10 +14,9 @@
 
 import nnabla as nn
 import nnabla.functions as NF
-
 import nnabla_rl.functions as RNF
 from nnabla_rl.model_trainers.model_trainer import Training, TrainingVariables
-from nnabla_rl.models import QFunction, StateActionQuantileFunction, Model
+from nnabla_rl.models import Model, QFunction, StateActionQuantileFunction
 
 
 def _pi(q_values: nn.Variable, max_q: nn.Variable, tau: float):

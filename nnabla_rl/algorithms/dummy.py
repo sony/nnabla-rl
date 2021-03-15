@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-
-from nnabla_rl.logger import logger
 import nnabla_rl as rl
+from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.logger import logger
 
 
 class DummyConfig(AlgorithmConfig):

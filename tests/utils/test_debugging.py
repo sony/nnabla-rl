@@ -15,9 +15,8 @@
 import pytest
 
 import nnabla as nn
-import nnabla.parametric_functions as NPF
 import nnabla.functions as NF
-
+import nnabla.parametric_functions as NPF
 from nnabla_rl.utils.debugging import count_parameter_number
 
 
