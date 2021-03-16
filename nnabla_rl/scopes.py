@@ -20,11 +20,12 @@ _evaluating = False
 @contextmanager
 def eval_scope():
     global _evaluating
+    original_evaluating = _evaluating
     try:
         _evaluating = True
         yield
     finally:
-        _evaluating = False
+        _evaluating = original_evaluating
 
 
 def is_eval_scope():

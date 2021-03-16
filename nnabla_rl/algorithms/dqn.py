@@ -237,6 +237,7 @@ class DQN(Algorithm):
     def _run_offline_training_iteration(self, buffer):
         self._dqn_training(buffer)
 
+    @eval_api
     def _greedy_action_selector(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):

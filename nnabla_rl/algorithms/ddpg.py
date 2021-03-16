@@ -224,7 +224,6 @@ class DDPG(Algorithm):
 
         return policy_trainer
 
-    @eval_api
     def compute_eval_action(self, state):
         action, _ = self._compute_greedy_action(state)
         return action
@@ -256,6 +255,7 @@ class DDPG(Algorithm):
         td_error = np.abs(errors['td_error'])
         replay_buffer.update_priorities(td_error)
 
+    @eval_api
     def _compute_greedy_action(self, s):
         # evaluation input/action variables
         s = np.expand_dims(s, axis=0)

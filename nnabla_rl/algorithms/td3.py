@@ -293,6 +293,7 @@ class TD3(Algorithm):
             # Optimize actor
             self._policy_trainer.train(batch)
 
+    @eval_api
     def _compute_greedy_action(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):

@@ -220,6 +220,7 @@ class REINFORCE(Algorithm):
 
         return s_batch, a_batch, accumulated_reward_batch
 
+    @eval_api
     def _compute_action(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):

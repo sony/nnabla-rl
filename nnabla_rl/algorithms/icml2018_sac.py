@@ -327,6 +327,7 @@ class ICML2018SAC(Algorithm):
         td_error = np.abs(errors['td_error'])
         replay_buffer.update_priorities(td_error)
 
+    @eval_api
     def _compute_greedy_action(self, s, deterministic=False):
         # evaluation input/action variables
         s = np.expand_dims(s, axis=0)

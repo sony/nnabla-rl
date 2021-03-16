@@ -24,6 +24,15 @@ class TestScopes(object):
             assert scopes.is_eval_scope()
         assert not scopes.is_eval_scope()
 
+    def test_nested_eval_scope(self):
+        assert not scopes.is_eval_scope()
+        with scopes.eval_scope():
+            assert scopes.is_eval_scope()
+            with scopes.eval_scope():
+                assert scopes.is_eval_scope()
+            assert scopes.is_eval_scope()
+        assert not scopes.is_eval_scope()
+
 
 if __name__ == "__main__":
     pytest.main()

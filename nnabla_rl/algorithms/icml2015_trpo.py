@@ -229,6 +229,7 @@ class ICML2015TRPO(Algorithm):
 
         return np.sum(reward_sequence*gamma_seqs, axis=1, keepdims=True)
 
+    @eval_api
     def _compute_action(self, s):
         # evaluation input/action variables
         s = np.expand_dims(s, axis=0)

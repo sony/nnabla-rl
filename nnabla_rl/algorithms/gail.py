@@ -486,6 +486,7 @@ class GAIL(Algorithm):
 
         self._discriminator_trainer.train(batch)
 
+    @eval_api
     def _compute_action(self, s, act_deterministic=False):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):

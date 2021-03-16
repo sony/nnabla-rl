@@ -341,6 +341,7 @@ class TRPO(Algorithm):
 
         self._policy_trainer.train(batch)
 
+    @eval_api
     def _compute_action(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):

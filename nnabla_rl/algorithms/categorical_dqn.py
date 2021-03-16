@@ -243,6 +243,7 @@ class CategoricalDQN(Algorithm):
         td_error = np.abs(errors['td_error'])
         replay_buffer.update_priorities(td_error)
 
+    @eval_api
     def _greedy_action_selector(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):

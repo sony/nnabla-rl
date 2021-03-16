@@ -278,6 +278,7 @@ class IQN(Algorithm):
 
         self._quantile_function_trainer.train(batch)
 
+    @eval_api
     def _greedy_action_selector(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):

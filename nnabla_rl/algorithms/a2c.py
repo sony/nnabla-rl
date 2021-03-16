@@ -187,10 +187,7 @@ class A2C(Algorithm):
 
     @eval_api
     def compute_eval_action(self, state):
-        return self._compute_action(state)
-
-    def _compute_action(self, s):
-        s = np.expand_dims(s, axis=0)
+        s = np.expand_dims(state, axis=0)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = nn.Variable(s.shape)
             distribution = self._policy.pi(self._eval_state_var)
@@ -486,6 +483,7 @@ class _A2CActor(object):
         np_to_mp_array(a, *array_and_dtype(self._mp_arrays.action))
         np_to_mp_array(returns, *array_and_dtype(self._mp_arrays.returns))
 
+    @eval_api
     def _compute_action(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):

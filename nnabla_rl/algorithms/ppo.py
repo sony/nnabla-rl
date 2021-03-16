@@ -388,6 +388,7 @@ class PPO(Algorithm):
         self._v_function_trainer.set_learning_rate(self._config.learning_rate * alpha)
         self._v_function_trainer.train(batch)
 
+    @eval_api
     def _compute_action(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):
@@ -577,6 +578,7 @@ class _PPOActor(object):
             self._v_function, experiences, gamma=self._gamma, lmb=self._lambda)
         return experiences, v_targets, advantages
 
+    @eval_api
     def _compute_action(self, s):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):
