@@ -60,7 +60,7 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
     def decode(self, z: nn.Variable, **kwargs) -> nn.Variable:
         s = kwargs['state']
         if z is None:
-            z = RF.randn(shape=(s.shape[0], self._latent_dim))
+            z = NF.randn(shape=(s.shape[0], self._latent_dim))
             z = NF.clip_by_value(z, -0.5, 0.5)
         with nn.parameter_scope(self.scope_name):
             x = NF.concatenate(s, z)
@@ -74,7 +74,7 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
     def decode_multiple(self, z: nn.Variable, decode_num: int, **kwargs) -> nn.Variable:
         s = kwargs['state']
         if z is None:
-            z = RF.randn(shape=(s.shape[0], decode_num, self._latent_dim))
+            z = NF.randn(shape=(s.shape[0], decode_num, self._latent_dim))
             z = NF.clip_by_value(z, -0.5, 0.5)
         s = RF.expand_dims(s, axis=0)
         s = RF.repeat(s, repeats=decode_num, axis=0)
