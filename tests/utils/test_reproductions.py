@@ -15,9 +15,8 @@
 import numpy as np
 import pytest
 
-import nnabla.initializer as NI
 import nnabla.functions as NF
-import nnabla_rl.functions as RF
+import nnabla.initializer as NI
 import nnabla_rl.utils.reproductions as reproductions
 
 

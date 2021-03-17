@@ -16,8 +16,8 @@ import random as py_random
 
 import gym
 import numpy as np
-import nnabla as nn
 
+import nnabla as nn
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 from nnabla_rl.logger import logger
 

@@ -16,7 +16,6 @@ import numpy as np
 import pytest
 
 import nnabla as nn
-import nnabla_rl as rl
 import nnabla_rl.functions as RF
 
 
