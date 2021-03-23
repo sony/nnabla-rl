@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import Optional, Tuple, Union, cast
 
 import gym
 import numpy as np
@@ -61,6 +61,7 @@ class DQNConfig(AlgorithmConfig):
         initial_epsilon (float): the initial epsilon value for ε-greedy explorer. Defaults to 1.0.
         final_epsilon (float): the last epsilon value for ε-greedy explorer. Defaults to 0.1.
         test_epsilon (float): the epsilon value on testing. Defaults to 0.05.
+        grad_clip (Optional[Tuple[float, float]]): Clip the gradient of final layer. Defaults to (-1.0, 1.0).
     """
     gamma: float = 0.99
     learning_rate: float = 2.5e-4
@@ -76,6 +77,7 @@ class DQNConfig(AlgorithmConfig):
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.1
     test_epsilon: float = 0.05
+    grad_clip: Optional[Tuple[float, float]] = (-1.0, 1.0)
 
     def __post_init__(self):
         '''__post_init__
@@ -209,7 +211,7 @@ class DQN(Algorithm):
     def _setup_q_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
             reduction_method='sum',
-            grad_clip=(-1.0, 1.0))
+            grad_clip=self._config.grad_clip)
 
         q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
             env_info=self._env_info,
