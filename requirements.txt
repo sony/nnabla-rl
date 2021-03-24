@@ -1,4 +1,4 @@
-nnabla>=1.14.0
+nnabla>=1.14.0,!=1.18.0
 gym
 dataclasses;python_version=="3.6"
 opencv-python
