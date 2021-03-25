@@ -22,6 +22,9 @@ from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 
 class _QFunctionClippedDoubleQTraining(Training):
+    # type decalrations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_functions: Sequence[QFunction]
 
     def __init__(self, target_functions: Sequence[QFunction]):
@@ -43,6 +46,9 @@ class _QFunctionClippedDoubleQTraining(Training):
 
 
 class ClippedDoubleQTraining(Training):
+    # type decalrations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _delegate: Training
 
     def __init__(self,

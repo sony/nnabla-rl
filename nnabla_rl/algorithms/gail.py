@@ -81,6 +81,10 @@ class GAILConfig(AlgorithmConfig):
         preprocess_state (bool): Enable preprocessing the states in the collected experiences \
             before feeding as training batch. Defaults to True.
     '''
+
+    # type decalrations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     preprocess_state: bool = True
     act_deterministic_in_eval: bool = True
     discriminator_batch_size: int = 50000

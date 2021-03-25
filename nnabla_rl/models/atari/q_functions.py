@@ -30,6 +30,9 @@ class DQNQFunction(QFunction):
         n_action (int): the number of discrete action
     '''
 
+    # type decalrations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _n_action: int
 
     def __init__(self, scope_name: str, n_action: int):
