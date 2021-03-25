@@ -4,6 +4,7 @@ on: [push]
 jobs:
   format:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.6
@@ -19,6 +20,7 @@ jobs:
           autopep8 -r --diff --max-line-length=120 .
   typing:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.6
@@ -34,6 +36,7 @@ jobs:
           mypy nnabla_rl
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.6
@@ -49,6 +52,7 @@ jobs:
           flake8 . --max-line-length=120
   isort:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.6
@@ -64,6 +68,7 @@ jobs:
           isort --check-only .
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8]
