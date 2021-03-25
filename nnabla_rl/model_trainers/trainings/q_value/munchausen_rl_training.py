@@ -36,7 +36,7 @@ def _tau_log_pi(q_k: nn.Variable, q_values: nn.Variable, max_q: nn.Variable, tau
 
 
 class _QFunctionMunchausenRLTraining(Training):
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_function: QFunction
@@ -77,7 +77,7 @@ class _QFunctionMunchausenRLTraining(Training):
 
 
 class _StateActionQuantileFunctionMunchausenRLTraining(Training):
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_function: StateActionQuantileFunction
@@ -133,7 +133,7 @@ class _StateActionQuantileFunctionMunchausenRLTraining(Training):
 
 
 class MunchausenRLTraining(Training):
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _delegate: Training

@@ -40,7 +40,7 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
         v_max (int): Maximum value of the distribution.
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _n_action: int
@@ -178,7 +178,7 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
         n_quantile (int): Number of bins.
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _n_action: int
@@ -301,7 +301,7 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
             modifies the weightings of tau. Defaults to risk neutral measure which does not do any change to the taus.
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _n_action: int

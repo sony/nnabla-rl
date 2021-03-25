@@ -21,7 +21,7 @@ from nnabla_rl.models import Model, QFunction, ValueDistributionFunction
 
 
 class _QFunctionDDQNTraining(Training):
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _train_function: QFunction
@@ -106,7 +106,7 @@ class _ValueDistributionFunctionDDQNTraining(Training):
 
 
 class DDQNTraining(Training):
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _delegate: Training

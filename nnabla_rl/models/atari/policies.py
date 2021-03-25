@@ -28,7 +28,7 @@ class PPOPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1707.06347.pdf
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _head: PPOSharedFunctionHead
@@ -58,7 +58,7 @@ class ICML2015TRPOPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1502.05477.pdf
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int

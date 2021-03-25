@@ -30,7 +30,7 @@ class TD3Policy(DeterministicPolicy):
     See: https://arxiv.org/abs/1802.09477
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int
@@ -66,7 +66,7 @@ class SACPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1801.01290.pdf
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int
@@ -110,7 +110,7 @@ class BEARPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1906.00949.pdf
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int
@@ -149,7 +149,7 @@ class PPOPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1707.06347.pdf
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int
@@ -183,7 +183,7 @@ class ICML2015TRPOPolicy(StochasticPolicy):
     See: https://arxiv.org/pdf/1502.05477.pdf (Original paper)
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int
@@ -213,7 +213,7 @@ class TRPOPolicy(StochasticPolicy):
     See: https://arxiv.org/abs/1709.06560.pdf
     '''
 
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int

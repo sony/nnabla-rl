@@ -74,7 +74,7 @@ class QRDQNQuantileDistributionFunction(QuantileDistributionFunction):
 
 
 class IQNQuantileFunction(StateActionQuantileFunction):
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _embedding_dim: int

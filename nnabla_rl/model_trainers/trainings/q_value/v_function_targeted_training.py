@@ -22,7 +22,7 @@ from nnabla_rl.utils.data import convert_to_list_if_not_list
 
 
 class _QFunctionVFunctionTargetedTraining(Training):
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_functions: Sequence[VFunction]
@@ -44,7 +44,7 @@ class _QFunctionVFunctionTargetedTraining(Training):
 
 
 class VFunctionTargetedTraining(Training):
-    # type decalrations to type check with mypy
+    # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _delegate: Training
