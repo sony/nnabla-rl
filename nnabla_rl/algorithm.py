@@ -22,11 +22,11 @@ import numpy as np
 import nnabla as nn
 import nnabla.solvers
 import nnabla_rl as rl
-import nnabla_rl.utils.context as context
 from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedTrainingException
 from nnabla_rl.hook import Hook
+from nnabla_rl.logger import logger
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
@@ -39,7 +39,13 @@ def eval_api(f):
 
 @dataclass
 class AlgorithmConfig(Configuration):
-    pass
+    """
+    List of algorithm common configuration
+
+    Args:
+        gpu_id (int): id of the gpu to use. If negative, the training will run on cpu. Defaults to -1.
+    """
+    gpu_id: int = -1
 
 
 class Algorithm(metaclass=ABCMeta):
@@ -66,7 +72,11 @@ class Algorithm(metaclass=ABCMeta):
         self._iteration_num = 0
         self._max_iterations = 0
         self._hooks = []
-        context._set_nnabla_context()
+
+        if self._config.gpu_id < 0:
+            logger.info('algorithm will run on cpu')
+        else:
+            logger.info('algorithm will run on gpu: {}'.format(self._config.gpu_id))
 
     @property
     def __name__(self):

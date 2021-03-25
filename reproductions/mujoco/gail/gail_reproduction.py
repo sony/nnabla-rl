@@ -14,7 +14,6 @@
 
 import argparse
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
@@ -25,8 +24,6 @@ from nnabla_rl.utils.reproductions import build_mujoco_env, d4rl_dataset_to_expe
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_datasetsize-{args.datasetsize}_results/seed-{args.seed}'
     set_global_seed(args.seed)
 
@@ -48,10 +45,9 @@ def run_training(args):
     expert_experiences = d4rl_dataset_to_experiences(train_dataset, size=args.datasetsize)
     expert_buffer.append_all(expert_experiences)
 
-    if args.snapshot_dir is None:
-        gail = A.GAIL(train_env, expert_buffer)
-    else:
-        gail = serializers.load_snapshot(args.snapshot_dir)
+    config = A.GAILConfig(gpu_id=args.gpu)
+    gail = A.GAIL(train_env, expert_buffer, config=config)
+
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     gail.set_hooks(hooks)
 
@@ -62,11 +58,10 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
-    gail = serializers.load_snapshot(args.snapshot_dir)
+    config = A.GAILConfig(gpu_id=args.gpu)
+    gail = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(gail, A.GAIL):
         raise ValueError('Loaded snapshot is not trained with GAIL!')
 

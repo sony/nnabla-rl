@@ -14,7 +14,6 @@
 
 import argparse
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
@@ -33,8 +32,6 @@ def select_start_timesteps(env_name):
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
     set_global_seed(args.seed)
 
@@ -49,12 +46,10 @@ def run_training(args):
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=5000)
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
-    if args.snapshot_dir is None:
-        timesteps = select_start_timesteps(args.env)
-        config = A.DDPGConfig(start_timesteps=timesteps)
-        ddpg = A.DDPG(train_env, config=config)
-    else:
-        ddpg = serializers.load_snapshot(args.snapshot_dir)
+    timesteps = select_start_timesteps(args.env)
+    config = A.DDPGConfig(gpu_id=args.gpu, start_timesteps=timesteps)
+    ddpg = A.DDPG(train_env, config=config)
+
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     ddpg.set_hooks(hooks)
 
@@ -65,12 +60,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    ddpg = serializers.load_snapshot(args.snapshot_dir)
+    config = A.DDPGConfig(gpu_id=args.gpu)
+    ddpg = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(ddpg, A.DDPG):
         raise ValueError('Loaded snapshot is not trained with DDPG!')
 

@@ -16,7 +16,6 @@ import argparse
 
 import numpy as np
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
@@ -27,8 +26,6 @@ from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
     set_global_seed(args.seed)
 
@@ -44,10 +41,9 @@ def run_training(args):
     iteration_num_hook = H.IterationNumHook(timing=5000)
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
-    if args.snapshot_dir is None:
-        trpo = A.TRPO(train_env)
-    else:
-        trpo = serializers.load_snapshot(args.snapshot_dir)
+    config = A.TRPOConfig(gpu_id=args.gpu)
+    trpo = A.TRPO(train_env, config=config)
+
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     trpo.set_hooks(hooks)
 
@@ -58,12 +54,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpou)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    trpo = serializers.load_snapshot(args.snapshot_dir)
+    config = A.TRPOConfig(gpu_id=args.gpu)
+    trpo = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(trpo, A.TRPO):
         raise ValueError('Loaded snapshot is not trained with TRPO!')
 

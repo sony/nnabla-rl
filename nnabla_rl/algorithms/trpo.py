@@ -34,6 +34,7 @@ from nnabla_rl.models import Model, StochasticPolicy, TRPOPolicy, TRPOVFunction,
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 
 
@@ -184,19 +185,28 @@ class TRPO(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise NotImplementedError
 
-        self._v_function = v_function_builder('v', self._env_info, self._config)
-        self._policy = policy_builder('pi', self._env_info, self._config)
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._v_function = v_function_builder('v', self._env_info, self._config)
+            self._policy = policy_builder('pi', self._env_info, self._config)
 
-        self._preprocessor: Optional[Preprocessor] = None
-        if self._config.preprocess_state and state_preprocessor_builder is not None:
-            preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
-            assert preprocessor is not None
-            self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
-            self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
-            self._state_preprocessor = preprocessor
-        self._v_function_solver = v_solver_builder(self._env_info, self._config)
+            self._preprocessor: Optional[Preprocessor] = None
+            if self._config.preprocess_state and state_preprocessor_builder is not None:
+                preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
+                assert preprocessor is not None
+                self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
+                self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
+                self._state_preprocessor = preprocessor
+            self._v_function_solver = v_solver_builder(self._env_info, self._config)
+
+    @eval_api
+    def compute_eval_action(self, s):
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_action(s)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
@@ -240,11 +250,6 @@ class TRPO(Algorithm):
         policy_trainer.setup_training(self._policy, {}, training)
 
         return policy_trainer
-
-    @eval_api
-    def compute_eval_action(self, s):
-        action, _ = self._compute_action(s)
-        return action
 
     def _run_online_training_iteration(self, env):
         if self.iteration_num % self._config.num_steps_per_iteration != 0:

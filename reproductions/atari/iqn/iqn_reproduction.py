@@ -14,7 +14,6 @@
 
 import argparse
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.replay_buffers as RB
@@ -31,8 +30,6 @@ class MemoryEfficientAtariBufferBuilder(ReplayBufferBuilder):
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
     set_global_seed(args.seed)
 
@@ -45,10 +42,9 @@ def run_training(args):
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=50000)
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
-    if args.snapshot_dir is None:
-        iqn = A.IQN(train_env, replay_buffer_builder=MemoryEfficientAtariBufferBuilder())
-    else:
-        iqn = serializers.load_snapshot(args.snapshot_dir)
+
+    config = A.IQNConfig(gpu_id=args.gpu)
+    iqn = A.IQN(train_env, config=config, replay_buffer_builder=MemoryEfficientAtariBufferBuilder())
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     iqn.set_hooks(hooks)
 
@@ -59,12 +55,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    iqn = serializers.load_snapshot(args.snapshot_dir)
+    config = A.IQNConfig(gpu_id=args.gpu)
+    iqn = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(iqn, A.IQN):
         raise ValueError('Loaded snapshot is not trained with IQN!')
 

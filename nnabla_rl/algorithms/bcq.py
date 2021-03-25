@@ -29,6 +29,7 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import (BCQPerturbator, BCQVariationalAutoEncoder, DeterministicPolicy, Perturbator, QFunction,
                               TD3QFunction, VariationalAutoEncoder)
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 
@@ -179,46 +180,50 @@ class BCQ(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException
 
-        self._q_ensembles = []
-        self._q_solvers = {}
-        self._target_q_ensembles = []
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q_ensembles = []
+            self._q_solvers = {}
+            self._target_q_ensembles = []
 
-        for i in range(self._config.num_q_ensembles):
-            q = q_function_builder(scope_name=f"q{i}",
-                                   env_info=self._env_info,
-                                   algorithm_config=self._config)
-            target_q = q.deepcopy(f'target_q{i}')
-            assert isinstance(target_q, QFunction)
-            self._q_ensembles.append(q)
-            self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-            self._target_q_ensembles.append(target_q)
+            for i in range(self._config.num_q_ensembles):
+                q = q_function_builder(scope_name=f"q{i}",
+                                       env_info=self._env_info,
+                                       algorithm_config=self._config)
+                target_q = q.deepcopy(f'target_q{i}')
+                assert isinstance(target_q, QFunction)
+                self._q_ensembles.append(q)
+                self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+                self._target_q_ensembles.append(target_q)
 
-        self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_config=self._config)
-        self._vae_solver = vae_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_config=self._config)
+            self._vae_solver = vae_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
-        self._xi = perturbator_builder(scope_name="xi", env_info=self._env_info, algorithm_config=self._config)
-        self._xi_solver = perturbator_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_xi = perturbator_builder(
-            scope_name="target_xi", env_info=self._env_info, algorithm_config=self._config)
+            self._xi = perturbator_builder(scope_name="xi", env_info=self._env_info, algorithm_config=self._config)
+            self._xi_solver = perturbator_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_xi = perturbator_builder(
+                scope_name="target_xi", env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, s):
-        s = np.expand_dims(s, axis=0)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
-            repeat_num = 100
-            state = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
-            assert state.shape == (repeat_num, self._eval_state_var.shape[1])
-            actions = self._vae.decode(z=None, state=state)
-            noise = self._xi.generate_noise(state, actions, self._config.phi)
-            self._eval_action = actions + noise
-            q_values = self._q_ensembles[0].q(state, self._eval_action)
-            self._eval_max_index = RF.argmax(q_values, axis=0)
-        self._eval_state_var.d = s
-        nn.forward_all([self._eval_action, self._eval_max_index])
-        return self._eval_action.d[self._eval_max_index.d[0]]
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            s = np.expand_dims(s, axis=0)
+            if not hasattr(self, '_eval_state_var'):
+                self._eval_state_var = nn.Variable(s.shape)
+                repeat_num = 100
+                state = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
+                assert state.shape == (repeat_num, self._eval_state_var.shape[1])
+                actions = self._vae.decode(z=None, state=state)
+                noise = self._xi.generate_noise(state, actions, self._config.phi)
+                self._eval_action = actions + noise
+                q_values = self._q_ensembles[0].q(state, self._eval_action)
+                self._eval_max_index = RF.argmax(q_values, axis=0)
+            self._eval_state_var.d = s
+            nn.forward_all([self._eval_action, self._eval_max_index])
+            return self._eval_action.d[self._eval_max_index.d[0]]
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._vae_trainer = self._setup_vae_training(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
         self._perturbator_trainer = self._setup_perturbator_training(env_or_buffer)

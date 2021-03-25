@@ -17,7 +17,6 @@ import os
 
 import numpy as np
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 from nnabla_rl.logger import logger
@@ -28,8 +27,6 @@ from nnabla_rl.writers import FileWriter
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     set_global_seed(args.seed)
     train_env = build_atari_env(args.env, seed=args.seed)
     eval_env = build_atari_env(
@@ -47,7 +44,7 @@ def run_training(args):
 
     actor_num = 8
     total_timesteps = 50000000
-    config = A.A2CConfig(actor_num=actor_num)
+    config = A.A2CConfig(gpu_id=args.gpu, actor_num=actor_num)
     a2c = A.A2C(train_env, config=config)
     a2c.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
 
@@ -58,11 +55,10 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
-    a2c = serializers.load_snapshot(args.snapshot_dir)
+    config = A.A2CConfig(gpu_id=args.gpu)
+    a2c = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(a2c, A.A2C):
         raise ValueError('Loaded snapshot is not trained with A2C!')
 

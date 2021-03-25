@@ -14,7 +14,6 @@
 
 import argparse
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
@@ -24,8 +23,6 @@ from nnabla_rl.utils.reproductions import build_atari_env, set_global_seed
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
     set_global_seed(args.seed)
 
@@ -41,15 +38,14 @@ def run_training(args):
     total_timesteps = 10000000
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
-    if args.snapshot_dir is None:
-        config = A.PPOConfig(actor_num=actor_num,
-                             total_timesteps=total_timesteps,
-                             timelimit_as_terminal=True,
-                             seed=args.seed,
-                             preprocess_state=False)
-        ppo = A.PPO(train_env, config=config)
-    else:
-        ppo = serializers.load_snapshot(args.snapshot_dir)
+    config = A.PPOConfig(gpu_id=args.gpu,
+                         actor_num=actor_num,
+                         total_timesteps=total_timesteps,
+                         timelimit_as_terminal=True,
+                         seed=args.seed,
+                         preprocess_state=False)
+    ppo = A.PPO(train_env, config=config)
+
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     ppo.set_hooks(hooks)
 
@@ -60,12 +56,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    ppo = serializers.load_snapshot(args.snapshot_dir)
+    config = A.PPOConfig(gpu_id=args.gpu)
+    ppo = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(ppo, A.PPO):
         raise ValueError('Loaded snapshot is not trained with PPO!')
 

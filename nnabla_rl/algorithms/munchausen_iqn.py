@@ -31,6 +31,7 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 
@@ -200,17 +201,30 @@ class MunchausenIQN(Algorithm):
         if not self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
-        kwargs = {}
-        kwargs['risk_measure_function'] = risk_measure_function
-        self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._config, **kwargs)
-        self._target_quantile_function = cast(StateActionQuantileFunction,
-                                              self._quantile_function.deepcopy('target_quantile_function'))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            kwargs = {}
+            kwargs['risk_measure_function'] = risk_measure_function
+            self._quantile_function = quantile_function_builder(
+                'quantile_function', self._env_info, self._config, **kwargs)
+            self._target_quantile_function = cast(StateActionQuantileFunction,
+                                                  self._quantile_function.deepcopy('target_quantile_function'))
 
-        self._quantile_function_solver = quantile_solver_builder(self._env_info, self._config)
+            self._quantile_function_solver = quantile_solver_builder(self._env_info, self._config)
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+            self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+
+    @eval_api
+    def compute_eval_action(self, state):
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            (action, _), _ = epsilon_greedy_action_selection(state,
+                                                             self._greedy_action_selector,
+                                                             self._random_action_selector,
+                                                             epsilon=self._config.test_epsilon)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._quantile_function_trainer = self._setup_quantile_function_training(env_or_buffer)
 
@@ -264,14 +278,6 @@ class MunchausenIQN(Algorithm):
                                 self._target_quantile_function.get_parameters())
 
         return quantile_function_trainer
-
-    @eval_api
-    def compute_eval_action(self, state):
-        (action, _), _ = epsilon_greedy_action_selection(state,
-                                                         self._greedy_action_selector,
-                                                         self._random_action_selector,
-                                                         epsilon=self._config.test_epsilon)
-        return action
 
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)

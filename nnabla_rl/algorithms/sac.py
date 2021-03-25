@@ -30,6 +30,7 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 
@@ -180,33 +181,37 @@ class SAC(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException
 
-        self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
-        self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
-        self._train_q_functions = [self._q1, self._q2]
-        self._train_q_solvers = {q.scope_name: q_solver_builder(self._env_info, self._config)
-                                 for q in self._train_q_functions}
-        self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
-                                    for q in self._train_q_functions]
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
+            self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
+            self._train_q_functions = [self._q1, self._q2]
+            self._train_q_solvers = {q.scope_name: q_solver_builder(self._env_info, self._config)
+                                     for q in self._train_q_functions}
+            self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
+                                        for q in self._train_q_functions]
 
-        self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
-        self._pi_solver = policy_solver_builder(self._env_info, self._config)
+            self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi_solver = policy_solver_builder(self._env_info, self._config)
 
-        self._temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
-            scope_name='temperature',
-            initial_value=self._config.initial_temperature)
-        if not self._config.fix_temperature:
-            self._temperature_solver = temperature_solver_builder(self._env_info, self._config)
-        else:
-            self._temperature_solver = None
+            self._temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
+                scope_name='temperature',
+                initial_value=self._config.initial_temperature)
+            if not self._config.fix_temperature:
+                self._temperature_solver = temperature_solver_builder(self._env_info, self._config)
+            else:
+                self._temperature_solver = None
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+            self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, state):
-        action, _ = self._compute_greedy_action(state, deterministic=True)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_greedy_action(state, deterministic=True)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)

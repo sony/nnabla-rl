@@ -30,6 +30,7 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, Training, TrainingBatch
 from nnabla_rl.models import DeterministicPolicy, QFunction, TD3Policy, TD3QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 
@@ -176,26 +177,30 @@ class TD3(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException
 
-        self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
-        self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
-        self._train_q_functions = [self._q1, self._q2]
-        self._train_q_solvers = {q.scope_name: critic_solver_builder(
-            env_info=self._env_info, algorithm_config=self._config) for q in self._train_q_functions}
-        self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
-                                    for q in self._train_q_functions]
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
+            self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
+            self._train_q_functions = [self._q1, self._q2]
+            self._train_q_solvers = {q.scope_name: critic_solver_builder(
+                env_info=self._env_info, algorithm_config=self._config) for q in self._train_q_functions}
+            self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
+                                        for q in self._train_q_functions]
 
-        self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
-        self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy('target_' + self._pi.scope_name))
+            self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy('target_' + self._pi.scope_name))
 
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, state):
-        action, _ = self._compute_greedy_action(state)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_greedy_action(state)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)

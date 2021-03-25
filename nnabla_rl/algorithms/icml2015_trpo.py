@@ -29,6 +29,7 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 
 
@@ -128,14 +129,18 @@ class ICML2015TRPO(Algorithm):
                  config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder()):
         super(ICML2015TRPO, self).__init__(env_or_env_info, config=config)
-        self._policy = policy_builder("pi", self._env_info, self._config)
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._policy = policy_builder("pi", self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, s):
-        action, _ = self._compute_action(s)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_action(s)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
 

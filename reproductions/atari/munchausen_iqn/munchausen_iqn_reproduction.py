@@ -16,7 +16,6 @@ import argparse
 
 import numpy as np
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.replay_buffers as RB
@@ -34,8 +33,6 @@ class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
     set_global_seed(args.seed)
 
@@ -48,32 +45,30 @@ def run_training(args):
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
 
-    config = A.MunchausenIQNConfig()
-    iqn = A.MunchausenIQN(train_env, config=config, replay_buffer_builder=MemoryEfficientBufferBuilder())
-    iqn.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
-    iqn.train(train_env, total_iterations=50000000)
+    config = A.MunchausenIQNConfig(gpu_id=args.gpu)
+    m_iqn = A.MunchausenIQN(train_env, config=config, replay_buffer_builder=MemoryEfficientBufferBuilder())
+    m_iqn.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
+    m_iqn.train(train_env, total_iterations=50000000)
 
     eval_env.close()
     train_env.close()
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
-    iqn = serializers.load_snapshot(args.snapshot_dir)
-    if not isinstance(iqn, A.MunchausenIQN):
+    config = A.MunchausenIQNConfig(gpu_id=args.gpu)
+    m_iqn = serializers.load_snapshot(args.snapshot_dir, config=config)
+    if not isinstance(m_iqn, A.MunchausenIQN):
         raise ValueError('Loaded snapshot is not trained with IQN!')
 
     eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=False)
     evaluator = EpisodicEvaluator(run_per_evaluation=30)
-    returns = evaluator(iqn, eval_env)
+    returns = evaluator(m_iqn, eval_env)
     mean = np.mean(returns)
     std_dev = np.std(returns)
     median = np.median(returns)
-    logger.info('Evaluation results. mean: {} +/- std: {}, median: {}'.format(
-        mean, std_dev, median))
+    logger.info('Evaluation results. mean: {} +/- std: {}, median: {}'.format(mean, std_dev, median))
 
 
 def main():

@@ -30,6 +30,7 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, SACVFunction, StochasticPolicy, VFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 
@@ -191,25 +192,34 @@ class ICML2018SAC(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
-        self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_config=self._config)
-        self._v_solver = v_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_v = cast(VFunction, self._v.deepcopy('target_' + self._v.scope_name))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_config=self._config)
+            self._v_solver = v_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_v = cast(VFunction, self._v.deepcopy('target_' + self._v.scope_name))
 
-        self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
-        self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
+            self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
+            self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
 
-        self._train_q_functions = [self._q1, self._q2]
-        self._train_q_solvers = {}
-        for q in self._train_q_functions:
-            self._train_q_solvers[q.scope_name] = q_solver_builder(
-                env_info=self._env_info, algorithm_config=self._config)
+            self._train_q_functions = [self._q1, self._q2]
+            self._train_q_solvers = {}
+            for q in self._train_q_functions:
+                self._train_q_solvers[q.scope_name] = q_solver_builder(
+                    env_info=self._env_info, algorithm_config=self._config)
 
-        self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
-        self._pi_solver = policy_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi_solver = policy_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+
+    @eval_api
+    def compute_eval_action(self, state):
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_greedy_action(state, deterministic=True)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
@@ -284,11 +294,6 @@ class ICML2018SAC(Algorithm):
         copy_network_parameters(self._v.get_parameters(), self._target_v.get_parameters(), 1.0)
 
         return v_function_trainer
-
-    @eval_api
-    def compute_eval_action(self, state):
-        action, _ = self._compute_greedy_action(state, deterministic=True)
-        return action
 
     def _run_online_training_iteration(self, env):
         for _ in range(self._config.environment_steps):

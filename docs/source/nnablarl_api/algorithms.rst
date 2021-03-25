@@ -1,7 +1,15 @@
 ===========
 Algorithms
 ===========
-All algorithms are derived from :class:`nnabla_rl.algorithm.Algorithm`
+All algorithm are derived from :class:`nnabla_rl.algorithm.Algorithm`.
+
+..  note::
+
+   Algorithm will run on cpu by default 
+   (No matter what `nnabla context <https://nnabla.readthedocs.io/en/latest/python/api/common.html#context>`_ 
+   is set in prior to the instantiation). 
+   If you want to run the algorithm on gpu, set the gpu_id through the algorithm's config.
+   Note that the algorithm will override the nnabla context when the training starts.
 
 Algorithm
 ==========

@@ -31,6 +31,7 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import DQNQFunction, QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 from nnabla_rl.utils.misc import copy_network_parameters
 
@@ -171,22 +172,25 @@ class DQN(Algorithm):
         super(DQN, self).__init__(env_or_env_info, config=config)
         if not self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_config=self._config)
+            self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
 
-        self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_config=self._config)
-        self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
-
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, s):
-        (action, _), _ = epsilon_greedy_action_selection(s,
-                                                         self._greedy_action_selector,
-                                                         self._random_action_selector,
-                                                         epsilon=self._config.test_epsilon)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            (action, _), _ = epsilon_greedy_action_selection(s,
+                                                             self._greedy_action_selector,
+                                                             self._random_action_selector,
+                                                             epsilon=self._config.test_epsilon)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
 
