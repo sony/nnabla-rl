@@ -29,6 +29,9 @@ class REINFORCEDiscretePolicy(StochasticPolicy):
     See: http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-5.pdf
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int
 
     def __init__(self, scope_name: str, action_dim: int):
@@ -56,6 +59,9 @@ class REINFORCEContinousPolicy(StochasticPolicy):
     See: http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-5.pdf
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _action_dim: int
     _fixed_ln_var: np.ndarray
 

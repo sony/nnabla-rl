@@ -154,6 +154,10 @@ class DQN(Algorithm):
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer
     '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: DQNConfig
     _q: QFunction
     _q_solver: nn.solver.Solver

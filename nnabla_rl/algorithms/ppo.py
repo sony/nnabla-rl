@@ -204,6 +204,10 @@ class PPO(Algorithm):
         state_preprocessor_builder (None or :py:class:`PreprocessorBuilder <nnabla_rl.builders.PreprocessorBuilder>`):
             state preprocessor builder to preprocess the states
     '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: PPOConfig
 
     _v_function: VFunction
@@ -441,6 +445,9 @@ class PPO(Algorithm):
 
 
 class _PPOActor(object):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _actor_num: int
     _env: gym.Env
     _env_info: EnvironmentInfo

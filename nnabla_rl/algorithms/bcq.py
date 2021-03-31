@@ -150,6 +150,10 @@ class BCQ(Algorithm):
         perturbator_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
             builder for perturbator solvers
     '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: BCQConfig
     _q_ensembles: List[QFunction]
     _q_solvers: Dict[str, nn.solver.Solver]

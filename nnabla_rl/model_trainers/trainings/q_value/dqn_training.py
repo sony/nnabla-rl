@@ -22,6 +22,9 @@ from nnabla_rl.models import (Model, QFunction, QuantileDistributionFunction, St
 
 
 class _QFunctionDQNTraining(Training):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_function: QFunction
 
     def __init__(self, target_function: QFunction):
@@ -38,6 +41,9 @@ class _QFunctionDQNTraining(Training):
 
 
 class _ValueDistributionFunctionDQNTraining(Training):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_function: ValueDistributionFunction
 
     def __init__(self, target_function: ValueDistributionFunction):
@@ -94,6 +100,9 @@ class _ValueDistributionFunctionDQNTraining(Training):
 
 
 class _QuantileDistributionFunctionDQNTraining(Training):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_function: QuantileDistributionFunction
 
     def __init__(self, target_function: QuantileDistributionFunction):
@@ -114,6 +123,9 @@ class _QuantileDistributionFunctionDQNTraining(Training):
 
 
 class _StateActionQuantileFunctionDQNTraining(Training):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_function: StateActionQuantileFunction
 
     def __init__(self, target_function: StateActionQuantileFunction):
@@ -143,6 +155,9 @@ class _StateActionQuantileFunctionDQNTraining(Training):
 
 
 class DQNTraining(Training):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _delegate: Training
 
     def __init__(self, train_function: Model, target_function: Model):

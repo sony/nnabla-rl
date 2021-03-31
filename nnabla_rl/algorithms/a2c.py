@@ -145,8 +145,12 @@ class A2C(Algorithm):
         policy_builder (:py:class:`ModelBuilder[StochasicPolicy] <nnabla_rl.builders.ModelBuilder>`):
             builder of policy models
         policy_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for policy solvers
-        config (:py:class:`A2CConfig <nnabla_rl.algorithms.a2c.A2Config>`): configuration of PPO algorithm
+        config (:py:class:`A2CConfig <nnabla_rl.algorithms.a2c.A2CConfig>`): configuration of A2C algorithm
     '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: A2CConfig
     _v_function: VFunction
     _v_function_solver: nn.solver.Solver
