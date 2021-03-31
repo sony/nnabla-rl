@@ -81,11 +81,11 @@ class A2CConfig(AlgorithmConfig):
         Check the set values are in valid range.
 
         '''
-        if not ((0.0 <= self.gamma) & (self.gamma <= 1.0)):
-            raise ValueError('gamma must lie between [0.0, 1.0]')
+        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
+        self._assert_between(self.decay, 0.0, 1.0, 'decay')
         self._assert_positive(self.n_steps, 'n_steps')
+        self._assert_positive(self.actor_num, 'actor num')
         self._assert_positive(self.learning_rate, 'learning_rate')
-        self._assert_positive(self.max_grad_norm, 'max_grad_norm')
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
@@ -176,9 +176,9 @@ class A2C(Algorithm):
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  config=A2CConfig()):
+        super(A2C, self).__init__(env_or_env_info, config=config)
         if self._env_info.is_continuous_action_env():
             raise NotImplementedError
-        super(A2C, self).__init__(env_or_env_info, config=config)
 
         # Initialize on cpu and change the context later
         with nn.context_scope(context.get_nnabla_context(-1)):
