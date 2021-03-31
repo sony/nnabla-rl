@@ -76,6 +76,9 @@ class SumTree(object):
         return self.sample_indices(indices, beta)
 
     def sample_indices(self, indices, beta=0.6):
+        if self._latest_indices is not None:
+            raise RuntimeError('Trying to sample data from buffer without updating priority. '
+                               'Check that the algorithm supports prioritized replay buffer.')
         data = [self._data[i] for i in indices]
         priorities = np.array([self._get_priority(i)
                                for i in indices])[:, np.newaxis]
@@ -107,6 +110,7 @@ class SumTree(object):
     def update_latest_priorities(self, priorities):
         for index, priority in zip(self._latest_indices, priorities):
             self.update(index, priority)
+        self._latest_indices = None
 
     def __len__(self):
         return self._data_num
