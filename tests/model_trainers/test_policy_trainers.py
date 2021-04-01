@@ -124,7 +124,7 @@ class TestComputeHessianVectorProduct(TrainerTest):
         flat_grads.forward()
 
         actual = conjugate_gradient(
-            compute_Ax, flat_grads.d, max_iterations=None)
+            compute_Ax, flat_grads.d, max_iterations=1000)
 
         H = np.array(
             [[2*state_array[0, 0]**2,
@@ -154,7 +154,7 @@ class TestComputeHessianVectorProduct(TrainerTest):
         flat_grads.forward()
 
         actual = conjugate_gradient(
-            compute_Ax, flat_grads.d, max_iterations=None)
+            compute_Ax, flat_grads.d, max_iterations=1000)
 
         hessian = compute_hessian(loss, nn.get_parameters().values())
 
