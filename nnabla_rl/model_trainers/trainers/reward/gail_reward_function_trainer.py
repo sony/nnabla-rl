@@ -70,7 +70,9 @@ class GAILRewardFunctionTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
 
-        return {}
+        trainer_state = {}
+        trainer_state['reward_loss'] = float(self._binary_classification_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self, models: Union[Model, Sequence[Model]],
                               training: Training,

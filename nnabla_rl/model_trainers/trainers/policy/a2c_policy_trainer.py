@@ -63,7 +63,10 @@ class A2CPolicyTrainer(ModelTrainer):
             if self._config.max_grad_norm is not None:
                 clip_grad_by_global_norm(solver, self._config.max_grad_norm)
             solver.update()
-        return {}
+
+        trainer_state = {}
+        trainer_state['pi_loss'] = float(self._pi_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self,
                               models: Sequence[Model],
@@ -75,7 +78,7 @@ class A2CPolicyTrainer(ModelTrainer):
             distribution = policy.pi(training_variables.s_current)
             log_prob = distribution.log_prob(training_variables.a_current)
             entropy = distribution.entropy()
-            advantage = training_variables.extra["advantage"]
+            advantage = training_variables.extra['advantage']
 
             self._pi_loss += NF.mean(-advantage * log_prob - self._config.entropy_coefficient * entropy)
 

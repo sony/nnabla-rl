@@ -34,7 +34,7 @@ class KLDVariationalAutoEncoderTrainerConfig(TrainerConfig):
 
 class KLDVariationalAutoEncoderTrainer(ModelTrainer):
     _config: KLDVariationalAutoEncoderTrainerConfig
-    _vae_loss: nn.Variable  # Training loss/output
+    _encoder_loss: nn.Variable  # Training loss/output
 
     def __init__(self,
                  env_info: EnvironmentInfo,
@@ -53,12 +53,14 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
         # update model
         for solver in solvers.values():
             solver.zero_grad()
-        self._vae_loss.forward(clear_no_need_grad=True)
-        self._vae_loss.backward(clear_buffer=True)
+        self._encoder_loss.forward(clear_no_need_grad=True)
+        self._encoder_loss.backward(clear_buffer=True)
         for solver in solvers.values():
             solver.update()
 
-        return {}
+        trainer_state = {}
+        trainer_state['encoder_loss'] = float(self._encoder_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self,
                               models: Iterable[Model],
@@ -67,7 +69,7 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
         models = cast(Iterable[VariationalAutoEncoder], models)
         batch_size = training_variables.batch_size
 
-        self._vae_loss = 0
+        self._encoder_loss = 0
         for vae in models:
             latent_distribution, reconstructed_action = vae.encode_and_decode(training_variables.s_current,
                                                                               action=training_variables.a_current)
@@ -79,7 +81,7 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
             reconstruction_loss = RNF.mean_squared_error(training_variables.a_current, reconstructed_action)
             kl_divergence = latent_distribution.kl_divergence(target_latent_distribution)
             latent_loss = 0.5 * NF.mean(kl_divergence)
-            self._vae_loss += reconstruction_loss + latent_loss
+            self._encoder_loss += reconstruction_loss + latent_loss
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables

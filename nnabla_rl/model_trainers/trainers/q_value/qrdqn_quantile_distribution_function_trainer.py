@@ -71,8 +71,9 @@ class QRDQNQuantileDistributionFunctionTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
 
-        # TODO: return dictionary of computed errors
-        return {}
+        trainer_state = {}
+        trainer_state['q_loss'] = float(self._quantile_huber_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self,
                               models: Sequence[Model],

@@ -61,7 +61,10 @@ class PPOPolicyTrainer(ModelTrainer):
         self._pi_loss.backward(clear_buffer=True)
         for solver in solvers.values():
             solver.update()
-        return {}
+
+        trainer_state = {}
+        trainer_state['pi_loss'] = float(self._pi_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self, models: Sequence[Model],
                               training: Training,

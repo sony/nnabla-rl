@@ -14,7 +14,7 @@
 
 import random
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import gym
 import numpy as np
@@ -225,6 +225,10 @@ class GAIL(Algorithm):
     _s_next_var_label: nn.Variable
     _a_var_label: nn.Variable
     _reward: nn.Variable
+
+    _v_function_trainer_state: Dict[str, Any]
+    _policy_trainer_state: Dict[str, Any]
+    _discriminator_trainer_state: Dict[str, Any]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  expert_buffer: ReplayBuffer,
@@ -468,7 +472,7 @@ class GAIL(Algorithm):
             batch = TrainingBatch(batch_size=self._config.vf_batch_size,
                                   s_current=s[indices],
                                   extra={'v_target': v_target[indices]})
-            self._v_function_trainer.train(batch)
+            self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     def _policy_training(self, s, a, v_target, advantage):
         extra = {}
@@ -479,7 +483,7 @@ class GAIL(Algorithm):
                               a_current=a[:self._config.pi_batch_size],
                               extra=extra)
 
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     def _discriminator_training(self, s_curr_expert, a_curr_expert, s_next_expert,
                                 s_curr_agent, a_curr_agent, s_next_agent):
@@ -494,7 +498,7 @@ class GAIL(Algorithm):
         batch = TrainingBatch(batch_size=self._config.discriminator_batch_size,
                               extra=extra)
 
-        self._discriminator_trainer.train(batch)
+        self._discriminator_trainer_state = self._discriminator_trainer.train(batch)
 
     @eval_api
     def _compute_action(self, s, act_deterministic=False):
@@ -542,4 +546,8 @@ class GAIL(Algorithm):
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(GAIL, self).latest_iteration_state
+        if hasattr(self, '_discriminator_trainer_state'):
+            latest_iteration_state['scalar'].update({'reward_loss': self._discriminator_trainer_state['reward_loss']})
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
         return latest_iteration_state

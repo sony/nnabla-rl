@@ -115,6 +115,20 @@ class TestMunchausenIQN(object):
         with pytest.raises(ValueError):
             A.MunchausenIQNConfig(clipping_value=100)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyDiscreteImg()
+        m_iqn = A.MunchausenIQN(dummy_env)
+
+        m_iqn._quantile_function_trainer_state = {'q_loss': 0.}
+
+        latest_iteration_state = m_iqn.latest_iteration_state
+        assert 'q_loss' in latest_iteration_state['scalar']
+        assert latest_iteration_state['scalar']['q_loss'] == 0.
+
 
 if __name__ == "__main__":
     import sys

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import Any, Dict, Union, cast
 
 import gym
 import numpy as np
@@ -147,6 +147,8 @@ class CategoricalDQN(Algorithm):
     _eval_state_var: nn.Variable
     _a_greedy: nn.Variable
 
+    _model_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: CategoricalDQNConfig = CategoricalDQNConfig(),
                  value_distribution_builder: ModelBuilder[ValueDistributionFunction]
@@ -246,10 +248,10 @@ class CategoricalDQN(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._model_trainer.train(batch)
+        self._model_trainer_state = self._model_trainer.train(batch)
 
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        td_errors = np.abs(self._model_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
     @eval_api
     def _greedy_action_selector(self, s):
@@ -275,3 +277,12 @@ class CategoricalDQN(Algorithm):
         solvers = {}
         solvers[self._atom_p.scope_name] = self._atom_p_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(CategoricalDQN, self).latest_iteration_state
+        if hasattr(self, '_model_trainer_state'):
+            latest_iteration_state['scalar'].update(
+                {'cross_entropy_loss': self._model_trainer_state['cross_entropy_loss']})
+            latest_iteration_state['histogram'].update({'td_errors': self._model_trainer_state['td_errors'].flatten()})
+        return latest_iteration_state

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union, cast
+from typing import Any, Dict, Optional, Tuple, Union, cast
 
 import gym
 import numpy as np
@@ -168,6 +168,8 @@ class DQN(Algorithm):
     _eval_state_var: nn.Variable
     _a_greedy: nn.Variable
 
+    _q_function_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: DQNConfig = DQNConfig(),
                  q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
@@ -273,10 +275,10 @@ class DQN(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._q_function_trainer.train(batch)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
 
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
     def _models(self):
         models = {}
@@ -290,7 +292,9 @@ class DQN(Algorithm):
 
     @property
     def latest_iteration_state(self):
-        latest_iteration_state = {}
-        latest_iteration_state['scalar'] = {}
-        latest_iteration_state['histogram'] = {}
+        latest_iteration_state = super(DQN, self).latest_iteration_state
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update(
+                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state

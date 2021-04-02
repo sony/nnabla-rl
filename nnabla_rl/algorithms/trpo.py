@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import gym
 import numpy as np
@@ -177,6 +177,9 @@ class TRPO(Algorithm):
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
 
+    _policy_trainer_state: Dict[str, Any]
+    _v_function_trainer_state: Dict[str, Any]
+
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: TRPOConfig = TRPOConfig(),
@@ -336,7 +339,7 @@ class TRPO(Algorithm):
             batch = TrainingBatch(batch_size=self._config.vf_batch_size,
                                   s_current=s[indices],
                                   extra={'v_target': v_target[indices]})
-            self._v_function_trainer.train(batch)
+            self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     def _policy_training(self, s, a, v_target, advantage):
         extra = {}
@@ -347,7 +350,7 @@ class TRPO(Algorithm):
                               a_current=a[:self._config.pi_batch_size],
                               extra=extra)
 
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     @eval_api
     def _compute_action(self, s):
@@ -376,4 +379,6 @@ class TRPO(Algorithm):
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(TRPO, self).latest_iteration_state
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
         return latest_iteration_state

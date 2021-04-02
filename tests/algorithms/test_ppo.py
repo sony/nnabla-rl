@@ -80,6 +80,23 @@ class TestPPO(object):
         with pytest.raises(ValueError):
             A.PPOConfig(total_timesteps=-1)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyContinuous()
+        ppo = A.PPO(dummy_env)
+
+        ppo._policy_trainer_state = {'pi_loss': 0.}
+        ppo._v_function_trainer_state = {'v_loss': 1.}
+
+        latest_iteration_state = ppo.latest_iteration_state
+        assert 'pi_loss' in latest_iteration_state['scalar']
+        assert 'v_loss' in latest_iteration_state['scalar']
+        assert latest_iteration_state['scalar']['pi_loss'] == 0.
+        assert latest_iteration_state['scalar']['v_loss'] == 1.
+
 
 if __name__ == "__main__":
     pytest.main()

@@ -71,10 +71,10 @@ class SquaredTDQFunctionTrainer(ModelTrainer):
         for q_solver in solvers.values():
             q_solver.update()
 
-        errors = {}
-        errors['q_loss'] = self._q_loss.d.copy()
-        errors['td_error'] = self._td_error.d.copy()
-        return errors
+        trainer_state = {}
+        trainer_state['q_loss'] = float(self._q_loss.d.copy())
+        trainer_state['td_errors'] = self._td_error.d.copy()
+        return trainer_state
 
     def _build_training_graph(self,
                               models: Sequence[Model],

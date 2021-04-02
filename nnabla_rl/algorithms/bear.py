@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import gym
 import numpy as np
@@ -186,11 +186,15 @@ class BEAR(Algorithm):
     _lagrange: MT.policy_trainers.bear_policy_trainer.AdjustableLagrangeMultiplier
     _lagrange_solver: nn.solver.Solver
     _q_function_trainer: ModelTrainer
-    _vae_trainer: ModelTrainer
+    _encoder_trainer: ModelTrainer
     _policy_trainer: ModelTrainer
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
     _eval_max_index: nn.Variable
+
+    _encoder_trainer_state: Dict[str, Any]
+    _policy_trainer_state: Dict[str, Any]
+    _q_function_trainer_state: Dict[str, Any]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: BEARConfig = BEARConfig(),
@@ -258,14 +262,14 @@ class BEAR(Algorithm):
     def _before_training_start(self, env_or_buffer):
         # set context globally to ensure that the training runs on configured gpu
         context.set_nnabla_context(self._config.gpu_id)
-        self._vae_trainer = self._setup_vae_training(env_or_buffer)
+        self._encoder_trainer = self._setup_encoder_training(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
-    def _setup_vae_training(self, env_or_buffer):
-        trainer_config = MT.vae_trainers.KLDVariationalAutoEncoderTrainerConfig()
+    def _setup_encoder_training(self, env_or_buffer):
+        trainer_config = MT.encoder_trainers.KLDVariationalAutoEncoderTrainerConfig()
 
-        vae_trainer = MT.vae_trainers.KLDVariationalAutoEncoderTrainer(
+        encoder_trainer = MT.encoder_trainers.KLDVariationalAutoEncoderTrainer(
             env_info=self._env_info,
             config=trainer_config)
 
@@ -286,8 +290,8 @@ class BEAR(Algorithm):
 
         training = MT.model_trainer.Training()
         squashed_action_vae = SquashedActionVAE(self._vae)
-        vae_trainer.setup_training(squashed_action_vae, {self._vae.scope_name: self._vae_solver}, training)
-        return vae_trainer
+        encoder_trainer.setup_training(squashed_action_vae, {self._vae.scope_name: self._vae_solver}, training)
+        return encoder_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
@@ -378,12 +382,12 @@ class BEAR(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._q_function_trainer.train(batch)
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
-        self._vae_trainer.train(batch)
-        self._policy_trainer.train(batch)
+        self._encoder_trainer_state = self._encoder_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     def _models(self):
         models = [*self._q_ensembles, *self._target_q_ensembles,
@@ -402,5 +406,12 @@ class BEAR(Algorithm):
 
     @property
     def latest_iteration_state(self):
-        state = super(BEAR, self).latest_iteration_state
-        return state
+        latest_iteration_state = super(BEAR, self).latest_iteration_state
+        if hasattr(self, '_encoder_trainer_state'):
+            latest_iteration_state['scalar'].update({'encoder_loss': self._encoder_trainer_state['encoder_loss']})
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update({'td_errors': self._q_function_trainer_state['td_errors']})
+        return latest_iteration_state

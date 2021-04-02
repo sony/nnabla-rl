@@ -64,7 +64,9 @@ class SPGPolicyTrainer(ModelTrainer):
                 solver.clip_grad_by_norm(self._config.grad_clip_norm)
             solver.update()
 
-        return {}
+        trainer_state = {}
+        trainer_state['pi_loss'] = float(self._pi_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self,
                               models: Sequence[Model],

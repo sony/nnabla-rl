@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Any, Dict, Union
 
 import gym
 import numpy as np
@@ -131,6 +131,8 @@ class REINFORCE(Algorithm):
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
 
+    _policy_trainer_state: Dict[str, Any]
+
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: REINFORCEConfig = REINFORCEConfig(),
@@ -202,7 +204,7 @@ class REINFORCE(Algorithm):
                               a_current=a_batch,
                               extra=extra)
 
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     def _align_experiences_and_compute_accumulated_reward(self, experiences):
         s_batch = None
@@ -249,7 +251,7 @@ class REINFORCE(Algorithm):
 
     @property
     def latest_iteration_state(self):
-        latest_iteration_state = {}
-        latest_iteration_state['scalar'] = {}
-        latest_iteration_state['histogram'] = {}
+        latest_iteration_state = super(REINFORCE, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
         return latest_iteration_state

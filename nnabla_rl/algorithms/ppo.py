@@ -16,7 +16,7 @@ import multiprocessing as mp
 import os
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, NamedTuple, Optional, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 import gym
 import numpy as np
@@ -225,6 +225,9 @@ class PPO(Algorithm):
     _actors: List['_PPOActor']
     _actor_processes: List[mp.Process]
 
+    _policy_trainer_state: Dict[str, Any]
+    _v_function_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: PPOConfig = PPOConfig(),
                  v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
@@ -396,9 +399,9 @@ class PPO(Algorithm):
                               extra=extra)
 
         self._policy_trainer.set_learning_rate(self._config.learning_rate * alpha)
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
         self._v_function_trainer.set_learning_rate(self._config.learning_rate * alpha)
-        self._v_function_trainer.train(batch)
+        self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     @eval_api
     def _compute_action(self, s):
@@ -442,6 +445,15 @@ class PPO(Algorithm):
                 config=self._config)
             actors.append(actor)
         return actors
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(PPO, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+        return latest_iteration_state
 
 
 class _PPOActor(object):

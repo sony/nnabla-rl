@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import gym
 import numpy as np
@@ -128,6 +128,8 @@ class ICML2015TRPO(Algorithm):
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
 
+    _policy_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder()):
@@ -197,7 +199,7 @@ class ICML2015TRPO(Algorithm):
                               a_current=a,
                               extra=extra)
 
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     def _align_experiences(self, buffer_iterator):
         s_batch = []
@@ -259,7 +261,5 @@ class ICML2015TRPO(Algorithm):
 
     @property
     def latest_iteration_state(self):
-        latest_iteration_state = {}
-        latest_iteration_state['scalar'] = {}
-        latest_iteration_state['histogram'] = {}
+        latest_iteration_state = super(ICML2015TRPO, self).latest_iteration_state
         return latest_iteration_state

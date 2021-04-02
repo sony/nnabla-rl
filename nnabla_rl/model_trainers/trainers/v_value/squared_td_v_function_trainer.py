@@ -64,7 +64,9 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
                 clip_grad_by_global_norm(solver, self._config.max_grad_norm)
             solver.update()
 
-        return {}
+        trainer_state = {}
+        trainer_state['v_loss'] = float(self._v_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self,
                               models: Iterable[Model],

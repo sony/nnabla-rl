@@ -63,8 +63,9 @@ class BCQPerturbatorTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
 
-        errors: Dict = {}
-        return errors
+        trainer_state = {}
+        trainer_state['perturbator_loss'] = float(self._perturbator_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self,
                               models: Sequence[Model],

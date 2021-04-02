@@ -124,7 +124,9 @@ class BEARPolicyTrainer(ModelTrainer):
             self._lagrange_solver.update()
             self._lagrange.clip(-5.0, 10.0)
 
-        return {}
+        trainer_state = {}
+        trainer_state['pi_loss'] = float(self._pi_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self, models: Sequence[Model],
                               training: Training,

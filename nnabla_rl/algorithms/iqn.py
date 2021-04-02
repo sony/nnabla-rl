@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import Any, Dict, Union, cast
 
 import gym
 import numpy as np
@@ -179,6 +179,8 @@ class IQN(Algorithm):
     _eval_state_var: nn.Variable
     _a_greedy: nn.Variable
 
+    _quantile_function_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: IQNConfig = IQNConfig(),
                  quantile_function_builder: ModelBuilder[StateActionQuantileFunction]
@@ -284,7 +286,7 @@ class IQN(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        self._quantile_function_trainer.train(batch)
+        self._quantile_function_trainer_state = self._quantile_function_trainer.train(batch)
 
     @eval_api
     def _greedy_action_selector(self, s):
@@ -310,3 +312,10 @@ class IQN(Algorithm):
         solvers = {}
         solvers[self._quantile_function.scope_name] = self._quantile_function_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(IQN, self).latest_iteration_state
+        if hasattr(self, '_quantile_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._quantile_function_trainer_state['q_loss']})
+        return latest_iteration_state

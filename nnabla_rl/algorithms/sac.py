@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 import gym
 import numpy as np
@@ -172,6 +172,9 @@ class SAC(Algorithm):
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
 
+    _policy_trainer_state: Dict[str, Any]
+    _q_function_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: SACConfig = SACConfig(),
                  q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
@@ -302,11 +305,11 @@ class SAC(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._q_function_trainer.train(batch)
-        self._policy_trainer.train(batch)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
     @eval_api
     def _compute_greedy_action(self, s, deterministic=False):
@@ -333,3 +336,14 @@ class SAC(Algorithm):
         if self._temperature_solver is not None:
             solvers[self._temperature.scope_name] = self._temperature_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(SAC, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update(
+                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
+        return latest_iteration_state

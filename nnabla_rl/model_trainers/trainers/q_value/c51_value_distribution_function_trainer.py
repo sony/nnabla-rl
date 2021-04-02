@@ -65,12 +65,13 @@ class C51ValueDistributionFunctionTrainer(ModelTrainer):
         self._cross_entropy_loss.backward()
         for solver in solvers.values():
             solver.update()
-        errors = {}
+        trainer_state = {}
         # Kullbuck Leibler divergence is not actually the td_error itself
         # but is used for prioritizing the replay buffer and we save it as 'td_error' for convenience
         # See: https://arxiv.org/pdf/1710.02298.pdf
-        errors['td_error'] = self._kl_loss.d.copy()
-        return errors
+        trainer_state['td_errors'] = self._kl_loss.d.copy()
+        trainer_state['cross_entropy_loss'] = float(self._cross_entropy_loss.d.copy())
+        return trainer_state
 
     def _build_training_graph(self,
                               models: Sequence[Model],

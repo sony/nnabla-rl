@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Sequence, cast
+from typing import Any, Dict, Optional, Sequence, cast
 
 import numpy as np
 
@@ -138,7 +138,8 @@ class TRPOPolicyTrainer(ModelTrainer):
 
         copy_network_parameters(policy.get_parameters(), old_policy.get_parameters(), tau=1.0)
 
-        return {}
+        trainer_state: Dict[str, Any] = {}
+        return trainer_state
 
     def _gpu_batch_size(self, batch_size):
         # We use gpu_batch_size to reduce one forward gpu calculation memory

@@ -79,6 +79,23 @@ class TestA2C(object):
         with pytest.raises(ValueError):
             A.A2CConfig(learning_rate=-1)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyDiscreteImg()
+        a2c = A.A2C(dummy_env)
+
+        a2c._policy_trainer_state = {'pi_loss': 0.}
+        a2c._v_function_trainer_state = {'v_loss': 1.}
+
+        latest_iteration_state = a2c.latest_iteration_state
+        assert 'pi_loss' in latest_iteration_state['scalar']
+        assert 'v_loss' in latest_iteration_state['scalar']
+        assert latest_iteration_state['scalar']['pi_loss'] == 0.
+        assert latest_iteration_state['scalar']['v_loss'] == 1.
+
 
 if __name__ == "__main__":
     pytest.main()

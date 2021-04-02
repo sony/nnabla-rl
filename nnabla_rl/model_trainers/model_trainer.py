@@ -162,10 +162,10 @@ class ModelTrainer(metaclass=ABCMeta):
             self._build_training_graph(self._models, self._training, self._training_variables)
 
         self._training.before_update(self._train_count)
-        error_info = self._update_model(self._models, self._solvers, batch, self._training_variables, **kwargs)
+        trainer_state = self._update_model(self._models, self._solvers, batch, self._training_variables, **kwargs)
         self._training.after_update(self._train_count)
 
-        return error_info
+        return trainer_state
 
     def setup_training(self,
                        models: Union[Model, Sequence[Model]],

@@ -81,6 +81,22 @@ class TestCategoricalDQN(object):
 
         assert action.shape == (1, )
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyDiscreteImg()
+        categorical_dqn = A.CategoricalDQN(dummy_env)
+
+        categorical_dqn._model_trainer_state = {'cross_entropy_loss': 0., 'td_errors': np.array([0., 1.])}
+
+        latest_iteration_state = categorical_dqn.latest_iteration_state
+        assert 'cross_entropy_loss' in latest_iteration_state['scalar']
+        assert 'td_errors' in latest_iteration_state['histogram']
+        assert latest_iteration_state['scalar']['cross_entropy_loss'] == 0.
+        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+
 
 if __name__ == "__main__":
     import sys

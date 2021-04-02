@@ -16,7 +16,7 @@ import multiprocessing as mp
 import os
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -169,6 +169,9 @@ class A2C(Algorithm):
 
     _policy_solver_builder: SolverBuilder
     _v_solver_builder: SolverBuilder
+
+    _policy_trainer_state: Dict[str, Any]
+    _v_function_trainer_state: Dict[str, Any]
 
     def __init__(self, env_or_env_info,
                  v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
@@ -338,8 +341,8 @@ class A2C(Algorithm):
         self._v_function_trainer.set_learning_rate(alpha)
 
         # model update
-        self._policy_trainer.train(batch)
-        self._v_function_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
+        self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     def _compute_advantage(self, s, returns):
         if not hasattr(self, '_state_var_for_advantage'):
@@ -365,6 +368,15 @@ class A2C(Algorithm):
         solvers[self._policy.scope_name] = self._policy_solver
         solvers[self._v_function.scope_name] = self._v_function_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(A2C, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+        return latest_iteration_state
 
 
 class _A2CActor(object):
