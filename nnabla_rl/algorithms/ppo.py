@@ -51,6 +51,7 @@ class PPOConfig(AlgorithmConfig):
     List of configurations for PPO algorithm
 
     Args:
+        epsilon (float): PPO's probability ratio clipping range. Defaults to 0.1
         gamma (float): discount factor of rewards. Defaults to 0.99.
         learning_rate (float): learning rate which is set to all solvers. \
             You can customize/override the learning rate for each solver by implementing the \
@@ -74,6 +75,7 @@ class PPOConfig(AlgorithmConfig):
             before feeding as training batch. Defaults to True.
     '''
 
+    epsilon: float = 0.1
     gamma: float = 0.99
     learning_rate: float = 2.5*1e-4
     lmb: float = 0.95
@@ -288,6 +290,7 @@ class PPO(Algorithm):
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.PPOPolicyTrainerConfig(
+            epsilon=self._config.epsilon,
             entropy_coefficient=self._config.entropy_coefficient
         )
         policy_trainer = MT.policy_trainers.PPOPolicyTrainer(

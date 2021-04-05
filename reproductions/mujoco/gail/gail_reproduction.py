@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
@@ -25,6 +26,8 @@ from nnabla_rl.utils.reproductions import build_mujoco_env, d4rl_dataset_to_expe
 
 def run_training(args):
     outdir = f'{args.env}_datasetsize-{args.datasetsize}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
@@ -72,13 +75,14 @@ def run_showcase(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='halfcheetah-medium-expert-v1')
+    parser.add_argument('--env', type=str, default='halfcheetah-medium-v2')
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--datasetsize', type=int, default=4000)
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--save-dir', type=str, default=None)
 
     args = parser.parse_args()
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import gym
 
@@ -38,6 +39,8 @@ def select_mmd_sigma(env_name, mmd_kernel):
 
 def run_training(args):
     outdir = f'{args.env}_{args.mmd_kernel}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
@@ -98,6 +101,7 @@ def main():
     parser.add_argument('--snapshot-dir', type=str, default=None)
     parser.add_argument('--mmd-kernel', type=str,
                         default="gaussian", choices=["laplacian", "gaussian"])
+    parser.add_argument('--save-dir', type=str, default=None)
 
     args = parser.parse_args()
 

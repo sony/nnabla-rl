@@ -1,2 +1,5 @@
 *v2_results*/**
 **/best*/**
+*.h5
+*.pickle
+*.json

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
@@ -24,6 +25,8 @@ from nnabla_rl.writers import FileWriter
 
 def run_training(args):
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     writer = FileWriter(outdir, "evaluation_result")
@@ -62,8 +65,8 @@ def run_showcase(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str,
-                        default='PongNoFrameskip-v4')
+    parser.add_argument('--env', type=str, default='PongNoFrameskip-v4')
+    parser.add_argument('--save-dir', type=str, default="")
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--gpu_batch_size', type=int, default=2500)
     parser.add_argument('--seed', type=int, default=0)

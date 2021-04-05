@@ -55,13 +55,13 @@ def build_mujoco_env(id_or_env, test=False, seed=None, render=False):
         # Add pybullet env
         import pybullet_envs  # noqa
     except ModuleNotFoundError:
-        # Do nothing if pybullet is not installed
+        # Ignore if pybullet is not installed
         pass
     try:
         # Add d4rl env
         import d4rl  # noqa
     except ModuleNotFoundError:
-        # Do nothing if d4rl is not installed
+        # Ignore if d4rl is not installed
         pass
 
     if isinstance(id_or_env, gym.Env):

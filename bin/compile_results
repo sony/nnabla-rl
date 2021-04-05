@@ -74,7 +74,7 @@ def create_average_result_file(histograms, file_outdir):
 
     file_prefix = "evaluation_result_average"
     writer = W.FileWriter(file_outdir, file_prefix=file_prefix)
-    for i, r in zip(iteration_nums, returns):
+    for i, r in zip(iteration_nums, returns_list):
         mean = np.mean(r)
         std_dev = np.std(r)
         minimum = np.min(r)
@@ -140,7 +140,6 @@ def compile_results(args):
     rootdir = pathlib.Path.cwd()
     directories = list_all_directory_with(rootdir, args.eval_scalar_filename)
 
-    histograms = {}
     for directory in directories:
         if args.outdir in str(directory):
             continue
@@ -173,15 +172,24 @@ def compile_results(args):
         copy_dir(best_median_dir, out_median_dir)
 
         histogram_file = copy_file_to_dir(eval_histogram_result_file, outdir)
+        create_result_plot(outdir / eval_scalar_result_file.name, outdir)
+        create_best_score_file(best_mean_iteration, best_mean_score, best_mean_std,
+                               best_median_iteration, best_median_score, outdir)
+
+    histograms = {}
+    histogram_directories = list_all_directory_with(rootdir, args.eval_histogram_filename)
+    for directory in histogram_directories:
+        if args.outdir not in str(directory):
+            continue
+        relative_dir = directory.relative_to(rootdir)
+        env_name = str(relative_dir).split('/')[1]
+        histogram_file = directory / args.eval_histogram_filename
+        print(f"found histogram file of env: {env_name} at: {histogram_file}")
         if histogram_file.exists():
             if env_name in histograms.keys():
                 histograms[env_name].append(histogram_file)
             else:
                 histograms[env_name] = [histogram_file]
-
-        create_result_plot(outdir / eval_scalar_result_file.name, outdir)
-        create_best_score_file(best_mean_iteration, best_mean_score, best_mean_std,
-                               best_median_iteration, best_median_score, outdir)
 
     create_average_result_file_and_plot(histograms, args)
 

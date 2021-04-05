@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
@@ -23,18 +24,20 @@ from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed
 
 
 def select_total_iterations(env_name):
-    if env_name in ['Hopper-v2']:
-        total_iterations = 1000000
+    if env_name in ['Ant-v2', 'HalfCheetah-v2', 'Walker2d-v2']:
+        total_iterations = 3000000
     elif env_name in ['Humanoid-v2']:
         total_iterations = 10000000
     else:
-        total_iterations = 3000000
+        total_iterations = 1000000
     print(f'Selected total iterations: {total_iterations}')
     return total_iterations
 
 
 def run_training(args):
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
@@ -84,6 +87,7 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--save-dir', type=str, default=None)
 
     # SAC algorithm config
     parser.add_argument('--fix-temperature', action='store_true')

@@ -24,7 +24,8 @@ setup_requires = ['pytest-runner']
 scripts = ['bin/plot_result',
            'bin/check_best_iteration',
            'bin/compile_results',
-           'bin/train_and_compile_results']
+           'bin/train_and_compile_results',
+           'bin/evaluate_algo']
 description = '''Deep reinforcement learning framework that is intended \
                  to be used for research, development and production.'''
 setup(

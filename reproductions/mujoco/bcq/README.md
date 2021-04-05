@@ -18,6 +18,8 @@ $ python bcq_reproduction.py --env='ant-expert-v0'
 
 ## Tested environments
 
+We trained the algorithm with the following environments.
+
 - ant-expert-v0
 - halfcheetah-expert-v0
 - hopper-expert-v0
@@ -25,9 +27,9 @@ $ python bcq_reproduction.py --env='ant-expert-v0'
 
 ## Reproduction results
 
-Red horizontal line is the dataset's agent score. </br>
+Red horizontal line is the expert's score. </br>
 Shaded region is the standard deviation of evaluation score. </br>
-The tested environment is not completely same as the original paper but the result is similar to that of imitation performance presented in the [BCQ paper](https://arxiv.org/pdf/1812.02900.pdf).
+The tested environment is not completely the same as the original paper but the result is similar to that of imitation performance presented in the [BCQ paper](https://arxiv.org/pdf/1812.02900.pdf).
 
 ### ant-expert-v0
 

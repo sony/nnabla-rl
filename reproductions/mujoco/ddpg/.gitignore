@@ -1,1 +1,4 @@
 *v2*_results*/**
+*.h5
+*.pickle
+*.json

@@ -1,9 +1,8 @@
 # PPO (Proximal Policy Optimization) reproduction
 
-We tested our implementation with 7 MuJoCo environments as in the [original paper](https://arxiv.org/pdf/1707.06347.pdf). </br>
+We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
 
-Following MuJoCo environments was tested with single seed:
-
+- Ant-v2
 - HalfCheetah-v2
 - Hopper-v2
 - InvertedDoublePendulum-v2
@@ -18,15 +17,21 @@ Reported score is rough estimate from the Figure 3 of the [original paper](https
 
 |Env|nnabla_rl best mean score|Reported score|
 |:---|:---:|:---:|
-|HalfCheetah-v2|1576.38+/-29.05|~1800|
-|Hopper-v2|3389.807+/-138.222|~2200|
-|InvertedDoublePendulum-v2|9334.256+/-0.997|~8000|
+|Ant-v2|2554.089+/-731.536|N/A|
+|HalfCheetah-v2|1693.484+/-37.688|~1800|
+|Hopper-v2|2761.192+/-927.428|~2200|
+|InvertedDoublePendulum-v2|9357.51+/-0.46|~8000|
 |InvertedPendulum-v2|1000.0+/-0.0|~1000|
-|Reacher-v2|-4.943+/-2.503|~-8|
-|Swimmer-v2|103.008+/-2.211|~110|
-|Walker2d-v2|4035.03+/-80.437|~3400|
+|Reacher-v2|-4.836+/-1.759|~-8|
+|Swimmer-v2|92.367+/-32.454|~110|
+|Walker2d-v2|3870.875+/-966.003|~3400|
 
 ## Learning curves
+
+### Ant-v2
+
+![Ant-v2 Result](reproduction_results/Ant-v2_results/result.png)
+
 
 ### HalfCheetah-v2
 

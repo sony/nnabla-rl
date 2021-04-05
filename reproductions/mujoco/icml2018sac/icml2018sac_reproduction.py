@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
@@ -53,10 +54,11 @@ def select_reward_scalar(env_name):
 
 def run_training(args):
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
-    eval_env = build_mujoco_env(
-        args.env, test=True, seed=args.seed + 100)
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
@@ -108,6 +110,7 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--save-dir', type=str, default=None)
 
     args = parser.parse_args()
 

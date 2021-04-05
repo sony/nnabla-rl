@@ -401,7 +401,7 @@ class BEAR(Algorithm):
         solvers[self._pi.scope_name] = self._pi_solver
         solvers[self._vae.scope_name] = self._vae_solver
         if not self._config.fix_lagrange_multiplier:
-            solvers.update[self._lagrange.scope_name] = self._lagrange_solver
+            solvers[self._lagrange.scope_name] = self._lagrange_solver
         return solvers
 
     @property

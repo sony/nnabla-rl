@@ -180,7 +180,8 @@ class ICML2018SAC(Algorithm):
     _v_function_trainer: ModelTrainer
 
     _eval_state_var: nn.Variable
-    _eval_action: nn.Variable
+    _eval_deterministic_action: nn.Variable
+    _eval_probabilistic_action: nn.Variable
 
     _policy_trainer_state: Dict[str, Any]
     _q_function_trainer_state: Dict[str, Any]
@@ -229,8 +230,10 @@ class ICML2018SAC(Algorithm):
         context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
-        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
-        self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
+        self._q_function_trainer = self._setup_q_function_training(
+            env_or_buffer)
+        self._v_function_trainer = self._setup_v_function_training(
+            env_or_buffer)
 
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
@@ -259,7 +262,8 @@ class ICML2018SAC(Algorithm):
                                                               q_functions=self._train_q_functions)
 
         training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
+        policy_trainer.setup_training(
+            self._pi, {self._pi.scope_name: self._pi_solver}, training)
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
@@ -281,7 +285,8 @@ class ICML2018SAC(Algorithm):
             target_update_frequency=self._config.target_update_interval,
             tau=self._config.tau
         )
-        q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
+        q_function_trainer.setup_training(
+            self._train_q_functions, self._train_q_solvers, training)
         return q_function_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
@@ -297,8 +302,10 @@ class ICML2018SAC(Algorithm):
             train_functions=self._v,
             target_functions=self._train_q_functions,  # Set training q as target
             target_policy=self._pi)
-        v_function_trainer.setup_training(self._v, {self._v.scope_name: self._v_solver}, training)
-        copy_network_parameters(self._v.get_parameters(), self._target_v.get_parameters(), 1.0)
+        v_function_trainer.setup_training(
+            self._v, {self._v.scope_name: self._v_solver}, training)
+        copy_network_parameters(self._v.get_parameters(),
+                                self._target_v.get_parameters(), 1.0)
 
         return v_function_trainer
 
@@ -346,13 +353,15 @@ class ICML2018SAC(Algorithm):
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = nn.Variable(s.shape)
             distribution = self._pi.pi(self._eval_state_var)
-            if deterministic:
-                self._eval_action = distribution.choose_probable()
-            else:
-                self._eval_action = distribution.sample()
+            self._eval_deterministic_action = distribution.choose_probable()
+            self._eval_probabilistic_action = distribution.sample()
         self._eval_state_var.d = s
-        self._eval_action.forward()
-        return np.squeeze(self._eval_action.d, axis=0), {}
+        if deterministic:
+            self._eval_deterministic_action.forward()
+            return np.squeeze(self._eval_deterministic_action.d, axis=0), {}
+        else:
+            self._eval_probabilistic_action.forward()
+            return np.squeeze(self._eval_probabilistic_action.d, axis=0), {}
 
     def _models(self):
         models = [self._v, self._target_v, self._q1, self._q2, self._pi]

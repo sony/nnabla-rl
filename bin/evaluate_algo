@@ -1,0 +1,139 @@
+#!/bin/bash
+ROOT_DIR=$(echo $PWD | sed 's/^\(.*nnabla-rl\).*$/\1/')
+export MKL_DEBUG_CPU_TYPE=5
+
+# env list
+ATARI_ENV_LIST=(
+    "AlienNoFrameskip-v4"
+    "AmidarNoFrameskip-v4"
+    "AssaultNoFrameskip-v4"
+    "AsterixNoFrameskip-v4"
+    "AsteroidsNoFrameskip-v4"
+    "AtlantisNoFrameskip-v4"
+    "BankHeistNoFrameskip-v4"
+    "BattleZoneNoFrameskip-v4"
+    "BeamRiderNoFrameskip-v4"
+    "BowlingNoFrameskip-v4"
+    "BoxingNoFrameskip-v4"
+    "BreakoutNoFrameskip-v4"
+    "CentipedeNoFrameskip-v4"
+    "ChopperCommandNoFrameskip-v4"
+    "CrazyClimberNoFrameskip-v4"
+    "DemonAttackNoFrameskip-v4"
+    "DoubleDunkNoFrameskip-v4"
+    "EnduroNoFrameskip-v4"
+    "FishingDerbyNoFrameskip-v4"
+    "FreewayNoFrameskip-v4"
+    "FrostbiteNoFrameskip-v4"
+    "GopherNoFrameskip-v4"
+    "GravitarNoFrameskip-v4"
+    "HeroNoFrameskip-v4"
+    "IceHockeyNoFrameskip-v4"
+    "JamesBondNoFrameskip-v4"
+    "KangarooNoFrameskip-v4"
+    "KrullNoFrameskip-v4"
+    "KungFuMasterNoFrameskip-v4"
+    "MontezumaRevengeNoFrameskip-v4"
+    "MsPacmanNoFrameskip-v4"
+    "NameThisGameNoFrameskip-v4"
+    "PongNoFrameskip-v4"
+    "PrivateEyeNoFrameskip-v4"
+    "QbertNoFrameskip-v4"
+    "RiverRaidNoFrameskip-v4"
+    "RoadRunnerNoFrameskip-v4"
+    "RobotankNoFrameskip-v4"
+    "SeaquestNoFrameskip-v4"
+    "SpaceInvadersNoFrameskip-v4"
+    "StarGunnerNoFrameskip-v4"
+    "TennisNoFrameskip-v4"
+    "TimePilotNoFrameskip-v4"
+    "TutankhamNoFrameskip-v4"
+    "UpNDownNoFrameskip-v4"
+    "VentureNoFrameskip-v4"
+    "VideoPinballNoFrameskip-v4"
+    "WizardOfWorNoFrameskip-v4"
+    "ZaxxonNoFrameskip-v4"
+)
+
+MUJOCO_ENV_LIST=(
+    "Ant-v2"
+    "HalfCheetah-v2"
+    "Hopper-v2"
+    "Walker2d-v2"
+    "Reacher-v2"
+    "Swimmer-v2"
+    "InvertedPendulum-v2"
+    "InvertedDoublePendulum-v2"
+    "ant-expert-v0"
+    "halfcheetah-expert-v0"
+    "hopper-expert-v0"
+    "walker2d-expert-v0"
+)
+
+GPU_ID=0
+ALGO_NAME="dqn"
+BASE_ENV_NAME="atari"
+ENV_START_INDEX=0
+ENV_END_INDEX=-1
+
+for opt in "$@"
+do
+    shift
+    case "$opt" in
+        "--gpu_id" )
+            GPU_ID="$1";;
+        "--algo_name" )
+            ALGO_NAME="$1";;
+        "--base_env_name" )
+            BASE_ENV_NAME="$1";;
+        "--env_start_index" )
+            ENV_START_INDEX="$1";;
+        "--env_end_index" )
+            ENV_END_INDEX="$1";;
+        "--envs" )
+            ENVS="$*";;
+        "--save_dir" )
+            SAVE_DIR="$1";;
+        "-h" )
+            echo ""
+            echo "[Usage] : ./evaluate_algo
+                --gpu_id <gpu_id>
+                --algo_name <algo_name> 
+                --base_env_name <base_env_name>
+                --env_start_index <env_start_index> 
+                --env_end_index <env_end_index>
+                --envs <env1> <env2> <env3>
+                --save_dir <save_dir>
+
+                e.g. ./evaluate_algo --algo_name dqn --base_env_name atari --env_start_index 0 --env_end_index 1 --save_dir sample
+                or if you want directly specify the training envs
+                e.g. ./evaluate_algo --algo_name sac --base_env_name mujoco --save_dir sample --envs Ant-v2 Hopper-v2 
+
+                -> Evaluation about dqn is executed in atari (AlienNoFrameskip-v4 AmidarNoFrameskip-v4).
+                Please see this script for check env index.
+                "
+            echo ""
+            exit 1;;
+    esac
+done
+
+REPRODUCTION_CODE_DIR="${ROOT_DIR}/reproductions/${BASE_ENV_NAME}/${ALGO_NAME}"
+SAVE_DIR=$REPRODUCTION_CODE_DIR
+
+for ENV_NAME in ${ENVS}
+do
+    echo "Start running training for: " ${ENV_NAME}
+    ${ROOT_DIR}/bin/train_and_compile_results "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR &
+done
+
+for INDEX in $(seq ${ENV_START_INDEX} ${ENV_END_INDEX})
+do
+    if [ $BASE_ENV_NAME = "atari" ];then
+        ENV_NAME=${ATARI_ENV_LIST[$INDEX]}
+    fi
+    if [ $BASE_ENV_NAME = "mujoco" ]; then
+        ENV_NAME=${MUJOCO_ENV_LIST[$INDEX]}
+    fi
+    echo "Start running training for: " ${ENV_NAME}
+    ${ROOT_DIR}/bin/train_and_compile_results "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR &
+done

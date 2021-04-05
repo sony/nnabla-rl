@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import numpy as np
 
@@ -27,6 +28,8 @@ from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed
 
 def run_training(args):
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
@@ -79,6 +82,7 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--save-dir', type=str, default=None)
 
     args = parser.parse_args()
 
