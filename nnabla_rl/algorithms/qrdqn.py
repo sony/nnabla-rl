@@ -33,7 +33,7 @@ from nnabla_rl.models import QRDQNQuantileDistributionFunction, QuantileDistribu
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -214,31 +214,20 @@ class QRDQN(Algorithm):
         return explorer
 
     def _setup_quantile_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerConfig(
+        trainer_config = MT.q_value.QRDQNQTrainerConfig(
             num_quantiles=self._config.num_quantiles,
             kappa=self._config.kappa)
 
-        quantile_dist_trainer = \
-            MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(self._env_info, config=trainer_config)
-
-        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
-        training = MT.q_value_trainings.DQNTraining(
-            train_function=self._quantile_dist,
-            target_function=self._target_quantile_dist)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._quantile_dist,
-            dst_models=self._target_quantile_dist,
-            target_update_frequency=target_update_frequency,
-            tau=1.0)
-        quantile_dist_trainer.setup_training(self._quantile_dist,
-                                             {self._quantile_dist.scope_name: self._quantile_dist_solver},
-                                             training)
+        quantile_dist_trainer = MT.q_value_trainers.QRDQNQTrainer(
+            train_functions=self._quantile_dist,
+            solvers={self._quantile_dist.scope_name: self._quantile_dist_solver},
+            target_function=self._target_quantile_dist,
+            env_info=self._env_info,
+            config=trainer_config)
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction
-        copy_network_parameters(self._quantile_dist.get_parameters(),
-                                self._target_quantile_dist.get_parameters())
+        sync_model(self._quantile_dist, self._target_quantile_dist)
         return quantile_dist_trainer
 
     def _run_online_training_iteration(self, env):
@@ -264,6 +253,8 @@ class QRDQN(Algorithm):
                               weight=info['weights'])
 
         self._quantile_dist_trainer_state = self._quantile_dist_trainer.train(batch)
+        if self.iteration_num % self._config.target_update_frequency:
+            sync_model(self._quantile_dist, self._target_quantile_dist)
 
     @eval_api
     def _greedy_action_selector(self, s):

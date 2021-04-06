@@ -31,7 +31,7 @@ from nnabla_rl.models import (BCQPerturbator, BCQVariationalAutoEncoder, Determi
                               TD3QFunction, VariationalAutoEncoder)
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -240,18 +240,16 @@ class BCQ(Algorithm):
         trainer_config = MT.encoder_trainers.KLDVariationalAutoEncoderTrainerConfig()
 
         encoder_trainer = MT.encoder_trainers.KLDVariationalAutoEncoderTrainer(
+            models=self._vae,
+            solvers={self._vae.scope_name: self._vae_solver},
             env_info=self._env_info,
             config=trainer_config)
-        training = MT.model_trainer.Training()
-        encoder_trainer.setup_training(self._vae, {self._vae.scope_name: self._vae_solver}, training)
         return encoder_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(reduction_method='mean')
-
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
-            env_info=self._env_info,
-            config=trainer_config)
+        trainer_config = MT.q_value.BCQQTrainerConfig(reduction_method='mean',
+                                                      num_action_samples=self._config.num_action_samples,
+                                                      lmb=self._config.lmb)
 
         # This is a wrapper class which outputs the target action for next state in q function training
         class PerturbedPolicy(DeterministicPolicy):
@@ -265,20 +263,15 @@ class BCQ(Algorithm):
                 noise = self._perturbator.generate_noise(s, a, phi=self._phi)
                 return a + noise
         target_policy = PerturbedPolicy(self._vae, self._target_xi, self._config.phi)
-        training = MT.q_value_trainings.BCQTraining(train_functions=self._q_ensembles,
-                                                    target_functions=self._target_q_ensembles,
-                                                    target_policy=target_policy,
-                                                    num_action_samples=self._config.num_action_samples,
-                                                    lmb=self._config.lmb)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._q_ensembles,
-            dst_models=self._target_q_ensembles,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._q_ensembles, self._q_solvers, training)
+        q_function_trainer = MT.q_value.BCQQTrainer(
+            train_functions=self._q_ensembles,
+            solvers=self._q_solvers,
+            target_functions=self._target_q_ensembles,
+            target_policy=target_policy,
+            env_info=self._env_info,
+            config=trainer_config)
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
-            copy_network_parameters(q.get_parameters(), target_q.get_parameters(), 1.0)
+            sync_model(q, target_q, 1.0)
         return q_function_trainer
 
     def _setup_perturbator_training(self, env_or_buffer):
@@ -286,20 +279,14 @@ class BCQ(Algorithm):
             phi=self._config.phi
         )
 
-        perturbator_trainer = MT.perturbator_trainers.BCQPerturbatorTrainer(
-            env_info=self._env_info,
-            config=trainer_config,
+        perturbator_trainer = MT.perturbator.BCQPerturbatorTrainer(
+            models=self._xi,
+            solvers={self._xi.scope_name: self._xi_solver},
             q_function=self._q_ensembles[0],
-            vae=self._vae)
-        training = MT.model_trainer.Training()
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._xi,
-            dst_models=self._target_xi,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        perturbator_trainer.setup_training(self._xi, {self._xi.scope_name: self._xi_solver}, training)
-        copy_network_parameters(self._xi.get_parameters(), self._target_xi.get_parameters(), 1.0)
+            vae=self._vae,
+            env_info=self._env_info,
+            config=trainer_config)
+        sync_model(self._xi, self._target_xi, 1.0)
         return perturbator_trainer
 
     def _run_online_training_iteration(self, env):
@@ -324,8 +311,13 @@ class BCQ(Algorithm):
         self._encoder_trainer_state = self._encoder_trainer.train(batch)
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
+            sync_model(q, target_q, tau=self._config.tau)
         td_errors = np.abs(self._q_function_trainer_state['td_errors'])
         replay_buffer.update_priorities(td_errors)
+
+        self._perturbator_trainer.train(batch)
+        sync_model(self._xi, self._target_xi, tau=self._config.tau)
 
         self._perturbator_trainer_state = self._perturbator_trainer.train(batch)
 

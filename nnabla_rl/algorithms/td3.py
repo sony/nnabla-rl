@@ -27,12 +27,12 @@ from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedEnvironmentException
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, Training, TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import DeterministicPolicy, QFunction, TD3Policy, TD3QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -229,46 +229,31 @@ class TD3(Algorithm):
 
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
-        q_function_trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        q_function_trainer_config = MT.q_value_trainers.TD3QTrainerConfig(
             reduction_method='mean',
-            grad_clip=None)
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
-            env_info=self._env_info,
-            config=q_function_trainer_config)
-
-        training = MT.q_value_trainings.TD3Training(
-            train_functions=self._train_q_functions,
-            target_functions=self._target_q_functions,
-            target_policy=self._target_pi,
+            grad_clip=None,
             train_action_noise_sigma=self._config.train_action_noise_sigma,
             train_action_noise_abs=self._config.train_action_noise_abs)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._train_q_functions,
-            dst_models=self._target_q_functions,
-            target_update_frequency=self._config.d,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
+        q_function_trainer = MT.q_value_trainers.TD3QTrainer(
+            train_functions=self._train_q_functions,
+            solvers=self._train_q_solvers,
+            target_functions=self._target_q_functions,
+            target_policy=self._target_pi,
+            env_info=self._env_info,
+            config=q_function_trainer_config)
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
-            copy_network_parameters(q.get_parameters(), target_q.get_parameters())
+            sync_model(q, target_q)
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.DPGPolicyTrainerConfig()
-        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(env_info=self._env_info,
-                                                             config=policy_trainer_config,
-                                                             q_function=self._q1)
-
-        training = Training()
-        # Update policy everytime when train is called. Because train is called every self._config.d iteration
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._pi,
-            dst_models=self._target_pi,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
-        copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), 1.0)
+        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
+            q_function=self._q1,
+            env_info=self._env_info,
+            config=policy_trainer_config)
+        sync_model(self._pi, self._target_pi, 1.0)
 
         return policy_trainer
 
@@ -295,14 +280,17 @@ class TD3(Algorithm):
                               weight=info['weights'])
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
-        self._policy_trainer_state = self._policy_trainer.train(batch)
-
         td_errors = np.abs(self._q_function_trainer_state['td_errors'])
         replay_buffer.update_priorities(td_errors)
 
         if self.iteration_num % self._config.d == 0:
             # Optimize actor
-            self._policy_trainer.train(batch)
+            self._policy_trainer_state = self._policy_trainer.train(batch)
+
+            # parameter update
+            for q, target_q in zip(self._train_q_functions, self._target_q_functions):
+                sync_model(q, target_q, tau=self._config.tau)
+            sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
     @eval_api
     def _compute_greedy_action(self, s):

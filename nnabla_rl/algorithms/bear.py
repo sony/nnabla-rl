@@ -32,7 +32,7 @@ from nnabla_rl.models import (BEARPolicy, DeterministicPolicy, QFunction, Stocha
                               UnsquashedVariationalAutoEncoder, VariationalAutoEncoder)
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -269,10 +269,6 @@ class BEAR(Algorithm):
     def _setup_encoder_training(self, env_or_buffer):
         trainer_config = MT.encoder_trainers.KLDVariationalAutoEncoderTrainerConfig()
 
-        encoder_trainer = MT.encoder_trainers.KLDVariationalAutoEncoderTrainer(
-            env_info=self._env_info,
-            config=trainer_config)
-
         # Wrapper for squashing reconstructed action during vae training
         class SquashedActionVAE(VariationalAutoEncoder):
             def __init__(self, original_vae):
@@ -288,19 +284,15 @@ class BEAR(Algorithm):
             def decode_multiple(self, decode_num, *args): raise NotImplementedError
             def latent_distribution(self, *args): raise NotImplementedError
 
-        training = MT.model_trainer.Training()
         squashed_action_vae = SquashedActionVAE(self._vae)
-        encoder_trainer.setup_training(squashed_action_vae, {self._vae.scope_name: self._vae_solver}, training)
+        encoder_trainer = MT.encoder_trainers.KLDVariationalAutoEncoderTrainer(
+            models=squashed_action_vae,
+            solvers={self._vae.scope_name: self._vae_solver},
+            env_info=self._env_info,
+            config=trainer_config)
         return encoder_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
-            reduction_method='mean')
-
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
-            env_info=self._env_info,
-            config=trainer_config)
-
         # This is a wrapper class which outputs the target action for next state in q function training
         class PerturbedPolicy(DeterministicPolicy):
             def __init__(self, target_pi):
@@ -311,20 +303,19 @@ class BEAR(Algorithm):
                 policy_distribution = self._target_pi.pi(s)
                 return NF.tanh(policy_distribution.sample())
         target_policy = PerturbedPolicy(self._target_pi)
-        training = MT.q_value_trainings.BCQTraining(train_functions=self._q_ensembles,
-                                                    target_functions=self._target_q_ensembles,
-                                                    target_policy=target_policy,
-                                                    num_action_samples=self._config.num_action_samples,
-                                                    lmb=self._config.lmb)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._q_ensembles,
-            dst_models=self._target_q_ensembles,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._q_ensembles, self._q_solvers, training)
+
+        trainer_config = MT.q_value.BCQQTrainerConfig(reduction_method='mean',
+                                                      num_action_samples=self._config.num_action_samples,
+                                                      lmb=self._config.lmb)
+        q_function_trainer = MT.q_value.BCQQTrainer(
+            train_functions=self._q_ensembles,
+            solvers=self._q_solvers,
+            target_functions=self._target_q_ensembles,
+            target_policy=target_policy,
+            env_info=self._env_info,
+            config=trainer_config)
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
-            copy_network_parameters(q.get_parameters(), target_q.get_parameters(), 1.0)
+            sync_model(q, target_q, 1.0)
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
@@ -346,21 +337,15 @@ class BEAR(Algorithm):
 
         wrapped_qs = [SquashedActionQ(q) for q in self._q_ensembles]
         policy_trainer = MT.policy_trainers.BEARPolicyTrainer(
-            self._env_info,
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
             q_ensembles=wrapped_qs,
             vae=self._vae,
             lagrange_multiplier=self._lagrange,
             lagrange_solver=self._lagrange_solver,
+            env_info=self._env_info,
             config=trainer_config)
-        training = MT.model_trainer.Training()
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._pi,
-            dst_models=self._target_pi,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
-        copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), 1.0)
+        sync_model(self._pi, self._target_pi, 1.0)
 
         return policy_trainer
 
@@ -383,11 +368,14 @@ class BEAR(Algorithm):
                               weight=info['weights'])
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
+            sync_model(q, target_q, tau=self._config.tau)
         td_errors = np.abs(self._q_function_trainer_state['td_errors'])
         replay_buffer.update_priorities(td_errors)
 
         self._encoder_trainer_state = self._encoder_trainer.train(batch)
         self._policy_trainer_state = self._policy_trainer.train(batch)
+        sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
     def _models(self):
         models = [*self._q_ensembles, *self._target_q_ensembles,

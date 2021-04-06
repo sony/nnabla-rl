@@ -170,15 +170,14 @@ class REINFORCE(Algorithm):
         return explorer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_config = MT.policy_trainers.SPGPolicyTrainerConfig(
+        policy_trainer_config = MT.policy_trainers.REINFORCEPolicyTrainerConfig(
             pi_loss_scalar=1.0 / self._config.num_rollouts_per_train_iteration,
             grad_clip_norm=self._config.clip_grad_norm)
-        policy_trainer = MT.policy_trainers.SPGPolicyTrainer(
+        policy_trainer = MT.policy_trainers.REINFORCEPolicyTrainer(
+            models=self._policy,
+            solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
             config=policy_trainer_config)
-
-        training = MT.policy_trainings.REINFORCETraining()
-        policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
         return policy_trainer
 
     def _run_online_training_iteration(self, env):

@@ -230,17 +230,15 @@ class TRPO(Algorithm):
         return explorer
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+        v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=1.0
         )
-        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+        v_function_trainer = MT.v_value.MonteCarloVTrainer(
+            train_functions=self._v_function,
+            solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
             config=v_function_trainer_config)
-
-        training = MT.v_value_trainings.MonteCarloVValueTraining()
-        v_function_trainer.setup_training(
-            self._v_function, {self._v_function.scope_name: self._v_function_solver}, training)
         return v_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
@@ -250,11 +248,10 @@ class TRPO(Algorithm):
             maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._config.conjugate_gradient_damping,
             conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
-        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
-                                                              config=policy_trainer_config)
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, {}, training)
-
+        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(
+            model=self._policy,
+            env_info=self._env_info,
+            config=policy_trainer_config)
         return policy_trainer
 
     def _run_online_training_iteration(self, env):

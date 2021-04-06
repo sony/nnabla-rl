@@ -33,7 +33,7 @@ from nnabla_rl.models import DQNQFunction, QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -219,24 +219,17 @@ class DQN(Algorithm):
         return explorer
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        trainer_config = MT.q_value_trainers.DQNQTrainerConfig(
             reduction_method='sum',
             grad_clip=self._config.grad_clip)
 
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+        q_function_trainer = MT.q_value_trainers.DQNQTrainer(
+            train_functions=self._q,
+            solvers={self._q.scope_name: self._q_solver},
+            target_function=self._target_q,
             env_info=self._env_info,
             config=trainer_config)
-
-        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
-        training = MT.q_value_trainings.DQNTraining(train_function=self._q, target_function=self._target_q)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._q,
-            dst_models=self._target_q,
-            target_update_frequency=target_update_frequency,
-            tau=1.0)
-        q_function_trainer.setup_training(self._q, {self._q.scope_name: self._q_solver}, training)
-        copy_network_parameters(self._q.get_parameters(), self._target_q.get_parameters())
+        sync_model(self._q, self._target_q)
         return q_function_trainer
 
     def _run_online_training_iteration(self, env):
@@ -276,6 +269,8 @@ class DQN(Algorithm):
                               weight=info['weights'])
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        if self.iteration_num % self._config.target_update_frequency == 0:
+            sync_model(self._q, self._target_q)
 
         td_errors = np.abs(self._q_function_trainer_state['td_errors'])
         replay_buffer.update_priorities(td_errors)

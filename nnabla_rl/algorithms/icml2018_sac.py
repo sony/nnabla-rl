@@ -32,7 +32,7 @@ from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, SACVFunction, S
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -256,56 +256,41 @@ class ICML2018SAC(Algorithm):
         temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
             scope_name='temperature',
             initial_value=1.0)
-        policy_trainer = MT.policy_trainers.SoftPolicyTrainer(env_info=self._env_info,
-                                                              config=policy_trainer_config,
-                                                              temperature=temperature,
-                                                              q_functions=self._train_q_functions)
-
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(
-            self._pi, {self._pi.scope_name: self._pi_solver}, training)
+        policy_trainer = MT.policy_trainers.SoftPolicyTrainer(
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
+            q_functions=self._train_q_functions,
+            temperature=temperature,
+            temperature_solver=None,
+            env_info=self._env_info,
+            config=policy_trainer_config)
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
-        q_function_trainer_param = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        q_function_trainer_param = MT.q_value_trainers.VTargetedQTrainerConfig(
             reduction_method='mean',
             q_loss_scalar=0.5)
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
-            self._env_info,
-            config=q_function_trainer_param)
-
-        training = MT.q_value_trainings.VFunctionTargetedTraining(
+        q_function_trainer = MT.q_value_trainers.VTargetedQTrainer(
             train_functions=self._train_q_functions,
-            target_functions=self._target_v)
-        # Update target_v in conjunction with q training
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._v,
-            dst_models=self._target_v,
-            target_update_frequency=self._config.target_update_interval,
-            tau=self._config.tau
-        )
-        q_function_trainer.setup_training(
-            self._train_q_functions, self._train_q_solvers, training)
+            solvers=self._train_q_solvers,
+            target_functions=self._target_v,
+            env_info=self._env_info,
+            config=q_function_trainer_param)
         return q_function_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+        v_function_trainer_config = MT.v_value.SoftVTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=0.5
         )
-        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+        v_function_trainer = MT.v_value.SoftVTrainer(
+            train_functions=self._v,
+            solvers={self._v.scope_name: self._v_solver},
+            target_functions=self._train_q_functions,  # Set training q as target
+            target_policy=self._pi,
             env_info=self._env_info,
             config=v_function_trainer_config)
-
-        training = MT.v_value_trainings.SoftVTraining(
-            train_functions=self._v,
-            target_functions=self._train_q_functions,  # Set training q as target
-            target_policy=self._pi)
-        v_function_trainer.setup_training(
-            self._v, {self._v.scope_name: self._v_solver}, training)
-        copy_network_parameters(self._v.get_parameters(),
-                                self._target_v.get_parameters(), 1.0)
+        sync_model(self._v, self._target_v, 1.0)
 
         return v_function_trainer
 
@@ -341,6 +326,8 @@ class ICML2018SAC(Algorithm):
         # Train in the order of v -> q -> policy
         self._v_function_trainer_state = self._v_function_trainer.train(batch)
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        if self.iteration_num % self._config.target_update_interval == 0:
+            sync_model(self._v, self._target_v, tau=self._config.tau)
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
         td_errors = np.abs(self._q_function_trainer_state['td_errors'])

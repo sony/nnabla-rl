@@ -27,12 +27,12 @@ from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedEnvironmentException
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, Training, TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import DeterministicPolicy, QFunction, TD3Policy, TD3QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -193,45 +193,29 @@ class DDPG(Algorithm):
         return explorer
 
     def _setup_q_function_training(self, env_or_buffer):
-        q_function_trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        q_function_trainer_config = MT.q_value.DDPGQTrainerConfig(
             reduction_method='mean',
             grad_clip=None)
 
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+        q_function_trainer = MT.q_value.DDPGQTrainer(
+            train_functions=self._q,
+            solvers={self._q.scope_name: self._q_solver},
+            target_functions=self._target_q,
+            target_policy=self._target_pi,
             env_info=self._env_info,
             config=q_function_trainer_config)
-
-        training = MT.q_value_trainings.DDPGTraining(
-            train_functions=self._q,
-            target_functions=self._target_q,
-            target_policy=self._target_pi)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._q,
-            dst_models=self._target_q,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._q, {self._q.scope_name: self._q_solver}, training)
-        copy_network_parameters(self._q.get_parameters(), self._target_q.get_parameters())
+        sync_model(self._q, self._target_q)
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.DPGPolicyTrainerConfig()
-        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(env_info=self._env_info,
-                                                             config=policy_trainer_config,
-                                                             q_function=self._q)
-        # Empty training will not configure anything and does the default training written in policy_trainer class
-        training = Training()
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._pi,
-            dst_models=self._target_pi,
-            target_update_frequency=1,
-            tau=self._config.tau
-        )
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
-        copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), tau=1.0)
-
+        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
+            q_function=self._q,
+            env_info=self._env_info,
+            config=policy_trainer_config)
+        sync_model(self._pi, self._target_pi, tau=1.0)
         return policy_trainer
 
     def compute_eval_action(self, state):
@@ -261,7 +245,10 @@ class DDPG(Algorithm):
                               weight=info['weights'])
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        sync_model(self._q, self._target_q, tau=self._config.tau)
+
         self._policy_trainer_state = self._policy_trainer.train(batch)
+        sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
         td_errors = np.abs(self._q_function_trainer_state['td_errors'])
         replay_buffer.update_priorities(td_errors)

@@ -32,7 +32,7 @@ from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, StochasticPolic
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -243,42 +243,31 @@ class SAC(Algorithm):
             fixed_temperature=self._config.fix_temperature,
             target_entropy=self._config.target_entropy)
         policy_trainer = MT.policy_trainers.SoftPolicyTrainer(
-            env_info=self._env_info,
-            config=policy_trainer_config,
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
             temperature=self._temperature,
             temperature_solver=self._temperature_solver,
-            q_functions=[self._q1, self._q2])
-
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(
-            self._pi, {self._pi.scope_name: self._pi_solver}, training)
+            q_functions=[self._q1, self._q2],
+            env_info=self._env_info,
+            config=policy_trainer_config)
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
-        q_function_trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        q_function_trainer_config = MT.q_value_trainers.SoftQTrainerConfig(
             reduction_method='mean',
             grad_clip=None)
 
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
-            env_info=self._env_info,
-            config=q_function_trainer_config)
-
-        training = MT.q_value_trainings.SoftQTraining(
+        q_function_trainer = MT.q_value_trainers.SoftQTrainer(
             train_functions=self._train_q_functions,
+            solvers=self._train_q_solvers,
             target_functions=self._target_q_functions,
             target_policy=self._pi,
-            temperature=self._policy_trainer.get_temperature())
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._train_q_functions,
-            dst_models=self._target_q_functions,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
+            temperature=self._policy_trainer.get_temperature(),
+            env_info=self._env_info,
+            config=q_function_trainer_config)
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
-            copy_network_parameters(
-                q.get_parameters(), target_q.get_parameters())
+            sync_model(q, target_q)
         return q_function_trainer
 
     def _run_online_training_iteration(self, env):
@@ -311,6 +300,8 @@ class SAC(Algorithm):
                               weight=info['weights'])
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        for q, target_q in zip(self._train_q_functions, self._target_q_functions):
+            sync_model(q, target_q, tau=self._config.tau)
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
         td_errors = np.abs(self._q_function_trainer_state['td_errors'])

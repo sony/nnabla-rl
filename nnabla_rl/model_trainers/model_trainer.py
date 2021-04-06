@@ -138,54 +138,52 @@ class ModelTrainer(metaclass=ABCMeta):
     _models: Sequence[Model]
     _solvers: Dict[str, nn.solver.Solver]
     _train_count: int
-    _training: 'Training'
     _training_variables: TrainingVariables
 
-    def __init__(self, env_info: EnvironmentInfo, config: TrainerConfig):
+    def __init__(self,
+                 models: Union[Model, Sequence[Model]],
+                 solvers: Dict[str, nn.solver.Solver],
+                 env_info: EnvironmentInfo,
+                 config: TrainerConfig):
         self._env_info = env_info
         self._config = config
 
-        self._models = []
-        self._solvers = {}
         self._train_count = 0
+
+        self._models = convert_to_list_if_not_list(models)
+        self._solvers = solvers
+
+        # Initially create training variables with batch_size 1.
+        # The batch_size will be updated later depending on the given experience data
+        # This procedure is a workaround to initialize model parameters (it it is not created).
+        self._training_variables = self._setup_training_variables(1)
+
+        self._build_training_graph(self._models, self._training_variables)
+
+        self._setup_solver()
 
     def train(self, batch: TrainingBatch, **kwargs) -> Dict[str, np.array]:
         if self._models is None:
             raise RuntimeError('Call setup_training() first. Model is not set!')
         self._train_count += 1
 
-        batch = self._training.setup_batch(batch)
+        batch = self._setup_batch(batch)
         new_batch_size = batch.batch_size
         prev_batch_size = self._training_variables.batch_size
         if new_batch_size != prev_batch_size:
             self._training_variables = self._setup_training_variables(new_batch_size)
-            self._build_training_graph(self._models, self._training, self._training_variables)
+            self._build_training_graph(self._models, self._training_variables)
 
-        self._training.before_update(self._train_count)
         trainer_state = self._update_model(self._models, self._solvers, batch, self._training_variables, **kwargs)
-        self._training.after_update(self._train_count)
 
         return trainer_state
-
-    def setup_training(self,
-                       models: Union[Model, Sequence[Model]],
-                       solvers: Dict[str, nn.solver.Solver],
-                       training: 'Training'):
-        self._models = convert_to_list_if_not_list(models)
-        self._solvers = solvers
-        self._training = training
-
-        # Initially create traning variables with batch_size 1.
-        # The batch_size will be updated later depending on the given experience data
-        self._training_variables = self._setup_training_variables(1)
-
-        self._build_training_graph(self._models, self._training, self._training_variables)
-
-        self._setup_solver()
 
     def set_learning_rate(self, new_learning_rate):
         for solver in self._solvers.values():
             solver.set_learning_rate(new_learning_rate)
+
+    def _setup_batch(self, batch: TrainingBatch) -> TrainingBatch:
+        return batch
 
     @abstractmethod
     def _update_model(self,
@@ -199,7 +197,6 @@ class ModelTrainer(metaclass=ABCMeta):
     @abstractmethod
     def _build_training_graph(self,
                               models: Sequence[Model],
-                              training: 'Training',
                               training_variables: TrainingVariables):
         raise NotImplementedError
 
@@ -213,37 +210,3 @@ class ModelTrainer(metaclass=ABCMeta):
                 solver = self._solvers[model.scope_name]
                 # Set retain_state = True and prevent overwriting loaded state (If it is loaded)
                 solver.set_parameters(model.get_parameters(), reset=False, retain_state=True)
-
-
-class Training():
-    def __init__(self):
-        pass
-
-    def setup_batch(self, batch: TrainingBatch):
-        return batch
-
-    def before_update(self, train_count: int):
-        pass
-
-    def after_update(self, train_count: int):
-        pass
-
-    def compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:
-        pass
-
-
-class TrainingExtension(Training):
-    def __init__(self, training):
-        self._training = training
-
-    def setup_batch(self, batch: TrainingBatch):
-        return self._training.setup_batch(batch)
-
-    def before_update(self, train_count: int):
-        self._training.before_update(train_count)
-
-    def after_update(self, train_count: int):
-        self._training.after_update(train_count)
-
-    def compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:
-        return self._training.compute_target(training_variables, **kwargs)

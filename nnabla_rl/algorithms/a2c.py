@@ -245,31 +245,24 @@ class A2C(Algorithm):
             max_grad_norm=self._config.max_grad_norm
         )
         policy_trainer = MT.policy_trainers.A2CPolicyTrainer(
+            models=self._policy,
+            solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
             config=policy_trainer_config)
-
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
         return policy_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
         # training input/loss variables
-        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+        v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=self._config.value_coefficient,
             max_grad_norm=self._config.max_grad_norm
         )
-
-        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+        v_function_trainer = MT.v_value.MonteCarloVTrainer(
+            train_functions=self._v_function,
+            solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
             config=v_function_trainer_config
-        )
-
-        training = MT.v_value_trainings.MonteCarloVValueTraining()
-        v_function_trainer.setup_training(
-            self._v_function,
-            {self._v_function.scope_name: self._v_function_solver},
-            training
         )
         return v_function_trainer
 

@@ -164,10 +164,10 @@ class ICML2015TRPO(Algorithm):
             maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._config.conjugate_gradient_damping,
             conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
-        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
-                                                              config=policy_trainer_config)
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, {}, training)
+        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(
+            model=self._policy,
+            env_info=self._env_info,
+            config=policy_trainer_config)
 
         return policy_trainer
 

@@ -33,7 +33,7 @@ from nnabla_rl.models import C51ValueDistributionFunction, ValueDistributionFunc
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -199,31 +199,21 @@ class CategoricalDQN(Algorithm):
         return explorer
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.C51ValueDistributionFunctionTrainerConfig(
+        trainer_config = MT.q_value_trainers.CategoricalDQNQTrainerConfig(
             v_min=self._config.v_min,
             v_max=self._config.v_max,
             num_atoms=self._config.num_atoms)
 
-        model_trainer = MT.q_value_trainers.C51ValueDistributionFunctionTrainer(
-            self._env_info,
+        model_trainer = MT.q_value_trainers.CategoricalDQNQTrainer(
+            train_functions=self._atom_p,
+            solvers={self._atom_p.scope_name: self._atom_p_solver},
+            target_function=self._target_atom_p,
+            env_info=self._env_info,
             config=trainer_config)
-
-        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
-        training = MT.q_value_trainings.DQNTraining(
-            train_function=self._atom_p,
-            target_function=self._target_atom_p)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._atom_p,
-            dst_models=self._target_atom_p,
-            target_update_frequency=target_update_frequency,
-            tau=1.0)
-        model_trainer.setup_training(self._atom_p, {self._atom_p.scope_name: self._atom_p_solver}, training)
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction
-        copy_network_parameters(self._atom_p.get_parameters(),
-                                self._target_atom_p.get_parameters())
+        sync_model(self._atom_p, self._target_atom_p)
         return model_trainer
 
     def _run_online_training_iteration(self, env):
@@ -249,7 +239,8 @@ class CategoricalDQN(Algorithm):
                               weight=info['weights'])
 
         self._model_trainer_state = self._model_trainer.train(batch)
-
+        if self.iteration_num % self._config.target_update_frequency == 0:
+            sync_model(self._atom_p, self._target_atom_p)
         td_errors = np.abs(self._model_trainer_state['td_errors'])
         replay_buffer.update_priorities(td_errors)
 
