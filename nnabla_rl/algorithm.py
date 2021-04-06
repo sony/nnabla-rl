@@ -55,7 +55,7 @@ class Algorithm(metaclass=ABCMeta):
         env_or_env_info\
         (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`)
             : environment or environment info
-        params (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`):
+        config (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`):
             configuration of the algorithm
     """
 

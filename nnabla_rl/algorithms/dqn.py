@@ -147,7 +147,7 @@ class DQN(Algorithm):
         env_or_env_info\
         (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
             the environment to train or environment info
-        params (:py:class:`DQNParam <nnabla_rl.algorithms.dqn.DQNParam>`):
+        config (:py:class:`DQNConfig <nnabla_rl.algorithms.dqn.DQNConfig>`):
             the parameter for DQN training
         q_func_builder (:py:class:`ModelBuilder <nnabla_rl.builders.ModelBuilder>`): builder of q function model
         q_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder of q function solver
