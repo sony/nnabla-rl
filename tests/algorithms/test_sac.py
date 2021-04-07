@@ -93,6 +93,25 @@ class TestSAC(object):
         with pytest.raises(ValueError):
             A.SACConfig(initial_temperature=-100)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyContinuous()
+        sac = A.SAC(dummy_env)
+
+        sac._q_function_trainer_state = {'q_loss': 0., 'td_errors': np.array([0., 1.])}
+        sac._policy_trainer_state = {'pi_loss': 1.}
+
+        latest_iteration_state = sac.latest_iteration_state
+        assert 'q_loss' in latest_iteration_state['scalar']
+        assert 'pi_loss' in latest_iteration_state['scalar']
+        assert 'td_errors' in latest_iteration_state['histogram']
+        assert latest_iteration_state['scalar']['q_loss'] == 0.
+        assert latest_iteration_state['scalar']['pi_loss'] == 1.
+        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+
 
 if __name__ == "__main__":
     import sys

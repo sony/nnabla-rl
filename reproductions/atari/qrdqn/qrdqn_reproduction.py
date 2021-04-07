@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import argparse
+import os
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.replay_buffers as RB
@@ -31,9 +31,9 @@ class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render)
@@ -45,10 +45,9 @@ def run_training(args):
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=50000)
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
-    if args.snapshot_dir is None:
-        qrdqn = A.QRDQN(train_env, replay_buffer_builder=MemoryEfficientBufferBuilder())
-    else:
-        qrdqn = serializers.load_snapshot(args.snapshot_dir)
+    config = A.QRDQNConfig(gpu_id=args.gpu)
+    qrdqn = A.QRDQN(train_env, config=config, replay_buffer_builder=MemoryEfficientBufferBuilder())
+
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     qrdqn.set_hooks(hooks)
 
@@ -59,12 +58,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    qrdqn = serializers.load_snapshot(args.snapshot_dir)
+    config = A.QRDQNConfig(gpu_id=args.gpu)
+    qrdqn = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(qrdqn, A.QRDQN):
         raise ValueError('Loaded snapshot is not trained with QRDQN!')
 
@@ -76,6 +74,7 @@ def run_showcase(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='BreakoutNoFrameskip-v4')
+    parser.add_argument('--save-dir', type=str, default="")
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--render', action='store_true')

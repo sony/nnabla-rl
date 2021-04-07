@@ -12,14 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.model_trainers.trainings import common as common_trainings  # noqa
-from nnabla_rl.model_trainers.trainings.common import extensions as common_extensions  # noqa
-from nnabla_rl.model_trainers.trainings import policy as policy_trainings  # noqa
-from nnabla_rl.model_trainers.trainings import q_value as q_value_trainings  # noqa
-from nnabla_rl.model_trainers.trainings import v_value as v_value_trainings  # noqa
-from nnabla_rl.model_trainers.trainers import perturbator as perturbator_trainers  # noqa
-from nnabla_rl.model_trainers.trainers import policy as policy_trainers  # noqa
-from nnabla_rl.model_trainers.trainers import q_value as q_value_trainers  # noqa
-from nnabla_rl.model_trainers.trainers import v_value as v_value_trainers  # noqa
-from nnabla_rl.model_trainers.trainers import vae as vae_trainers  # noqa
-from nnabla_rl.model_trainers.trainers import reward as reward_trainiers  # noqa
+from nnabla_rl.model_trainers import perturbator as perturbator_trainers  # noqa
+from nnabla_rl.model_trainers import policy as policy_trainers  # noqa
+from nnabla_rl.model_trainers import q_value as q_value_trainers  # noqa
+from nnabla_rl.model_trainers import v_value as v_value_trainers  # noqa
+from nnabla_rl.model_trainers import encoder as encoder_trainers  # noqa
+from nnabla_rl.model_trainers import reward as reward_trainiers  # noqa

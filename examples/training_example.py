@@ -14,7 +14,6 @@
 
 import gym
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
@@ -30,9 +29,6 @@ def build_env(seed=None):
 
 
 def main():
-    # Run on gpu if possible.
-    nnabla_rl.run_on_gpu(0)
-
     # Evaluate the trained network (Optional)
     eval_env = build_env(seed=100)
     evaluation_hook = H.EvaluationHook(
@@ -47,7 +43,7 @@ def main():
     save_snapshot_hook = H.SaveSnapshotHook('./pendulum_v0_ddpg_results', timing=1000)
 
     train_env = build_env()
-    config = A.DDPGConfig(start_timesteps=200)
+    config = A.DDPGConfig(start_timesteps=200, gpu_id=0)
     ddpg = A.DDPG(train_env, config=config)
     ddpg.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
 

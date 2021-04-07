@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import Any, Dict, Optional, Tuple, Union, cast
 
 import gym
 import numpy as np
@@ -31,8 +31,9 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import DQNQFunction, QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -61,6 +62,7 @@ class DQNConfig(AlgorithmConfig):
         initial_epsilon (float): the initial epsilon value for ε-greedy explorer. Defaults to 1.0.
         final_epsilon (float): the last epsilon value for ε-greedy explorer. Defaults to 0.1.
         test_epsilon (float): the epsilon value on testing. Defaults to 0.05.
+        grad_clip (Optional[Tuple[float, float]]): Clip the gradient of final layer. Defaults to (-1.0, 1.0).
     """
     gamma: float = 0.99
     learning_rate: float = 2.5e-4
@@ -76,6 +78,7 @@ class DQNConfig(AlgorithmConfig):
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.1
     test_epsilon: float = 0.05
+    grad_clip: Optional[Tuple[float, float]] = (-1.0, 1.0)
 
     def __post_init__(self):
         '''__post_init__
@@ -144,13 +147,17 @@ class DQN(Algorithm):
         env_or_env_info\
         (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
             the environment to train or environment info
-        params (:py:class:`DQNParam <nnabla_rl.algorithms.dqn.DQNParam>`):
+        config (:py:class:`DQNConfig <nnabla_rl.algorithms.dqn.DQNConfig>`):
             the parameter for DQN training
         q_func_builder (:py:class:`ModelBuilder <nnabla_rl.builders.ModelBuilder>`): builder of q function model
         q_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder of q function solver
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer
     '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: DQNConfig
     _q: QFunction
     _q_solver: nn.solver.Solver
@@ -161,6 +168,8 @@ class DQN(Algorithm):
     _eval_state_var: nn.Variable
     _a_greedy: nn.Variable
 
+    _q_function_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: DQNConfig = DQNConfig(),
                  q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
@@ -169,22 +178,25 @@ class DQN(Algorithm):
         super(DQN, self).__init__(env_or_env_info, config=config)
         if not self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_config=self._config)
+            self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
 
-        self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_config=self._config)
-        self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
-
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, s):
-        (action, _), _ = epsilon_greedy_action_selection(s,
-                                                         self._greedy_action_selector,
-                                                         self._random_action_selector,
-                                                         epsilon=self._config.test_epsilon)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            (action, _), _ = epsilon_greedy_action_selection(s,
+                                                             self._greedy_action_selector,
+                                                             self._random_action_selector,
+                                                             epsilon=self._config.test_epsilon)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
 
@@ -207,24 +219,17 @@ class DQN(Algorithm):
         return explorer
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        trainer_config = MT.q_value_trainers.DQNQTrainerConfig(
             reduction_method='sum',
-            grad_clip=(-1.0, 1.0))
+            grad_clip=self._config.grad_clip)
 
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+        q_function_trainer = MT.q_value_trainers.DQNQTrainer(
+            train_functions=self._q,
+            solvers={self._q.scope_name: self._q_solver},
+            target_function=self._target_q,
             env_info=self._env_info,
             config=trainer_config)
-
-        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
-        training = MT.q_value_trainings.DQNTraining(train_function=self._q, target_function=self._target_q)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._q,
-            dst_models=self._target_q,
-            target_update_frequency=target_update_frequency,
-            tau=1.0)
-        q_function_trainer.setup_training(self._q, {self._q.scope_name: self._q_solver}, training)
-        copy_network_parameters(self._q.get_parameters(), self._target_q.get_parameters())
+        sync_model(self._q, self._target_q)
         return q_function_trainer
 
     def _run_online_training_iteration(self, env):
@@ -263,10 +268,12 @@ class DQN(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._q_function_trainer.train(batch)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        if self.iteration_num % self._config.target_update_frequency == 0:
+            sync_model(self._q, self._target_q)
 
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
     def _models(self):
         models = {}
@@ -280,7 +287,9 @@ class DQN(Algorithm):
 
     @property
     def latest_iteration_state(self):
-        latest_iteration_state = {}
-        latest_iteration_state['scalar'] = {}
-        latest_iteration_state['histogram'] = {}
+        latest_iteration_state = super(DQN, self).latest_iteration_state
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update(
+                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state

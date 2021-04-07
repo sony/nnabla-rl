@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Callable, Union, cast
+from typing import Any, Callable, Dict, Union, cast
 
 import gym
 import numpy as np
@@ -31,8 +31,9 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import IQNQuantileFunction, StateActionQuantileFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -176,6 +177,9 @@ class MunchausenIQN(Algorithm):
             builder of replay_buffer
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: MunchausenIQNConfig
     _quantile_function: StateActionQuantileFunction
     _target_quantile_function: StateActionQuantileFunction
@@ -187,6 +191,8 @@ class MunchausenIQN(Algorithm):
 
     _eval_state_var: nn.Variable
     _a_greedy: nn.Variable
+
+    _quantile_function_trainer_state: Dict[str, Any]
 
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
@@ -200,17 +206,30 @@ class MunchausenIQN(Algorithm):
         if not self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
-        kwargs = {}
-        kwargs['risk_measure_function'] = risk_measure_function
-        self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._config, **kwargs)
-        self._target_quantile_function = cast(StateActionQuantileFunction,
-                                              self._quantile_function.deepcopy('target_quantile_function'))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            kwargs = {}
+            kwargs['risk_measure_function'] = risk_measure_function
+            self._quantile_function = quantile_function_builder(
+                'quantile_function', self._env_info, self._config, **kwargs)
+            self._target_quantile_function = cast(StateActionQuantileFunction,
+                                                  self._quantile_function.deepcopy('target_quantile_function'))
 
-        self._quantile_function_solver = quantile_solver_builder(self._env_info, self._config)
+            self._quantile_function_solver = quantile_solver_builder(self._env_info, self._config)
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+            self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+
+    @eval_api
+    def compute_eval_action(self, state):
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            (action, _), _ = epsilon_greedy_action_selection(state,
+                                                             self._greedy_action_selector,
+                                                             self._random_action_selector,
+                                                             epsilon=self._config.test_epsilon)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._quantile_function_trainer = self._setup_quantile_function_training(env_or_buffer)
 
@@ -232,46 +251,28 @@ class MunchausenIQN(Algorithm):
         return explorer
 
     def _setup_quantile_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.IQNQuantileFunctionTrainerConfig(
+        trainer_config = MT.q_value_trainers.MunchausenIQNQTrainerConfig(
             N=self._config.N,
             N_prime=self._config.N_prime,
             K=self._config.K,
-            kappa=self._config.kappa)
+            kappa=self._config.kappa,
+            tau=self._config.entropy_temperature,
+            alpha=self._config.munchausen_scaling_term,
+            clip_min=self._config.clipping_value,
+            clip_max=0.0)
 
-        quantile_function_trainer = MT.q_value_trainers.IQNQuantileFunctionTrainer(
-            self._env_info,
+        quantile_function_trainer = MT.q_value_trainers.MunchausenIQNQTrainer(
+            train_functions=self._quantile_function,
+            solvers={self._quantile_function.scope_name: self._quantile_function_solver},
+            target_function=self._target_quantile_function,
+            env_info=self._env_info,
             config=trainer_config)
-
-        target_update_frequency = self._config.target_update_frequency // self._config.learner_update_frequency
-        training = MT.q_value_trainings.MunchausenRLTraining(train_function=self._quantile_function,
-                                                             target_function=self._target_quantile_function,
-                                                             tau=self._config.entropy_temperature,
-                                                             alpha=self._config.munchausen_scaling_term,
-                                                             clip_min=self._config.clipping_value,
-                                                             clip_max=0.0)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._quantile_function,
-            dst_models=self._target_quantile_function,
-            target_update_frequency=target_update_frequency,
-            tau=1.0)
-        quantile_function_trainer.setup_training(
-            self._quantile_function, {self._quantile_function.scope_name: self._quantile_function_solver}, training)
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction
-        copy_network_parameters(self._quantile_function.get_parameters(),
-                                self._target_quantile_function.get_parameters())
+        sync_model(self._quantile_function, self._target_quantile_function)
 
         return quantile_function_trainer
-
-    @eval_api
-    def compute_eval_action(self, state):
-        (action, _), _ = epsilon_greedy_action_selection(state,
-                                                         self._greedy_action_selector,
-                                                         self._random_action_selector,
-                                                         epsilon=self._config.test_epsilon)
-        return action
 
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)
@@ -295,7 +296,9 @@ class MunchausenIQN(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        self._quantile_function_trainer.train(batch)
+        self._quantile_function_trainer_state = self._quantile_function_trainer.train(batch)
+        if self.iteration_num % self._config.target_update_frequency == 0:
+            sync_model(self._quantile_function, self._target_quantile_function)
 
     @eval_api
     def _greedy_action_selector(self, s):
@@ -321,3 +324,10 @@ class MunchausenIQN(Algorithm):
         solvers = {}
         solvers[self._quantile_function.scope_name] = self._quantile_function_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(MunchausenIQN, self).latest_iteration_state
+        if hasattr(self, '_quantile_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._quantile_function_trainer_state['q_loss']})
+        return latest_iteration_state

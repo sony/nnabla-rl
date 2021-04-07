@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import gym
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
@@ -27,9 +27,9 @@ from nnabla_rl.utils.reproductions import build_mujoco_env, d4rl_dataset_to_expe
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
@@ -50,10 +50,9 @@ def run_training(args):
     experiences = d4rl_dataset_to_experiences(train_dataset, size=buffer.capacity)
     buffer.append_all(experiences)
 
-    if args.snapshot_dir is None:
-        bcq = A.BCQ(train_env)
-    else:
-        bcq = serializers.load_snapshot(args.snapshot_dir)
+    config = A.BCQConfig(gpu_id=args.gpu)
+    bcq = A.BCQ(train_env, config=config)
+
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     bcq.set_hooks(hooks)
 
@@ -64,12 +63,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    bcq = serializers.load_snapshot(args.snapshot_dir)
+    config = A.BCQConfig(gpu_id=args.gpu)
+    bcq = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(bcq, A.BCQ):
         raise ValueError('Loaded snapshot is not trained with BCQ!')
 
@@ -87,6 +85,7 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--save-dir', type=str, default=None)
 
     args = parser.parse_args()
 

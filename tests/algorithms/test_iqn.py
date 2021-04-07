@@ -113,6 +113,20 @@ class TestIQN(object):
         with pytest.raises(ValueError):
             A.IQNConfig(embedding_dim=-1)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyDiscreteImg()
+        iqn = A.IQN(dummy_env)
+
+        iqn._quantile_function_trainer_state = {'q_loss': 0.}
+
+        latest_iteration_state = iqn.latest_iteration_state
+        assert 'q_loss' in latest_iteration_state['scalar']
+        assert latest_iteration_state['scalar']['q_loss'] == 0.
+
 
 if __name__ == "__main__":
     import sys

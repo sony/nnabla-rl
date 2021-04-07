@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, List, Union, cast
+from typing import Any, Dict, List, Union, cast
 
 import gym
 import numpy as np
@@ -27,11 +27,12 @@ from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedEnvironmentException
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, Training, TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import DeterministicPolicy, QFunction, TD3Policy, TD3QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -147,6 +148,9 @@ class TD3(Algorithm):
             builder of replay_buffer
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: TD3Config
     _q1: QFunction
     _q2: QFunction
@@ -165,6 +169,9 @@ class TD3(Algorithm):
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
 
+    _policy_trainer_state: Dict[str, Any]
+    _q_function_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: TD3Config = TD3Config(),
                  critic_builder: ModelBuilder[QFunction] = DefaultCriticBuilder(),
@@ -176,26 +183,30 @@ class TD3(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException
 
-        self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
-        self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
-        self._train_q_functions = [self._q1, self._q2]
-        self._train_q_solvers = {q.scope_name: critic_solver_builder(
-            env_info=self._env_info, algorithm_config=self._config) for q in self._train_q_functions}
-        self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
-                                    for q in self._train_q_functions]
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
+            self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
+            self._train_q_functions = [self._q1, self._q2]
+            self._train_q_solvers = {q.scope_name: critic_solver_builder(
+                env_info=self._env_info, algorithm_config=self._config) for q in self._train_q_functions}
+            self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
+                                        for q in self._train_q_functions]
 
-        self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
-        self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy('target_' + self._pi.scope_name))
+            self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy('target_' + self._pi.scope_name))
 
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, state):
-        action, _ = self._compute_greedy_action(state)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_greedy_action(state)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
@@ -218,46 +229,31 @@ class TD3(Algorithm):
 
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
-        q_function_trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        q_function_trainer_config = MT.q_value_trainers.TD3QTrainerConfig(
             reduction_method='mean',
-            grad_clip=None)
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
-            env_info=self._env_info,
-            config=q_function_trainer_config)
-
-        training = MT.q_value_trainings.TD3Training(
-            train_functions=self._train_q_functions,
-            target_functions=self._target_q_functions,
-            target_policy=self._target_pi,
+            grad_clip=None,
             train_action_noise_sigma=self._config.train_action_noise_sigma,
             train_action_noise_abs=self._config.train_action_noise_abs)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._train_q_functions,
-            dst_models=self._target_q_functions,
-            target_update_frequency=self._config.d,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
+        q_function_trainer = MT.q_value_trainers.TD3QTrainer(
+            train_functions=self._train_q_functions,
+            solvers=self._train_q_solvers,
+            target_functions=self._target_q_functions,
+            target_policy=self._target_pi,
+            env_info=self._env_info,
+            config=q_function_trainer_config)
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
-            copy_network_parameters(q.get_parameters(), target_q.get_parameters())
+            sync_model(q, target_q)
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.DPGPolicyTrainerConfig()
-        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(env_info=self._env_info,
-                                                             config=policy_trainer_config,
-                                                             q_function=self._q1)
-
-        training = Training()
-        # Update policy everytime when train is called. Because train is called every self._config.d iteration
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._pi,
-            dst_models=self._target_pi,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
-        copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), 1.0)
+        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
+            q_function=self._q1,
+            env_info=self._env_info,
+            config=policy_trainer_config)
+        sync_model(self._pi, self._target_pi, 1.0)
 
         return policy_trainer
 
@@ -283,15 +279,18 @@ class TD3(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._q_function_trainer.train(batch)
-        self._policy_trainer.train(batch)
-
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
         if self.iteration_num % self._config.d == 0:
             # Optimize actor
-            self._policy_trainer.train(batch)
+            self._policy_trainer_state = self._policy_trainer.train(batch)
+
+            # parameter update
+            for q, target_q in zip(self._train_q_functions, self._target_q_functions):
+                sync_model(q, target_q, tau=self._config.tau)
+            sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
     @eval_api
     def _compute_greedy_action(self, s):
@@ -316,3 +315,14 @@ class TD3(Algorithm):
         solvers[self._pi.scope_name] = self._pi_solver
         solvers.update(self._train_q_solvers)
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(TD3, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update(
+                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
+        return latest_iteration_state

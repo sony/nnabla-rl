@@ -15,10 +15,14 @@
 import numpy as np
 
 from nnabla.solver import Solver
+from nnabla_rl.models import Model
+
+
+def sync_model(src: Model, dst: Model, tau: float = 1.0):
+    copy_network_parameters(origin_params=src.get_parameters(), target_params=dst.get_parameters(), tau=tau)
 
 
 def copy_network_parameters(origin_params, target_params, tau=1.0):
-
     if not ((0.0 <= tau) & (tau <= 1.0)):
         raise ValueError('tau must lie between [0.0, 1.0]')
 

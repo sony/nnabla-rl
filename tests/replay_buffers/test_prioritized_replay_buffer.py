@@ -113,6 +113,22 @@ class TestSumTree(object):
             assert experience == buffer[index]
             assert weight == buffer._weights_from_priorities(priority, beta)
 
+    def test_sample_without_update(self):
+        beta = 0.5
+        buffer = self._generate_buffer_with_experiences(experience_num=100)
+        indices = [1, 67, 50, 4, 99]
+        _, weights = buffer.sample_indices(indices, beta=beta)
+
+        # update the priority and check that following sampling succeeds
+        errors = np.random.sample([len(weights), 1])
+        buffer.update_latest_priorities(errors)
+
+        _, _ = buffer.sample_indices(indices, beta=beta)
+
+        # sample without priority update
+        with pytest.raises(RuntimeError):
+            buffer.sample_indices(indices, beta=beta)
+
     def _generate_experience_mock(self):
         state_shape = (5, )
         action_shape = (10, )

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, List, Union, cast
+from typing import Any, Dict, List, Union, cast
 
 import gym
 import numpy as np
@@ -30,8 +30,9 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, SACVFunction, StochasticPolicy, VFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -161,6 +162,9 @@ class ICML2018SAC(Algorithm):
             builder of replay_buffer
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: ICML2018SACConfig
     _v: VFunction
     _v_solver: nn.solver.Solver
@@ -176,7 +180,12 @@ class ICML2018SAC(Algorithm):
     _v_function_trainer: ModelTrainer
 
     _eval_state_var: nn.Variable
-    _eval_action: nn.Variable
+    _eval_deterministic_action: nn.Variable
+    _eval_probabilistic_action: nn.Variable
+
+    _policy_trainer_state: Dict[str, Any]
+    _q_function_trainer_state: Dict[str, Any]
+    _v_function_trainer_state: Dict[str, Any]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: ICML2018SACConfig = ICML2018SACConfig(),
@@ -191,29 +200,40 @@ class ICML2018SAC(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
-        self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_config=self._config)
-        self._v_solver = v_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_v = cast(VFunction, self._v.deepcopy('target_' + self._v.scope_name))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_config=self._config)
+            self._v_solver = v_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_v = cast(VFunction, self._v.deepcopy('target_' + self._v.scope_name))
 
-        self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
-        self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
+            self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
+            self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
 
-        self._train_q_functions = [self._q1, self._q2]
-        self._train_q_solvers = {}
-        for q in self._train_q_functions:
-            self._train_q_solvers[q.scope_name] = q_solver_builder(
-                env_info=self._env_info, algorithm_config=self._config)
+            self._train_q_functions = [self._q1, self._q2]
+            self._train_q_solvers = {}
+            for q in self._train_q_functions:
+                self._train_q_solvers[q.scope_name] = q_solver_builder(
+                    env_info=self._env_info, algorithm_config=self._config)
 
-        self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
-        self._pi_solver = policy_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi_solver = policy_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+
+    @eval_api
+    def compute_eval_action(self, state):
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_greedy_action(state, deterministic=True)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
-        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
-        self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
+        self._q_function_trainer = self._setup_q_function_training(
+            env_or_buffer)
+        self._v_function_trainer = self._setup_v_function_training(
+            env_or_buffer)
 
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
@@ -236,59 +256,43 @@ class ICML2018SAC(Algorithm):
         temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
             scope_name='temperature',
             initial_value=1.0)
-        policy_trainer = MT.policy_trainers.SoftPolicyTrainer(env_info=self._env_info,
-                                                              config=policy_trainer_config,
-                                                              temperature=temperature,
-                                                              q_functions=self._train_q_functions)
-
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
+        policy_trainer = MT.policy_trainers.SoftPolicyTrainer(
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
+            q_functions=self._train_q_functions,
+            temperature=temperature,
+            temperature_solver=None,
+            env_info=self._env_info,
+            config=policy_trainer_config)
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
-        q_function_trainer_param = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        q_function_trainer_param = MT.q_value_trainers.VTargetedQTrainerConfig(
             reduction_method='mean',
             q_loss_scalar=0.5)
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
-            self._env_info,
-            config=q_function_trainer_param)
-
-        training = MT.q_value_trainings.VFunctionTargetedTraining(
+        q_function_trainer = MT.q_value_trainers.VTargetedQTrainer(
             train_functions=self._train_q_functions,
-            target_functions=self._target_v)
-        # Update target_v in conjunction with q training
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._v,
-            dst_models=self._target_v,
-            target_update_frequency=self._config.target_update_interval,
-            tau=self._config.tau
-        )
-        q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
+            solvers=self._train_q_solvers,
+            target_functions=self._target_v,
+            env_info=self._env_info,
+            config=q_function_trainer_param)
         return q_function_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+        v_function_trainer_config = MT.v_value.SoftVTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=0.5
         )
-        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+        v_function_trainer = MT.v_value.SoftVTrainer(
+            train_functions=self._v,
+            solvers={self._v.scope_name: self._v_solver},
+            target_functions=self._train_q_functions,  # Set training q as target
+            target_policy=self._pi,
             env_info=self._env_info,
             config=v_function_trainer_config)
-
-        training = MT.v_value_trainings.SoftVTraining(
-            train_functions=self._v,
-            target_functions=self._train_q_functions,  # Set training q as target
-            target_policy=self._pi)
-        v_function_trainer.setup_training(self._v, {self._v.scope_name: self._v_solver}, training)
-        copy_network_parameters(self._v.get_parameters(), self._target_v.get_parameters(), 1.0)
+        sync_model(self._v, self._target_v, 1.0)
 
         return v_function_trainer
-
-    @eval_api
-    def compute_eval_action(self, state):
-        action, _ = self._compute_greedy_action(state, deterministic=True)
-        return action
 
     def _run_online_training_iteration(self, env):
         for _ in range(self._config.environment_steps):
@@ -320,12 +324,14 @@ class ICML2018SAC(Algorithm):
                               weight=info['weights'])
 
         # Train in the order of v -> q -> policy
-        self._v_function_trainer.train(batch)
-        errors = self._q_function_trainer.train(batch)
-        self._policy_trainer.train(batch)
+        self._v_function_trainer_state = self._v_function_trainer.train(batch)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        if self.iteration_num % self._config.target_update_interval == 0:
+            sync_model(self._v, self._target_v, tau=self._config.tau)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
     @eval_api
     def _compute_greedy_action(self, s, deterministic=False):
@@ -334,13 +340,15 @@ class ICML2018SAC(Algorithm):
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = nn.Variable(s.shape)
             distribution = self._pi.pi(self._eval_state_var)
-            if deterministic:
-                self._eval_action = distribution.choose_probable()
-            else:
-                self._eval_action = distribution.sample()
+            self._eval_deterministic_action = distribution.choose_probable()
+            self._eval_probabilistic_action = distribution.sample()
         self._eval_state_var.d = s
-        self._eval_action.forward()
-        return np.squeeze(self._eval_action.d, axis=0), {}
+        if deterministic:
+            self._eval_deterministic_action.forward()
+            return np.squeeze(self._eval_deterministic_action.d, axis=0), {}
+        else:
+            self._eval_probabilistic_action.forward()
+            return np.squeeze(self._eval_probabilistic_action.d, axis=0), {}
 
     def _models(self):
         models = [self._v, self._target_v, self._q1, self._q2, self._pi]
@@ -352,3 +360,16 @@ class ICML2018SAC(Algorithm):
         solvers[self._v.scope_name] = self._v_solver
         solvers[self._pi.scope_name] = self._pi_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(ICML2018SAC, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update(
+                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
+        return latest_iteration_state

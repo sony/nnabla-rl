@@ -107,6 +107,24 @@ class TestGAIL():
         with pytest.raises(ValueError):
             A.GAILConfig(adversary_entropy_coef=-0.5)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyContinuous()
+        dummy_buffer = self._create_dummy_buffer(dummy_env)
+        gail = A.GAIL(dummy_env, dummy_buffer)
+
+        gail._v_function_trainer_state = {'v_loss': 0.}
+        gail._discriminator_trainer_state = {'reward_loss': 1.}
+
+        latest_iteration_state = gail.latest_iteration_state
+        assert 'v_loss' in latest_iteration_state['scalar']
+        assert 'reward_loss' in latest_iteration_state['scalar']
+        assert latest_iteration_state['scalar']['v_loss'] == 0.
+        assert latest_iteration_state['scalar']['reward_loss'] == 1.
+
 
 if __name__ == "__main__":
     import sys

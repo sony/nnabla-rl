@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import gym
 import numpy as np
@@ -30,8 +30,9 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import (BEARPolicy, DeterministicPolicy, QFunction, StochasticPolicy, TD3QFunction,
                               UnsquashedVariationalAutoEncoder, VariationalAutoEncoder)
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -170,6 +171,9 @@ class BEAR(Algorithm):
             builder for lagrange multiplier solver
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: BEARConfig
     _q_ensembles: List[QFunction]
     _q_solvers: Dict[str, nn.solver.Solver]
@@ -182,11 +186,15 @@ class BEAR(Algorithm):
     _lagrange: MT.policy_trainers.bear_policy_trainer.AdjustableLagrangeMultiplier
     _lagrange_solver: nn.solver.Solver
     _q_function_trainer: ModelTrainer
-    _vae_trainer: ModelTrainer
+    _encoder_trainer: ModelTrainer
     _policy_trainer: ModelTrainer
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
     _eval_max_index: nn.Variable
+
+    _encoder_trainer_state: Dict[str, Any]
+    _policy_trainer_state: Dict[str, Any]
+    _q_function_trainer_state: Dict[str, Any]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: BEARConfig = BEARConfig(),
@@ -201,64 +209,65 @@ class BEAR(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException
 
-        self._q_ensembles = []
-        self._q_solvers = {}
-        self._target_q_ensembles = []
-        for i in range(self._config.num_q_ensembles):
-            q = q_function_builder(scope_name="q{}".format(i), env_info=self._env_info, algorithm_config=self._config)
-            target_q = q_function_builder(
-                scope_name="target_q{}".format(i), env_info=self._env_info, algorithm_config=self._config)
-            self._q_ensembles.append(q)
-            self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-            self._target_q_ensembles.append(target_q)
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q_ensembles = []
+            self._q_solvers = {}
+            self._target_q_ensembles = []
+            for i in range(self._config.num_q_ensembles):
+                q = q_function_builder(scope_name="q{}".format(
+                    i), env_info=self._env_info, algorithm_config=self._config)
+                target_q = q_function_builder(
+                    scope_name="target_q{}".format(i), env_info=self._env_info, algorithm_config=self._config)
+                self._q_ensembles.append(q)
+                self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+                self._target_q_ensembles.append(target_q)
 
-        self._pi = pi_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
-        self._pi_solver = pi_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_pi = pi_builder(scope_name="target_pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi = pi_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi_solver = pi_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_pi = pi_builder(scope_name="target_pi", env_info=self._env_info, algorithm_config=self._config)
 
-        self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_config=self._config)
-        self._vae_solver = vae_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._vae = vae_builder(scope_name="vae", env_info=self._env_info, algorithm_config=self._config)
+            self._vae_solver = vae_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
-        self._lagrange = MT.policy_trainers.bear_policy_trainer.AdjustableLagrangeMultiplier(
-            scope_name="alpha",
-            initial_value=self._config.initial_lagrange_multiplier)
-        self._lagrange_solver = lagrange_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._lagrange = MT.policy_trainers.bear_policy_trainer.AdjustableLagrangeMultiplier(
+                scope_name="alpha",
+                initial_value=self._config.initial_lagrange_multiplier)
+            self._lagrange_solver = lagrange_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, s):
-        s = np.expand_dims(s, axis=0)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            s = np.expand_dims(s, axis=0)
+            if not hasattr(self, '_eval_state_var'):
+                self._eval_state_var = nn.Variable(s.shape)
+                if self._config.use_mean_for_eval:
+                    eval_distribution = self._pi.pi(self._eval_state_var)
+                    self._eval_action = NF.tanh(eval_distribution.mean())
+                else:
+                    repeat_num = 100
+                    state = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
+                    assert state.shape == (repeat_num, self._eval_state_var.shape[1])
+                    eval_distribution = self._pi.pi(state)
+                    self._eval_action = NF.tanh(eval_distribution.sample())
+                    q_values = self._q_ensembles[0].q(state, self._eval_action)
+                    self._eval_max_index = RF.argmax(q_values, axis=0)
+            self._eval_state_var.d = s
             if self._config.use_mean_for_eval:
-                eval_distribution = self._pi.pi(self._eval_state_var)
-                self._eval_action = NF.tanh(eval_distribution.mean())
+                self._eval_action.forward()
+                return np.squeeze(self._eval_action.d, axis=0)
             else:
-                repeat_num = 100
-                state = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
-                assert state.shape == (repeat_num, self._eval_state_var.shape[1])
-                eval_distribution = self._pi.pi(state)
-                self._eval_action = NF.tanh(eval_distribution.sample())
-                q_values = self._q_ensembles[0].q(state, self._eval_action)
-                self._eval_max_index = RF.argmax(q_values, axis=0)
-        self._eval_state_var.d = s
-        if self._config.use_mean_for_eval:
-            self._eval_action.forward()
-            return np.squeeze(self._eval_action.d, axis=0)
-        else:
-            nn.forward_all([self._eval_action, self._eval_max_index])
-            return self._eval_action.d[self._eval_max_index.d[0]]
+                nn.forward_all([self._eval_action, self._eval_max_index])
+                return self._eval_action.d[self._eval_max_index.d[0]]
 
     def _before_training_start(self, env_or_buffer):
-        self._vae_trainer = self._setup_vae_training(env_or_buffer)
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
+        self._encoder_trainer = self._setup_encoder_training(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
-    def _setup_vae_training(self, env_or_buffer):
-        trainer_config = MT.vae_trainers.KLDVariationalAutoEncoderTrainerConfig()
-
-        vae_trainer = MT.vae_trainers.KLDVariationalAutoEncoderTrainer(
-            env_info=self._env_info,
-            config=trainer_config)
+    def _setup_encoder_training(self, env_or_buffer):
+        trainer_config = MT.encoder_trainers.KLDVariationalAutoEncoderTrainerConfig()
 
         # Wrapper for squashing reconstructed action during vae training
         class SquashedActionVAE(VariationalAutoEncoder):
@@ -275,19 +284,15 @@ class BEAR(Algorithm):
             def decode_multiple(self, decode_num, *args): raise NotImplementedError
             def latent_distribution(self, *args): raise NotImplementedError
 
-        training = MT.model_trainer.Training()
         squashed_action_vae = SquashedActionVAE(self._vae)
-        vae_trainer.setup_training(squashed_action_vae, {self._vae.scope_name: self._vae_solver}, training)
-        return vae_trainer
-
-    def _setup_q_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
-            reduction_method='mean')
-
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+        encoder_trainer = MT.encoder_trainers.KLDVariationalAutoEncoderTrainer(
+            models=squashed_action_vae,
+            solvers={self._vae.scope_name: self._vae_solver},
             env_info=self._env_info,
             config=trainer_config)
+        return encoder_trainer
 
+    def _setup_q_function_training(self, env_or_buffer):
         # This is a wrapper class which outputs the target action for next state in q function training
         class PerturbedPolicy(DeterministicPolicy):
             def __init__(self, target_pi):
@@ -298,20 +303,19 @@ class BEAR(Algorithm):
                 policy_distribution = self._target_pi.pi(s)
                 return NF.tanh(policy_distribution.sample())
         target_policy = PerturbedPolicy(self._target_pi)
-        training = MT.q_value_trainings.BCQTraining(train_functions=self._q_ensembles,
-                                                    target_functions=self._target_q_ensembles,
-                                                    target_policy=target_policy,
-                                                    num_action_samples=self._config.num_action_samples,
-                                                    lmb=self._config.lmb)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._q_ensembles,
-            dst_models=self._target_q_ensembles,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._q_ensembles, self._q_solvers, training)
+
+        trainer_config = MT.q_value.BCQQTrainerConfig(reduction_method='mean',
+                                                      num_action_samples=self._config.num_action_samples,
+                                                      lmb=self._config.lmb)
+        q_function_trainer = MT.q_value.BCQQTrainer(
+            train_functions=self._q_ensembles,
+            solvers=self._q_solvers,
+            target_functions=self._target_q_ensembles,
+            target_policy=target_policy,
+            env_info=self._env_info,
+            config=trainer_config)
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
-            copy_network_parameters(q.get_parameters(), target_q.get_parameters(), 1.0)
+            sync_model(q, target_q, 1.0)
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
@@ -333,21 +337,15 @@ class BEAR(Algorithm):
 
         wrapped_qs = [SquashedActionQ(q) for q in self._q_ensembles]
         policy_trainer = MT.policy_trainers.BEARPolicyTrainer(
-            self._env_info,
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
             q_ensembles=wrapped_qs,
             vae=self._vae,
             lagrange_multiplier=self._lagrange,
             lagrange_solver=self._lagrange_solver,
+            env_info=self._env_info,
             config=trainer_config)
-        training = MT.model_trainer.Training()
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._pi,
-            dst_models=self._target_pi,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
-        copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), 1.0)
+        sync_model(self._pi, self._target_pi, 1.0)
 
         return policy_trainer
 
@@ -369,12 +367,15 @@ class BEAR(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._q_function_trainer.train(batch)
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
+            sync_model(q, target_q, tau=self._config.tau)
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
-        self._vae_trainer.train(batch)
-        self._policy_trainer.train(batch)
+        self._encoder_trainer_state = self._encoder_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
+        sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
     def _models(self):
         models = [*self._q_ensembles, *self._target_q_ensembles,
@@ -388,10 +389,17 @@ class BEAR(Algorithm):
         solvers[self._pi.scope_name] = self._pi_solver
         solvers[self._vae.scope_name] = self._vae_solver
         if not self._config.fix_lagrange_multiplier:
-            solvers.update[self._lagrange.scope_name] = self._lagrange_solver
+            solvers[self._lagrange.scope_name] = self._lagrange_solver
         return solvers
 
     @property
     def latest_iteration_state(self):
-        state = super(BEAR, self).latest_iteration_state
-        return state
+        latest_iteration_state = super(BEAR, self).latest_iteration_state
+        if hasattr(self, '_encoder_trainer_state'):
+            latest_iteration_state['scalar'].update({'encoder_loss': self._encoder_trainer_state['encoder_loss']})
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update({'td_errors': self._q_function_trainer_state['td_errors']})
+        return latest_iteration_state

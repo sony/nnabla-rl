@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import gym
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
@@ -38,9 +38,9 @@ def select_mmd_sigma(env_name, mmd_kernel):
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_{args.mmd_kernel}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
@@ -62,12 +62,10 @@ def run_training(args):
     experiences = d4rl_dataset_to_experiences(train_dataset, size=buffer.capacity)
     buffer.append_all(experiences)
 
-    if args.snapshot_dir is None:
-        mmd_sigma = select_mmd_sigma(args.env, args.mmd_kernel)
-        config = A.BEARConfig(mmd_sigma=mmd_sigma, mmd_type=args.mmd_kernel)
-        bear = A.BEAR(train_env, config=config)
-    else:
-        bear = serializers.load_snapshot(args.snapshot_dir)
+    mmd_sigma = select_mmd_sigma(args.env, args.mmd_kernel)
+    config = A.BEARConfig(gpu_id=args.gpu, mmd_sigma=mmd_sigma, mmd_type=args.mmd_kernel)
+    bear = A.BEAR(train_env, config=config)
+
     hooks = [save_snapshot_hook, evaluation_hook,
              iteration_num_hook, iteration_state_hook]
     bear.set_hooks(hooks)
@@ -79,12 +77,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    bear = serializers.load_snapshot(args.snapshot_dir)
+    config = A.BEARConfig(gpu_id=args.gpu)
+    bear = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(bear, A.BEAR):
         raise ValueError('Loaded snapshot is not trained with BEAR!')
 
@@ -104,6 +101,7 @@ def main():
     parser.add_argument('--snapshot-dir', type=str, default=None)
     parser.add_argument('--mmd-kernel', type=str,
                         default="gaussian", choices=["laplacian", "gaussian"])
+    parser.add_argument('--save-dir', type=str, default=None)
 
     args = parser.parse_args()
 

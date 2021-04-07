@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import Any, Dict, Union, cast
 
 import gym
 import numpy as np
@@ -27,11 +27,12 @@ from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedEnvironmentException
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, Training, TrainingBatch
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import DeterministicPolicy, QFunction, TD3Policy, TD3QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -127,6 +128,9 @@ class DDPG(Algorithm):
             builder of replay_buffer
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: DDPGConfig
     _q: QFunction
     _q_solver: nn.solver.Solver
@@ -139,6 +143,9 @@ class DDPG(Algorithm):
     _q_function_trainer: ModelTrainer
     _policy_trainer: ModelTrainer
 
+    _policy_trainer_state: Dict[str, Any]
+    _q_function_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: DDPGConfig = DDPGConfig(),
                  critic_builder: ModelBuilder[QFunction] = DefaultCriticBuilder(),
@@ -150,17 +157,20 @@ class DDPG(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException
 
-        self._q = critic_builder(scope_name="q", env_info=self._env_info, algorithm_config=self._config)
-        self._q_solver = critic_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q = critic_builder(scope_name="q", env_info=self._env_info, algorithm_config=self._config)
+            self._q_solver = critic_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
 
-        self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
-        self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy("target_" + self._pi.scope_name))
+            self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy("target_" + self._pi.scope_name))
 
-        self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
@@ -183,50 +193,35 @@ class DDPG(Algorithm):
         return explorer
 
     def _setup_q_function_training(self, env_or_buffer):
-        q_function_trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        q_function_trainer_config = MT.q_value.DDPGQTrainerConfig(
             reduction_method='mean',
             grad_clip=None)
 
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
+        q_function_trainer = MT.q_value.DDPGQTrainer(
+            train_functions=self._q,
+            solvers={self._q.scope_name: self._q_solver},
+            target_functions=self._target_q,
+            target_policy=self._target_pi,
             env_info=self._env_info,
             config=q_function_trainer_config)
-
-        training = MT.q_value_trainings.DDPGTraining(
-            train_functions=self._q,
-            target_functions=self._target_q,
-            target_policy=self._target_pi)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._q,
-            dst_models=self._target_q,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._q, {self._q.scope_name: self._q_solver}, training)
-        copy_network_parameters(self._q.get_parameters(), self._target_q.get_parameters())
+        sync_model(self._q, self._target_q)
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.DPGPolicyTrainerConfig()
-        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(env_info=self._env_info,
-                                                             config=policy_trainer_config,
-                                                             q_function=self._q)
-        # Empty training will not configure anything and does the default training written in policy_trainer class
-        training = Training()
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._pi,
-            dst_models=self._target_pi,
-            target_update_frequency=1,
-            tau=self._config.tau
-        )
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
-        copy_network_parameters(self._pi.get_parameters(), self._target_pi.get_parameters(), tau=1.0)
-
+        policy_trainer = MT.policy_trainers.DPGPolicyTrainer(
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
+            q_function=self._q,
+            env_info=self._env_info,
+            config=policy_trainer_config)
+        sync_model(self._pi, self._target_pi, tau=1.0)
         return policy_trainer
 
     def compute_eval_action(self, state):
-        action, _ = self._compute_greedy_action(state)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_greedy_action(state)
+            return action
 
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)
@@ -249,11 +244,14 @@ class DDPG(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._q_function_trainer.train(batch)
-        self._policy_trainer.train(batch)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        sync_model(self._q, self._target_q, tau=self._config.tau)
 
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
+        sync_model(self._pi, self._target_pi, tau=self._config.tau)
+
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
     @eval_api
     def _compute_greedy_action(self, s):
@@ -281,11 +279,11 @@ class DDPG(Algorithm):
 
     @property
     def latest_iteration_state(self):
-        latest_iteration_state = {}
-        latest_iteration_state['iteration'] = self._iteration_num
-        latest_iteration_state['scalar'] = {}
-        latest_iteration_state['histogram'] = {}
-
-        latest_iteration_state['histogram'].update(self._q.get_parameters())
-
+        latest_iteration_state = super(DDPG, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update(
+                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 import gym
 import numpy as np
@@ -30,8 +30,9 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -79,7 +80,8 @@ class SACConfig(AlgorithmConfig):
         self._assert_positive(self.gradient_steps, 'gradient_steps')
         self._assert_positive(self.environment_steps, 'environment_steps')
         if self.initial_temperature is not None:
-            self._assert_positive(self.initial_temperature, 'initial_temperature')
+            self._assert_positive(
+                self.initial_temperature, 'initial_temperature')
         self._assert_positive(self.start_timesteps, 'start_timesteps')
 
 
@@ -149,6 +151,9 @@ class SAC(Algorithm):
             builder of replay_buffer
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: SACConfig
     _q1: QFunction
     _q2: QFunction
@@ -166,7 +171,11 @@ class SAC(Algorithm):
     _q_function_trainer: ModelTrainer
 
     _eval_state_var: nn.Variable
-    _eval_action: nn.Variable
+    _eval_deterministic_action: nn.Variable
+    _eval_probabilistic_action: nn.Variable
+
+    _policy_trainer_state: Dict[str, Any]
+    _q_function_trainer_state: Dict[str, Any]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: SACConfig = SACConfig(),
@@ -180,36 +189,41 @@ class SAC(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException
 
-        self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
-        self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
-        self._train_q_functions = [self._q1, self._q2]
-        self._train_q_solvers = {q.scope_name: q_solver_builder(self._env_info, self._config)
-                                 for q in self._train_q_functions}
-        self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
-                                    for q in self._train_q_functions]
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
+            self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
+            self._train_q_functions = [self._q1, self._q2]
+            self._train_q_solvers = {q.scope_name: q_solver_builder(self._env_info, self._config)
+                                     for q in self._train_q_functions}
+            self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
+                                        for q in self._train_q_functions]
 
-        self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
-        self._pi_solver = policy_solver_builder(self._env_info, self._config)
+            self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
+            self._pi_solver = policy_solver_builder(self._env_info, self._config)
 
-        self._temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
-            scope_name='temperature',
-            initial_value=self._config.initial_temperature)
-        if not self._config.fix_temperature:
-            self._temperature_solver = temperature_solver_builder(self._env_info, self._config)
-        else:
-            self._temperature_solver = None
+            self._temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
+                scope_name='temperature',
+                initial_value=self._config.initial_temperature)
+            if not self._config.fix_temperature:
+                self._temperature_solver = temperature_solver_builder(self._env_info, self._config)
+            else:
+                self._temperature_solver = None
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+            self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, state):
-        action, _ = self._compute_greedy_action(state, deterministic=True)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_greedy_action(state, deterministic=True)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
-        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
+        self._q_function_trainer = self._setup_q_function_training(
+            env_or_buffer)
 
     def _setup_environment_explorer(self, env_or_buffer):
         if self._is_buffer(env_or_buffer):
@@ -229,40 +243,31 @@ class SAC(Algorithm):
             fixed_temperature=self._config.fix_temperature,
             target_entropy=self._config.target_entropy)
         policy_trainer = MT.policy_trainers.SoftPolicyTrainer(
-            env_info=self._env_info,
-            config=policy_trainer_config,
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
             temperature=self._temperature,
             temperature_solver=self._temperature_solver,
-            q_functions=[self._q1, self._q2])
-
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._pi, {self._pi.scope_name: self._pi_solver}, training)
+            q_functions=[self._q1, self._q2],
+            env_info=self._env_info,
+            config=policy_trainer_config)
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
-        q_function_trainer_config = MT.q_value_trainers.SquaredTDQFunctionTrainerConfig(
+        q_function_trainer_config = MT.q_value_trainers.SoftQTrainerConfig(
             reduction_method='mean',
             grad_clip=None)
 
-        q_function_trainer = MT.q_value_trainers.SquaredTDQFunctionTrainer(
-            env_info=self._env_info,
-            config=q_function_trainer_config)
-
-        training = MT.q_value_trainings.SoftQTraining(
+        q_function_trainer = MT.q_value_trainers.SoftQTrainer(
             train_functions=self._train_q_functions,
+            solvers=self._train_q_solvers,
             target_functions=self._target_q_functions,
             target_policy=self._pi,
-            temperature=self._policy_trainer.get_temperature())
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._train_q_functions,
-            dst_models=self._target_q_functions,
-            target_update_frequency=1,
-            tau=self._config.tau)
-        q_function_trainer.setup_training(self._train_q_functions, self._train_q_solvers, training)
+            temperature=self._policy_trainer.get_temperature(),
+            env_info=self._env_info,
+            config=q_function_trainer_config)
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
-            copy_network_parameters(q.get_parameters(), target_q.get_parameters())
+            sync_model(q, target_q)
         return q_function_trainer
 
     def _run_online_training_iteration(self, env):
@@ -294,25 +299,30 @@ class SAC(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._q_function_trainer.train(batch)
-        self._policy_trainer.train(batch)
+        self._q_function_trainer_state = self._q_function_trainer.train(batch)
+        for q, target_q in zip(self._train_q_functions, self._target_q_functions):
+            sync_model(q, target_q, tau=self._config.tau)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
     @eval_api
     def _compute_greedy_action(self, s, deterministic=False):
+        # evaluation input/action variables
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = nn.Variable(s.shape)
             distribution = self._pi.pi(self._eval_state_var)
-            if deterministic:
-                self._eval_action = distribution.choose_probable()
-            else:
-                self._eval_action = distribution.sample()
+            self._eval_deterministic_action = distribution.choose_probable()
+            self._eval_probabilistic_action = distribution.sample()
         self._eval_state_var.d = s
-        self._eval_action.forward()
-        return np.squeeze(self._eval_action.d, axis=0), {}
+        if deterministic:
+            self._eval_deterministic_action.forward()
+            return np.squeeze(self._eval_deterministic_action.d, axis=0), {}
+        else:
+            self._eval_probabilistic_action.forward()
+            return np.squeeze(self._eval_probabilistic_action.d, axis=0), {}
 
     def _models(self):
         models = [self._q1, self._q2, self._pi]
@@ -325,3 +335,14 @@ class SAC(Algorithm):
         if self._temperature_solver is not None:
             solvers[self._temperature.scope_name] = self._temperature_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(SAC, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_q_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['histogram'].update(
+                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
+        return latest_iteration_state

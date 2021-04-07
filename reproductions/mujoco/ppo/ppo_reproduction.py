@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import argparse
+import os
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
@@ -32,9 +32,9 @@ def select_timelimit_as_terminal(env_name):
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
@@ -51,21 +51,20 @@ def run_training(args):
     total_iterations = 1000000
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
-    if args.snapshot_dir is None:
-        timelimit_as_terminal = select_timelimit_as_terminal(args.env)
-        config = A.PPOConfig(epsilon=0.2,
-                             entropy_coefficient=0.0,
-                             actor_timesteps=2048,
-                             epochs=10,
-                             batch_size=64,
-                             learning_rate=3.0*1e-4,
-                             actor_num=1,
-                             decrease_alpha=False,
-                             timelimit_as_terminal=timelimit_as_terminal,
-                             seed=args.seed)
-        ppo = A.PPO(train_env, config=config)
-    else:
-        ppo = serializers.load_snapshot(args.snapshot_dir)
+    timelimit_as_terminal = select_timelimit_as_terminal(args.env)
+    config = A.PPOConfig(gpu_id=args.gpu,
+                         epsilon=0.2,
+                         entropy_coefficient=0.0,
+                         actor_timesteps=2048,
+                         epochs=10,
+                         batch_size=64,
+                         learning_rate=3.0*1e-4,
+                         actor_num=1,
+                         decrease_alpha=False,
+                         timelimit_as_terminal=timelimit_as_terminal,
+                         seed=args.seed)
+    ppo = A.PPO(train_env, config=config)
+
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     ppo.set_hooks(hooks)
 
@@ -76,12 +75,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    ppo = serializers.load_snapshot(args.snapshot_dir)
+    config = A.PPOConfig(gpu_id=args.gpu)
+    ppo = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(ppo, A.PPO):
         raise ValueError('Loaded snapshot is not trained with PPO!')
 
@@ -99,6 +97,7 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--save-dir', type=str, default=None)
 
     args = parser.parse_args()
 

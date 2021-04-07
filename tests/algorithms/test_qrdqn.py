@@ -108,6 +108,20 @@ class TestQRDQN(object):
         with pytest.raises(ValueError):
             A.QRDQNConfig(kappa=-1)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyDiscreteImg()
+        qrdqn = A.QRDQN(dummy_env)
+
+        qrdqn._quantile_dist_trainer_state = {'q_loss': 0.}
+
+        latest_iteration_state = qrdqn.latest_iteration_state
+        assert 'q_loss' in latest_iteration_state['scalar']
+        assert latest_iteration_state['scalar']['q_loss'] == 0.
+
 
 if __name__ == "__main__":
     import sys

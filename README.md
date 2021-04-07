@@ -46,6 +46,21 @@ See [algorithms](./nnabla_rl/algorithms/README.md).
 
 You can find the reproduction and evaluation results of each algorithm [here](./reproductions)
 
+## Getting started
+
+Try below interactive demos to get started. </br>
+You can run it directly on [Colab](https://colab.research.google.com/) from the links in the table below.
+
+| Title | Notebook | Target RL task |
+|:---:|:---:|:---:|
+| Simple reinforcement learning training to get started | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sony/nnabla-rl/blob/master/interactive-demos/pendulum.ipynb) | Pendulum |
+| Learn how to use training algorithms | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sony/nnabla-rl/blob/master/interactive-demos/tutorial-algorithm.ipynb) | Pendulum |
+| Learn how to use customized network model for training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sony/nnabla-rl/blob/master/interactive-demos/tutorial-model.ipynb) | Mountain car |
+| Learn how to use different network solver for training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sony/nnabla-rl/blob/master/interactive-demos/tutorial-solver.ipynb) | Pendulum |
+| Learn how to use different replay buffer for training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sony/nnabla-rl/blob/master/interactive-demos/tutorial-replay-buffer.ipynb) | Pendulum |
+| Learn how to use your own environment for training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sony/nnabla-rl/blob/master/interactive-demos/tutorial-envs.ipynb) | Customized environment |
+| Atari game training example | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sony/nnabla-rl/blob/master/interactive-demos/atari.ipynb) | Atari games |
+
 ## Documentation
 
 Full documentation is under the docs/.

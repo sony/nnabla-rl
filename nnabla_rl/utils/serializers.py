@@ -15,6 +15,7 @@
 import json
 import pathlib
 import pickle
+import warnings
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.utils.files as files
@@ -154,6 +155,9 @@ def _load_solver_states(path, algorithm):
     for scope_name, solver in algorithm._solvers().items():
         filename = scope_name + '_solver' + '.h5'
         filepath = path / filename
+        if not filepath.exists():
+            warnings.warn(f"No solver file found in: {filepath}. Ommitting...")
+            continue
         model = models[scope_name]
         solver.set_parameters(model.get_parameters())
         solver.load_states(filepath)

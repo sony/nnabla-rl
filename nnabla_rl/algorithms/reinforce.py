@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Any, Dict, Union
 
 import gym
 import numpy as np
@@ -29,6 +29,7 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 
 
@@ -130,21 +131,28 @@ class REINFORCE(Algorithm):
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
 
+    _policy_trainer_state: Dict[str, Any]
+
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: REINFORCEConfig = REINFORCEConfig(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder()):
         super(REINFORCE, self).__init__(env_or_env_info, config=config)
-        self._policy = policy_builder("pi", self._env_info, self._config)
-        self._policy_solver = policy_solver_builder(self._env_info, self._config)
+
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._policy = policy_builder("pi", self._env_info, self._config)
+            self._policy_solver = policy_solver_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, s):
-        action, _ = self._compute_action(s)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_action(s)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
@@ -162,15 +170,14 @@ class REINFORCE(Algorithm):
         return explorer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_config = MT.policy_trainers.SPGPolicyTrainerConfig(
+        policy_trainer_config = MT.policy_trainers.REINFORCEPolicyTrainerConfig(
             pi_loss_scalar=1.0 / self._config.num_rollouts_per_train_iteration,
             grad_clip_norm=self._config.clip_grad_norm)
-        policy_trainer = MT.policy_trainers.SPGPolicyTrainer(
+        policy_trainer = MT.policy_trainers.REINFORCEPolicyTrainer(
+            models=self._policy,
+            solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
             config=policy_trainer_config)
-
-        training = MT.policy_trainings.REINFORCETraining()
-        policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
@@ -196,7 +203,7 @@ class REINFORCE(Algorithm):
                               a_current=a_batch,
                               extra=extra)
 
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     def _align_experiences_and_compute_accumulated_reward(self, experiences):
         s_batch = None
@@ -243,7 +250,7 @@ class REINFORCE(Algorithm):
 
     @property
     def latest_iteration_state(self):
-        latest_iteration_state = {}
-        latest_iteration_state['scalar'] = {}
-        latest_iteration_state['histogram'] = {}
+        latest_iteration_state = super(REINFORCE, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
         return latest_iteration_state

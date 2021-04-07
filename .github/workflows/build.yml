@@ -1,9 +1,14 @@
 name: Build nnabla-rl
-on: [push]
+on:
+  pull_request:
+    branches: [master]
+    types: [synchronize, opened, reopened, ready_for_review]
 
 jobs:
   format:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.6
@@ -19,6 +24,8 @@ jobs:
           autopep8 -r --diff --max-line-length=120 .
   typing:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.6
@@ -34,6 +41,8 @@ jobs:
           mypy nnabla_rl
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.6
@@ -49,6 +58,8 @@ jobs:
           flake8 . --max-line-length=120
   isort:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.6
@@ -64,6 +75,8 @@ jobs:
           isort --check-only .
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event.pull_request.draft == false
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8]

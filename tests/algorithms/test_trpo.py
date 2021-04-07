@@ -96,6 +96,20 @@ class TestTRPO():
         with pytest.raises(ValueError):
             A.TRPOConfig(vf_learning_rate=-0.5)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyContinuous()
+        trpo = A.TRPO(dummy_env)
+
+        trpo._v_function_trainer_state = {'v_loss': 0.}
+
+        latest_iteration_state = trpo.latest_iteration_state
+        assert 'v_loss' in latest_iteration_state['scalar']
+        assert latest_iteration_state['scalar']['v_loss'] == 0.
+
 
 if __name__ == "__main__":
     import sys

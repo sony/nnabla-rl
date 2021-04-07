@@ -36,7 +36,7 @@ class SolverBuilder():
         Args:
             env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):\
                 environment information
-            algorithm_params (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`): \
+            algorithm_config (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`): \
                 configuration class of the target algorithm
 
         Returns:

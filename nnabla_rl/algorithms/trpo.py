@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import gym
 import numpy as np
@@ -34,6 +34,7 @@ from nnabla_rl.models import Model, StochasticPolicy, TRPOPolicy, TRPOVFunction,
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 
 
@@ -162,6 +163,9 @@ class TRPO(Algorithm):
             state preprocessor builder to preprocess the states
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: TRPOConfig
     _policy: StochasticPolicy
     _v_function: VFunction
@@ -172,6 +176,9 @@ class TRPO(Algorithm):
     _v_function_trainer: ModelTrainer
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
+
+    _policy_trainer_state: Dict[str, Any]
+    _v_function_trainer_state: Dict[str, Any]
 
     def __init__(self,
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
@@ -184,19 +191,28 @@ class TRPO(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise NotImplementedError
 
-        self._v_function = v_function_builder('v', self._env_info, self._config)
-        self._policy = policy_builder('pi', self._env_info, self._config)
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._v_function = v_function_builder('v', self._env_info, self._config)
+            self._policy = policy_builder('pi', self._env_info, self._config)
 
-        self._preprocessor: Optional[Preprocessor] = None
-        if self._config.preprocess_state and state_preprocessor_builder is not None:
-            preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
-            assert preprocessor is not None
-            self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
-            self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
-            self._state_preprocessor = preprocessor
-        self._v_function_solver = v_solver_builder(self._env_info, self._config)
+            self._preprocessor: Optional[Preprocessor] = None
+            if self._config.preprocess_state and state_preprocessor_builder is not None:
+                preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
+                assert preprocessor is not None
+                self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
+                self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
+                self._state_preprocessor = preprocessor
+            self._v_function_solver = v_solver_builder(self._env_info, self._config)
+
+    @eval_api
+    def compute_eval_action(self, s):
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_action(s)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
@@ -214,17 +230,15 @@ class TRPO(Algorithm):
         return explorer
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+        v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=1.0
         )
-        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+        v_function_trainer = MT.v_value.MonteCarloVTrainer(
+            train_functions=self._v_function,
+            solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
             config=v_function_trainer_config)
-
-        training = MT.v_value_trainings.MonteCarloVValueTraining()
-        v_function_trainer.setup_training(
-            self._v_function, {self._v_function.scope_name: self._v_function_solver}, training)
         return v_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
@@ -234,17 +248,11 @@ class TRPO(Algorithm):
             maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._config.conjugate_gradient_damping,
             conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
-        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
-                                                              config=policy_trainer_config)
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, {}, training)
-
+        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(
+            model=self._policy,
+            env_info=self._env_info,
+            config=policy_trainer_config)
         return policy_trainer
-
-    @eval_api
-    def compute_eval_action(self, s):
-        action, _ = self._compute_action(s)
-        return action
 
     def _run_online_training_iteration(self, env):
         if self.iteration_num % self._config.num_steps_per_iteration != 0:
@@ -328,7 +336,7 @@ class TRPO(Algorithm):
             batch = TrainingBatch(batch_size=self._config.vf_batch_size,
                                   s_current=s[indices],
                                   extra={'v_target': v_target[indices]})
-            self._v_function_trainer.train(batch)
+            self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     def _policy_training(self, s, a, v_target, advantage):
         extra = {}
@@ -339,7 +347,7 @@ class TRPO(Algorithm):
                               a_current=a[:self._config.pi_batch_size],
                               extra=extra)
 
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     @eval_api
     def _compute_action(self, s):
@@ -368,4 +376,6 @@ class TRPO(Algorithm):
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(TRPO, self).latest_iteration_state
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
         return latest_iteration_state

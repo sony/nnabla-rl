@@ -16,7 +16,7 @@ import multiprocessing as mp
 import os
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, NamedTuple, Optional, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 import gym
 import numpy as np
@@ -51,6 +51,7 @@ class PPOConfig(AlgorithmConfig):
     List of configurations for PPO algorithm
 
     Args:
+        epsilon (float): PPO's probability ratio clipping range. Defaults to 0.1
         gamma (float): discount factor of rewards. Defaults to 0.99.
         learning_rate (float): learning rate which is set to all solvers. \
             You can customize/override the learning rate for each solver by implementing the \
@@ -74,6 +75,7 @@ class PPOConfig(AlgorithmConfig):
             before feeding as training batch. Defaults to True.
     '''
 
+    epsilon: float = 0.1
     gamma: float = 0.99
     learning_rate: float = 2.5*1e-4
     lmb: float = 0.95
@@ -204,9 +206,12 @@ class PPO(Algorithm):
         state_preprocessor_builder (None or :py:class:`PreprocessorBuilder <nnabla_rl.builders.PreprocessorBuilder>`):
             state preprocessor builder to preprocess the states
     '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: PPOConfig
 
-    _gpu_id: int
     _v_function: VFunction
     _v_function_solver: nn.solver.Solver
     _policy: StochasticPolicy
@@ -216,8 +221,14 @@ class PPO(Algorithm):
     _policy_trainer: ModelTrainer
     _v_function_trainer: ModelTrainer
 
+    _policy_solver_builder: SolverBuilder
+    _v_solver_builder: SolverBuilder
+
     _actors: List['_PPOActor']
     _actor_processes: List[mp.Process]
+
+    _policy_trainer_state: Dict[str, Any]
+    _v_function_trainer_state: Dict[str, Any]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: PPOConfig = PPOConfig(),
@@ -226,77 +237,80 @@ class PPO(Algorithm):
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
-        self._gpu_id = context._gpu_id
-        # Prevent setting context by the Algorithm class
-        if 0 <= self._gpu_id:
-            context._gpu_id = -1
         super(PPO, self).__init__(env_or_env_info, config=config)
 
-        self._v_function = v_function_builder('v', self._env_info, self._config)
-        self._policy = policy_builder('pi', self._env_info, self._config)
-        self._state_preprocessor = None
+        # Initialize on cpu and change the context later
+        with nn.context_scope(context.get_nnabla_context(-1)):
+            self._v_function = v_function_builder('v', self._env_info, self._config)
+            self._policy = policy_builder('pi', self._env_info, self._config)
+            self._state_preprocessor = None
 
-        if self._config.preprocess_state and state_preprocessor_builder is not None:
-            preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
-            assert preprocessor is not None
-            self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
-            self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
-            self._state_preprocessor = preprocessor
-        self._policy_solver = policy_solver_builder(self._env_info, self._config)
-        self._v_function_solver = v_solver_builder(self._env_info, self._config)
+            if self._config.preprocess_state and state_preprocessor_builder is not None:
+                preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
+                assert preprocessor is not None
+                self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
+                self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
+                self._state_preprocessor = preprocessor
+
+            self._policy_solver = policy_solver_builder(self._env_info, self._config)
+            self._policy_solver_builder = policy_solver_builder  # keep for later use
+            self._v_function_solver = v_solver_builder(self._env_info, self._config)
+            self._v_solver_builder = v_solver_builder  # keep for later use
 
     @eval_api
     def compute_eval_action(self, state):
-        if context._gpu_id < 0 and 0 <= self._gpu_id:
-            context._gpu_id = self._gpu_id
-            context._set_nnabla_context()
-        return self._compute_action(state)
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            return self._compute_action(state)
 
     def _before_training_start(self, env_or_buffer):
         if not self._is_env(env_or_buffer):
             raise ValueError('PPO only supports online training')
-        context._gpu_id = self._gpu_id
         env = env_or_buffer
 
         # FIXME: This setup is a workaround for creating underlying model parameters
         # If the parameter is not created, the multiprocessable array (created in launch_actor_processes)
         # will be empty and the agent does not learn anything
+        context.set_nnabla_context(-1)
         self._setup_policy_training(env_or_buffer)
         self._setup_v_function_training(env_or_buffer)
 
         self._actors, self._actor_processes = self._launch_actor_processes(env)
-        context._set_nnabla_context()
+        context.set_nnabla_context(self._config.gpu_id)
 
         # Setup again here to use gpu (if it is set)
+        old_policy_solver = self._policy_solver
+        self._policy_solver = self._policy_solver_builder(self._env_info, self._config)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
+        self._policy_solver.set_states(old_policy_solver.get_states())
+
+        old_v_function_solver = self._v_function_solver
+        self._v_function_solver = self._v_solver_builder(self._env_info, self._config)
         self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
+        self._v_function_solver.set_states(old_v_function_solver.get_states())
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.PPOPolicyTrainerConfig(
+            epsilon=self._config.epsilon,
             entropy_coefficient=self._config.entropy_coefficient
         )
         policy_trainer = MT.policy_trainers.PPOPolicyTrainer(
+            models=self._policy,
+            solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
             config=policy_trainer_config)
-
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
         return policy_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
         # training input/loss variables
-        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+        v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=self._config.value_coefficient
         )
-
-        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+        v_function_trainer = MT.v_value.MonteCarloVTrainer(
+            train_functions=self._v_function,
+            solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
             config=v_function_trainer_config)
-
-        training = MT.v_value_trainings.MonteCarloVValueTraining()
-        v_function_trainer.setup_training(
-            self._v_function, {self._v_function.scope_name: self._v_function_solver}, training)
         return v_function_trainer
 
     def _after_training_finish(self, env_or_buffer):
@@ -384,9 +398,9 @@ class PPO(Algorithm):
                               extra=extra)
 
         self._policy_trainer.set_learning_rate(self._config.learning_rate * alpha)
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
         self._v_function_trainer.set_learning_rate(self._config.learning_rate * alpha)
-        self._v_function_trainer.train(batch)
+        self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     @eval_api
     def _compute_action(self, s):
@@ -431,8 +445,20 @@ class PPO(Algorithm):
             actors.append(actor)
         return actors
 
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(PPO, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+        return latest_iteration_state
+
 
 class _PPOActor(object):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _actor_num: int
     _env: gym.Env
     _env_info: EnvironmentInfo
@@ -546,7 +572,7 @@ class _PPOActor(object):
         self._update_params(src=params, dest=self._state_preprocessor_mp_arrays)
 
     def _run_actor_loop(self):
-        context._set_nnabla_context()
+        context.set_nnabla_context(self._config.gpu_id)
         if self._config.seed >= 0:
             seed = self._actor_num + self._config.seed
         else:

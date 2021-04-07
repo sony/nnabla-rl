@@ -14,7 +14,7 @@
 
 from setuptools import find_packages, setup
 
-install_requires = ['nnabla>=1.17', 'gym', 'dataclasses;python_version=="3.6"', 'opencv-python']
+install_requires = ['nnabla>=1.17,!=1.18.0', 'gym', 'dataclasses;python_version=="3.6"', 'opencv-python']
 
 tests_require = ['pytest', 'pytest-cov', 'mock']
 # pytest-runner is required to run tests with
@@ -24,7 +24,8 @@ setup_requires = ['pytest-runner']
 scripts = ['bin/plot_result',
            'bin/check_best_iteration',
            'bin/compile_results',
-           'bin/train_and_compile_results']
+           'bin/train_and_compile_results',
+           'bin/evaluate_algo']
 description = '''Deep reinforcement learning framework that is intended \
                  to be used for research, development and production.'''
 setup(

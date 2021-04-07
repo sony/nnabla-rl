@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import gym
 import numpy as np
@@ -29,6 +29,7 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 
 
@@ -117,6 +118,9 @@ class ICML2015TRPO(Algorithm):
             builder of policy models
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: ICML2015TRPOConfig
     _policy: StochasticPolicy
     _policy_trainer: ModelTrainer
@@ -124,18 +128,24 @@ class ICML2015TRPO(Algorithm):
     _eval_state_var: nn.Variable
     _eval_action: nn.Variable
 
+    _policy_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder()):
         super(ICML2015TRPO, self).__init__(env_or_env_info, config=config)
-        self._policy = policy_builder("pi", self._env_info, self._config)
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._policy = policy_builder("pi", self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, s):
-        action, _ = self._compute_action(s)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_action(s)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
@@ -154,10 +164,10 @@ class ICML2015TRPO(Algorithm):
             maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._config.conjugate_gradient_damping,
             conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
-        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
-                                                              config=policy_trainer_config)
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, {}, training)
+        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(
+            model=self._policy,
+            env_info=self._env_info,
+            config=policy_trainer_config)
 
         return policy_trainer
 
@@ -189,7 +199,7 @@ class ICML2015TRPO(Algorithm):
                               a_current=a,
                               extra=extra)
 
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     def _align_experiences(self, buffer_iterator):
         s_batch = []
@@ -251,7 +261,5 @@ class ICML2015TRPO(Algorithm):
 
     @property
     def latest_iteration_state(self):
-        latest_iteration_state = {}
-        latest_iteration_state['scalar'] = {}
-        latest_iteration_state['histogram'] = {}
+        latest_iteration_state = super(ICML2015TRPO, self).latest_iteration_state
         return latest_iteration_state

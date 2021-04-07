@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import argparse
+import os
 
 import numpy as np
 
-import nnabla_rl
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.replay_buffers as RB
@@ -34,9 +34,9 @@ class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
 
 
 def run_training(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     outdir = f'{args.env}_results/seed-{args.seed}'
+    if args.save_dir:
+        outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     writer = FileWriter(outdir, "evaluation_result")
@@ -49,7 +49,7 @@ def run_training(args):
 
     train_env = build_atari_env(args.env, seed=args.seed)
 
-    config = A.DQNConfig()
+    config = A.DQNConfig(gpu_id=args.gpu)
     dqn = A.DQN(train_env,
                 config=config,
                 replay_buffer_builder=MemoryEfficientBufferBuilder())
@@ -62,12 +62,11 @@ def run_training(args):
 
 
 def run_showcase(args):
-    nnabla_rl.run_on_gpu(cuda_device_id=args.gpu)
-
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    dqn = serializers.load_snapshot(args.snapshot_dir)
+    config = A.DQNConfig(gpu_id=args.gpu)
+    dqn = serializers.load_snapshot(args.snapshot_dir, config=config)
     if not isinstance(dqn, A.DQN):
         raise ValueError('Loaded snapshot is not trained with DQN!')
 
@@ -84,6 +83,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str,
                         default='BreakoutNoFrameskip-v4')
+    parser.add_argument('--save-dir', type=str, default="")
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--render', action='store_true')

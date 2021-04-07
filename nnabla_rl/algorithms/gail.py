@@ -14,7 +14,7 @@
 
 import random
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import gym
 import numpy as np
@@ -37,6 +37,7 @@ from nnabla_rl.models import (GAILDiscriminator, GAILPolicy, GAILVFunction, Mode
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
 
 
@@ -80,6 +81,10 @@ class GAILConfig(AlgorithmConfig):
         preprocess_state (bool): Enable preprocessing the states in the collected experiences \
             before feeding as training batch. Defaults to True.
     '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     preprocess_state: bool = True
     act_deterministic_in_eval: bool = True
     discriminator_batch_size: int = 50000
@@ -221,6 +226,10 @@ class GAIL(Algorithm):
     _a_var_label: nn.Variable
     _reward: nn.Variable
 
+    _v_function_trainer_state: Dict[str, Any]
+    _policy_trainer_state: Dict[str, Any]
+    _discriminator_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  expert_buffer: ReplayBuffer,
                  config=GAILConfig(),
@@ -234,30 +243,40 @@ class GAIL(Algorithm):
         if self._env_info.is_discrete_action_env():
             raise NotImplementedError
 
-        self._expert_buffer = expert_buffer
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            policy = policy_builder("pi", self._env_info, self._config)
+            v_function = v_function_builder("v", self._env_info, self._config)
+            discriminator = reward_function_builder("discriminator", self._env_info, self._config)
 
-        policy = policy_builder("pi", self._env_info, self._config)
-        v_function = v_function_builder("v", self._env_info, self._config)
-        discriminator = reward_function_builder("discriminator", self._env_info, self._config)
+            if self._config.preprocess_state:
+                if state_preprocessor_builder is None:
+                    raise ValueError('State preprocessing is enabled but no preprocessor builder is given')
+                pi_v_preprocessor = state_preprocessor_builder('pi_v_preprocessor', self._env_info, self._config)
+                v_function = _StatePreprocessedVFunction(v_function=v_function, preprocessor=pi_v_preprocessor)
+                policy = _StatePreprocessedPolicy(policy=policy, preprocessor=pi_v_preprocessor)
+                r_preprocessor = state_preprocessor_builder('r_preprocessor', self._env_info, self._config)
+                discriminator = _StatePreprocessedRewardFunction(
+                    reward_function=discriminator, preprocessor=r_preprocessor)
+                self._pi_v_state_preprocessor = pi_v_preprocessor
+                self._r_state_preprocessor = r_preprocessor
+            self._v_function = v_function
+            self._policy = policy
+            self._discriminator = discriminator
 
-        if self._config.preprocess_state:
-            if state_preprocessor_builder is None:
-                raise ValueError('State preprocessing is enabled but no preprocessor builder is given')
-            pi_v_preprocessor = state_preprocessor_builder('pi_v_preprocessor', self._env_info, self._config)
-            v_function = _StatePreprocessedVFunction(v_function=v_function, preprocessor=pi_v_preprocessor)
-            policy = _StatePreprocessedPolicy(policy=policy, preprocessor=pi_v_preprocessor)
-            r_preprocessor = state_preprocessor_builder('r_preprocessor', self._env_info, self._config)
-            discriminator = _StatePreprocessedRewardFunction(reward_function=discriminator, preprocessor=r_preprocessor)
-            self._pi_v_state_preprocessor = pi_v_preprocessor
-            self._r_state_preprocessor = r_preprocessor
-        self._v_function = v_function
-        self._policy = policy
-        self._discriminator = discriminator
+            self._v_function_solver = v_solver_builder(self._env_info, self._config)
+            self._discriminator_solver = reward_solver_builder(self._env_info, self._config)
 
-        self._v_function_solver = v_solver_builder(self._env_info, self._config)
-        self._discriminator_solver = reward_solver_builder(self._env_info, self._config)
+            self._expert_buffer = expert_buffer
+
+    @eval_api
+    def compute_eval_action(self, s):
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._compute_action(s, act_deterministic=self._config.act_deterministic_in_eval)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
@@ -276,17 +295,15 @@ class GAIL(Algorithm):
         return explorer
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+        v_function_trainer_config = MT.v_value_trainers.MonteCarloVTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=1.0
         )
-        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+        v_function_trainer = MT.v_value_trainers.MonteCarloVTrainer(
+            train_functions=self._v_function,
+            solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
             config=v_function_trainer_config)
-
-        training = MT.v_value_trainings.MonteCarloVValueTraining()
-        v_function_trainer.setup_training(
-            self._v_function, {self._v_function.scope_name: self._v_function_solver}, training)
         return v_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
@@ -295,11 +312,10 @@ class GAIL(Algorithm):
             maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._config.conjugate_gradient_damping,
             conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
-        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(env_info=self._env_info,
-                                                              config=policy_trainer_config)
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, {}, training)
-
+        policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(
+            model=self._policy,
+            env_info=self._env_info,
+            config=policy_trainer_config)
         return policy_trainer
 
     def _setup_reward_function_training(self, env_or_buffer):
@@ -308,18 +324,13 @@ class GAIL(Algorithm):
             learning_rate=self._config.discriminator_learning_rate,
             entropy_coef=self._config.adversary_entropy_coef
         )
-        reward_function_trainer = MT.reward_trainiers.GAILRewardFunctionTrainer(env_info=self._env_info,
-                                                                                config=reward_function_trainer_config)
-        training = MT.model_trainer.Training()
-        reward_function_trainer.setup_training(
-            self._discriminator, {self._discriminator.scope_name: self._discriminator_solver}, training)
+        reward_function_trainer = MT.reward_trainiers.GAILRewardFunctionTrainer(
+            models=self._discriminator,
+            solvers={self._discriminator.scope_name: self._discriminator_solver},
+            env_info=self._env_info,
+            config=reward_function_trainer_config)
 
         return reward_function_trainer
-
-    @eval_api
-    def compute_eval_action(self, s):
-        action, _ = self._compute_action(s, act_deterministic=self._config.act_deterministic_in_eval)
-        return action
 
     def _run_online_training_iteration(self, env):
         if self.iteration_num % self._config.num_steps_per_iteration != 0:
@@ -458,7 +469,7 @@ class GAIL(Algorithm):
             batch = TrainingBatch(batch_size=self._config.vf_batch_size,
                                   s_current=s[indices],
                                   extra={'v_target': v_target[indices]})
-            self._v_function_trainer.train(batch)
+            self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     def _policy_training(self, s, a, v_target, advantage):
         extra = {}
@@ -469,7 +480,7 @@ class GAIL(Algorithm):
                               a_current=a[:self._config.pi_batch_size],
                               extra=extra)
 
-        self._policy_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
 
     def _discriminator_training(self, s_curr_expert, a_curr_expert, s_next_expert,
                                 s_curr_agent, a_curr_agent, s_next_agent):
@@ -484,7 +495,7 @@ class GAIL(Algorithm):
         batch = TrainingBatch(batch_size=self._config.discriminator_batch_size,
                               extra=extra)
 
-        self._discriminator_trainer.train(batch)
+        self._discriminator_trainer_state = self._discriminator_trainer.train(batch)
 
     @eval_api
     def _compute_action(self, s, act_deterministic=False):
@@ -532,4 +543,8 @@ class GAIL(Algorithm):
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(GAIL, self).latest_iteration_state
+        if hasattr(self, '_discriminator_trainer_state'):
+            latest_iteration_state['scalar'].update({'reward_loss': self._discriminator_trainer_state['reward_loss']})
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
         return latest_iteration_state

@@ -16,7 +16,7 @@ import multiprocessing as mp
 import os
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -81,11 +81,11 @@ class A2CConfig(AlgorithmConfig):
         Check the set values are in valid range.
 
         '''
-        if not ((0.0 <= self.gamma) & (self.gamma <= 1.0)):
-            raise ValueError('gamma must lie between [0.0, 1.0]')
+        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
+        self._assert_between(self.decay, 0.0, 1.0, 'decay')
         self._assert_positive(self.n_steps, 'n_steps')
+        self._assert_positive(self.actor_num, 'actor num')
         self._assert_positive(self.learning_rate, 'learning_rate')
-        self._assert_positive(self.max_grad_norm, 'max_grad_norm')
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
@@ -145,10 +145,13 @@ class A2C(Algorithm):
         policy_builder (:py:class:`ModelBuilder[StochasicPolicy] <nnabla_rl.builders.ModelBuilder>`):
             builder of policy models
         policy_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for policy solvers
-        config (:py:class:`A2CConfig <nnabla_rl.algorithms.a2c.A2Config>`): configuration of PPO algorithm
+        config (:py:class:`A2CConfig <nnabla_rl.algorithms.a2c.A2CConfig>`): configuration of A2C algorithm
     '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: A2CConfig
-    _gpu_id: int
     _v_function: VFunction
     _v_function_solver: nn.solver.Solver
     _policy: StochasticPolicy
@@ -164,58 +167,77 @@ class A2C(Algorithm):
     _policy_trainer: ModelTrainer
     _v_function_trainer: ModelTrainer
 
+    _policy_solver_builder: SolverBuilder
+    _v_solver_builder: SolverBuilder
+
+    _policy_trainer_state: Dict[str, Any]
+    _v_function_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info,
                  v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  config=A2CConfig()):
+        super(A2C, self).__init__(env_or_env_info, config=config)
         if self._env_info.is_continuous_action_env():
             raise NotImplementedError
 
-        self._gpu_id = context._gpu_id
-        # Prevent setting context by the Algorithm class
-        if 0 <= self._gpu_id:
-            context._gpu_id = -1
-        super(A2C, self).__init__(env_or_env_info, config=config)
+        # Initialize on cpu and change the context later
+        with nn.context_scope(context.get_nnabla_context(-1)):
+            self._policy = policy_builder('pi', self._env_info, self._config)
+            self._v_function = v_function_builder('v', self._env_info, self._config)
 
-        self._policy = policy_builder('pi', self._env_info, self._config)
-        self._v_function = v_function_builder('v', self._env_info, self._config)
-
-        self._policy_solver = policy_solver_builder(self._env_info, self._config)
-        self._v_function_solver = v_solver_builder(self._env_info, self._config)
+            self._policy_solver = policy_solver_builder(self._env_info, self._config)
+            self._policy_solver_builder = policy_solver_builder  # keep for later use
+            self._v_function_solver = v_solver_builder(self._env_info, self._config)
+            self._v_solver_builder = v_solver_builder  # keep for later use
 
     @eval_api
     def compute_eval_action(self, state):
-        s = np.expand_dims(state, axis=0)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
-            distribution = self._policy.pi(self._eval_state_var)
-            self._eval_action = distribution.sample()
-            self._eval_action.need_grad = False
-        self._eval_state_var.d = s
-        self._eval_action.forward(clear_no_need_grad=True)
-        action = np.squeeze(self._eval_action.d, axis=0)
-        if self._env_info.is_discrete_action_env():
-            return np.int(action)
-        else:
-            return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            s = np.expand_dims(state, axis=0)
+            if not hasattr(self, '_eval_state_var'):
+                self._eval_state_var = nn.Variable(s.shape)
+                distribution = self._policy.pi(self._eval_state_var)
+                self._eval_action = distribution.sample()
+                self._eval_action.need_grad = False
+            self._eval_state_var.d = s
+            self._eval_action.forward(clear_no_need_grad=True)
+            action = np.squeeze(self._eval_action.d, axis=0)
+            if self._env_info.is_discrete_action_env():
+                return np.int(action)
+            else:
+                return action
 
     def _before_training_start(self, env_or_buffer):
         if not self._is_env(env_or_buffer):
             raise ValueError('A2C only supports online training')
         env = env_or_buffer
-        context._gpu_id = self._gpu_id
 
-        self._setup_policy_training(env_or_buffer)
-        self._setup_v_function_training(env_or_buffer)
+        # FIXME: This setup is a workaround for creating underlying model parameters
+        # If the parameter is not created, the multiprocessable array (created in launch_actor_processes)
+        # will be empty and the agent does not learn anything
+        context.set_nnabla_context(-1)
+        self._setup_policy_training(env)
+        self._setup_v_function_training(env)
 
         self._actors, self._actor_processes = self._launch_actor_processes(env)
 
-        context._set_nnabla_context()
+        # NOTE: Setting gpu context after the launch of processes
+        # If you set the gpu context before the launch of proceses, the process will corrupt
+        context.set_nnabla_context(self._config.gpu_id)
 
-        self._policy_trainer = self._setup_policy_training(env_or_buffer)
-        self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
+        # Setup again here to use gpu (if it is set)
+        old_policy_solver = self._policy_solver
+        self._policy_solver = self._policy_solver_builder(self._env_info, self._config)
+        self._policy_trainer = self._setup_policy_training(env)
+        self._policy_solver.set_states(old_policy_solver.get_states())
+
+        old_v_function_solver = self._v_function_solver
+        self._v_function_solver = self._v_solver_builder(self._env_info, self._config)
+        self._v_function_trainer = self._setup_v_function_training(env)
+        self._v_function_solver.set_states(old_v_function_solver.get_states())
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.A2CPolicyTrainerConfig(
@@ -223,31 +245,24 @@ class A2C(Algorithm):
             max_grad_norm=self._config.max_grad_norm
         )
         policy_trainer = MT.policy_trainers.A2CPolicyTrainer(
+            models=self._policy,
+            solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
             config=policy_trainer_config)
-
-        training = MT.model_trainer.Training()
-        policy_trainer.setup_training(self._policy, {self._policy.scope_name: self._policy_solver}, training)
         return policy_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
         # training input/loss variables
-        v_function_trainer_config = MT.v_value_trainers.SquaredTDVFunctionTrainerConfig(
+        v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
             reduction_method='mean',
             v_loss_scalar=self._config.value_coefficient,
             max_grad_norm=self._config.max_grad_norm
         )
-
-        v_function_trainer = MT.v_value_trainers.SquaredTDVFunctionTrainer(
+        v_function_trainer = MT.v_value.MonteCarloVTrainer(
+            train_functions=self._v_function,
+            solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
             config=v_function_trainer_config
-        )
-
-        training = MT.v_value_trainings.MonteCarloVValueTraining()
-        v_function_trainer.setup_training(
-            self._v_function,
-            {self._v_function.scope_name: self._v_function_solver},
-            training
         )
         return v_function_trainer
 
@@ -319,8 +334,8 @@ class A2C(Algorithm):
         self._v_function_trainer.set_learning_rate(alpha)
 
         # model update
-        self._policy_trainer.train(batch)
-        self._v_function_trainer.train(batch)
+        self._policy_trainer_state = self._policy_trainer.train(batch)
+        self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     def _compute_advantage(self, s, returns):
         if not hasattr(self, '_state_var_for_advantage'):
@@ -346,6 +361,15 @@ class A2C(Algorithm):
         solvers[self._policy.scope_name] = self._policy_solver
         solvers[self._v_function.scope_name] = self._v_function_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(A2C, self).latest_iteration_state
+        if hasattr(self, '_policy_trainer_state'):
+            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+        if hasattr(self, '_v_function_trainer_state'):
+            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+        return latest_iteration_state
 
 
 class _A2CActor(object):
@@ -422,7 +446,7 @@ class _A2CActor(object):
         self._update_params(src=params, dest=self._policy_mp_arrays)
 
     def _run_actor_loop(self):
-        context._set_nnabla_context()
+        context.set_nnabla_context(self._config.gpu_id)
         if self._config.seed >= 0:
             seed = self._actor_num + self._config.seed
         else:

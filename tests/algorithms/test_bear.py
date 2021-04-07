@@ -95,6 +95,28 @@ class TestBEAR(object):
         with pytest.raises(ValueError):
             A.BEARConfig(warmup_iterations=-100)
 
+    def test_latest_iteration_state(self):
+        '''
+        Check that latest iteration state has the keys and values we expected
+        '''
+
+        dummy_env = E.DummyContinuous()
+        bear = A.BEAR(dummy_env)
+
+        bear._encoder_trainer_state = {'encoder_loss': 0.}
+        bear._q_function_trainer_state = {'q_loss': 1., 'td_errors': np.array([0., 1.])}
+        bear._policy_trainer_state = {'pi_loss': 2.}
+
+        latest_iteration_state = bear.latest_iteration_state
+        assert 'encoder_loss' in latest_iteration_state['scalar']
+        assert 'q_loss' in latest_iteration_state['scalar']
+        assert 'pi_loss' in latest_iteration_state['scalar']
+        assert 'td_errors' in latest_iteration_state['histogram']
+        assert latest_iteration_state['scalar']['encoder_loss'] == 0.
+        assert latest_iteration_state['scalar']['q_loss'] == 1.
+        assert latest_iteration_state['scalar']['pi_loss'] == 2.
+        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+
 
 if __name__ == "__main__":
     import sys

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import Any, Dict, Union, cast
 
 import gym
 import numpy as np
@@ -31,8 +31,9 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QRDQNQuantileDistributionFunction, QuantileDistributionFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -145,6 +146,9 @@ class QRDQN(Algorithm):
             builder of replay_buffer
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: QRDQNConfig
 
     _quantile_dist: QuantileDistributionFunction
@@ -158,32 +162,37 @@ class QRDQN(Algorithm):
     _eval_state_var: nn.Variable
     _a_greedy: nn.Variable
 
+    _quantile_dist_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: QRDQNConfig = QRDQNConfig(),
                  quantile_dist_function_builder: ModelBuilder[QuantileDistributionFunction] = DefaultQuantileBuilder(),
                  quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(QRDQN, self).__init__(env_or_env_info, config=config)
-
         if not self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
-        self._quantile_dist = quantile_dist_function_builder('quantile_dist_train', self._env_info, self._config)
-        self._quantile_dist_solver = quantile_solver_builder(self._env_info, self._config)
-        self._target_quantile_dist = cast(QuantileDistributionFunction,
-                                          self._quantile_dist.deepcopy('quantile_dist_target'))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._quantile_dist = quantile_dist_function_builder('quantile_dist_train', self._env_info, self._config)
+            self._quantile_dist_solver = quantile_solver_builder(self._env_info, self._config)
+            self._target_quantile_dist = cast(QuantileDistributionFunction,
+                                              self._quantile_dist.deepcopy('quantile_dist_target'))
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+            self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, state):
-        (action, _), _ = epsilon_greedy_action_selection(state,
-                                                         self._greedy_action_selector,
-                                                         self._random_action_selector,
-                                                         epsilon=self._config.test_epsilon)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            (action, _), _ = epsilon_greedy_action_selection(state,
+                                                             self._greedy_action_selector,
+                                                             self._random_action_selector,
+                                                             epsilon=self._config.test_epsilon)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._quantile_dist_trainer = self._setup_quantile_function_training(env_or_buffer)
 
@@ -205,31 +214,20 @@ class QRDQN(Algorithm):
         return explorer
 
     def _setup_quantile_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainerConfig(
+        trainer_config = MT.q_value.QRDQNQTrainerConfig(
             num_quantiles=self._config.num_quantiles,
             kappa=self._config.kappa)
 
-        quantile_dist_trainer = \
-            MT.q_value_trainers.QRDQNQuantileDistributionFunctionTrainer(self._env_info, config=trainer_config)
-
-        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
-        training = MT.q_value_trainings.DQNTraining(
-            train_function=self._quantile_dist,
-            target_function=self._target_quantile_dist)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._quantile_dist,
-            dst_models=self._target_quantile_dist,
-            target_update_frequency=target_update_frequency,
-            tau=1.0)
-        quantile_dist_trainer.setup_training(self._quantile_dist,
-                                             {self._quantile_dist.scope_name: self._quantile_dist_solver},
-                                             training)
+        quantile_dist_trainer = MT.q_value_trainers.QRDQNQTrainer(
+            train_functions=self._quantile_dist,
+            solvers={self._quantile_dist.scope_name: self._quantile_dist_solver},
+            target_function=self._target_quantile_dist,
+            env_info=self._env_info,
+            config=trainer_config)
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction
-        copy_network_parameters(self._quantile_dist.get_parameters(),
-                                self._target_quantile_dist.get_parameters())
+        sync_model(self._quantile_dist, self._target_quantile_dist)
         return quantile_dist_trainer
 
     def _run_online_training_iteration(self, env):
@@ -254,7 +252,9 @@ class QRDQN(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        self._quantile_dist_trainer.train(batch)
+        self._quantile_dist_trainer_state = self._quantile_dist_trainer.train(batch)
+        if self.iteration_num % self._config.target_update_frequency:
+            sync_model(self._quantile_dist, self._target_quantile_dist)
 
     @eval_api
     def _greedy_action_selector(self, s):
@@ -280,3 +280,10 @@ class QRDQN(Algorithm):
         solvers = {}
         solvers[self._quantile_dist.scope_name] = self._quantile_dist_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(QRDQN, self).latest_iteration_state
+        if hasattr(self, '_quantile_dist_trainer_state'):
+            latest_iteration_state['scalar'].update({'q_loss': self._quantile_dist_trainer_state['q_loss']})
+        return latest_iteration_state

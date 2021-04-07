@@ -22,10 +22,10 @@ import nnabla.functions as NF
 import nnabla.initializer as NI
 import nnabla.parametric_functions as NPF
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.model_trainers.trainers.policy.soft_policy_trainer import AdjustableTemperature
-from nnabla_rl.model_trainers.trainers.policy.trpo_policy_trainer import (_concat_network_params_in_ndarray,
-                                                                          _hessian_vector_product,
-                                                                          _update_network_params_by_flat_params)
+from nnabla_rl.model_trainers.policy.soft_policy_trainer import AdjustableTemperature
+from nnabla_rl.model_trainers.policy.trpo_policy_trainer import (_concat_network_params_in_ndarray,
+                                                                 _hessian_vector_product,
+                                                                 _update_network_params_by_flat_params)
 from nnabla_rl.utils.matrices import compute_hessian
 from nnabla_rl.utils.optimization import conjugate_gradient
 
@@ -124,7 +124,7 @@ class TestComputeHessianVectorProduct(TrainerTest):
         flat_grads.forward()
 
         actual = conjugate_gradient(
-            compute_Ax, flat_grads.d, max_iterations=None)
+            compute_Ax, flat_grads.d, max_iterations=1000)
 
         H = np.array(
             [[2*state_array[0, 0]**2,
@@ -154,7 +154,7 @@ class TestComputeHessianVectorProduct(TrainerTest):
         flat_grads.forward()
 
         actual = conjugate_gradient(
-            compute_Ax, flat_grads.d, max_iterations=None)
+            compute_Ax, flat_grads.d, max_iterations=1000)
 
         hessian = compute_hessian(loss, nn.get_parameters().values())
 

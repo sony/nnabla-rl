@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Union, cast
+from typing import Any, Dict, Union, cast
 
 import gym
 import numpy as np
@@ -31,8 +31,9 @@ from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import C51ValueDistributionFunction, ValueDistributionFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshall_experiences
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -132,6 +133,9 @@ class CategoricalDQN(Algorithm):
             builder of replay_buffer
      '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: CategoricalDQNConfig
     _atom_p: ValueDistributionFunction
     _atom_p_solver: nn.solver.Solver
@@ -143,6 +147,8 @@ class CategoricalDQN(Algorithm):
     _eval_state_var: nn.Variable
     _a_greedy: nn.Variable
 
+    _model_trainer_state: Dict[str, Any]
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: CategoricalDQNConfig = CategoricalDQNConfig(),
                  value_distribution_builder: ModelBuilder[ValueDistributionFunction]
@@ -153,21 +159,25 @@ class CategoricalDQN(Algorithm):
         if not self._env_info.is_discrete_action_env():
             raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
-        self._atom_p = value_distribution_builder('atom_p_train', self._env_info, self._config)
-        self._atom_p_solver = value_distribution_solver_builder(self._env_info, self._config)
-        self._target_atom_p = cast(ValueDistributionFunction, self._atom_p.deepcopy('target_atom_p_train'))
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            self._atom_p = value_distribution_builder('atom_p_train', self._env_info, self._config)
+            self._atom_p_solver = value_distribution_solver_builder(self._env_info, self._config)
+            self._target_atom_p = cast(ValueDistributionFunction, self._atom_p.deepcopy('target_atom_p_train'))
 
-        self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+            self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     @eval_api
     def compute_eval_action(self, state):
-        (action, _), _ = epsilon_greedy_action_selection(state,
-                                                         self._greedy_action_selector,
-                                                         self._random_action_selector,
-                                                         epsilon=self._config.test_epsilon)
-        return action
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            (action, _), _ = epsilon_greedy_action_selection(state,
+                                                             self._greedy_action_selector,
+                                                             self._random_action_selector,
+                                                             epsilon=self._config.test_epsilon)
+            return action
 
     def _before_training_start(self, env_or_buffer):
+        # set context globally to ensure that the training runs on configured gpu
+        context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._model_trainer = self._setup_value_distribution_function_training(env_or_buffer)
 
@@ -189,31 +199,21 @@ class CategoricalDQN(Algorithm):
         return explorer
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.C51ValueDistributionFunctionTrainerConfig(
+        trainer_config = MT.q_value_trainers.CategoricalDQNQTrainerConfig(
             v_min=self._config.v_min,
             v_max=self._config.v_max,
             num_atoms=self._config.num_atoms)
 
-        model_trainer = MT.q_value_trainers.C51ValueDistributionFunctionTrainer(
-            self._env_info,
+        model_trainer = MT.q_value_trainers.CategoricalDQNQTrainer(
+            train_functions=self._atom_p,
+            solvers={self._atom_p.scope_name: self._atom_p_solver},
+            target_function=self._target_atom_p,
+            env_info=self._env_info,
             config=trainer_config)
-
-        target_update_frequency = self._config.target_update_frequency / self._config.learner_update_frequency
-        training = MT.q_value_trainings.DQNTraining(
-            train_function=self._atom_p,
-            target_function=self._target_atom_p)
-        training = MT.common_extensions.PeriodicalTargetUpdate(
-            training,
-            src_models=self._atom_p,
-            dst_models=self._target_atom_p,
-            target_update_frequency=target_update_frequency,
-            tau=1.0)
-        model_trainer.setup_training(self._atom_p, {self._atom_p.scope_name: self._atom_p_solver}, training)
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction
-        copy_network_parameters(self._atom_p.get_parameters(),
-                                self._target_atom_p.get_parameters())
+        sync_model(self._atom_p, self._target_atom_p)
         return model_trainer
 
     def _run_online_training_iteration(self, env):
@@ -238,10 +238,11 @@ class CategoricalDQN(Algorithm):
                               s_next=s_next,
                               weight=info['weights'])
 
-        errors = self._model_trainer.train(batch)
-
-        td_error = np.abs(errors['td_error'])
-        replay_buffer.update_priorities(td_error)
+        self._model_trainer_state = self._model_trainer.train(batch)
+        if self.iteration_num % self._config.target_update_frequency == 0:
+            sync_model(self._atom_p, self._target_atom_p)
+        td_errors = np.abs(self._model_trainer_state['td_errors'])
+        replay_buffer.update_priorities(td_errors)
 
     @eval_api
     def _greedy_action_selector(self, s):
@@ -267,3 +268,12 @@ class CategoricalDQN(Algorithm):
         solvers = {}
         solvers[self._atom_p.scope_name] = self._atom_p_solver
         return solvers
+
+    @property
+    def latest_iteration_state(self):
+        latest_iteration_state = super(CategoricalDQN, self).latest_iteration_state
+        if hasattr(self, '_model_trainer_state'):
+            latest_iteration_state['scalar'].update(
+                {'cross_entropy_loss': self._model_trainer_state['cross_entropy_loss']})
+            latest_iteration_state['histogram'].update({'td_errors': self._model_trainer_state['td_errors'].flatten()})
+        return latest_iteration_state

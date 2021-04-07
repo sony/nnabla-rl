@@ -27,7 +27,7 @@ class TestOptimization():
         b = np.random.uniform(-3, 3, (x_dim, ))
 
         optimized_x = conjugate_gradient(
-            compute_Ax, b, max_iterations=None)
+            compute_Ax, b, max_iterations=1000)
 
         expected_x = np.dot(np.linalg.inv(symmetric_positive_A), b)
 

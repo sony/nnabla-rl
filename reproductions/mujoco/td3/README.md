@@ -2,7 +2,7 @@
 
 We tested our implementation with 4 MuJoCo environments also used in the [original paper](https://arxiv.org/pdf/1802.09477.pdf).
 
-Following MuJoCo environments was tested with single seed:
+We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
 
 - Ant-v2
 - HalfCheetah-v2
@@ -13,10 +13,10 @@ Following MuJoCo environments was tested with single seed:
 
 |Env|nnabla_rl best mean score|Reported score|
 |:---|:---:|:---:|
-|Ant-v2|**5946.96+/-129.8**|4372.44+/-1000.33|
-|HalfCheetah-v2|**10704.76+/-106.46**|9636.95+/-859.065|
-|Hopper-v2|**3725.68+/-13.086**|3564.07+/-114.74|
-|Walker2d-v2|**5399.54+/-54.353**|4682.82+/-539.64|
+|Ant-v2|**5056.422+/-938.283**|4372.44+/-1000.33|
+|HalfCheetah-v2|**10627.57+/-843.172**|9636.95+/-859.065|
+|Hopper-v2|3050.033+/-843.191|**3564.07+/-114.74**|
+|Walker2d-v2|**4948.24+/-318.22**|4682.82+/-539.64|
 
 ## Learning curves
 
