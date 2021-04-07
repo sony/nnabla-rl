@@ -17,8 +17,7 @@ import random as py_random
 import gym
 import numpy as np
 
-import nnabla_rl as rl
-from nnabla import random as nn_random
+import nnabla as nn
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 from nnabla_rl.logger import logger
 
@@ -26,11 +25,7 @@ from nnabla_rl.logger import logger
 def set_global_seed(seed: int):
     np.random.seed(seed=seed)
     py_random.seed(seed)
-
-    # FIXME: nnabla's random functions such as F.rand will not be seeded with this
-    nn_random.prng = np.random.RandomState(seed=seed)
-
-    rl.seed(seed)
+    nn.seed(seed)
 
 
 def build_atari_env(id_or_env, test=False, seed=None, render=False):

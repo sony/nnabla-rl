@@ -16,7 +16,6 @@ import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
-import nnabla_rl.functions as NRF
 import nnabla_rl.functions as RF
 from nnabla_rl.distributions import Distribution
 
@@ -52,18 +51,18 @@ class Softmax(Distribution):
         return 1
 
     def sample(self, noise_clip=None):
-        return RF.random_choice(self._actions, w=self._distribution)
+        return NF.random_choice(self._actions, w=self._distribution)
 
     def sample_multiple(self, num_samples, noise_clip=None):
         raise NotImplementedError
 
     def sample_and_compute_log_prob(self, noise_clip=None):
-        sample = RF.random_choice(self._actions, w=self._distribution)
+        sample = NF.random_choice(self._actions, w=self._distribution)
         log_prob = self.log_prob(sample)
         return sample, log_prob
 
     def choose_probable(self):
-        return NRF.argmax(self._distribution, axis=1)
+        return RF.argmax(self._distribution, axis=1)
 
     def mean(self):
         raise NotImplementedError

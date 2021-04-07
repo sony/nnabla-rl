@@ -69,7 +69,7 @@ class TD3QTrainer(SquaredTDQFunctionTrainer):
 
     def _compute_noisy_action(self, state):
         a_next_var = self._target_policy.pi(state)
-        epsilon = NF.clip_by_value(RF.randn(sigma=self._config.train_action_noise_sigma,
+        epsilon = NF.clip_by_value(NF.randn(sigma=self._config.train_action_noise_sigma,
                                             shape=a_next_var.shape),
                                    min=-self._config.train_action_noise_abs,
                                    max=self._config.train_action_noise_abs)
