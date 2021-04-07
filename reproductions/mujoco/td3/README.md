@@ -13,10 +13,10 @@ We tested our implementation with following MuJoCo environments using 3 differen
 
 |Env|nnabla_rl best mean score|Reported score|
 |:---|:---:|:---:|
-|Ant-v2|**5155.44+/-852.74**|4372.44+/-1000.33|
-|HalfCheetah-v2|**9919.97+/-1173.35**|9636.95+/-859.065|
-|Hopper-v2|3514.80+/-304.12|**3564.07+/-114.74**|
-|Walker2d-v2|**4755.93+/-145.60**|4682.82+/-539.64|
+|Ant-v2|**5056.422+/-938.283**|4372.44+/-1000.33|
+|HalfCheetah-v2|**10627.57+/-843.172**|9636.95+/-859.065|
+|Hopper-v2|3050.033+/-843.191|**3564.07+/-114.74**|
+|Walker2d-v2|**4948.24+/-318.22**|4682.82+/-539.64|
 
 ## Learning curves
 
