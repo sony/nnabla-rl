@@ -12,5 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__version__ = '1.0.0rc1'
+
 from nnabla_rl.logger import enable_logging, disable_logging  # noqa
 from nnabla_rl.scopes import eval_scope, is_eval_scope  # noqa
