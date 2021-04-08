@@ -13,9 +13,12 @@
 # limitations under the License.
 
 import warnings
+from typing import Any, Dict
 
 import nnabla as nn
 from nnabla.ext_utils import get_extension_context
+
+contexts: Dict[int, Any] = {}
 
 
 def set_nnabla_context(gpu_id):
@@ -24,10 +27,15 @@ def set_nnabla_context(gpu_id):
 
 
 def get_nnabla_context(gpu_id):
+    global contexts
+    if gpu_id in contexts:
+        return contexts[gpu_id]
     if gpu_id < 0:
-        return get_extension_context('cpu')
+        ctx = get_extension_context('cpu')
     try:
-        return get_extension_context('cudnn', device_id=gpu_id)
+        ctx = get_extension_context('cudnn', device_id=gpu_id)
     except ModuleNotFoundError:
         warnings.warn('Could not get CUDA context and cuDNN context. Fallback to CPU context instead', RuntimeWarning)
-        return get_extension_context('cpu')
+        ctx = get_extension_context('cpu')
+    contexts[gpu_id] = ctx
+    return ctx
