@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Sony Corporation. All Rights Reserved.
+# Copyright (c) 2021 Sony Group Corporation. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
 project = 'NNablaRL'
-copyright = '2021, Sony Corporation'
-author = 'Sony Corporation'
+copyright = '2021, Sony Group Corporation'
+author = 'Sony Group Corporation'
 release = '0.0'
 
 
