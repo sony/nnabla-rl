@@ -29,5 +29,5 @@ def get_nnabla_context(gpu_id):
     try:
         return get_extension_context('cudnn', device_id=gpu_id)
     except ModuleNotFoundError:
-        warnings.warn('Could not get CUDA context and cuDNN context. Fallback to CPU context intead', RuntimeWarning)
+        warnings.warn('Could not get CUDA context and cuDNN context. Fallback to CPU context instead', RuntimeWarning)
         return get_extension_context('cpu')

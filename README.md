@@ -20,7 +20,7 @@ $ cd <nnabla_rl root dir>
 $ pip install -e .
 ```
 
-NNablaRL only supports Python version >= 3.6 and [NNabla](https://github.com/sony/nnabla) version >= 1.14.
+NNablaRL only supports Python version >= 3.6 and [NNabla](https://github.com/sony/nnabla) version >= 1.17.
 
 ## Features
 
@@ -44,7 +44,8 @@ To get more details about NNablaRL, see documentation and [examples](./examples)
 
 See [algorithms](./nnabla_rl/algorithms/README.md).
 
-You can find the reproduction and evaluation results of each algorithm [here](./reproductions)
+You can find the reproduction and evaluation results of each algorithm [here](./reproductions)  
+Note that you may not get completely the same results when running the reproduction code on your computer. The result may slightly change depending on your machine, nnabla/nnabla-rl's package version, etc.
 
 ## Getting started
 
