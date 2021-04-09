@@ -12,12 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.models.distributional_function import QuantileDistributionFunction, ValueDistributionFunction  # noqa
-from nnabla_rl.models.distributional_function import StateActionQuantileFunction  # noqa
+from nnabla_rl.models.distributional_function import (ValueDistributionFunction,  # noqa
+                                                      DiscreteValueDistributionFunction,
+                                                      ContinuousValueDistributionFunction)
+from nnabla_rl.models.distributional_function import (QuantileDistributionFunction,  # noqa
+                                                      DiscreteQuantileDistributionFunction,
+                                                      ContinuousQuantileDistributionFunction)
+from nnabla_rl.models.distributional_function import (StateActionQuantileFunction,  # noqa
+                                                      DiscreteStateActionQuantileFunction,
+                                                      ContinuousStateActionQuantileFunction)
 from nnabla_rl.models.model import Model  # noqa
 from nnabla_rl.models.perturbator import Perturbator  # noqa
 from nnabla_rl.models.policy import Policy, DeterministicPolicy, StochasticPolicy  # noqa
-from nnabla_rl.models.q_function import QFunction  # noqa
+from nnabla_rl.models.q_function import QFunction, DiscreteQFunction, ContinuousQFunction  # noqa
 from nnabla_rl.models.v_function import VFunction  # noqa
 from nnabla_rl.models.reward_function import RewardFunction  # noqa
 from nnabla_rl.models.encoder import Encoder, VariationalAutoEncoder  # noqa

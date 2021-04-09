@@ -19,10 +19,10 @@ import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.policy import DeterministicPolicy
-from nnabla_rl.models.q_function import QFunction
+from nnabla_rl.models.q_function import ContinuousQFunction
 
 
-class TD3QFunction(QFunction):
+class TD3QFunction(ContinuousQFunction):
     '''
     Critic model proposed by S. Fujimoto in TD3 paper for mujoco environment.
     See: https://arxiv.org/abs/1802.09477
@@ -62,7 +62,7 @@ class TD3QFunction(QFunction):
         return self.q(s, optimal_action)
 
 
-class SACQFunction(QFunction):
+class SACQFunction(ContinuousQFunction):
     '''
     QFunciton model proposed by T. Haarnoja in SAC paper for mujoco environment.
     See: https://arxiv.org/pdf/1801.01290.pdf

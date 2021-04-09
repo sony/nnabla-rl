@@ -57,9 +57,7 @@ class CategoricalDQNQTrainer(ValueDistributionFunctionTrainer):
         v_max = self._config.v_max
         v_min = self._config.v_min
 
-        target_atom_probabilities = self._target_function.probabilities(s_next)
-        a_star = self._target_function.argmax_q_from_probabilities(target_atom_probabilities)
-        pj = self._target_function._probabilities_of(target_atom_probabilities, a_star)
+        pj = self._target_function.max_q_probs(s_next)
 
         delta_z = (v_max - v_min) / (N - 1)
         z = np.asarray([v_min + i * delta_z for i in range(N)])

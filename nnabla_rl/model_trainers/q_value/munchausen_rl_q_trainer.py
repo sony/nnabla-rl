@@ -125,11 +125,12 @@ class MunchausenIQNQTrainer(StateActionQuantileFunctionTrainer):
 
         batch_size = s_next.shape[0]
 
-        tau_j = self._target_function._sample_tau(shape=(batch_size, self._config.N_prime))
-        target_return_samples = self._target_function.return_samples(s_next, tau_j)
+        tau_j = self._target_function.sample_tau(shape=(batch_size, self._config.N_prime))
+        target_return_samples = self._target_function.all_quantile_values(s_next, tau_j)
         assert target_return_samples.shape[0:-1] == (batch_size, self._config.N_prime)
 
-        all_next_q = self._target_function.return_samples_to_q_values(target_return_samples)
+        all_next_q = NF.transpose(target_return_samples, axes=(0, 2, 1))
+        all_next_q = NF.mean(all_next_q, axis=2)
         max_next_q = NF.max(all_next_q, axis=1, keepdims=True)
         pi = _pi(all_next_q, max_next_q, tau=self._config.tau)
         pi = RF.expand_dims(pi, axis=1)
@@ -139,8 +140,9 @@ class MunchausenIQNQTrainer(StateActionQuantileFunctionTrainer):
         assert pi.shape == all_tau_log_pi.shape
         soft_q_target = NF.sum(pi * (target_return_samples - all_tau_log_pi), axis=(pi.ndim - 1))
 
-        current_return_samples = self._target_function.return_samples(s_current, tau_j)
-        all_current_q = self._target_function.return_samples_to_q_values(current_return_samples)
+        current_return_samples = self._target_function.all_quantile_values(s_current, tau_j)
+        all_current_q = NF.transpose(current_return_samples, axes=(0, 2, 1))
+        all_current_q = NF.mean(all_current_q, axis=2)
         max_current_q = NF.max(all_current_q, axis=1, keepdims=True)
         one_hot = NF.one_hot(NF.reshape(a_current, (-1, 1), inplace=False), (all_current_q.shape[1],))
         current_q = NF.sum(all_current_q * one_hot, axis=1, keepdims=True)  # get q value of a

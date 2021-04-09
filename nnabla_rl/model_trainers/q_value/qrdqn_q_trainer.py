@@ -49,9 +49,6 @@ class QRDQNQTrainer(QuantileDistributionFunctionTrainer):
         non_terminal = training_variables.non_terminal
         s_next = training_variables.s_next
 
-        target_quantiles = self._target_function.quantiles(s_next)
-        a_star = self._target_function.argmax_q_from_quantiles(target_quantiles)
-
-        theta_j = self._target_function._quantiles_of(target_quantiles, a_star)
+        theta_j = self._target_function.max_q_quantiles(s_next)
         Ttheta_j = reward + non_terminal * gamma * theta_j
         return Ttheta_j

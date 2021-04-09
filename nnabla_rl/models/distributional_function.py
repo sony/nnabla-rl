@@ -15,8 +15,6 @@
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, Iterable, Optional
 
-import numpy as np
-
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla_rl.functions as RF
@@ -64,46 +62,39 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
         return self.__class__(self._scope_name, self._n_action, self._n_atom, self._v_min, self._v_max)
 
     @abstractmethod
-    def probabilities(self, s: nn.Variable) -> nn.Variable:
-        '''Computes the probabilities of q-value for each action for the given state.
+    def probs(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        """Compute probabilities of atoms for given state and action
+
+        Args:
+            s (nn.Variable): state variable
+            a (nn.Variable): action variable
+
+        Returns:
+            nn.Variable: probabilities of atoms for given state and action
+        """
+        raise NotImplementedError
+
+    def all_probs(self, s: nn.Variable) -> nn.Variable:
+        """Compute probabilities of atoms for all posible actions for given state
 
         Args:
             s (nn.Variable): state variable
 
         Returns:
-            nn.Variable: probabilities of q-value for each action for the given state
-        '''
+            nn.Variable: probabilities of atoms for all posible actions for given state
+        """
         raise NotImplementedError
 
-    def argmax_q_from_probabilities(self, atom_probabilities: nn.Variable) -> nn.Variable:
-        '''Computes argmax of q value from given probabilities
+    def max_q_probs(self, s: nn.Variable) -> nn.Variable:
+        """Compute probabilities of atoms for given state that maximizes the q_value
 
         Args:
-            atom_probabilities (nn.Variable): probabilities of q-value
+            s (nn.Variable): state variable
 
         Returns:
-            nn.Variable: action which maximizes the q-values computed from the probabilities of q-value
-        '''
-        q_values = self.probabilities_to_q_values(atom_probabilities)
-        return RF.argmax(q_values, axis=1, keepdims=True)
-
-    def probabilities_to_q_values(self, atom_probabilities: nn.Variable) -> nn.Variable:
-        '''Compute the q value from the probability distribution
-
-        Args:
-            atom_probabilities (nn.Variable): probabilities of q-value
-
-        Returns:
-            nn.Variable: q value of each action
-        '''
-        batch_size = atom_probabilities.shape[0]
-        assert atom_probabilities.shape == (batch_size, self._n_action, self._n_atom)
-        z = RF.expand_dims(self._z, axis=0)
-        z = RF.expand_dims(z, axis=1)
-        z = NF.broadcast(z, shape=(batch_size, self._n_action, self._n_atom))
-        q_values = NF.sum(z * atom_probabilities, axis=2)
-        assert q_values.shape == (batch_size, self._n_action)
-        return q_values
+            nn.Variable: probabilities of atoms for given state that maximizes the q_value
+        """
+        raise NotImplementedError
 
     def as_q_function(self) -> QFunction:
         '''Convert the value distribution function to QFunction.
@@ -112,11 +103,35 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
             nnabla_rl.models.q_function.QFunction:
                 QFunction instance which computes the q-values based on the probabilities.
         '''
+        raise NotImplementedError
+
+    def _compute_z(self, n_atom: int, v_min: float, v_max: float) -> nn.Variable:
+        delta_z = (v_max - v_min) / (n_atom - 1)
+        return v_min + delta_z * NF.arange(0, n_atom)
+
+
+class DiscreteValueDistributionFunction(ValueDistributionFunction):
+    '''Base value distribution class for discrete action envs.
+    '''
+    @abstractmethod
+    def all_probs(self, s: nn.Variable) -> nn.Variable:
+        raise NotImplementedError
+
+    def probs(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        probs = self.all_probs(s)
+        return self._probabilities_of(probs, a)
+
+    def max_q_probs(self, s: nn.Variable) -> nn.Variable:
+        probs = self.all_probs(s)
+        a_star = self._argmax_q_from_probabilities(probs)
+        return self._probabilities_of(probs, a_star)
+
+    def as_q_function(self) -> QFunction:
         class Wrapper(QFunction):
 
-            _value_distribution_function: 'ValueDistributionFunction'
+            _value_distribution_function: 'DiscreteValueDistributionFunction'
 
-            def __init__(self, value_distribution_function: 'ValueDistributionFunction'):
+            def __init__(self, value_distribution_function: 'DiscreteValueDistributionFunction'):
                 super(Wrapper, self).__init__(value_distribution_function.scope_name)
                 self._value_distribution_function = value_distribution_function
 
@@ -131,20 +146,19 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
                 return NF.max(q_values, axis=1, keepdims=True)
 
             def argmax_q(self, s: nn.Variable) -> nn.Variable:
-                probabilities = self._value_distribution_function.probabilities(s)
-                greedy_action = self._value_distribution_function.argmax_q_from_probabilities(probabilities)
+                probabilities = self._value_distribution_function.all_probs(s)
+                greedy_action = self._value_distribution_function._argmax_q_from_probabilities(probabilities)
                 return greedy_action
 
         return Wrapper(self)
 
-    def _state_to_q_values(self, s: nn.Variable) -> nn.Variable:
-        probabilities = self.probabilities(s)
-        return self.probabilities_to_q_values(probabilities)
+    def _argmax_q_from_probabilities(self, atom_probabilities: nn.Variable) -> nn.Variable:
+        q_values = self._probabilities_to_q_values(atom_probabilities)
+        return RF.argmax(q_values, axis=1, keepdims=True)
 
-    def _compute_z(self, n_atom: int, v_min: float, v_max: float) -> nn.Variable:
-        delta_z = (v_max - v_min) / (n_atom - 1)
-        z = nn.Variable.from_numpy_array(np.asarray([v_min + i * delta_z for i in range(n_atom)]))
-        return z
+    def _state_to_q_values(self, s: nn.Variable) -> nn.Variable:
+        probabilities = self.all_probs(s)
+        return self._probabilities_to_q_values(probabilities)
 
     def _probabilities_of(self, probabilities: nn.Variable, a: nn.Variable) -> nn.Variable:
         probabilities = NF.transpose(probabilities, axes=(0, 2, 1))
@@ -154,6 +168,16 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
 
         return probabilities
 
+    def _probabilities_to_q_values(self, atom_probabilities: nn.Variable) -> nn.Variable:
+        batch_size = atom_probabilities.shape[0]
+        assert atom_probabilities.shape == (batch_size, self._n_action, self._n_atom)
+        z = RF.expand_dims(self._z, axis=0)
+        z = RF.expand_dims(z, axis=1)
+        z = NF.broadcast(z, shape=(batch_size, self._n_action, self._n_atom))
+        q_values = NF.sum(z * atom_probabilities, axis=2)
+        assert q_values.shape == (batch_size, self._n_action)
+        return q_values
+
     def _to_one_hot(self, a: nn.Variable) -> nn.Variable:
         batch_size = a.shape[0]
         a = NF.reshape(a, (-1, 1))
@@ -162,6 +186,12 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
         one_hot = RF.expand_dims(one_hot, axis=1)
         one_hot = NF.broadcast(one_hot, shape=(batch_size, self._n_atom, self._n_action))
         return one_hot
+
+
+class ContinuousValueDistributionFunction(ValueDistributionFunction):
+    '''Base value distribution class for continuous action envs.
+    '''
+    pass
 
 
 class QuantileDistributionFunction(Model, metaclass=ABCMeta):
@@ -191,8 +221,7 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
         self._n_quantile = n_quantile
         self._qj = 1 / n_quantile
 
-    @abstractmethod
-    def quantiles(self, s: nn.Variable) -> nn.Variable:
+    def all_quantiles(self, s: nn.Variable) -> nn.Variable:
         '''Computes the quantiles of q-value for each action for the given state.
 
         Args:
@@ -203,28 +232,28 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
         '''
         raise NotImplementedError
 
-    def argmax_q_from_quantiles(self, quantiles: nn.Variable) -> nn.Variable:
-        '''Computes argmax of q value from given quantiles
+    def quantiles(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        '''Computes the quantiles of q-value for given state and action.
 
         Args:
-            quantiles (nn.Variable): quantiless of q-value
+            s (nn.Variable): state variable
+            a (nn.Variable): action variable
 
         Returns:
-            nn.Variable: action which maximizes the q-values computed from the quantiles of q-value
+            nn.Variable: quantiles of q-value for given state and action.
         '''
-        q_values = self.quantiles_to_q_values(quantiles)
-        return RF.argmax(q_values, axis=1, keepdims=True)
+        raise NotImplementedError
 
-    def quantiles_to_q_values(self, quantiles: nn.Variable) -> nn.Variable:
-        '''Computes the q value from given quantiles
+    def max_q_quantiles(self, s: nn.Variable) -> nn.Variable:
+        """Compute the quantiles of q-value for given state that maximizes the q_value
 
         Args:
-            quantiles (nn.Variable): quantiless of q-value
+            s (nn.Variable): state variable
 
         Returns:
-            nn.Variable: q values computed from the quantiles of q-value
-        '''
-        return NF.sum(quantiles * self._qj, axis=2)
+            nn.Variable: quantiles of q-value for given state that maximizes the q_value
+        """
+        raise NotImplementedError
 
     def as_q_function(self) -> QFunction:
         '''Convert the quantile distribution function to QFunction.
@@ -233,11 +262,29 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
             nnabla_rl.models.q_function.QFunction:
                 QFunction instance which computes the q-values based on the quantiles.
         '''
+        raise NotImplementedError
+
+
+class DiscreteQuantileDistributionFunction(QuantileDistributionFunction):
+    @abstractmethod
+    def all_quantiles(self, s: nn.Variable) -> nn.Variable:
+        raise NotImplementedError
+
+    def quantiles(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        quantiles = self.all_quantiles(s)
+        return self._quantiles_of(quantiles, a)
+
+    def max_q_quantiles(self, s: nn.Variable) -> nn.Variable:
+        probs = self.all_quantiles(s)
+        a_star = self._argmax_q_from_quantiles(probs)
+        return self._quantiles_of(probs, a_star)
+
+    def as_q_function(self) -> QFunction:
         class Wrapper(QFunction):
 
-            _quantile_distribution_function: 'QuantileDistributionFunction'
+            _quantile_distribution_function: 'DiscreteQuantileDistributionFunction'
 
-            def __init__(self, quantile_distribution_function: 'QuantileDistributionFunction'):
+            def __init__(self, quantile_distribution_function: 'DiscreteQuantileDistributionFunction'):
                 super(Wrapper, self).__init__(quantile_distribution_function.scope_name)
                 self._quantile_distribution_function = quantile_distribution_function
 
@@ -252,15 +299,22 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
                 return NF.max(q_values, axis=1, keepdims=True)
 
             def argmax_q(self, s: nn.Variable) -> nn.Variable:
-                quantiles = self._quantile_distribution_function.quantiles(s)
-                greedy_action = self._quantile_distribution_function.argmax_q_from_quantiles(quantiles)
+                quantiles = self._quantile_distribution_function.all_quantiles(s)
+                greedy_action = self._quantile_distribution_function._argmax_q_from_quantiles(quantiles)
                 return greedy_action
 
         return Wrapper(self)
 
+    def _argmax_q_from_quantiles(self, quantiles: nn.Variable) -> nn.Variable:
+        q_values = self._quantiles_to_q_values(quantiles)
+        return RF.argmax(q_values, axis=1, keepdims=True)
+
+    def _quantiles_to_q_values(self, quantiles: nn.Variable) -> nn.Variable:
+        return NF.sum(quantiles * self._qj, axis=2)
+
     def _state_to_q_values(self, s: nn.Variable) -> nn.Variable:
-        quantiles = self.quantiles(s)
-        return self.quantiles_to_q_values(quantiles)
+        quantiles = self.all_quantiles(s)
+        return self._quantiles_to_q_values(quantiles)
 
     def _quantiles_of(self, quantiles: nn.Variable, a: nn.Variable) -> nn.Variable:
         batch_size = quantiles.shape[0]
@@ -280,6 +334,10 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
         one_hot = RF.expand_dims(one_hot, axis=1)
         one_hot = NF.broadcast(one_hot, shape=(batch_size, self._n_quantile, self._n_action))
         return one_hot
+
+
+class ContinuousQuantileDistributionFunction(QuantileDistributionFunction):
+    pass
 
 
 def risk_neutral_measure(tau: nn.Variable) -> nn.Variable:
@@ -318,8 +376,7 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
         self._K = K
         self._risk_measure_function = risk_measure_function
 
-    @abstractmethod
-    def return_samples(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
+    def all_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
         '''Compute the return samples for all action for given state and quantile threshold.
 
         Args:
@@ -327,34 +384,79 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
             tau (nn.Variable): quantile threshold.
 
         Returns:
-            nn.Variable: return sampled from implicit return distribution for given state using tau.
+            nn.Variable: return samples from implicit return distribution for given state using tau.
         '''
         pass
 
-    def argmax_q_from_return_samples(self, return_samples: nn.Variable) -> nn.Variable:
-        '''Compute the action which maximizes the q value computed from given return samples.
+    def quantile_values(self, s: nn.Variable, a: nn.Variable, tau: nn.Variable) -> nn.Variable:
+        '''Compute the return samples for given state and action.
 
         Args:
-            return_samples (nn.Variable): return samples.
+            s (nn.Variable): state variable.
+            a (nn.Variable): action variable.
+            tau (nn.Variable): quantile threshold.
 
         Returns:
-            nn.Variable: action which maximizes the q value for given return samples.
+            nn.Variable: return samples from implicit return distribution for given state and action using tau.
         '''
-        q_values = self.return_samples_to_q_values(return_samples)
-        return RF.argmax(q_values, axis=1, keepdims=True)
+        pass
 
-    def return_samples_to_q_values(self, return_samples: nn.Variable) -> nn.Variable:
-        '''Compute the q values for each action for given return samples.
+    def max_q_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
+        '''Compute the return samples from distribution that maximizes q value for given state using quantile threshold.
 
         Args:
-            return_samples (nn.Variable): return samples.
+            s (nn.Variable): state variable.
+            tau (nn.Variable): quantile threshold.
 
         Returns:
-            nn.Variable: q values for each action for given return samples.
+            nn.Variable: return samples from implicit return distribution that maximizes q for given state using tau.
         '''
-        samples = NF.transpose(return_samples, axes=(0, 2, 1))
-        q_values = NF.mean(samples, axis=2)
-        return q_values
+        pass
+
+    def sample_tau(self, shape: Optional[Iterable] = None) -> nn.Variable:
+        '''Sample quantile thresholds from uniform distribution
+
+        Args:
+            shape (Tuple[int] or None): shape of the quantile threshold to sample. If None the shape will be (1, K).
+
+        Returns:
+            nn.Variable: quantile thresholds
+        '''
+        if shape is None:
+            shape = (1, self._K)
+        return NF.rand(low=0.0, high=1.0, shape=shape)
+
+    def as_q_function(self) -> QFunction:
+        '''Convert the state action quantile function to QFunction.
+
+        Returns:
+            nnabla_rl.models.q_function.QFunction:
+                QFunction instance which computes the q-values based on return samples.
+        '''
+        raise NotImplementedError
+
+    def _sample_risk_measured_tau(self, shape: Optional[Iterable]) -> nn.Variable:
+        tau = self.sample_tau(shape)
+        return self._risk_measure_function(tau)
+
+
+class DiscreteStateActionQuantileFunction(StateActionQuantileFunction):
+    @abstractmethod
+    def all_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
+        raise NotImplementedError
+
+    def quantile_values(self, s: nn.Variable, a: nn.Variable, tau: nn.Variable) -> nn.Variable:
+        return_samples = self.all_quantile_values(s, tau)
+        return self._return_samples_of(return_samples, a)
+
+    def max_q_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
+        batch_size = s.shape[0]
+        tau_k = self._sample_risk_measured_tau(shape=(batch_size, self._K))
+        _return_samples = self.all_quantile_values(s, tau_k)
+        a_star = self._argmax_q_from_return_samples(_return_samples)
+
+        return_samples = self.all_quantile_values(s, tau)
+        return self._return_samples_of(return_samples, a_star)
 
     def as_q_function(self) -> QFunction:
         '''Convert the state action quantile function to QFunction.
@@ -364,10 +466,9 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
                 QFunction instance which computes the q-values based on the return_samples.
         '''
         class Wrapper(QFunction):
+            _quantile_function: 'DiscreteStateActionQuantileFunction'
 
-            _quantile_function: 'StateActionQuantileFunction'
-
-            def __init__(self, quantile_function: 'StateActionQuantileFunction'):
+            def __init__(self, quantile_function: 'DiscreteStateActionQuantileFunction'):
                 super(Wrapper, self).__init__(quantile_function.scope_name)
                 self._quantile_function = quantile_function
 
@@ -387,16 +488,41 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
             def argmax_q(self, s: nn.Variable) -> nn.Variable:
                 batch_size = s.shape[0]
                 tau = self._quantile_function._sample_risk_measured_tau(shape=(batch_size, self._quantile_function._K))
-                samples = self._quantile_function.return_samples(s, tau)
-                greedy_action = self._quantile_function.argmax_q_from_return_samples(samples)
+                samples = self._quantile_function.all_quantile_values(s, tau)
+                greedy_action = self._quantile_function._argmax_q_from_return_samples(samples)
                 return greedy_action
 
         return Wrapper(self)
 
+    def _return_samples_to_q_values(self, return_samples: nn.Variable) -> nn.Variable:
+        '''Compute the q values for each action for given return samples.
+
+        Args:
+            return_samples (nn.Variable): return samples.
+
+        Returns:
+            nn.Variable: q values for each action for given return samples.
+        '''
+        samples = NF.transpose(return_samples, axes=(0, 2, 1))
+        q_values = NF.mean(samples, axis=2)
+        return q_values
+
+    def _argmax_q_from_return_samples(self, return_samples: nn.Variable) -> nn.Variable:
+        '''Compute the action which maximizes the q value computed from given return samples.
+
+        Args:
+            return_samples (nn.Variable): return samples.
+
+        Returns:
+            nn.Variable: action which maximizes the q value for given return samples.
+        '''
+        q_values = self._return_samples_to_q_values(return_samples)
+        return RF.argmax(q_values, axis=1, keepdims=True)
+
     def _state_to_q_values(self, s: nn.Variable) -> nn.Variable:
         tau = self._sample_risk_measured_tau(shape=(1, self._K))
-        samples = self.return_samples(s, tau)
-        return self.return_samples_to_q_values(samples)
+        samples = self.all_quantile_values(s, tau)
+        return self._return_samples_to_q_values(samples)
 
     def _return_samples_of(self, return_samples: nn.Variable, a: nn.Variable) -> nn.Variable:
         one_hot = self._to_one_hot(a, shape=return_samples.shape)
@@ -413,9 +539,6 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
         one_hot = NF.broadcast(one_hot, shape=shape)
         return one_hot
 
-    def _sample_tau(self, shape: Optional[Iterable] = None) -> nn.Variable:
-        return NF.rand(low=0.0, high=1.0, shape=shape)
 
-    def _sample_risk_measured_tau(self, shape: Optional[Iterable]) -> nn.Variable:
-        tau = self._sample_tau(shape)
-        return self._risk_measure_function(tau)
+class ContinuousStateActionQuantileFunction(StateActionQuantileFunction):
+    pass

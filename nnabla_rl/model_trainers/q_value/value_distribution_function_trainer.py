@@ -102,8 +102,7 @@ class ValueDistributionFunctionTrainer(ModelTrainer):
                       target: nn.Variable,
                       training_variables: TrainingVariables) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
         batch_size = training_variables.batch_size
-        atom_probabilities = model.probabilities(self._training_variables.s_current)
-        atom_probabilities = model._probabilities_of(atom_probabilities, self._training_variables.a_current)
+        atom_probabilities = model.probs(self._training_variables.s_current, self._training_variables.a_current)
         atom_probabilities = NF.clip_by_value(atom_probabilities, 1e-10, 1.0)
         cross_entropy = target * NF.log(atom_probabilities)
         assert cross_entropy.shape == (batch_size, self._config.num_atoms)

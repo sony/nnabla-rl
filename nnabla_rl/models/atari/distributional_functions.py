@@ -20,11 +20,12 @@ import nnabla as nn
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 import nnabla_rl.functions as RF
-from nnabla_rl.models import QuantileDistributionFunction, StateActionQuantileFunction, ValueDistributionFunction
+from nnabla_rl.models import (DiscreteQuantileDistributionFunction, DiscreteStateActionQuantileFunction,
+                              DiscreteValueDistributionFunction)
 
 
-class C51ValueDistributionFunction(ValueDistributionFunction):
-    def probabilities(self, s: nn.Variable) -> nn.Variable:
+class C51ValueDistributionFunction(DiscreteValueDistributionFunction):
+    def all_probs(self, s: nn.Variable) -> nn.Variable:
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("conv1"):
@@ -48,8 +49,8 @@ class C51ValueDistributionFunction(ValueDistributionFunction):
         return NF.softmax(h, axis=2)
 
 
-class QRDQNQuantileDistributionFunction(QuantileDistributionFunction):
-    def quantiles(self, s: nn.Variable) -> nn.Variable:
+class QRDQNQuantileDistributionFunction(DiscreteQuantileDistributionFunction):
+    def all_quantiles(self, s: nn.Variable) -> nn.Variable:
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("conv1"):
@@ -73,7 +74,7 @@ class QRDQNQuantileDistributionFunction(QuantileDistributionFunction):
         return quantiles
 
 
-class IQNQuantileFunction(StateActionQuantileFunction):
+class IQNQuantileFunction(DiscreteStateActionQuantileFunction):
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -84,7 +85,7 @@ class IQNQuantileFunction(StateActionQuantileFunction):
         super(IQNQuantileFunction, self).__init__(scope_name, n_action, K, risk_measure_function)
         self._embedding_dim = embedding_dim
 
-    def return_samples(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
+    def all_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
         encoded = self._encode(s, tau.shape[-1])
         embedding = self._compute_embedding(tau, encoded.shape[-1])
 

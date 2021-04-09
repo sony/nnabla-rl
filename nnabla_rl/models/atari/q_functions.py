@@ -15,12 +15,11 @@
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-import nnabla_rl.functions as RF
 import nnabla_rl.initializers as RI
-from nnabla_rl.models.q_function import QFunction
+from nnabla_rl.models.q_function import DiscreteQFunction
 
 
-class DQNQFunction(QFunction):
+class DQNQFunction(DiscreteQFunction):
     '''
     Q function proposed by DeepMind in DQN paper for atari environment.
     See: https://deepmind.com/research/publications/human-level-control-through-deep-reinforcement-learning
@@ -38,14 +37,6 @@ class DQNQFunction(QFunction):
     def __init__(self, scope_name: str, n_action: int):
         super(DQNQFunction, self).__init__(scope_name)
         self._n_action = n_action
-
-    def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
-        q_values = self.all_q(s)
-        q_value = NF.sum(q_values * NF.one_hot(NF.reshape(a, (-1, 1), inplace=False), (q_values.shape[1],)),
-                         axis=1,
-                         keepdims=True)  # get q value of a
-
-        return q_value
 
     def all_q(self, s: nn.Variable) -> nn.Variable:
         ''' Predict all q values of the given state
@@ -85,11 +76,3 @@ class DQNQFunction(QFunction):
                                w_init=RI.HeNormal(h.shape[1], self._n_action)
                                )
         return h
-
-    def max_q(self, s: nn.Variable) -> nn.Variable:
-        q_values = self.all_q(s)
-        return NF.max(q_values, axis=1, keepdims=True)
-
-    def argmax_q(self, s: nn.Variable) -> nn.Variable:
-        q_values = self.all_q(s)
-        return RF.argmax(q_values, axis=1, keepdims=True)

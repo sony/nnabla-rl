@@ -98,8 +98,7 @@ class QuantileDistributionFunctionTrainer(ModelTrainer):
                       target: nn.Variable,
                       training_variables: TrainingVariables) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
         batch_size = training_variables.batch_size
-        Ttheta_i = model.quantiles(s=training_variables.s_current)
-        Ttheta_i = model._quantiles_of(Ttheta_i, training_variables.a_current)
+        Ttheta_i = model.quantiles(training_variables.s_current, training_variables.a_current)
         Ttheta_i = RF.expand_dims(Ttheta_i, axis=2)
         assert Ttheta_i.shape == (batch_size, self._config.num_quantiles, 1)
 

@@ -49,18 +49,11 @@ class IQNQTrainer(StateActionQuantileFunctionTrainer):
         non_terminal = training_variables.non_terminal
         s_next = training_variables.s_next
 
-        K = self._config.K
+        batch_size = training_variables.batch_size
         N_prime = self._config.N_prime
 
-        batch_size = s_next.shape[0]
-
-        tau_k = self._target_function._sample_risk_measured_tau(shape=(batch_size, K))
-        return_samples = self._target_function.return_samples(s_next, tau_k)
-        a_star = self._target_function.argmax_q_from_return_samples(return_samples)
-
-        tau_j = self._target_function._sample_tau(shape=(batch_size, N_prime))
-        target_returns_samples = self._target_function.return_samples(s_next, tau_j)
-        Z_tau_j = self._target_function._return_samples_of(target_returns_samples, a_star)
+        tau_j = self._target_function.sample_tau(shape=(batch_size, N_prime))
+        Z_tau_j = self._target_function.max_q_quantile_values(s_next, tau_j)
         assert Z_tau_j.shape == (batch_size, N_prime)
         target = reward + non_terminal * gamma * Z_tau_j
         return target

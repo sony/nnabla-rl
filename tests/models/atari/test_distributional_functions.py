@@ -20,6 +20,10 @@ from nnabla_rl.models.atari.distributional_functions import (C51ValueDistributio
                                                              QRDQNQuantileDistributionFunction)
 
 
+def risk_measure_function(tau):
+    return tau
+
+
 class TestC51ValueDistributionFunction(object):
     def test_scope_name(self):
         nn.clear_parameters()
@@ -53,9 +57,8 @@ class TestC51ValueDistributionFunction(object):
                                              v_min=v_min)
 
         # Fake input to initialize parameters
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
-        model.probabilities(input_state)
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
+        model.all_probs(input_state)
         assert len(model.get_parameters()) == 10
 
     def test_probabilities(self):
@@ -73,9 +76,8 @@ class TestC51ValueDistributionFunction(object):
                                              v_max=v_max,
                                              v_min=v_min)
 
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
-        val = model.probabilities(input_state)
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
+        val = model.all_probs(input_state)
         val.forward()
 
         assert val.shape == (1, n_action, n_atom)
@@ -106,9 +108,8 @@ class TestQRDQNQuantileDistributionFunction(object):
                                                   n_action=n_action,
                                                   n_quantile=n_quantile)
         # Fake input to initialize parameters
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
-        model.quantiles(input_state)
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
+        model.all_quantiles(input_state)
         assert len(model.get_parameters()) == 10
 
     def test_quantiles(self):
@@ -122,16 +123,11 @@ class TestQRDQNQuantileDistributionFunction(object):
                                                   n_action=n_action,
                                                   n_quantile=n_quantile)
 
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
-        val = model.quantiles(input_state)
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
+        val = model.all_quantiles(input_state)
         val.forward()
 
         assert val.shape == (1, n_action, n_quantile)
-
-
-def risk_measure_function(tau):
-    return tau
 
 
 class TestIQNQuantileFunction(object):
@@ -164,14 +160,12 @@ class TestIQNQuantileFunction(object):
                                     K=K,
                                     risk_measure_function=risk_measure_function)
         # Fake input to initialize parameters
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
-        tau = nn.Variable.from_numpy_array(
-            np.random.rand(1, 10))
-        model.return_samples(input_state, tau)
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
+        tau = nn.Variable.from_numpy_array(np.random.rand(1, 10))
+        model.all_quantile_values(input_state, tau)
         assert len(model.get_parameters()) == 12
 
-    def test_return_samples(self):
+    def test_quantile_values(self):
         nn.clear_parameters()
 
         state_shape = (4, 84, 84)
@@ -187,10 +181,9 @@ class TestIQNQuantileFunction(object):
 
         # Initialize parameters
         n_sample = 5
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         tau = nn.Variable.from_numpy_array(np.random.rand(1, n_sample))
-        return_samples = model.return_samples(input_state, tau)
+        return_samples = model.all_quantile_values(input_state, tau)
         return_samples.forward()
 
         assert return_samples.shape == (1, n_sample, n_action)
@@ -211,8 +204,7 @@ class TestIQNQuantileFunction(object):
 
         # Initialize parameters
         n_sample = 5
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         encoded = model._encode(input_state, n_sample=n_sample)
         encoded.forward()
         encoded = encoded.d

@@ -93,9 +93,10 @@ class StateActionQuantileFunctionTrainer(ModelTrainer):
                       training_variables: TrainingVariables) -> nn.Variable:
         batch_size = training_variables.batch_size
 
-        tau_i = model._sample_tau(shape=(batch_size, self._config.N))
-        samples = model.return_samples(training_variables.s_current, tau_i)
-        Z_tau_i = model._return_samples_of(samples, training_variables.a_current)
+        tau_i = model.sample_tau(shape=(batch_size, self._config.N))
+        Z_tau_i = model.quantile_values(training_variables.s_current,
+                                        training_variables.a_current,
+                                        tau_i)
         Z_tau_i = RF.expand_dims(Z_tau_i, axis=2)
         tau_i = RF.expand_dims(tau_i, axis=2)
         assert Z_tau_i.shape == (batch_size, self._config.N, 1)
