@@ -103,6 +103,9 @@ class TRPOPolicyTrainerConfig(TrainerConfig):
 
 
 class TRPOPolicyTrainer(ModelTrainer):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: TRPOPolicyTrainerConfig
     _approximate_return: nn.Variable
     _approximate_return_flat_grads: nn.Variable

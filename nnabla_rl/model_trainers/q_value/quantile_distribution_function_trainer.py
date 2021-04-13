@@ -33,6 +33,9 @@ class QuantileDistributionFunctionTrainerConfig(TrainerConfig):
 
 
 class QuantileDistributionFunctionTrainer(ModelTrainer):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: QuantileDistributionFunctionTrainerConfig
     _tau_hat_var: nn.Variable
     _quantile_huber_loss: nn.Variable

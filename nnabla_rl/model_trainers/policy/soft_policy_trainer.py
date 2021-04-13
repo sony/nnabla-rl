@@ -55,7 +55,9 @@ class SoftPolicyTrainerConfig(TrainerConfig):
 class SoftPolicyTrainer(ModelTrainer):
     '''Soft Policy Gradient style Policy Trainer
     '''
-
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _q_functions: Sequence[QFunction]
     _temperature_loss: nn.Variable
     _temperature: AdjustableTemperature

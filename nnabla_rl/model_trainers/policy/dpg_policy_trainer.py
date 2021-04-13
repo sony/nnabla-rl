@@ -32,7 +32,9 @@ class DPGPolicyTrainerConfig(TrainerConfig):
 class DPGPolicyTrainer(ModelTrainer):
     '''Deterministic Policy Gradient (DPG) style Policy Trainer
     '''
-
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: DPGPolicyTrainerConfig
     _pi_loss: nn.Variable
     _q_function: QFunction

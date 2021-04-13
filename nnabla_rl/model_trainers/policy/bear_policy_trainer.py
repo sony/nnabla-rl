@@ -26,6 +26,9 @@ from nnabla_rl.models import Model, QFunction, StochasticPolicy, VariationalAuto
 
 
 class AdjustableLagrangeMultiplier(Model):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _log_lagrange: nn.Variable
 
     def __init__(self, scope_name, initial_value=None):
@@ -71,7 +74,9 @@ class BEARPolicyTrainerConfig(TrainerConfig):
 class BEARPolicyTrainer(ModelTrainer):
     '''Bootstrapping Error Accumulation Reduction (BEAR) style Policy Trainer
     '''
-
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: BEARPolicyTrainerConfig
     _mmd_loss: nn.Variable
     _pi_loss: nn.Variable
