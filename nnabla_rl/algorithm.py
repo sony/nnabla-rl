@@ -57,6 +57,10 @@ class Algorithm(metaclass=ABCMeta):
             : environment or environment info
         config (:py:class:`AlgorithmConfig <nnabla_rl.algorithm.AlgorithmConfig>`):
             configuration of the algorithm
+
+    Note:
+        Default functions, solvers and configurations are set to the configurations of each algorithm's original paper.
+        Default functions may not work depending on the environment.
     """
 
     # type declarations to type check with mypy
