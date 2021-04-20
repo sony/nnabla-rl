@@ -23,13 +23,13 @@ All seeds results are combined and the mean of the score is calculated from them
 
 |Env|nnabla_rl best mean score|Reported score ([Reference](https://arxiv.org/pdf/1708.05144.pdf))|
 |:---|:---:|:---:|
-|AsterixNoFrameskip-v4|6678.691+/-3181.892|N/A|
-|BreakoutNoFrameskip-v4|415.315+/-89.831|581.6|
-|PongNoFrameskip-v4|20.335+/-1.11|19.9|
-|QbertNoFrameskip-v4|15062.959+/-2643.344|15967.4|
-|SeaquestFrameskip-v4|1743.03+/-81.934|1754.0|
+|AsterixNoFrameskip-v4|11690.807+/-8718.597|N/A|
+|BreakoutNoFrameskip-v4|548.5+/-170.1|581.6|
+|PongNoFrameskip-v4|20.947+/-0.223|19.9|
+|QbertNoFrameskip-v4|14759.859+/-1437.363|15967.4|
+|SeaquestFrameskip-v4|1770.909+/-65.039|1754.0|
 
-**NOTE: Our A2C was trained with 8 threads.**
+**NOTE: Our A2C was trained with 16 threads.**
 
 ## Learning curves
 

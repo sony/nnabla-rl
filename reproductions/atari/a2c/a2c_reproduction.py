@@ -42,7 +42,7 @@ def run_training(args):
     evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=250000, writer=writer)
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=250000)
 
-    actor_num = 8
+    actor_num = 16
     total_timesteps = 50000000
     config = A.A2CConfig(gpu_id=args.gpu, actor_num=actor_num)
     a2c = A.A2C(train_env, config=config)
