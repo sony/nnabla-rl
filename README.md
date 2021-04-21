@@ -13,7 +13,7 @@ Installing NNablaRL is easy!
 $ pip install nnabla_rl
 ```
 
-If you would like to install nnabla_rl for development
+If you would like to install NNablaRL for development purpose do
 
 ```sh
 $ cd <nnabla_rl root dir>
@@ -40,12 +40,33 @@ dqn.train(env)  # 3
 
 To get more details about NNablaRL, see documentation and [examples](./examples).
 
-### Builtin Algorithms
+### Many builtin algorithms
 
-See [algorithms](./nnabla_rl/algorithms/README.md).
+Most of famous/SoTA deep reinforcement learning algorithms, such as DQN, SAC, BCQ, GAIL, etc., is implemented in NNablaRL. Implemented algorithms are carefully tested and evaluated. You can easily start training your agent using these verified implementations.  
 
-You can find the reproduction and evaluation results of each algorithm [here](./reproductions)  
+For the list of implemented algorithms see [here](./nnabla_rl/algorithms/README.md).
+
+You can also find the reproduction and evaluation results of each algorithm [here](./reproductions).  
 Note that you may not get completely the same results when running the reproduction code on your computer. The result may slightly change depending on your machine, nnabla/nnabla-rl's package version, etc.
+
+### Seemless switching of online and offline training
+
+In reinforcement learning, there are two main training procedures, online and offline, to train the agent.
+Online training is a training procedure that executes both data collection and network update alternately. Conversely, offline training is a training procedure that updates the network using only existing data. With NNablaRL, you can switch these two training procedures seemlessly. For example, as shown below, you can easily train a robot's controller online using simulated environment and finetune it offline with real robot dataset.
+
+```py
+import nnabla_rl
+import nnabla_rl.algorithms as A
+
+simulator = get_simulator() # This is just an example. Assuming that simulator exists
+dqn = A.DQN(simulator)
+# train online for 1M iterations
+dqn.train_online(simulator, total_iterations=1000000)
+
+real_data = get_real_robot_data() # This is also an example. Assuming that you have real robot data
+# fine tune the agent offline for 10k iterations using real data
+dqn.train_offline(real_data, total_iterations=10000)
+```
 
 ## Getting started
 
