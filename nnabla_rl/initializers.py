@@ -68,7 +68,7 @@ def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
     return NI.NormalInitializer(s)
 
 
-def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
+def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in', rng=None):
     ''' Create Weight initializer proposed by He et al. (Uniform distribution version)
 
     Args:
@@ -90,12 +90,12 @@ def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     else:
         raise NotImplementedError('Unknown init mode: {}'.format(mode))
 
-    return NI.UniformInitializer(lim=(-lim, lim))
+    return NI.UniformInitializer(lim=(-lim, lim), rng=rng)
 
 
-def GlorotUniform(inmaps, outmaps, kernel=(1, 1)):
+def GlorotUniform(inmaps, outmaps, kernel=(1, 1), rng=None):
     lb, ub = NI.calc_uniform_lim_glorot(inmaps, outmaps, kernel)
-    return NI.UniformInitializer(lim=(lb, ub))
+    return NI.UniformInitializer(lim=(lb, ub), rng=rng)
 
 
 class NormcInitializer(NI.BaseInitializer):
