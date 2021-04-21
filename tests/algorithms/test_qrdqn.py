@@ -57,6 +57,22 @@ class TestQRDQN(object):
 
         qrdqn.train_online(dummy_env, total_iterations=10)
 
+    def test_run_online_training_multistep(self):
+        '''
+        Check that no error occurs when calling online training
+        '''
+
+        dummy_env = E.DummyDiscreteImg()
+        config = A.QRDQNConfig()
+        config.num_steps = 2
+        config.start_timesteps = 5
+        config.batch_size = 5
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        qrdqn = A.QRDQN(dummy_env, config=config)
+
+        qrdqn.train_online(dummy_env, total_iterations=10)
+
     def test_run_offline_training(self):
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5

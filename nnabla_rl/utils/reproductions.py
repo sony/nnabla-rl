@@ -19,25 +19,26 @@ import gym
 import numpy as np
 
 import nnabla as nn
+import nnabla_rl as rl
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 from nnabla_rl.logger import logger
-
-import nnabla_rl.environments  # noqa
 
 
 def set_global_seed(seed: int):
     np.random.seed(seed=seed)
     py_random.seed(seed)
     nn.seed(seed)
+    rl.seed(seed)
 
 
-def build_atari_env(id_or_env, test=False, seed=None, render=False):
+def build_atari_env(id_or_env, test=False, seed=None, render=False, print_info=True):
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
     else:
         env = make_atari(id_or_env)
-    print_env_info(env)
+    if print_info:
+        print_env_info(env)
 
     env = wrap_deepmind(env, episode_life=not test, clip_rewards=not test)
     env = NumpyFloat32Env(env)
@@ -49,7 +50,7 @@ def build_atari_env(id_or_env, test=False, seed=None, render=False):
     return env
 
 
-def build_mujoco_env(id_or_env, test=False, seed=None, render=False):
+def build_mujoco_env(id_or_env, test=False, seed=None, render=False, print_info=True):
     try:
         # Add pybullet env
         import pybullet_envs  # noqa
@@ -67,7 +68,9 @@ def build_mujoco_env(id_or_env, test=False, seed=None, render=False):
         env = id_or_env
     else:
         env = gym.make(id_or_env)
-    print_env_info(env)
+
+    if print_info:
+        print_env_info(env)
 
     env = NumpyFloat32Env(env)
 

@@ -18,6 +18,7 @@ from collections import deque
 import numpy as np
 
 from nnabla_rl.replay_buffer import ReplayBuffer
+from nnabla_rl.replay_buffers.prioritized_replay_buffer import PrioritizedReplayBuffer
 from nnabla_rl.utils.data import RingBuffer
 
 
@@ -37,65 +38,96 @@ class MemoryEfficientAtariBuffer(ReplayBuffer):
 
     def __init__(self, capacity):
         super(MemoryEfficientAtariBuffer, self).__init__(capacity=capacity)
-        self._scale = 255.0
         self._reset = True
         self._buffer = RingBuffer(maxlen=capacity)
         self._sub_buffer = deque(maxlen=3)
 
     def append(self, experience):
-        s, a, r, non_terminal, s_next, *_ = experience
-        if not self._is_float(s):
-            raise ValueError('dtype {} is not supported'.format(s.dtype))
-        if not self._is_float(s_next):
-            raise ValueError('dtype {} is not supported'.format(s_next.dtype))
-
-        # cast to uint8 and use only the last image to reduce memory
-        s = self._denormalize_state(s[-1])
-        s_next = self._denormalize_state(s_next[-1])
-        s = np.array(s, copy=True, dtype=np.uint8)
-        s_next = np.array(s_next, copy=True, dtype=np.uint8)
-        assert s.shape == (84, 84)
-        assert s.shape == s_next.shape
-        experience = (s, a, r, non_terminal, s_next, self._reset)
-        removed = self._buffer.append_with_removed_item_check(experience)
-        if removed is not None:
-            self._sub_buffer.append(removed)
-        self._reset = (0 == non_terminal)
-
-    def append_all(self, experiences):
-        for experience in experiences:
-            self.append(experience)
+        self._reset = _append_to_buffer(experience, self._buffer, self._sub_buffer, self._reset)
 
     def __getitem__(self, index):
-        (_, a, r, non_terminal, s_next, _) = self._buffer[index]
-        states = np.empty(shape=(4, 84, 84), dtype=np.uint8)
-        for i in range(0, 4):
-            buffer_index = index - i
-            if 0 <= buffer_index:
-                (s, _, _, _, _, reset) = self._buffer[buffer_index]
-            else:
-                (s, _, _, _, _, reset) = self._sub_buffer[buffer_index]
-            assert s.shape == (84, 84)
-            tail_index = 4-i
-            if reset:
-                states[0:tail_index] = s
-                break
-            else:
-                states[tail_index-1] = s
-        s = self._normalize_state(states)
-        assert s.shape == (4, 84, 84)
+        return _getitem_from_buffer(index, self._buffer, self._sub_buffer)
 
-        s_next = np.expand_dims(s_next, axis=0)
-        s_next = self._normalize_state(s_next)
-        s_next = np.concatenate((s[1:], s_next), axis=0)
-        assert s.shape == s_next.shape
-        return (s, a, r, non_terminal, s_next)
 
-    def _denormalize_state(self, state):
-        return (state * self._scale).astype(np.uint8)
+class MemoryEfficientPrioritizedAtariBuffer(PrioritizedReplayBuffer):
+    '''Prioritized buffer designed to compactly save experiences of Atari environments used in DQN.
 
-    def _normalize_state(self, state):
-        return state.astype(np.float32) / self._scale
+    Prioritized version of efficient Atari buffer.
 
-    def _is_float(self, state):
-        return np.issubdtype(state.dtype, np.floating)
+    Note that this class is designed only for DQN style training on atari environment.
+    (i.e. State consists of 4 concatenated grayscaled frames and its values are normalized between 0 and 1)
+    '''
+
+    def __init__(self, capacity, alpha=0.6, beta=0.4, betasteps=10000, epsilon=1e-8):
+        super(MemoryEfficientPrioritizedAtariBuffer, self).__init__(capacity=capacity,
+                                                                    alpha=alpha,
+                                                                    beta=beta,
+                                                                    betasteps=betasteps,
+                                                                    epsilon=epsilon)
+        self._reset = True
+        self._sub_buffer = deque(maxlen=3)
+
+    def append(self, experience):
+        self._reset = _append_to_buffer(experience, self._buffer, self._sub_buffer, self._reset)
+
+    def __getitem__(self, index):
+        return _getitem_from_buffer(index, self._buffer, self._sub_buffer)
+
+
+def _denormalize_state(state, scalar=255.0):
+    return (state * scalar).astype(np.uint8)
+
+
+def _normalize_state(state, scalar=255.0):
+    return state.astype(np.float32) / scalar
+
+
+def _is_float(state):
+    return np.issubdtype(state.dtype, np.floating)
+
+
+def _append_to_buffer(experience, buffer, sub_buffer, reset_flag):
+    s, a, r, non_terminal, s_next, *_ = experience
+    if not _is_float(s):
+        raise ValueError('dtype {} is not supported'.format(s.dtype))
+    if not _is_float(s_next):
+        raise ValueError('dtype {} is not supported'.format(s_next.dtype))
+
+    # cast to uint8 and use only the last image to reduce memory
+    s = _denormalize_state(s[-1])
+    s_next = _denormalize_state(s_next[-1])
+    s = np.array(s, copy=True, dtype=np.uint8)
+    s_next = np.array(s_next, copy=True, dtype=np.uint8)
+    assert s.shape == (84, 84)
+    assert s.shape == s_next.shape
+    experience = (s, a, r, non_terminal, s_next, reset_flag)
+    removed = buffer.append_with_removed_item_check(experience)
+    if removed is not None:
+        sub_buffer.append(removed)
+    return (0 == non_terminal)
+
+
+def _getitem_from_buffer(index, buffer, sub_buffer):
+    (_, a, r, non_terminal, s_next, _) = buffer[index]
+    states = np.empty(shape=(4, 84, 84), dtype=np.uint8)
+    for i in range(0, 4):
+        buffer_index = index - i
+        if 0 <= buffer_index:
+            (s, _, _, _, _, reset) = buffer[buffer_index]
+        else:
+            (s, _, _, _, _, reset) = sub_buffer[buffer_index]
+        assert s.shape == (84, 84)
+        tail_index = 4-i
+        if reset:
+            states[0:tail_index] = s
+            break
+        else:
+            states[tail_index-1] = s
+    s = _normalize_state(states)
+    assert s.shape == (4, 84, 84)
+
+    s_next = np.expand_dims(s_next, axis=0)
+    s_next = _normalize_state(s_next)
+    s_next = np.concatenate((s[1:], s_next), axis=0)
+    assert s.shape == s_next.shape
+    return (s, a, r, non_terminal, s_next)

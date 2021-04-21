@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-
+import nnabla_rl as rl
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
@@ -28,10 +27,10 @@ class ReplacementSamplingReplayBuffer(ReplayBuffer):
     def __init__(self, capacity=None):
         super(ReplacementSamplingReplayBuffer, self).__init__(capacity)
 
-    def sample(self, num_samples=1):
-        indices = self._random_indices(num_samples=num_samples)
-        return self.sample_indices(indices)
+    def sample(self, num_samples=1, num_steps=1):
+        max_index = len(self) - num_steps + 1
+        indices = self._random_indices(num_samples=num_samples, max_index=max_index)
+        return self.sample_indices(indices, num_steps=num_steps)
 
-    def _random_indices(self, num_samples):
-        buffer_length = len(self)
-        return random.choices(range(buffer_length), k=num_samples)
+    def _random_indices(self, num_samples, max_index):
+        return rl.random.drng.choice(max_index, size=num_samples, replace=True)

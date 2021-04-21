@@ -20,20 +20,21 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.q_value.multi_step_trainer import MultiStepTrainer, MultiStepTrainerConfig
 from nnabla_rl.models import Model, ValueDistributionFunction
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
-class ValueDistributionFunctionTrainerConfig(TrainerConfig):
+class ValueDistributionFunctionTrainerConfig(MultiStepTrainerConfig):
     v_min: float = -10.0
     v_max: float = 10.0
     num_atoms: int = 51
 
 
-class ValueDistributionFunctionTrainer(ModelTrainer):
+class ValueDistributionFunctionTrainer(MultiStepTrainer):
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
