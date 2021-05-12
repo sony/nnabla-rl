@@ -22,6 +22,25 @@ $ pip install -e .
 
 NNablaRL only supports Python version >= 3.6 and [NNabla](https://github.com/sony/nnabla) version >= 1.17.
 
+### Enabling GPU accelaration (Optional)
+
+NNablaRL algorithms run on CPU by default. To run the algorithm on GPU, first install [nnabla-ext-cuda](https://github.com/sony/nnabla-ext-cuda) as follows.
+(Replace [cuda-version] depending on the cuda version installed to your machine.)
+
+```
+$ pip install nnabla-ext-cuda[cuda-version]
+```
+
+After installing nnabla-ext-cuda, set the gpu id to run the algorithm on through algorithm's configuration.
+
+```py
+import nnabla_rl.algorithms as A
+
+config = A.DQNConfig(gpu_id=0) # Use gpu 0. If negative, will run on CPU.
+dqn = A.DQN(env, config=config)
+...
+```
+
 ## Features
 
 ### Friendly API
