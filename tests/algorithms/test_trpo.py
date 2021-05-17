@@ -31,13 +31,13 @@ class TestTRPO():
 
         assert trpo.__name__ == 'TRPO'
 
-    def test_discrete_env_unsupported(self):
+    def test_discrete_action_env_unsupported(self):
         '''
-        Check that error occurs when training on discrete env
+        Check that error occurs when training on discrete action env
         '''
 
         dummy_env = E.DummyDiscrete()
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(Exception):
             A.TRPO(dummy_env)
 
     def test_run_online_training(self):
@@ -113,9 +113,7 @@ class TestTRPO():
 
 
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, "./")
     from testing_utils import EpisodicEnv
     pytest.main()
 else:
-    from .testing_utils import EpisodicEnv
+    from ..testing_utils import EpisodicEnv

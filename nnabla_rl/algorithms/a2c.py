@@ -19,6 +19,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+import gym
 import numpy as np
 
 import nnabla as nn
@@ -31,7 +32,8 @@ from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import A3CPolicy, A3CSharedFunctionHead, A3CVFunction, StochasticPolicy, VFunction
-from nnabla_rl.utils.data import marshal_experiences, unzip
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable, unzip
+from nnabla_rl.utils.misc import create_variable
 from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
                                           mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
@@ -181,8 +183,6 @@ class A2C(Algorithm):
                  policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  config=A2CConfig()):
         super(A2C, self).__init__(env_or_env_info, config=config)
-        if self._env_info.is_continuous_action_env():
-            raise NotImplementedError
 
         # Initialize on cpu and change the context later
         with nn.context_scope(context.get_nnabla_context(-1)):
@@ -197,13 +197,14 @@ class A2C(Algorithm):
     @eval_api
     def compute_eval_action(self, state):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            s = np.expand_dims(state, axis=0)
+            state = add_batch_dimension(state)
             if not hasattr(self, '_eval_state_var'):
-                self._eval_state_var = nn.Variable(s.shape)
+                self._eval_state_var = create_variable(1, self._env_info.state_shape)
                 distribution = self._policy.pi(self._eval_state_var)
                 self._eval_action = distribution.sample()
                 self._eval_action.need_grad = False
-            self._eval_state_var.d = s
+
+            set_data_to_variable(self._eval_state_var, state)
             self._eval_action.forward(clear_no_need_grad=True)
             action = np.squeeze(self._eval_action.d, axis=0)
             if self._env_info.is_discrete_action_env():
@@ -362,6 +363,12 @@ class A2C(Algorithm):
         solvers[self._policy.scope_name] = self._policy_solver
         solvers[self._v_function.scope_name] = self._v_function_solver
         return solvers
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
+            else env_or_env_info
+        return not env_info.is_continuous_action_env()
 
     @property
     def latest_iteration_state(self):

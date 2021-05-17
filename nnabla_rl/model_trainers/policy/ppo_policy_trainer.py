@@ -22,6 +22,8 @@ import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
 from nnabla_rl.models import Model, StochasticPolicy
+from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -52,11 +54,11 @@ class PPOPolicyTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        training_variables.s_current.d = batch.s_current
-        training_variables.a_current.d = batch.a_current
-        training_variables.extra['log_prob'].d = batch.extra['log_prob']
-        training_variables.extra['advantage'].d = batch.extra['advantage']
-        training_variables.extra['alpha'].d = batch.extra['alpha']
+        set_data_to_variable(training_variables.s_current, batch.s_current)
+        set_data_to_variable(training_variables.a_current, batch.a_current)
+        set_data_to_variable(training_variables.extra['log_prob'], batch.extra['log_prob'])
+        set_data_to_variable(training_variables.extra['advantage'], batch.extra['advantage'])
+        set_data_to_variable(training_variables.extra['alpha'], batch.extra['alpha'])
 
         # update model
         for solver in solvers.values():
@@ -93,15 +95,11 @@ class PPOPolicyTrainer(ModelTrainer):
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables
-        s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        if self._env_info.is_discrete_action_env():
-            action_shape = (batch_size, 1)
-        else:
-            action_shape = (batch_size, self._env_info.action_dim)
-        a_current_var = nn.Variable(action_shape)
-        log_prob_var = nn.Variable((batch_size, 1))
-        advantage_var = nn.Variable((batch_size, 1))
-        alpha_var = nn.Variable((batch_size, 1))
+        s_current_var = create_variable(batch_size, self._env_info.state_shape)
+        a_current_var = create_variable(batch_size, self._env_info.action_shape)
+        log_prob_var = create_variable(batch_size, 1)
+        advantage_var = create_variable(batch_size, 1)
+        alpha_var = create_variable(batch_size, 1)
 
         extra = {}
         extra['log_prob'] = log_prob_var

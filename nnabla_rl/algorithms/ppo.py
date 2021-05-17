@@ -40,7 +40,8 @@ from nnabla_rl.models import (Model, PPOAtariPolicy, PPOAtariVFunction, PPOMujoc
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
-from nnabla_rl.utils.data import marshal_experiences, unzip
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable, unzip
+from nnabla_rl.utils.misc import create_variable
 from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
                                           mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
@@ -405,12 +406,12 @@ class PPO(Algorithm):
 
     @eval_api
     def _compute_action(self, s):
-        s = np.expand_dims(s, axis=0)
+        s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
             distribution = self._policy.pi(self._eval_state_var)
             self._eval_action = distribution.sample()
-        self._eval_state_var.d = s
+        set_data_to_variable(self._eval_state_var, s)
         self._eval_action.forward()
         action = np.squeeze(self._eval_action.d, axis=0)
         if self._env_info.is_discrete_action_env():
@@ -431,6 +432,10 @@ class PPO(Algorithm):
         solvers[self._policy.scope_name] = self._policy_solver
         solvers[self._v_function.scope_name] = self._v_function_solver
         return solvers
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        return True  # supports all enviroments
 
     def _build_ppo_actors(self, env, v_function, policy, state_preprocessor):
         actors = []

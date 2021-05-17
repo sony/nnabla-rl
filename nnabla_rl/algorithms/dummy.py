@@ -57,3 +57,7 @@ class Dummy(Algorithm):
 
     def _solvers(self):
         return {}
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        return True

@@ -39,7 +39,8 @@ from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -243,8 +244,6 @@ class GAIL(Algorithm):
                  reward_solver_builder: SolverBuilder = DefaultRewardFunctionSolverBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
         super(GAIL, self).__init__(env_or_env_info, config=config)
-        if self._env_info.is_discrete_action_env():
-            raise NotImplementedError
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             policy = policy_builder("pi", self._env_info, self._config)
@@ -272,9 +271,9 @@ class GAIL(Algorithm):
             self._expert_buffer = expert_buffer
 
     @eval_api
-    def compute_eval_action(self, s):
+    def compute_eval_action(self, state):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(s, act_deterministic=self._config.act_deterministic_in_eval)
+            action, _ = self._compute_action(state, act_deterministic=self._config.act_deterministic_in_eval)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -354,20 +353,17 @@ class GAIL(Algorithm):
         labeled_experience = []
         if not hasattr(self, '_s_var_label'):
             # build graph
-            self._s_var_label = nn.Variable((1, *self._env_info.state_shape))
-            self._s_next_var_label = nn.Variable((1, *self._env_info.state_shape))
-            if self._env_info.is_discrete_action_env():
-                self._a_var_label = nn.Variable((1, 1))
-            else:
-                self._a_var_label = nn.Variable((1, self._env_info.action_dim))
+            self._s_var_label = create_variable(1, self._env_info.state_shape)
+            self._s_next_var_label = create_variable(1, self._env_info.state_shape)
+            self._a_var_label = create_variable(1, self._env_info.action_shape)
             logits_fake = self._discriminator.r(self._s_var_label, self._a_var_label, self._s_next_var_label)
             self._reward = -NF.log(1. - NF.sigmoid(logits_fake) + 1e-8)
 
         for s, a, _, non_terminal, n_s, info in experience:
             # forward and get reward
-            self._s_var_label.d = s.reshape((1, -1))
-            self._a_var_label.d = a.reshape((1, -1))
-            self._s_next_var_label.d = n_s.reshape((1, -1))
+            set_data_to_variable(self._s_var_label, add_batch_dimension(s))
+            set_data_to_variable(self._a_var_label, add_batch_dimension(a))
+            set_data_to_variable(self._s_next_var_label, add_batch_dimension(n_s))
             self._reward.forward()
             transition = (s, a, self._reward.d, non_terminal, n_s, info)
             labeled_experience.append(transition)
@@ -502,9 +498,9 @@ class GAIL(Algorithm):
 
     @eval_api
     def _compute_action(self, s, act_deterministic=False):
-        s = np.expand_dims(s, axis=0)
+        s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
             self._eval_a_distribution = self._policy.pi(self._eval_state_var)
 
         if act_deterministic:
@@ -512,7 +508,7 @@ class GAIL(Algorithm):
         else:
             eval_a = self._probabilistic_action()
 
-        self._eval_state_var.d = s
+        set_data_to_variable(self._eval_state_var, s)
         eval_a.forward()
         return np.squeeze(eval_a.d, axis=0), {}
 
@@ -542,6 +538,12 @@ class GAIL(Algorithm):
         solvers[self._v_function.scope_name] = self._v_function_solver
         solvers[self._discriminator.scope_name] = self._discriminator_solver
         return solvers
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
+            else env_or_env_info
+        return not env_info.is_discrete_action_env()
 
     @property
     def latest_iteration_state(self):

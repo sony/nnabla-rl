@@ -20,6 +20,8 @@ import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
 from nnabla_rl.models import Model, Perturbator, QFunction, VariationalAutoEncoder
+from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -57,7 +59,7 @@ class BCQPerturbatorTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict:
-        training_variables.s_current.d = batch.s_current
+        set_data_to_variable(training_variables.s_current, batch.s_current)
 
         # update model
         for solver in solvers.values():
@@ -92,6 +94,6 @@ class BCQPerturbatorTrainer(ModelTrainer):
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables
-        s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
+        s_current_var = create_variable(batch_size, self._env_info.state_shape)
         training_variables = TrainingVariables(batch_size, s_current_var)
         return training_variables

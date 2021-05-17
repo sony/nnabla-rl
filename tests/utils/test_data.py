@@ -13,9 +13,93 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
-from nnabla_rl.utils.data import RingBuffer
+import nnabla as nn
+import nnabla_rl.environments as E
+from nnabla_rl.utils.data import RingBuffer, add_batch_dimension, marshal_experiences, set_data_to_variable
+
+
+class TestData():
+    def test_set_data_to_variable(self):
+        variable = nn.Variable((3,))
+        array = np.random.rand(3)
+
+        set_data_to_variable(variable, array)
+
+        assert np.allclose(variable.d, array)
+
+    def test_set_data_to_variable_tuple(self):
+        variables = (nn.Variable((3,)), nn.Variable((5,)))
+        arrays = (np.random.rand(3), np.random.rand(5))
+
+        set_data_to_variable(variables, arrays)
+
+        assert np.allclose(variables[0].d, arrays[0])
+        assert np.allclose(variables[1].d, arrays[1])
+
+    def test_set_data_to_variable_wrong_length(self):
+        variables = (nn.Variable((3,)), nn.Variable((5,)), nn.Variable((7,)))
+        arrays = (np.random.rand(3), np.random.rand(5))
+
+        with pytest.raises(AssertionError):
+            set_data_to_variable(variables, arrays)
+
+    def test_marshal_experiences(self):
+        batch_size = 3
+        dummy_env = E.DummyContinuous()
+        experiences = generate_dummy_experiences(dummy_env, batch_size)
+        state, action, reward, done, next_state = marshal_experiences(experiences)
+
+        assert state.shape == (batch_size, dummy_env.observation_space.shape[0])
+        assert action.shape == (batch_size, dummy_env.action_space.shape[0])
+        assert reward.shape == (batch_size, 1)
+        assert done.shape == (batch_size, 1)
+        assert next_state.shape == (batch_size, dummy_env.observation_space.shape[0])
+
+    def test_marshal_experiences_tuple_continous(self):
+        batch_size = 2
+        dummy_env = E.DummyTupleContinuous()
+        experiences = generate_dummy_experiences(dummy_env, batch_size)
+        state, action, reward, done, next_state = marshal_experiences(experiences)
+
+        assert state[0].shape == (batch_size, dummy_env.observation_space[0].shape[0])
+        assert state[1].shape == (batch_size, dummy_env.observation_space[1].shape[0])
+        assert action.shape == (batch_size, dummy_env.action_space.shape[0])
+        assert reward.shape == (batch_size, 1)
+        assert done.shape == (batch_size, 1)
+        assert next_state[0].shape == (batch_size, dummy_env.observation_space[0].shape[0])
+        assert next_state[1].shape == (batch_size, dummy_env.observation_space[1].shape[0])
+
+    def test_marshal_experiences_tuple_discrete(self):
+        batch_size = 2
+        dummy_env = E.DummyTupleDiscrete()
+        experiences = generate_dummy_experiences(dummy_env, batch_size)
+        state, action, reward, done, next_state = marshal_experiences(experiences)
+
+        assert state[0].shape == (batch_size, 1)
+        assert state[1].shape == (batch_size, 1)
+        assert action.shape == (batch_size, 1)
+        assert reward.shape == (batch_size, 1)
+        assert done.shape == (batch_size, 1)
+        assert next_state[0].shape == (batch_size, 1)
+        assert next_state[1].shape == (batch_size, 1)
+
+    def test_add_batch_dimension_array(self):
+        array = np.random.randn(4)
+        actual_array = add_batch_dimension(array)
+
+        assert actual_array.shape == (1, *array.shape)
+
+    def test_add_batch_dimension_tuple(self):
+        array1 = np.random.randn(4)
+        array2 = np.random.randn(3)
+
+        actual_array = add_batch_dimension((array1, array2))
+
+        assert actual_array[0].shape == (1, *array1.shape)
+        assert actual_array[1].shape == (1, *array2.shape)
 
 
 class TestRingBuffer(object):
@@ -59,4 +143,7 @@ class TestRingBuffer(object):
 
 
 if __name__ == "__main__":
+    from testing_utils import generate_dummy_experiences
     pytest.main()
+else:
+    from ..testing_utils import generate_dummy_experiences

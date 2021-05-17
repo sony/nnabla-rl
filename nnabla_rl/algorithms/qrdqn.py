@@ -28,13 +28,12 @@ from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QRDQNQuantileDistributionFunction, QuantileDistributionFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshal_experiences
-from nnabla_rl.utils.misc import sync_model
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
+from nnabla_rl.utils.misc import create_variable, sync_model
 
 
 @dataclass
@@ -171,8 +170,6 @@ class QRDQN(Algorithm):
                  quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
         super(QRDQN, self).__init__(env_or_env_info, config=config)
-        if not self._env_info.is_discrete_action_env():
-            raise UnsupportedEnvironmentException('{} only supports discrete action environment'.format(self.__name__))
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._quantile_dist = quantile_dist_function_builder('quantile_dist_train', self._env_info, self._config)
@@ -259,12 +256,12 @@ class QRDQN(Algorithm):
 
     @eval_api
     def _greedy_action_selector(self, s):
-        s = np.expand_dims(s, axis=0)
+        s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
             q_function = self._quantile_dist.as_q_function()
             self._a_greedy = q_function.argmax_q(self._eval_state_var)
-        self._eval_state_var.d = s
+        set_data_to_variable(self._eval_state_var, s)
         self._a_greedy.forward()
         return np.squeeze(self._a_greedy.d, axis=0), {}
 
@@ -281,6 +278,12 @@ class QRDQN(Algorithm):
         solvers = {}
         solvers[self._quantile_dist.scope_name] = self._quantile_dist_solver
         return solvers
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
+            else env_or_env_info
+        return not env_info.is_continuous_action_env()
 
     @property
     def latest_iteration_state(self):

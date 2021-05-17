@@ -26,6 +26,7 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 
 class TestAlgorithm(object):
     @patch.multiple(Algorithm, __abstractmethods__=set())
+    @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
     def test_resume_online_training(self):
         env = E.DummyContinuous()
         algorithm = Algorithm(env)
@@ -39,6 +40,7 @@ class TestAlgorithm(object):
         assert algorithm._run_online_training_iteration.call_count == total_iterations * 2
 
     @patch.multiple(Algorithm, __abstractmethods__=set())
+    @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
     def test_resume_offline_training(self):
         env = E.DummyContinuous()
         algorithm = Algorithm(env)
@@ -76,6 +78,10 @@ class TestAlgorithm(object):
 
             def _solvers(self):
                 pass
+
+            @classmethod
+            def is_supported_env(cls, env_or_env_info):
+                return True
 
         eval_scope_check = EvalScopeCheck()
         eval_scope_check.compute_eval_action(x=np.empty(shape=(1, 5)))

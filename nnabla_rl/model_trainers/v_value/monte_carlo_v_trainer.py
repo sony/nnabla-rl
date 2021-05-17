@@ -21,6 +21,7 @@ from nnabla_rl.model_trainers.model_trainer import TrainingBatch, TrainingVariab
 from nnabla_rl.model_trainers.v_value.squared_td_v_function_trainer import (SquaredTDVFunctionTrainer,
                                                                             SquaredTDVFunctionTrainerConfig)
 from nnabla_rl.models import VFunction
+from nnabla_rl.utils.data import set_data_to_variable
 
 
 @dataclass
@@ -46,7 +47,7 @@ class MonteCarloVTrainer(SquaredTDVFunctionTrainer):
         v_target = batch.extra['v_target']
         if self._v_target is None or self._v_target.shape[0] != batch_size:
             self._v_target = nn.Variable((batch_size, 1))
-        self._v_target.d = v_target
+        set_data_to_variable(self._v_target, v_target)
         return batch
 
     def _compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:

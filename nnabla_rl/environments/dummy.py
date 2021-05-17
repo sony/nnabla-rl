@@ -46,7 +46,33 @@ class DummyDiscrete(AbstractDummyEnv):
         super(DummyDiscrete, self).__init__(
             max_episode_steps=max_episode_steps)
         self.action_space = gym.spaces.Discrete(4)
-        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))
+        self.observation_space = gym.spaces.Discrete(5)
+
+
+class DummyTupleContinuous(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyTupleContinuous, self).__init__(
+            max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))
+        self.observation_space = gym.spaces.Tuple((gym.spaces.Box(low=0.0, high=1.0, shape=(4, )),
+                                                   gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))))
+
+
+class DummyTupleDiscrete(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyTupleDiscrete, self).__init__(
+            max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Discrete(2)
+        self.observation_space = gym.spaces.Tuple((gym.spaces.Discrete(4), gym.spaces.Discrete(5)))
+
+
+class DummyTupleMixed(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyTupleMixed, self).__init__(
+            max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(3, ))
+        self.observation_space = gym.spaces.Tuple((gym.spaces.Discrete(4),
+                                                   gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))))
 
 
 class DummyDiscreteImg(AbstractDummyEnv):

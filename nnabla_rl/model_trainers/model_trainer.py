@@ -15,7 +15,7 @@
 
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Optional, Sequence, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -52,12 +52,12 @@ class TrainingBatch():
            the mini-batch for next step (used in n-step learning)
     """
     batch_size: int
-    s_current: np.ndarray
+    s_current: Union[np.ndarray, Tuple[np.ndarray, ...]]
     a_current: np.ndarray
     reward: np.ndarray
     gamma: float
     non_terminal: np.ndarray
-    s_next: np.ndarray
+    s_next: Union[np.ndarray, Tuple[np.ndarray, ...]]
     weight: np.ndarray
     extra: Dict[str, np.ndarray]
     # Used in n-step learning
@@ -65,12 +65,12 @@ class TrainingBatch():
 
     def __init__(self,
                  batch_size: int,
-                 s_current: Optional[np.ndarray] = None,
+                 s_current: Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]] = None,
                  a_current: Optional[np.ndarray] = None,
                  reward: Optional[np.ndarray] = None,
                  gamma: Optional[float] = None,
                  non_terminal: Optional[np.ndarray] = None,
-                 s_next: Optional[np.ndarray] = None,
+                 s_next: Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]] = None,
                  weight: Optional[np.ndarray] = None,
                  extra: Dict[str, np.ndarray] = {},
                  next_step_batch: Optional['TrainingBatch'] = None):
@@ -96,22 +96,22 @@ class TrainingBatch():
 
 class TrainingVariables():
     batch_size: int
-    s_current: nn.Variable
+    s_current: Union[nn.Variable, Tuple[nn.Variable, ...]]
     a_current: nn.Variable
     reward: nn.Variable
     gamma: nn.Variable
     non_terminal: nn.Variable
-    s_next: nn.Variable
+    s_next: Union[nn.Variable, Tuple[nn.Variable, ...]]
     weight: nn.Variable
 
     def __init__(self,
                  batch_size: int,
-                 s_current: Optional[nn.Variable] = None,
+                 s_current: Optional[Union[nn.Variable, Tuple[nn.Variable, ...]]] = None,
                  a_current: Optional[nn.Variable] = None,
                  reward: Optional[nn.Variable] = None,
                  gamma: Optional[nn.Variable] = None,
                  non_terminal: Optional[nn.Variable] = None,
-                 s_next: Optional[nn.Variable] = None,
+                 s_next: Optional[Union[nn.Variable, Tuple[nn.Variable, ...]]] = None,
                  weight: Optional[nn.Variable] = None,
                  extra: Dict[str, nn.Variable] = {}):
         assert 0 < batch_size

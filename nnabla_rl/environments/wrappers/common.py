@@ -18,13 +18,17 @@ import numpy as np
 
 
 class Float32ObservationEnv(gym.ObservationWrapper):
+
     def __init__(self, env):
         super(Float32ObservationEnv, self).__init__(env)
         self.dtype = np.float32
         self.observation_space.dtype = np.dtype(np.float32)
 
     def observation(self, observation):
-        return self.dtype(observation)
+        if isinstance(observation, tuple):
+            return tuple(map(self.dtype, observation))
+        else:
+            return self.dtype(observation)
 
 
 class Float32RewardEnv(gym.RewardWrapper):
@@ -37,6 +41,7 @@ class Float32RewardEnv(gym.RewardWrapper):
 
 
 class Float32ActionEnv(gym.ActionWrapper):
+
     def __init__(self, env):
         super(Float32ActionEnv, self).__init__(env)
         self.dtype = np.float32
@@ -49,6 +54,7 @@ class Float32ActionEnv(gym.ActionWrapper):
 
 
 class Int32ActionEnv(gym.ActionWrapper):
+
     def __init__(self, env):
         super(Int32ActionEnv, self).__init__(env)
         self.dtype = np.int32

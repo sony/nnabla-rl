@@ -21,7 +21,8 @@ import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
 from nnabla_rl.models import Model, RewardFunction
-from nnabla_rl.utils.data import convert_to_list_if_not_list
+from nnabla_rl.utils.data import convert_to_list_if_not_list, set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -54,19 +55,8 @@ class GAILRewardFunctionTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        s_curr_agent = batch.extra['s_current_agent']
-        a_curr_agent = batch.extra['a_current_agent']
-        s_next_agent = batch.extra['s_next_agent']
-        s_curr_expert = batch.extra['s_current_expert']
-        a_curr_expert = batch.extra['a_current_expert']
-        s_next_expert = batch.extra['s_next_expert']
-
-        training_variables.extra['s_current_expert'].d = s_curr_expert
-        training_variables.extra['a_current_expert'].d = a_curr_expert
-        training_variables.extra['s_next_expert'].d = s_next_expert
-        training_variables.extra['s_current_agent'].d = s_curr_agent
-        training_variables.extra['a_current_agent'].d = a_curr_agent
-        training_variables.extra['s_next_agent'].d = s_next_agent
+        for key in batch.extra.keys():
+            set_data_to_variable(training_variables.extra[key], batch.extra[key])
 
         # update model
         for solver in solvers.values():
@@ -104,17 +94,12 @@ class GAILRewardFunctionTrainer(ModelTrainer):
             self._binary_classification_loss += fake_loss + real_loss + entropy_loss
 
     def _setup_training_variables(self, batch_size):
-        s_current_agent_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        s_next_agent_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        s_current_expert_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        s_next_expert_var = nn.Variable((batch_size, *self._env_info.state_shape))
-
-        if self._env_info.is_discrete_action_env():
-            a_current_agent_var = nn.Variable((batch_size, 1))
-            a_current_expert_var = nn.Variable((batch_size, 1))
-        else:
-            a_current_agent_var = nn.Variable((batch_size, self._env_info.action_dim))
-            a_current_expert_var = nn.Variable((batch_size, self._env_info.action_dim))
+        s_current_agent_var = create_variable(batch_size, self._env_info.state_shape)
+        s_next_agent_var = create_variable(batch_size, self._env_info.state_shape)
+        s_current_expert_var = create_variable(batch_size, self._env_info.state_shape)
+        s_next_expert_var = create_variable(batch_size, self._env_info.state_shape)
+        a_current_agent_var = create_variable(batch_size, self._env_info.action_shape)
+        a_current_expert_var = create_variable(batch_size, self._env_info.action_shape)
 
         variables = {'s_current_expert': s_current_expert_var,
                      'a_current_expert': a_current_expert_var,

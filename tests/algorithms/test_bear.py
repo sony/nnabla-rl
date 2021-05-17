@@ -32,9 +32,9 @@ class TestBEAR(object):
 
         assert bear.__name__ == 'BEAR'
 
-    def test_discrete_env_unsupported(self):
+    def test_discrete_action_env_unsupported(self):
         '''
-        Check that error occurs when training on discrete env
+        Check that error occurs when training on discrete action env
         '''
 
         dummy_env = E.DummyDiscrete()
@@ -120,9 +120,7 @@ class TestBEAR(object):
 
 
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, "./")
     from testing_utils import generate_dummy_experiences
     pytest.main()
 else:
-    from .testing_utils import generate_dummy_experiences
+    from ..testing_utils import generate_dummy_experiences

@@ -32,9 +32,9 @@ class TestCategoricalDQN(object):
 
         assert categorical_dqn.__name__ == 'CategoricalDQN'
 
-    def test_continuous_env_unsupported(self):
+    def test_continuous_action_env_unsupported(self):
         '''
-        Check that error occurs when training on continuous env
+        Check that error occurs when training on continuous action env
         '''
 
         dummy_env = E.DummyContinuous()
@@ -100,9 +100,7 @@ class TestCategoricalDQN(object):
 
 
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, "./")
     from testing_utils import generate_dummy_experiences
     pytest.main()
 else:
-    from .testing_utils import generate_dummy_experiences
+    from ..testing_utils import generate_dummy_experiences

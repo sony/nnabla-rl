@@ -22,6 +22,8 @@ import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
 from nnabla_rl.models import Model, QFunction
+from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -56,13 +58,13 @@ class SquaredTDQFunctionTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        training_variables.s_current.d = batch.s_current
-        training_variables.a_current.d = batch.a_current
-        training_variables.reward.d = batch.reward
-        training_variables.gamma.d = batch.gamma
-        training_variables.non_terminal.d = batch.non_terminal
-        training_variables.s_next.d = batch.s_next
-        training_variables.weight.d = batch.weight
+        set_data_to_variable(training_variables.s_current, batch.s_current)
+        set_data_to_variable(training_variables.a_current, batch.a_current)
+        set_data_to_variable(training_variables.reward, batch.reward)
+        set_data_to_variable(training_variables.gamma, batch.gamma)
+        set_data_to_variable(training_variables.non_terminal, batch.non_terminal)
+        set_data_to_variable(training_variables.s_next, batch.s_next)
+        set_data_to_variable(training_variables.weight, batch.weight)
 
         # update model
         for q_solver in solvers.values():
@@ -127,17 +129,13 @@ class SquaredTDQFunctionTrainer(ModelTrainer):
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables
-        s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        if self._env_info.is_discrete_action_env():
-            a_current_var = nn.Variable((batch_size, 1))
-        else:
-            a_current_var = nn.Variable((batch_size, self._env_info.action_dim))
-        s_next_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        reward_var = nn.Variable((batch_size, 1))
-        gamma_var = nn.Variable((1, 1))
-        non_terminal_var = nn.Variable((batch_size, 1))
-        s_next_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        weight_var = nn.Variable((batch_size, 1))
+        s_current_var = create_variable(batch_size, self._env_info.state_shape)
+        a_current_var = create_variable(batch_size, self._env_info.action_shape)
+        s_next_var = create_variable(batch_size, self._env_info.state_shape)
+        reward_var = create_variable(batch_size, 1)
+        gamma_var = create_variable(batch_size, 1)
+        non_terminal_var = create_variable(batch_size, 1)
+        weight_var = create_variable(batch_size, 1)
 
         training_variables = TrainingVariables(batch_size=batch_size,
                                                s_current=s_current_var,

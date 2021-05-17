@@ -31,7 +31,8 @@ from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, 
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -137,13 +138,14 @@ class ICML2015TRPO(Algorithm):
                  config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder()):
         super(ICML2015TRPO, self).__init__(env_or_env_info, config=config)
+
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._policy = policy_builder("pi", self._env_info, self._config)
 
     @eval_api
-    def compute_eval_action(self, s):
+    def compute_eval_action(self, state):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(s)
+            action, _ = self._compute_action(state)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -245,12 +247,12 @@ class ICML2015TRPO(Algorithm):
     @eval_api
     def _compute_action(self, s):
         # evaluation input/action variables
-        s = np.expand_dims(s, axis=0)
+        s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
             distribution = self._policy.pi(self._eval_state_var)
             self._eval_action = distribution.sample()
-        self._eval_state_var.d = s
+        set_data_to_variable(self._eval_state_var, s)
         self._eval_action.forward()
         return np.squeeze(self._eval_action.d, axis=0), {}
 
@@ -261,6 +263,10 @@ class ICML2015TRPO(Algorithm):
 
     def _solvers(self):
         return {}
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        return True  # supports all enviroments
 
     @property
     def latest_iteration_state(self):

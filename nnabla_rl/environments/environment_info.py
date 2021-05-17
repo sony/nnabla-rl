@@ -16,7 +16,9 @@
 from dataclasses import dataclass
 
 import gym
-import numpy as np
+
+from nnabla_rl.environments.gym_utils import (extract_max_episode_steps, get_space_dim, get_space_high, get_space_low,
+                                              get_space_shape, is_same_space_type)
 
 
 @dataclass
@@ -28,6 +30,17 @@ class EnvironmentInfo(object):
     observation_space: gym.spaces.Space
     action_space: gym.spaces.Space
     max_episode_steps: int
+
+    def __init__(self, observation_space, action_space, max_episode_steps):
+        self.observation_space = observation_space
+        self.action_space = action_space
+        self.max_episode_steps = max_episode_steps
+
+        if not (self.is_discrete_state_env() or self.is_continuous_state_env()):
+            raise ValueError("Unsupported state space")
+
+        if not (self.is_discrete_action_env() or self.is_continuous_action_env()):
+            raise ValueError("Unsupported action space")
 
     @staticmethod
     def from_env(env):
@@ -50,7 +63,7 @@ class EnvironmentInfo(object):
         """
         return EnvironmentInfo(observation_space=env.observation_space,
                                action_space=env.action_space,
-                               max_episode_steps=EnvironmentInfo._extract_max_episode_steps(env))
+                               max_episode_steps=extract_max_episode_steps(env))
 
     def is_discrete_action_env(self):
         '''
@@ -58,8 +71,9 @@ class EnvironmentInfo(object):
 
         Returns:
             bool: True if the action to execute in the environment is discrete. Otherwise False.
+                Note that if the action is gym.spaces.Tuple and all of the element are discrete, it returns True.
         '''
-        return isinstance(self.action_space, gym.spaces.Discrete)
+        return is_same_space_type(self.action_space, gym.spaces.Discrete)
 
     def is_continuous_action_env(self):
         '''
@@ -67,43 +81,103 @@ class EnvironmentInfo(object):
 
         Returns:
             bool: True if the action to execute in the environment is continuous. Otherwise False.
+                Note that if the action is gym.spaces.Tuple and all of the element are continuous, it returns True.
         '''
-        return not self.is_discrete_action_env()
+        return is_same_space_type(self.action_space, gym.spaces.Box)
+
+    def is_discrete_state_env(self):
+        '''
+        Check whether the state of the environment is discrete or not
+
+        Returns:
+            bool: True if the state of the environment is discrete. Otherwise False.
+                Note that if the state is gym.spaces.Tuple and all of the element are discrete, it returns True.
+        '''
+        return is_same_space_type(self.observation_space, gym.spaces.Discrete)
+
+    def is_continuous_state_env(self):
+        '''
+        Check whether the state of the environment is continuous or not
+
+        Returns:
+            bool: True if the state of the environment is continuous. Otherwise False.
+                Note that if the state is gym.spaces.Tuple and all of the element are continuous, it returns True.
+        '''
+        return is_same_space_type(self.observation_space, gym.spaces.Box)
+
+    def is_tuple_state_env(self):
+        '''
+        Check whether the state of the environment is tuple or not
+
+        Returns:
+            bool: True if the state of the environment is tuple. Otherwise False.
+        '''
+        return isinstance(self.observation_space, gym.spaces.Tuple)
 
     @property
     def state_shape(self):
         '''
         The shape of observation space
         '''
-        return self.observation_space.shape
+        if self.is_tuple_state_env():
+            return tuple(map(get_space_shape, self.observation_space))
+        else:
+            return get_space_shape(self.observation_space)
 
     @property
     def state_dim(self):
         '''
         The dimension of state assuming that the state is flatten.
         '''
-        return np.prod(self.observation_space.shape)
+        if self.is_tuple_state_env():
+            return tuple(map(get_space_dim, self.observation_space))
+        else:
+            return get_space_dim(self.observation_space)
+
+    @property
+    def state_high(self):
+        '''
+        The upper limit of observation space
+        '''
+        if self.is_tuple_state_env():
+            return tuple(map(get_space_high, self.observation_space))
+        else:
+            return get_space_high(self.observation_space)
+
+    @property
+    def state_low(self):
+        '''
+        The lower limit of observation space
+        '''
+        if self.is_tuple_state_env():
+            return tuple(map(get_space_low, self.observation_space))
+        else:
+            return get_space_low(self.observation_space)
+
+    @property
+    def action_high(self):
+        '''
+        The upper limit of action space
+        '''
+        return get_space_high(self.action_space)
+
+    @property
+    def action_low(self):
+        '''
+        The lower limit of action space
+        '''
+        return get_space_low(self.action_space)
 
     @property
     def action_shape(self):
         '''
         The shape of action space
         '''
-        return self.action_space.shape
+        return get_space_shape(self.action_space)
 
     @property
     def action_dim(self):
         '''
         The dimension of action assuming that the action is flatten.
         '''
-        if self.is_discrete_action_env():
-            return self.action_space.n
-        else:
-            return np.prod(self.action_space.shape)
-
-    @staticmethod
-    def _extract_max_episode_steps(env):
-        if env.spec is None or env.spec.max_episode_steps is None:
-            return float("inf")
-        else:
-            return env.spec.max_episode_steps
+        return get_space_dim(self.action_space)

@@ -45,6 +45,68 @@ class TestEnvInfo(object):
         assert not env_info.is_discrete_action_env()
         assert env_info.is_continuous_action_env()
 
+    def test_is_discrete_state_env(self):
+        dummy_env = E.DummyDiscrete()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.is_discrete_state_env()
+        assert not env_info.is_continuous_state_env()
+        assert not env_info.is_tuple_state_env()
+
+    def test_is_continuous_state_env(self):
+        dummy_env = E.DummyContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert not env_info.is_discrete_state_env()
+        assert env_info.is_continuous_state_env()
+        assert not env_info.is_tuple_state_env()
+
+    def test_is_tuple_and_discrete_state_env(self):
+        dummy_env = E.DummyTupleDiscrete()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.is_discrete_state_env()
+        assert not env_info.is_continuous_state_env()
+        assert env_info.is_tuple_state_env()
+
+    def test_is_tuple_and_continuous_state_env(self):
+        dummy_env = E.DummyTupleContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert not env_info.is_discrete_state_env()
+        assert env_info.is_continuous_state_env()
+        assert env_info.is_tuple_state_env()
+
+    def test_action_shape_continuous(self):
+        dummy_env = E.DummyContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.action_shape == dummy_env.action_space.shape
+
+    def test_action_shape_discrete(self):
+        dummy_env = E.DummyDiscreteImg()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.action_shape == (1, )
+
+    def test_action_dim_continuous(self):
+        dummy_env = E.DummyContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.action_dim == dummy_env.action_space.shape[0]
+
+    def test_action_dim_discrete(self):
+        dummy_env = E.DummyDiscrete()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.action_dim == dummy_env.action_space.n
+
+    def test_state_shape_discrete(self):
+        dummy_env = E.DummyDiscrete()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_shape == (1, )
+
     def test_state_shape_continuous(self):
         dummy_env = E.DummyContinuous()
         env_info = EnvironmentInfo.from_env(dummy_env)
@@ -56,6 +118,24 @@ class TestEnvInfo(object):
         env_info = EnvironmentInfo.from_env(dummy_env)
 
         assert env_info.state_shape == dummy_env.observation_space.shape
+
+    def test_state_shape_tuple_discrete(self):
+        dummy_env = E.DummyTupleDiscrete()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_shape == ((1, ), (1, ))
+
+    def test_state_shape_tuple_continuous(self):
+        dummy_env = E.DummyTupleContinuous()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_shape == tuple(space.shape for space in dummy_env.observation_space)
+
+    def test_state_dim_discrete(self):
+        dummy_env = E.DummyDiscrete()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_dim == dummy_env.observation_space.n
 
     def test_state_dim_continuous(self):
         dummy_env = E.DummyContinuous()
@@ -69,29 +149,22 @@ class TestEnvInfo(object):
 
         assert env_info.state_dim == np.prod(dummy_env.observation_space.shape)
 
-    def test_action_shape_continuous(self):
-        dummy_env = E.DummyContinuous()
+    def test_state_dim_tuple_discrete(self):
+        dummy_env = E.DummyTupleDiscrete()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.action_shape == dummy_env.action_space.shape
+        assert env_info.state_dim == tuple(space.n for space in env_info.observation_space)
 
-    def test_action_shape_discrete(self):
-        dummy_env = E.DummyDiscreteImg()
+    def test_state_dim_tuple_continuous(self):
+        dummy_env = E.DummyTupleContinuous()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.action_shape == dummy_env.action_space.shape
+        assert env_info.state_dim == tuple(np.prod(space.shape) for space in env_info.observation_space)
 
-    def test_action_dim_continuous(self):
-        dummy_env = E.DummyContinuous()
-        env_info = EnvironmentInfo.from_env(dummy_env)
-
-        assert env_info.action_dim == dummy_env.action_space.shape[0]
-
-    def test_action_dim_discrete(self):
-        dummy_env = E.DummyDiscrete()
-        env_info = EnvironmentInfo.from_env(dummy_env)
-
-        assert env_info.action_dim == dummy_env.action_space.n
+    def test_error_tuple_mixed_env(self):
+        dummy_env = E.DummyTupleMixed()
+        with pytest.raises(ValueError):
+            EnvironmentInfo.from_env(dummy_env)
 
 
 if __name__ == "__main__":
