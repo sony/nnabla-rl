@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+# Copyright 2021 Sony Group Corporation.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
+import os
+import pathlib
+import re
+import subprocess
+
+_exclude_dirs = ['.git', '.egg', 'cache', '.vscode', 'external']
+_insert_file_regex = re.compile('.*.(py|cfg|ini|sh)')
+_header_extract_regex = re.compile('# Copyright \\d{4}.*? limitations under the License.', re.DOTALL)
+_shebang_extract_regex = re.compile('#!.+')
+_date_extract_regex = re.compile('(\\d{4}-\\d{2}-\\d{2})')
+
+COPYRIGHT_TEMPLATE_SONY_CORP = '# Copyright {} Sony Corporation.'
+
+COPYRIGHT_TEMPLATE_SONY_GROUP_CORP = '# Copyright {} Sony Group Corporation.'
+
+APACHE2_LICENSE_TEMPLATE = '''#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.'''
+
+
+def listup_files(rootdir):
+    files = []
+    path = pathlib.Path(rootdir)
+    dirname = str(path)
+    for exclude in _exclude_dirs:
+        if exclude in dirname:
+            return files
+
+    for f in path.iterdir():
+        if f.is_dir():
+            files.extend(listup_files(f))
+        else:
+            # empty suffix means binary file
+            matched = _insert_file_regex.fullmatch(str(f)) is not None or (f.suffix == '' and has_shebang(f))
+            if matched:
+                files.append(f)
+    return files
+
+
+def has_shebang(filepath):
+    try:
+        has_shebang = extract_shebang(filepath) is not None
+        return has_shebang
+    except UnicodeDecodeError:
+        # Raw binary file and not text.
+        return False
+
+
+def execute_command(command):
+    return subprocess.check_output(command).decode("utf-8")
+
+
+def retrieve_commit_dates(filepath):
+    current_dir = os.getcwd()
+
+    parent = str(filepath.parent)
+    os.chdir(parent)
+    result = execute_command(['git', 'log', '--format="format:%ci"', '--reverse', filepath.name])
+    os.chdir(current_dir)
+    dates = _date_extract_regex.findall(result)
+    return dates
+
+
+def fill_intermediate_years(years, end_year=None):
+    years.sort()
+    start_year = int(years[0])
+    if end_year is None:
+        end_year = int(years[-1])
+    filled_years = []
+    for year in range(start_year, end_year+1):
+        filled_years.append(str(year))
+    return filled_years
+
+
+def create_file_header(filepath):
+    commit_dates = retrieve_commit_dates(filepath)
+
+    sony_years = set()
+    sony_group_years = set()
+    for date in commit_dates:
+        (year, month, _) = date.split('-')
+        if int(year) <= 2020:
+            sony_years.add(year)
+        elif int(year) <= 2021 and int(month) < 4:
+            sony_years.add(year)
+        else:
+            sony_group_years.add(year)
+
+    header = ''
+    if len(sony_years) != 0:
+        sony_years = list(sony_years)
+        sony_years = fill_intermediate_years(sony_years, end_year=2021)
+        joined_sony_years = ','.join(sony_years)
+        header += COPYRIGHT_TEMPLATE_SONY_CORP.format(joined_sony_years) + '\n'
+
+    if len(sony_group_years) != 0:
+        sony_group_years = list(sony_group_years)
+        sony_group_years = fill_intermediate_years(sony_group_years)
+        joined_sony_group_years = ','.join(sony_group_years)
+        header += COPYRIGHT_TEMPLATE_SONY_GROUP_CORP.format(joined_sony_group_years) + '\n'
+
+    header += APACHE2_LICENSE_TEMPLATE
+
+    return header
+
+
+def extract_text(text, regex):
+    extracted_texts = regex.findall(text)
+    if len(extracted_texts) == 0:
+        return None
+    else:
+        return extracted_texts[0]
+
+
+def extract_copyright_header_from_text(text):
+    return extract_text(text, _header_extract_regex)
+
+
+def extract_copyright_header(filepath):
+    with open(filepath, 'r') as f:
+        text = f.read()
+    return extract_copyright_header_from_text(text)
+
+
+def extract_shebang_from_text(text):
+    shebang = extract_text(text, _shebang_extract_regex)
+    return shebang
+
+
+def extract_shebang(filepath):
+    with open(filepath, 'r') as f:
+        text = f.read()
+    shebang = extract_shebang_from_text(text)
+    return shebang
+
+
+def check_diff(filepath):
+    expected_header = create_file_header(filepath)
+    actual_header = extract_copyright_header(filepath)
+    if actual_header != expected_header:
+        raise ValueError(
+            f'header of file {filepath} is different from expected header!\n'
+            f'{actual_header}\n is different from\n{expected_header}')
+
+
+def insert_copyright_header(filepath):
+    new_header = create_file_header(filepath)
+
+    with open(filepath, 'r') as f:
+        text = f.read()
+
+    old_header = extract_copyright_header_from_text(text)
+
+    if old_header == new_header:
+        return
+
+    print(f'inserting copyright to: {filepath}')
+    if old_header is None:
+        shebang = extract_shebang_from_text(text)
+        if shebang is None:
+            replaced_text = new_header + '\n' + text
+        else:
+            text = text.replace(shebang + '\n', '')
+            replaced_text = shebang + '\n' + new_header + '\n' + text
+    else:
+        replaced_text = text.replace(old_header, new_header)
+    with open(filepath, 'w') as f:
+        f.write(replaced_text)
+
+
+def main(args):
+    files = listup_files(args.rootdir)
+    for f in files:
+        if args.diff:
+            check_diff(f)
+        else:
+            insert_copyright_header(f)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--rootdir', type=str, default='./')
+    parser.add_argument('--diff', action="store_true", default=False)
+    args = parser.parse_args()
+    main(args)
