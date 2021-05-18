@@ -261,6 +261,58 @@ class TestFunctions(object):
         assert np.allclose(optimal_mean.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-3)
         assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-3)
 
+    @pytest.mark.parametrize("batch_size", [i for i in range(1, 3)])
+    @pytest.mark.parametrize("diag_size", [i for i in range(1, 5)])
+    @pytest.mark.parametrize("upper", [True, False])
+    def test_triangular_matrix(self, batch_size, diag_size, upper):
+        non_diag_size = diag_size * (diag_size - 1) // 2
+        diagonal = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, diag_size)).astype(np.float32))
+        non_diagonal = nn.Variable.from_numpy_array(np.random.normal(
+            size=(batch_size, non_diag_size)).astype(np.float32))
+
+        triangular_matrix = RF.triangular_matrix(diagonal, non_diagonal, upper)
+        triangular_matrix.forward()
+
+        for b in range(batch_size):
+            i = 0
+            for row in range(diag_size):
+                for col in range(diag_size):
+                    value = triangular_matrix.d[b, row, col]
+                    if col < row:
+                        if upper:
+                            assert value == 0
+                        else:
+                            assert value == non_diagonal.d[b, i]
+                            i += 1
+                    elif row < col:
+                        if upper:
+                            assert value == non_diagonal.d[b, i]
+                            i += 1
+                        else:
+                            assert value == 0
+                    else:
+                        assert row == col
+                        assert value == diagonal.d[b, row]
+
+    @pytest.mark.parametrize("batch_size", [i for i in range(1, 3)])
+    @pytest.mark.parametrize("diag_size", [i for i in range(1, 5)])
+    @pytest.mark.parametrize("upper", [True, False])
+    def test_triangular_matrix_create_diagonal_matrix(self, batch_size, diag_size, upper):
+        diagonal = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, diag_size)).astype(np.float32))
+        non_diagonal = None
+
+        triangular_matrix = RF.triangular_matrix(diagonal, non_diagonal, upper)
+        triangular_matrix.forward()
+
+        for b in range(batch_size):
+            for row in range(diag_size):
+                for col in range(diag_size):
+                    value = triangular_matrix.d[b, row, col]
+                    if row == col:
+                        assert value == diagonal.d[b, row]
+                    else:
+                        assert value == 0
+
 
 if __name__ == "__main__":
     pytest.main()

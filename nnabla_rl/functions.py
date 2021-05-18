@@ -314,3 +314,74 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
         var = alpha * var + (1 - alpha) * new_var.reshape((batch_size, gaussian_dimension))
 
     return mean, top
+
+
+def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable] = None, upper=False) -> nn.Variable:
+    '''
+    Compute triangular_matrix from given diagonal and non_diagonal elements
+    If non_diagonal is None, will create a diagonal matrix.
+
+    Example:
+        >>> import numpy as np
+        >>> import nnabla as nn
+        >>> import nnabla.functions as NF
+        >>> import nnabla_rl.functions as RF
+        >>> diag_size = 3
+        >>> batch_size = 2
+        >>> non_diag_size = diag_size * (diag_size - 1) // 2
+        >>> diagonal = nn.Variable.from_numpy_array(np.ones(6).astype(np.float32).reshape((batch_size, diag_size)))
+        >>> non_diagonal = nn.Variable.from_numpy_array(np.arange(batch_size*non_diag_size).astype(np.float32)\
+.reshape((batch_size, non_diag_size)))
+        >>> diagonal.d
+        array([[1., 1., 1.],
+               [1., 1., 1.]], dtype=float32)
+        >>> non_diagonal.d
+        array([[0., 1., 2.],
+               [3., 4., 5.]], dtype=float32)
+        >>> lower_triangular_matrix = RF.triangular_matrix(diagonal, non_diagonal)
+        >>> lower_triangular_matrix.forward()
+        >>> lower_triangular_matrix.d
+        array([[[1., 0., 0.],
+                [0., 1., 0.],
+                [1., 2., 1.]],
+               [[1., 0., 0.],
+                [3., 1., 0.],
+                [4., 5., 1.]]], dtype=float32)
+
+    Args:
+        diagonal (nn.Variable): diagonal elements of lower triangular matrix.
+            It's shape must be (batch_size, diagonal_size).
+        non_diagonal (nn.Variable or None): non-diagonal part of lower triangular elements.
+            It's shape must be (batch_size, diagonal_size * (diagonal_size - 1) // 2).
+        upper (bool): If true will create an upper triangular matrix. Otherwise will create a lower triangular matrix.
+
+    Returns:
+        nn.Variable: lower triangular matrix constructed from given variables.
+
+    '''
+    def _flat_tri_indices(batch_size, matrix_dim, upper):
+        matrix_size = matrix_dim * matrix_dim
+
+        tri_indices = np.triu_indices(n=matrix_dim, k=1) if upper else np.tril_indices(n=matrix_dim, k=-1)
+        ravel_tril_indices = np.ravel_multi_index(tri_indices, dims=(matrix_dim, matrix_dim)).reshape((1, -1))
+        scatter_indices = np.concatenate([ravel_tril_indices + b * matrix_size for b in range(batch_size)], axis=1)
+
+        return nn.Variable.from_numpy_array(scatter_indices)
+
+    (batch_size, diagonal_size) = diagonal.shape
+    diagonal_part = NF.matrix_diag(diagonal)
+
+    if non_diagonal is None:
+        return diagonal_part
+    else:
+        non_diagonal_size = diagonal_size * (diagonal_size - 1) // 2
+        assert non_diagonal.shape == (batch_size, non_diagonal_size)
+
+        scatter_indices = _flat_tri_indices(batch_size, matrix_dim=diagonal_size, upper=upper)
+
+        matrix_size = diagonal_size * diagonal_size
+        non_diagonal_part = NF.reshape(non_diagonal, shape=(batch_size * non_diagonal_size, ))
+        non_diagonal_part = NF.scatter_nd(non_diagonal_part, scatter_indices, shape=(batch_size * matrix_size, ))
+        non_diagonal_part = NF.reshape(non_diagonal_part, shape=(batch_size, diagonal_size, diagonal_size))
+
+        return diagonal_part + non_diagonal_part
