@@ -13,19 +13,12 @@ Installing NNablaRL is easy!
 $ pip install nnabla_rl
 ```
 
-If you would like to install NNablaRL for development purpose do
-
-```sh
-$ cd <nnabla_rl root dir>
-$ pip install -e .
-```
-
 NNablaRL only supports Python version >= 3.6 and [NNabla](https://github.com/sony/nnabla) version >= 1.17.
 
 ### Enabling GPU accelaration (Optional)
 
 NNablaRL algorithms run on CPU by default. To run the algorithm on GPU, first install [nnabla-ext-cuda](https://github.com/sony/nnabla-ext-cuda) as follows.
-(Replace [cuda-version] depending on the cuda version installed to your machine.)
+(Replace [cuda-version] depending on the cuda version installed on your machine.)
 
 ```
 $ pip install nnabla-ext-cuda[cuda-version]
@@ -104,20 +97,11 @@ You can run it directly on [Colab](https://colab.research.google.com/) from the 
 
 ## Documentation
 
-Full documentation is under the docs/.
-To build the documentation, you will need [Sphinx](http://www.sphinx-doc.org) and some additional python packages.
-
-```
-cd docs/
-pip install -r requirements.txt
-```
-
-You can then build the documentation by running ``make <format>`` from the
-``docs/`` folder. Run ``make`` to get a list of all available output formats.
+Full documentation is [here](https://nnabla-rl.readthedocs.io/).
 
 ## Contribution guide
 
-TBD.
+Any kind of contribution to NNablaRL is welcome! See the [contribution guide](./CONTRIBUTING.md) for details.
 
 ## License
 

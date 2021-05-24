@@ -21,7 +21,7 @@ jobs:
           pip install -r requirements.txt
       - name: check python code format with autopep8
         run: |
-          autopep8 -r --diff --max-line-length=120 .
+          autopep8 --diff .
   typing:
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -38,7 +38,7 @@ jobs:
           pip install -r requirements.txt
       - name: Typing check with mypy
         run: |
-          mypy nnabla_rl
+          mypy
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -55,7 +55,7 @@ jobs:
           pip install -r requirements.txt
       - name: Lint with pyflakes
         run: |
-          flake8 . --max-line-length=120
+          flake8
   isort:
     runs-on: ubuntu-latest
     timeout-minutes: 3
