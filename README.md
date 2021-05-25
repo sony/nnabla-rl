@@ -10,7 +10,7 @@ that is intended to be used for research, development and production.
 Installing NNablaRL is easy!
 
 ```sh
-$ pip install nnabla_rl
+$ pip install nnabla-rl
 ```
 
 NNablaRL only supports Python version >= 3.6 and [NNabla](https://github.com/sony/nnabla) version >= 1.17.
@@ -18,10 +18,15 @@ NNablaRL only supports Python version >= 3.6 and [NNabla](https://github.com/son
 ### Enabling GPU accelaration (Optional)
 
 NNablaRL algorithms run on CPU by default. To run the algorithm on GPU, first install [nnabla-ext-cuda](https://github.com/sony/nnabla-ext-cuda) as follows.
-(Replace [cuda-version] depending on the cuda version installed on your machine.)
+(Replace [cuda-version] depending on the CUDA version installed on your machine.)
 
-```
+```sh
 $ pip install nnabla-ext-cuda[cuda-version]
+```
+
+```sh
+# Example installation. Supposing CUDA 11.0 is installed on your machine.
+$ pip install nnabla-ext-cuda110
 ```
 
 After installing nnabla-ext-cuda, set the gpu id to run the algorithm on through algorithm's configuration.
@@ -50,11 +55,11 @@ dqn = A.DQN(env)  # 2
 dqn.train(env)  # 3
 ```
 
-To get more details about NNablaRL, see documentation and [examples](./examples).
+To get more details about NNablaRL, see [documentation](https://nnabla-rl.readthedocs.io/) and [examples](./examples).
 
 ### Many builtin algorithms
 
-Most of famous/SoTA deep reinforcement learning algorithms, such as DQN, SAC, BCQ, GAIL, etc., is implemented in NNablaRL. Implemented algorithms are carefully tested and evaluated. You can easily start training your agent using these verified implementations.  
+Most of famous/SOTA deep reinforcement learning algorithms, such as DQN, SAC, BCQ, GAIL, etc., are implemented in NNablaRL. Implemented algorithms are carefully tested and evaluated. You can easily start training your agent using these verified implementations.  
 
 For the list of implemented algorithms see [here](./nnabla_rl/algorithms/README.md).
 
