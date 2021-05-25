@@ -1,8 +1,8 @@
 # PPO (Proximal Policy Optimization) reproduction
 
-We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/abs/1707.06347).  
+This reproduction script trains the PPO (Proximal Policy Optimization) algorithm proposed by J. Schulman et al. in the paper: [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347).
 
-Following Atari games were tested with 3 seeds:
+We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/abs/1707.06347) with 3 different initial random seeds:
 
 - Asterix
 - BreakOut

@@ -1,8 +1,8 @@
 # ICML2018SAC (Soft Actor Critic with reward scaling) reproduction
 
-We tested our implementation with 4 MuJoCo environments as in the [original paper](https://arxiv.org/pdf/1801.01290.pdf).
+This reproduction script trains the SAC (Soft Actor Critic) algorithm proposed by T. Haarnoja et al. in the paper: [Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor](https://arxiv.org/abs/1801.01290).
 
-We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
+We tested our implementation with 4 MuJoCo environments as in the [original paper](https://arxiv.org/pdf/1801.01290.pdf) using 3 different initial random seeds:
 
 - Ant-v2
 - HalfCheetah-v2

@@ -1,8 +1,8 @@
 # SAC (Soft Actor Critic) reproduction
 
-We tested our implementation with the following MuJoCo environments using 3 different initial random seeds:
+This reproduction script trains the SAC (Soft Actor Critic) algorithm proposed by T. Haarnoja et al. in the paper: [Soft Actor-Critic Algorithms and Applications](https://arxiv.org/abs/1812.05905).
 
-This Soft Actor Critic algorithm's implementation adjusts the temperature parameter automatically.
+We tested our implementation with the following MuJoCo environments using 3 different initial random seeds:
 
 - Ant-v2
 - HalfCheetah-v2

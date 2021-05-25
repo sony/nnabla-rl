@@ -1,5 +1,7 @@
 # BCQ (Batch Constrained Q-learning) reproduction
 
+This reproduction script trains the BCQ (Batch Constrained Q-learning) algorithm proposed by S. Fujomoto, et al. in the paper: [Off-Policy Deep Reinforcement Learning without Exploration](https://arxiv.org/abs/1812.02900).
+
 ## Prerequisites
 
 Install [d4rl](https://github.com/rail-berkeley/d4rl) before starting the training. (And also you'll need the mujoco software license to use mujoco)

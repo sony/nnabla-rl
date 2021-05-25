@@ -1,5 +1,7 @@
 # TRPO (Trust Region Policy Optimization) with monte carlo estimate of values (single path procedure) reproduction
 
+This reproduction script trains the TRPO (Trust Region Policy Optimization) algorithm proposed by J. Schulman et al. in the paper: [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477).
+
 We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
 
 - HalfCheetah-v2

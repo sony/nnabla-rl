@@ -1,8 +1,9 @@
 # A2C (Advantage Actor-Critic) reproduction
 
-We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/abs/1602.01783).
+This reproduction script trains the A2C (Advantage Actor-Critic) algorithm.
+A2C is a synchronous version of A3C (Asynchronous Advantage Actor-Critic) proposed by V. Mnih, et al. in the paper: [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783).
 
-Following Atari games was tested with 3 seeds:
+We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/abs/1602.01783) using 3 different initial random seeds:
 
 - Asterix
 - BreakOut
@@ -17,7 +18,7 @@ We evaluated the algorithm in following settings.
 * In every 1M frames (250K steps), the mean reward is evaluated using the Q-Network parameter at that timestep. 
 * The evaluation step lasts for 500K frames (125K steps) but the last episode that exceeeds 125K timesteps is not used for evaluation.
 
-All seeds results are combined and the mean of the score is calculated from them.
+Mean evaluation score is the mean score among 3 seeds at each iteration.
 
 ## Result
 

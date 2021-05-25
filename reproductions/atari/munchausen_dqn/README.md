@@ -1,8 +1,8 @@
-# M-DQN (Munchausen Deep Q-Learning Network) reproduction
+# M-DQN (Munchausen Deep Q-learning Network) reproduction
 
-We tested our implementation with Atari games also used in the [original paper](https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf)
+This reproduction script trains the M-DQN (Munchausen Deep Q-learning Network) algorithm proposed by N. Vieillard et al. in the paper: [Munchausen Reinforcement Learning](https://arxiv.org/pdf/1806.06923.pdf).
 
-Following Atari games was tested with 3 seeds:
+We tested our implementation with 5 Atari games also used in the [original paper](https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf) with 3 different initial random seeds:
 
 - Asterix
 - BreakOut
@@ -18,7 +18,7 @@ We evaluated the algorithm as follows.
  * The evaluation step lasts for 500K frames (125K steps) but the last episode that exceeeds 125K timesteps is not used for evaluation.
  * epsilon is set to 0.001 (not greedy).
 
-All seeds results are combined and the mean of the score is calculated from them.
+Mean evaluation score is the mean score among 3 seeds at each iteration.
 
 ## Result
 

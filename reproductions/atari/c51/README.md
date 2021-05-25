@@ -1,8 +1,8 @@
 # C51 (Categorical DQN with 51 atoms) reproduction
 
-We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/pdf/1707.06887.pdf).
+This reproduction script trains the C51 (Categorical DQN with 51 atoms) algorithm proposed by M. G. Bellemare, et al. in the paper: [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887).
 
-Following Atari games was tested with 3 seeds:
+We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/pdf/1707.06887.pdf) using 3 differnt initial random seeds:
 
 - Asterix
 - Breakout
@@ -18,7 +18,7 @@ We evaluated the algorithm in following settings.
 * The evaluation step lasts for 500K frames (125K steps) but the last episode that exceeeds 125K timesteps is not used for evaluation.
 * epsilon is set to 0.001 (not greedy).
 
-All seeds results are combined and the mean of the score is calculated from them.
+Mean evaluation score is the mean score among 3 seeds at each iteration.
 
 ## Result
 

@@ -1,8 +1,9 @@
 # IQN (Implicit Quantile Networks) reproduction
 
-We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/pdf/1806.06923.pdf).  
+This reproduction script trains the IQN (Implicit Quantile Networks) algorithm proposed by W. Dabney et al. in the paper: [Implicit Quantile Networks for Distributional Reinforcement Learning](https://arxiv.org/pdf/1806.06923.pdf).
 
-Following Atari games was tested with 3 seeds:
+We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/pdf/1806.06923.pdf)
+with 3 different initial random seeds:
 
 - Asterix
 - BreakOut
@@ -14,11 +15,11 @@ Following Atari games was tested with 3 seeds:
 
 We evaluated the algorithm in following settings.
 
-* In every 1M frames (250K steps), the mean reward is evaluated using the Q-Network parameter at that timestep. 
+* In every 1M frames (250K steps), the mean reward is evaluated using the Q-Network parameter at that timestep.
 * The evaluation step lasts for 500K frames (125K steps) but the last episode that exceeeds 125K timesteps is not used for evaluation.
 * epsilon is set to 0.001 (not greedy).
 
-All seeds results are combined and the mean of the score is calculated from them.
+Mean evaluation score is the mean score among 3 seeds at each iteration.
 
 ## Result
 

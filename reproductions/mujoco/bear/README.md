@@ -1,5 +1,7 @@
 # BEAR (Bootstrapping Error Accumulation Reduction) reproduction
 
+This reproduction script trains the BEAR (Bootstrapping Error Accumulation Reduction) algorithm proposed by A. Kumar, et al. in the paper: [Stabilizing Off-Policy Q-Learning via Bootstrapping Error Reduction](https://arxiv.org/abs/1906.00949).
+
 ## Prerequisites
 
 Install [d4rl](https://github.com/rail-berkeley/d4rl) before starting the training. (And also you'll need the mujoco software license to use mujoco)
