@@ -1,5 +1,7 @@
 # GAIL (Generative Adversarial Imitation Learning) reproduction
 
+This reproduction script trains the GAIL (Generative Adversarial Imitation Learning) algorithm proposed by J. Ho, et al. in the paper: [Generative Adversarial Imitation Learning](https://arxiv.org/abs/1606.03476).
+
 ## Prerequisites
 
 Install [d4rl](https://github.com/rail-berkeley/d4rl) before starting the training. (And also you'll need the mujoco software license to use mujoco)

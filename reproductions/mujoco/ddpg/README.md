@@ -1,13 +1,17 @@
 # DDPG (Deep Deterministic Policy Gradient) reproduction
 
-We tested our implementation with 4 MuJoCo environments.
-Our implementation of DDPG is same as the "OurDDPG" which was presented in [TD3 paper](https://arxiv.org/pdf/1802.09477.pdf) and is a bit different from original [DDPG paper](https://arxiv.org/pdf/1509.02971.pdf).
+This reproduction script trains the DDPG (Deep Deteministic Policy Gradient) algorithm proposed by T. P. Lillicrap, et al. in the paper: [Continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971).
 
-We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
+We tested our implementation with 4(+4) MuJoCo environments using 3 different initial random seeds.
+NNablaRL's implementation of DDPG is same as the "OurDDPG" which was presented in [TD3 paper](https://arxiv.org/pdf/1802.09477.pdf) and is slightly different from original [DDPG paper](https://arxiv.org/pdf/1509.02971.pdf).
 
 - Ant-v2
 - HalfCheetah-v2
 - Hopper-v2
+- InvertedDoublePendulum-v2
+- InvertedPendulum-v2
+- Reacher-v2
+- Swimmer-v2
 - Walker2d-v2
 
 ## Result

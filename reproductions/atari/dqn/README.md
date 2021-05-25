@@ -1,8 +1,8 @@
-# DQN (Deep Q-Learning Network) reproduction
+# DQN (Deep Q-learning Network) reproduction
 
-We tested our implementation with 49 Atari games also used in the [original paper](https://www.nature.com/articles/nature14236).  
+This reproduction script trains the DQN (Deep Q-learning Network) algorithm proposed by V. Mnih, et al. in the paper: [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236).
 
-All 49 Atari games presented in the paper was tested with 3 seeds:
+We tested our implementation with 49 Atari games also used in the [original paper](https://www.nature.com/articles/nature14236) using 3 different initial random seeds:
 
 ## Evaluation procedure
 

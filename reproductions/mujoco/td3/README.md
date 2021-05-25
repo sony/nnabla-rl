@@ -1,8 +1,8 @@
 # TD3 (Twin Delayed Deep Deterministic policy gradient) reproduction
 
-We tested our implementation with 7(+1) MuJoCo environments also used in the [original paper](https://arxiv.org/pdf/1802.09477.pdf).
+This reproduction script trains the TD3 (Twin Delayed Deep Deterministic policy gradient) algorithm proposed by S. Fujimoto et al. in the paper: [Addressing Function Approximation Error in Actor-Critic Methods](https://arxiv.org/abs/1802.09477).
 
-We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
+We tested our implementation with 7(+1) MuJoCo environments also used in the original paper using 3 different initial random seeds:
 
 - Ant-v2
 - HalfCheetah-v2

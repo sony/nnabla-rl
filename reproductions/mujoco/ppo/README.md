@@ -1,5 +1,7 @@
 # PPO (Proximal Policy Optimization) reproduction
 
+This reproduction script trains the PPO (Proximal Policy Optimization) algorithm proposed by J. Schulman et al. in the paper: [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347).
+
 We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
 
 - Ant-v2

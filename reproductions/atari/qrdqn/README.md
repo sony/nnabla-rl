@@ -1,8 +1,8 @@
 # QR-DQN (Distributional Reinforcement Learning with Quantile Regression) reproduction
 
-We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/abs/1710.10044).  
+This reproduction script trains the PPO (Proximal Policy Optimization) algorithm proposed by W. Dabney et al. in the paper: [Distributional Reinforcement Learning with Quantile Regression](https://arxiv.org/abs/1710.10044).
 
-Following Atari games was tested with 3 seeds:
+We tested our implementation with 5 Atari games also used in the [original paper](https://arxiv.org/abs/1710.10044) with 3 different initial random seeds:
 
 - Asterix
 - BreakOut
@@ -18,7 +18,7 @@ We evaluated the algorithm in following settings.
 * The evaluation step lasts for 500K frames (125K steps) but the last episode that exceeeds 125K timesteps is not used for evaluation.
 * epsilon is set to 0.001 (not greedy).
 
-All seeds results are combined and the mean of the score is calculated from them.
+Below score is the mean score among 3 seeds.
 
 ## Result
 

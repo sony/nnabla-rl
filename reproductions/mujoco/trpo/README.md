@@ -1,5 +1,7 @@
 # TRPO (Trust Region Policy Optimization) with GAE (Generalized Advantage Estimation) reproduction
 
+This reproduction script trains the TRPO (Trust Region Policy Optimization) with GAE (Generalized Advantage Estimation) algorithm proposed by J. Schulman et al. in the paper: [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477) and [High-Dimensional Continuous Control Using Generalized Advantage Estimation](https://arxiv.org/abs/1506.02438).
+
 We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
 
 - Ant-v2
