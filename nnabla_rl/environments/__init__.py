@@ -13,4 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.environments.dummy import DummyAtariEnv, DummyContinuous, DummyDiscrete, DummyDiscreteImg  # noqa
+from gym.envs.registration import register
+
+from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyDiscrete,  # noqa
+                                          DummyDiscreteImg, DummyMujocoEnv)
+
+register(
+    id='FakeMujocoNNablaRL-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyMujocoEnv',
+    max_episode_steps=10
+)
+
+register(
+    id='FakeAtariNNablaRLNoFrameskip-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyAtariEnv',
+    max_episode_steps=10
+)

@@ -33,9 +33,9 @@ def run_training(args):
     writer = FileWriter(outdir, "evaluation_result")
     eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render)
     evaluator = EpisodicEvaluator()
-    evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=int(1e5), writer=writer)
+    evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=args.eval_timing, writer=writer)
 
-    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=int(1e5))
+    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
     iteration_num_hook = H.IterationNumHook(timing=int(1e5))
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
@@ -45,7 +45,7 @@ def run_training(args):
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     trpo.set_hooks(hooks)
 
-    trpo.train_online(train_env, total_iterations=int(500*1e5))
+    trpo.train_online(train_env, total_iterations=args.total_iterations)
 
     eval_env.close()
     train_env.close()
@@ -55,12 +55,12 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
     config = A.ICML2015TRPOConfig(gpu_id=args.gpu)
-    trpo = serializers.load_snapshot(args.snapshot_dir, config=config)
+    trpo = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
     if not isinstance(trpo, A.ICML2015TRPO):
         raise ValueError('Loaded snapshot is not trained with ICML2015TRPO')
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=True)
-    evaluator = EpisodicEvaluator()
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
+    evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(trpo, eval_env)
 
 
@@ -74,6 +74,10 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--total_iterations', type=int, default=50000000)
+    parser.add_argument('--save_timing', type=int, default=100000)
+    parser.add_argument('--eval_timing', type=int, default=100000)
+    parser.add_argument('--showcase_runs', type=int, default=10)
 
     args = parser.parse_args()
 

@@ -100,3 +100,19 @@ class DummyAtariEnv(AbstractDummyEnv):
 
     def get_action_meanings(self):
         return ['NOOP', 'FIRE', 'LEFT', 'RIGHT']
+
+
+class DummyMujocoEnv(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyMujocoEnv, self).__init__(max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))
+
+    def get_dataset(self):
+        dataset = {}
+        datasize = 100
+        dataset['observations'] = np.stack([self.observation_space.sample() for _ in range(datasize)], axis=0)
+        dataset['actions'] = np.stack([self.action_space.sample() for _ in range(datasize)], axis=0)
+        dataset['rewards'] = np.random.randn(datasize, 1)
+        dataset['terminals'] = np.zeros((datasize, 1))
+        return dataset

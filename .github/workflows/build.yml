@@ -107,6 +107,26 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
+  test_reproductions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.6
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.6
+      - name: Install nnabla-rl
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Atari reproductions test
+        run: |
+          ./bin/test_reproductions --gpu_id -1 --base_env atari --env FakeAtariNNablaRLNoFrameskip-v1
+      - name: Mujoco reproductions test
+        run: |
+          ./bin/test_reproductions --gpu_id -1 --base_env mujoco --env FakeMujocoNNablaRL-v1
   copyright:
     runs-on: ubuntu-latest
     timeout-minutes: 3
