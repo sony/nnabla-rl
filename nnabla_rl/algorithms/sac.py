@@ -326,7 +326,7 @@ class SAC(Algorithm):
             return np.squeeze(self._eval_probabilistic_action.d, axis=0), {}
 
     def _models(self):
-        models = [self._q1, self._q2, self._pi]
+        models = [self._q1, self._q2, self._pi, self._temperature]
         return {model.scope_name: model for model in models}
 
     def _solvers(self):

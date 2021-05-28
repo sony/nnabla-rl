@@ -37,11 +37,11 @@ def run_training(args):
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
-                                       timing=5000,
+                                       timing=args.eval_timing,
                                        writer=W.FileWriter(outdir=outdir,
                                                            file_prefix='evaluation_result'))
 
-    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=5000)
+    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
     iteration_num_hook = H.IterationNumHook(timing=100)
 
     train_env = gym.make(args.env)
@@ -57,7 +57,7 @@ def run_training(args):
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     bcq.set_hooks(hooks)
 
-    bcq.train_offline(buffer, total_iterations=1000000)
+    bcq.train_offline(buffer, total_iterations=args.total_iterations)
 
     eval_env.close()
     train_env.close()
@@ -68,13 +68,12 @@ def run_showcase(args):
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
     config = A.BCQConfig(gpu_id=args.gpu)
-    bcq = serializers.load_snapshot(args.snapshot_dir, config=config)
+    bcq = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
     if not isinstance(bcq, A.BCQ):
         raise ValueError('Loaded snapshot is not trained with BCQ!')
 
-    eval_env = build_mujoco_env(
-        args.env, test=True, seed=args.seed + 200, render=True)
-    evaluator = EpisodicEvaluator()
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
+    evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(bcq, eval_env)
 
 
@@ -87,6 +86,10 @@ def main():
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
     parser.add_argument('--save-dir', type=str, default=None)
+    parser.add_argument('--total_iterations', type=int, default=1000000)
+    parser.add_argument('--save_timing', type=int, default=5000)
+    parser.add_argument('--eval_timing', type=int, default=5000)
+    parser.add_argument('--showcase_runs', type=int, default=10)
 
     args = parser.parse_args()
 

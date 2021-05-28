@@ -40,16 +40,15 @@ def run_training(args):
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     writer = FileWriter(outdir, "evaluation_result")
     evaluator = TimestepEvaluator(num_timesteps=125000)
-    evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=250000, writer=writer)
-    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=250000)
+    evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=args.eval_timing, writer=writer)
+    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
 
     actor_num = 16
-    total_timesteps = 50000000
     config = A.A2CConfig(gpu_id=args.gpu, actor_num=actor_num)
     a2c = A.A2C(train_env, config=config)
     a2c.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
 
-    a2c.train(train_env, total_iterations=total_timesteps)
+    a2c.train(train_env, total_iterations=args.total_iterations)
 
     eval_env.close()
     train_env.close()
@@ -59,12 +58,12 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
     config = A.A2CConfig(gpu_id=args.gpu)
-    a2c = serializers.load_snapshot(args.snapshot_dir, config=config)
+    a2c = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
     if not isinstance(a2c, A.A2C):
         raise ValueError('Loaded snapshot is not trained with A2C!')
 
     eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=False)
-    evaluator = EpisodicEvaluator(run_per_evaluation=30)
+    evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     returns = evaluator(a2c, eval_env)
     mean = np.mean(returns)
     std_dev = np.std(returns)
@@ -81,6 +80,10 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--total_iterations', type=int, default=50000000)
+    parser.add_argument('--save_timing', type=int, default=250000)
+    parser.add_argument('--eval_timing', type=int, default=250000)
+    parser.add_argument('--showcase_runs', type=int, default=10)
 
     args = parser.parse_args()
 

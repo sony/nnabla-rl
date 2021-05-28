@@ -233,7 +233,7 @@ class GAIL(Algorithm):
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  expert_buffer: ReplayBuffer,
-                 config=GAILConfig(),
+                 config: GAILConfig = GAILConfig(),
                  v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultVFunctionSolverBuilder(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),

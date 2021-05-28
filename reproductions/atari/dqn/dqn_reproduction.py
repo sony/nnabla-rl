@@ -43,10 +43,10 @@ def run_training(args):
     writer = FileWriter(outdir, "evaluation_result")
     eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render)
     evaluator = TimestepEvaluator(num_timesteps=125000)
-    evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=250000, writer=writer)
+    evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=args.eval_timing, writer=writer)
 
     iteration_num_hook = H.IterationNumHook(timing=100)
-    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=250000)
+    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
 
     train_env = build_atari_env(args.env, seed=args.seed)
 
@@ -56,7 +56,7 @@ def run_training(args):
                 replay_buffer_builder=MemoryEfficientBufferBuilder())
     dqn.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
 
-    dqn.train(train_env, total_iterations=50000000)
+    dqn.train(train_env, total_iterations=args.total_iterations)
 
     eval_env.close()
     train_env.close()
@@ -67,12 +67,12 @@ def run_showcase(args):
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
     config = A.DQNConfig(gpu_id=args.gpu)
-    dqn = serializers.load_snapshot(args.snapshot_dir, config=config)
+    dqn = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
     if not isinstance(dqn, A.DQN):
         raise ValueError('Loaded snapshot is not trained with DQN!')
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=False)
-    evaluator = EpisodicEvaluator(run_per_evaluation=30)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
+    evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     returns = evaluator(dqn, eval_env)
     mean = np.mean(returns)
     std_dev = np.std(returns)
@@ -90,6 +90,10 @@ def main():
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
+    parser.add_argument('--total_iterations', type=int, default=50000000)
+    parser.add_argument('--save_timing', type=int, default=250000)
+    parser.add_argument('--eval_timing', type=int, default=250000)
+    parser.add_argument('--showcase_runs', type=int, default=10)
 
     args = parser.parse_args()
 
