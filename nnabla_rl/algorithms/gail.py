@@ -39,7 +39,7 @@ from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.utils.data import marshal_experiences
 
 
 @dataclass
@@ -437,7 +437,7 @@ class GAIL(Algorithm):
         buffer_iterator.reset()
         for experiences, _ in buffer_iterator:
             # length of experiences is 1
-            s_seq, a_seq, _, _, s_next_seq, *_ = marshall_experiences(experiences[0])
+            s_seq, a_seq, _, _, s_next_seq, *_ = marshal_experiences(experiences[0])
             s_batch.append(s_seq)
             a_batch.append(a_seq)
             s_next_batch.append(s_next_seq)
@@ -455,7 +455,7 @@ class GAIL(Algorithm):
     def _align_discriminator_experiences(self, buffer_iterator):
         # sample expert data
         expert_experience, _ = self._expert_buffer.sample(self._config.discriminator_batch_size)
-        s_expert_batch, a_expert_batch, _, _, s_next_expert_batch, *_ = marshall_experiences(expert_experience)
+        s_expert_batch, a_expert_batch, _, _, s_next_expert_batch, *_ = marshal_experiences(expert_experience)
         # sample agent data
         s_batch, a_batch, s_next_batch = self._align_state_and_action(
             buffer_iterator, batch_size=self._config.discriminator_batch_size)

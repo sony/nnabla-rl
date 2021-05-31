@@ -31,7 +31,7 @@ from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, 
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.utils.data import marshal_experiences
 
 
 @dataclass
@@ -210,7 +210,7 @@ class ICML2015TRPO(Algorithm):
         buffer_iterator.reset()
         for experiences in buffer_iterator:
             experience, *_ = experiences
-            s_seq, a_seq, r_seq, *_ = marshall_experiences(experience[0])
+            s_seq, a_seq, r_seq, *_ = marshal_experiences(experience[0])
             accumulated_reward = self._compute_accumulated_reward(r_seq.flatten(), self._config.gamma)
             s_batch.append(s_seq)
             a_batch.append(a_seq)

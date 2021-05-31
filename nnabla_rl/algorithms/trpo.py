@@ -36,7 +36,7 @@ from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.utils.data import marshal_experiences
 
 
 @dataclass
@@ -321,7 +321,7 @@ class TRPO(Algorithm):
         buffer_iterator.reset()
         for experiences, _ in buffer_iterator:
             # length of experiences is 1
-            s_seq, a_seq, *_ = marshall_experiences(experiences[0])
+            s_seq, a_seq, *_ = marshal_experiences(experiences[0])
             s_batch.append(s_seq)
             a_batch.append(a_seq)
 

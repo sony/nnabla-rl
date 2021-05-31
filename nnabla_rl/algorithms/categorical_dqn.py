@@ -33,7 +33,7 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import C51ValueDistributionFunction, ValueDistributionFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.utils.data import marshal_experiences
 from nnabla_rl.utils.misc import sync_model
 
 
@@ -229,7 +229,7 @@ class CategoricalDQN(Algorithm):
 
     def _categorical_dqn_training(self, replay_buffer):
         experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
+        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
         batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,

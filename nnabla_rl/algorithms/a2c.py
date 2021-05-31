@@ -31,7 +31,7 @@ from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import A3CPolicy, A3CSharedFunctionHead, A3CVFunction, StochasticPolicy, VFunction
-from nnabla_rl.utils.data import marshall_experiences, unzip
+from nnabla_rl.utils.data import marshal_experiences, unzip
 from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
                                           mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
@@ -476,7 +476,7 @@ class _A2CActor(object):
         return processed_experiences
 
     def _process_experiences(self, experiences, s_last):
-        (s, a, r, non_terminal) = marshall_experiences(experiences)
+        (s, a, r, non_terminal) = marshal_experiences(experiences)
         v_last = self._compute_v(s_last)
         returns = self._compute_returns(r, non_terminal, v_last)
         return (s, a, returns)

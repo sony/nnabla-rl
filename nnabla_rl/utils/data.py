@@ -27,7 +27,7 @@ def add_axis_if_single_dim(data):
         return data
 
 
-def marshall_experiences(experiences):
+def marshal_experiences(experiences):
     unzipped_experiences = unzip(experiences)
     return tuple(add_axis_if_single_dim(np.asarray(data)) for data in unzipped_experiences)
 
