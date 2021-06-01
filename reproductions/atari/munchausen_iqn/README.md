@@ -2,6 +2,48 @@
 
 This reproduction script trains the M-IQN (Munchausen Implicit Quantile Networks) algorithm proposed by N. Vieillard et al. in the paper: [Munchausen Reinforcement Learning](https://arxiv.org/pdf/1806.06923.pdf).
 
+## How to run the reproduction script
+
+To run the reproduction script do
+
+```sh
+$ python munchausen_iqn_reproduction.py <options>
+```
+
+If you omit options, the script will run on BreakoutNoFrameskip-v4 environment with gpu id 0.
+
+You can change the training environment and gpu as follows
+
+```sh
+$ python munchausen_iqn_reproduction.py --env <env_name> --gpu <gpu_id>
+```
+
+```sh
+# Example1: run the script on cpu and train the agent with Pong:
+$ python munchausen_iqn_reproduction.py --env PongNoFrameskip-v4 --gpu -1
+# Example2: run the script on gpu 1 and train the agent with SpaceInvaders:
+$ python munchausen_iqn_reproduction.py --env SpaceInvadersNoFrameskip-v4 --gpu 1
+```
+
+To check all available options type:
+
+```sh
+$ python munchausen_iqn_reproduction.py --help
+```
+
+To check the trained result do
+
+```sh
+$ python munchausen_iqn_reproduction.py --showcase --snapshot-dir <snapshot_dir> --render
+```
+
+```sh
+# Example:
+$ python munchausen_iqn_reproduction.py --showcase --snapshot-dir ./BreakoutNoFrameskip-v4/seed-1/iteration-250000/ --render
+```
+
+## Atari Evaluation
+
 We tested our implementation with 5 Atari games also used in the [original paper](https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf) with 3 different initial random seeds:
 
 - Asterix
@@ -9,8 +51,6 @@ We tested our implementation with 5 Atari games also used in the [original paper
 - Pong
 - Qbert
 - Seaquest
-
-## Atari Evaluation
 
 We evaluated the algorithm as follows.
 

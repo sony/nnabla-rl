@@ -2,9 +2,49 @@
 
 This reproduction script trains the DQN (Deep Q-learning Network) algorithm proposed by V. Mnih, et al. in the paper: [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236).
 
-We tested our implementation with 49 Atari games also used in the [original paper](https://www.nature.com/articles/nature14236) using 3 different initial random seeds:
+## How to run the reproduction script
+
+To run the reproduction script do
+
+```sh
+$ python dqn_reproduction.py <options>
+```
+
+If you omit options, the script will run on BreakoutNoFrameskip-v4 environment with gpu id 0.
+
+You can change the training environment and gpu as follows
+
+```sh
+$ python dqn_reproduction.py --env <env_name> --gpu <gpu_id>
+```
+
+```sh
+# Example1: run the script on cpu and train the agent with Pong:
+$ python dqn_reproduction.py --env PongNoFrameskip-v4 --gpu -1
+# Example2: run the script on gpu 1 and train the agent with SpaceInvaders:
+$ python dqn_reproduction.py --env SpaceInvadersNoFrameskip-v4 --gpu 1
+```
+
+To check all available options type:
+
+```sh
+$ python dqn_reproduction.py --help
+```
+
+To check the trained result do
+
+```sh
+$ python dqn_reproduction.py --showcase --snapshot-dir <snapshot_dir> --render
+```
+
+```sh
+# Example:
+$ python dqn_reproduction.py --showcase --snapshot-dir ./BreakoutNoFrameskip-v4/seed-1/iteration-250000/ --render
+```
 
 ## Evaluation procedure
+
+We tested our implementation with 49 Atari games also used in the [original paper](https://www.nature.com/articles/nature14236) using 3 different initial random seeds:
 
 We evaluated the algorithm in following settings.
 
