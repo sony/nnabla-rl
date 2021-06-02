@@ -31,7 +31,7 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.utils.data import marshal_experiences
 
 
 @dataclass
@@ -212,7 +212,7 @@ class REINFORCE(Algorithm):
         accumulated_reward_batch = None
 
         for experience in experiences:
-            s_seq, a_seq, r_seq, *_ = marshall_experiences(experience)
+            s_seq, a_seq, r_seq, *_ = marshal_experiences(experience)
             accumulated_reward = np.cumsum(r_seq[::-1])[::-1]
 
             if s_batch is None:

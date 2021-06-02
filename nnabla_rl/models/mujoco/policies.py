@@ -22,6 +22,7 @@ import nnabla.parametric_functions as NPF
 import nnabla_rl.distributions as D
 import nnabla_rl.initializers as RI
 from nnabla.parameter import get_parameter_or_create
+from nnabla_rl.distributions.distribution import Distribution
 from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy
 
 
@@ -87,7 +88,7 @@ class SACPolicy(StochasticPolicy):
         self._min_log_sigma = min_log_sigma
         self._max_log_sigma = max_log_sigma
 
-    def pi(self, s: nn.Variable) -> nn.Variable:
+    def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=256, name="linear1")
             h = NF.relu(x=h)
@@ -120,7 +121,7 @@ class BEARPolicy(StochasticPolicy):
         super(BEARPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
 
-    def pi(self, s: nn.Variable) -> nn.Variable:
+    def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
             linear1_init = RI.HeUniform(
                 inmaps=s.shape[1], outmaps=400, factor=1/3)
@@ -159,7 +160,7 @@ class PPOPolicy(StochasticPolicy):
         super(PPOPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
 
-    def pi(self, s: nn.Variable) -> nn.Variable:
+    def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=64, name="linear1",
                            w_init=RI.NormcInitializer(std=1.0))
@@ -193,7 +194,7 @@ class ICML2015TRPOPolicy(StochasticPolicy):
         super(ICML2015TRPOPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
 
-    def pi(self, s: nn.Variable) -> nn.Variable:
+    def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=30, name="linear1")
             h = NF.tanh(x=h)
@@ -223,7 +224,7 @@ class TRPOPolicy(StochasticPolicy):
         super(TRPOPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
 
-    def pi(self, s: nn.Variable) -> nn.Variable:
+    def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=64, name="linear1",
                            w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
@@ -252,7 +253,7 @@ class GAILPolicy(StochasticPolicy):
         super(GAILPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
 
-    def pi(self, s: nn.Variable) -> D.Distribution:
+    def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=100, name="linear1",
                            w_init=RI.NormcInitializer(std=1.0))

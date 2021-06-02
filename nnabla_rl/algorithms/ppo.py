@@ -40,7 +40,7 @@ from nnabla_rl.models import (Model, PPOAtariPolicy, PPOAtariVFunction, PPOMujoc
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
-from nnabla_rl.utils.data import marshall_experiences, unzip
+from nnabla_rl.utils.data import marshal_experiences, unzip
 from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
                                           mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
@@ -386,7 +386,7 @@ class PPO(Algorithm):
         else:
             alpha = 1.0
 
-        (s, a, _, _, _, log_prob, v_target, advantage) = marshall_experiences(experiences)
+        (s, a, _, _, _, log_prob, v_target, advantage) = marshal_experiences(experiences)
 
         extra = {}
         extra['log_prob'] = log_prob
@@ -626,7 +626,7 @@ class _PPOActor(object):
     def _fill_result(self, experiences, v_targets, advantages):
         def array_and_dtype(mp_arrays_item):
             return mp_arrays_item[0], mp_arrays_item[2]
-        (s, a, r, non_terminal, s_next, log_prob) = marshall_experiences(experiences)
+        (s, a, r, non_terminal, s_next, log_prob) = marshal_experiences(experiences)
         np_to_mp_array(s, *array_and_dtype(self._mp_arrays.state))
         np_to_mp_array(a, *array_and_dtype(self._mp_arrays.action))
         np_to_mp_array(r, *array_and_dtype(self._mp_arrays.reward))

@@ -18,6 +18,7 @@ import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 import nnabla_rl.distributions as D
 import nnabla_rl.initializers as RI
+from nnabla_rl.distributions.distribution import Distribution
 from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead
 from nnabla_rl.models.policy import StochasticPolicy
 
@@ -40,7 +41,7 @@ class PPOPolicy(StochasticPolicy):
         self._action_dim = action_dim
         self._head = head
 
-    def pi(self, s: nn.Variable) -> nn.Variable:
+    def pi(self, s: nn.Variable) -> Distribution:
         h = self._hidden(s)
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("linear_pi"):
@@ -68,7 +69,7 @@ class ICML2015TRPOPolicy(StochasticPolicy):
         super(ICML2015TRPOPolicy, self).__init__(scope_name=scope_name)
         self._action_dim = action_dim
 
-    def pi(self, s: nn.Variable) -> nn.Variable:
+    def pi(self, s: nn.Variable) -> Distribution:
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("conv1"):
@@ -98,7 +99,7 @@ class A3CPolicy(StochasticPolicy):
         self._action_dim = action_dim
         self._head = head
 
-    def pi(self, s):
+    def pi(self, s: nn.Variable) -> Distribution:
         h = self._hidden(s)
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("linear_pi"):

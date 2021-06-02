@@ -32,7 +32,7 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshall_experiences
+from nnabla_rl.utils.data import marshal_experiences
 from nnabla_rl.utils.misc import sync_model
 
 
@@ -290,7 +290,7 @@ class SAC(Algorithm):
 
     def _sac_training(self, replay_buffer):
         experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshall_experiences(experiences)
+        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
         batch = TrainingBatch(batch_size=self._config.batch_size,
                               s_current=s,
                               a_current=a,
@@ -326,7 +326,7 @@ class SAC(Algorithm):
             return np.squeeze(self._eval_probabilistic_action.d, axis=0), {}
 
     def _models(self):
-        models = [self._q1, self._q2, self._pi]
+        models = [self._q1, self._q2, self._pi, self._temperature]
         return {model.scope_name: model for model in models}
 
     def _solvers(self):

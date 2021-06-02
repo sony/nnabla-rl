@@ -1,0 +1,66 @@
+#!/bin/bash
+# Copyright 2021 Sony Group Corporation.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -e
+
+ROOT_DIR=$(echo ${PWD} | sed 's/^\(.*nnabla-rl\).*$/\1/')
+
+# parameters
+SEED=1
+TOTAL_ITERATIONS=1
+SHOWCASE_RUNS=1
+GPU_ID=-1
+BASE_ENV="atari"
+ENV="FakeAtariNNablaRLNoFrameskip-v1"
+
+for opt in "$@"
+do
+    shift
+    case "$opt" in
+        "--gpu_id" )
+            GPU_ID="$1";;
+        "--base_env" )
+            BASE_ENV="$1";;
+        "--env" )
+            ENV="$1";;
+        "-h" )
+            echo ""
+            echo "[Usage] : ./test_reproduction
+                --gpu_id <gpu_id>
+                --base_env <base_env_name>
+                --env <env_name>
+                
+                e.g.  sh bin/test_reproductions.sh --gpu_id 0 --base_env atari --env BreakoutNoFrameskip-v4 
+                "
+            echo ""
+            exit 1;;
+    esac
+done
+
+REPRODUCTIONS_DIRS=$(find ${ROOT_DIR}/reproductions/${BASE_ENV}/* -maxdepth 0 -type d)
+RESULT_BASE_DIR="${ROOT_DIR}/test_reproduction_results"
+
+for dir in $REPRODUCTIONS_DIRS;
+do
+    ALGORITHM=$(basename ${dir})
+    SCRIPT="${dir}/${ALGORITHM}_reproduction.py"
+    echo "Test run of training for ${ALGORITHM}"
+    python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --save-dir "${RESULT_BASE_DIR}/${ALGORITHM}" --seed ${SEED} \
+        --total_iterations ${TOTAL_ITERATIONS} --save_timing ${TOTAL_ITERATIONS}
+    SNAPSHOT_DIR="${RESULT_BASE_DIR}/${ALGORITHM}/${ENV}_results/seed-${SEED}/iteration-${TOTAL_ITERATIONS}"
+    echo "Test run of showcase for ${ALGORITHM}"
+    python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --snapshot-dir ${SNAPSHOT_DIR} --showcase \
+        --showcase_runs ${SHOWCASE_RUNS}
+done

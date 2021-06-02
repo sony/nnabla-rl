@@ -45,11 +45,11 @@ def run_training(args):
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
-                                       timing=5000,
+                                       timing=args.eval_timing,
                                        writer=W.FileWriter(outdir=outdir, file_prefix='evaluation_result'))
 
     iteration_num_hook = H.IterationNumHook(timing=100)
-    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=5000)
+    save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
 
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     config = A.SACConfig(gpu_id=args.gpu, fix_temperature=args.fix_temperature)
@@ -58,7 +58,7 @@ def run_training(args):
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
     sac.set_hooks(hooks)
 
-    total_iterations = select_total_iterations(args.env)
+    total_iterations = select_total_iterations(args.env) if args.total_iterations is None else args.total_iterations
     sac.train_online(train_env, total_iterations=total_iterations)
 
     eval_env.close()
@@ -70,13 +70,12 @@ def run_showcase(args):
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
     config = A.SACConfig(gpu_id=args.gpu)
-    sac = serializers.load_snapshot(args.snapshot_dir, config=config)
+    sac = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
     if not isinstance(sac, A.SAC):
         raise ValueError('Loaded snapshot is not trained with SAC!')
 
-    eval_env = build_mujoco_env(
-        args.env, test=True, seed=args.seed + 200, render=True)
-    evaluator = EpisodicEvaluator()
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
+    evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(sac, eval_env)
 
 
@@ -89,6 +88,10 @@ def main():
     parser.add_argument('--showcase', action='store_true')
     parser.add_argument('--snapshot-dir', type=str, default=None)
     parser.add_argument('--save-dir', type=str, default=None)
+    parser.add_argument('--total_iterations', type=int, default=None)
+    parser.add_argument('--save_timing', type=int, default=5000)
+    parser.add_argument('--eval_timing', type=int, default=5000)
+    parser.add_argument('--showcase_runs', type=int, default=10)
 
     # SAC algorithm config
     parser.add_argument('--fix-temperature', action='store_true')
