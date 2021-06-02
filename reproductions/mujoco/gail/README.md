@@ -13,7 +13,7 @@ $ pip install git+https://github.com/rail-berkeley/d4rl@master#egg=d4rl
 ## To run the training
 
 ```sh
-$ python gail_reproduction.py --env='ant-expert-v2'
+$ python gail_reproduction.py --env 'ant-expert-v2'
 ```
 
 ## Tested datasets
