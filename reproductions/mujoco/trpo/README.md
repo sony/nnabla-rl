@@ -2,6 +2,48 @@
 
 This reproduction script trains the TRPO (Trust Region Policy Optimization) with GAE (Generalized Advantage Estimation) algorithm proposed by J. Schulman et al. in the paper: [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477) and [High-Dimensional Continuous Control Using Generalized Advantage Estimation](https://arxiv.org/abs/1506.02438).
 
+## How to run the reproduction script
+
+To run the reproduction script do
+
+```sh
+$ python trpo_reproduction.py <options>
+```
+
+If you omit options, the script will run on Ant-v2 environment with gpu id 0.
+
+You can change the training environment and gpu as follows
+
+```sh
+$ python trpo_reproduction.py --env <env_name> --gpu <gpu_id>
+```
+
+```sh
+# Example1: run the script on cpu and train the agent with HalfCheetah:
+$ python trpo_reproduction.py --env HalfCheetah-v2 --gpu -1
+# Example2: run the script on gpu 1 and train the agent with Walker2d:
+$ python trpo_reproduction.py --env -Walker2d-v2 --gpu 1
+```
+
+To check all available options type:
+
+```sh
+$ python trpo_reproduction.py --help
+```
+
+To check the trained result do
+
+```sh
+$ python trpo_reproduction.py --showcase --snapshot-dir <snapshot_dir> --render
+```
+
+```sh
+# Example:
+$ python trpo_reproduction.py --showcase --snapshot-dir ./Ant-v2/seed-1/iteration-10000/ --render
+```
+
+## Evaluation
+
 We tested our implementation with following MuJoCo environments using 3 different initial random seeds:
 
 - Ant-v2

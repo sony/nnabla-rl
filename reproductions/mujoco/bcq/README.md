@@ -15,7 +15,7 @@ $ pip install git+https://github.com/rail-berkeley/d4rl@master#egg=d4rl
 Use d4rl env for reproduction (This reproduction code only supports mujoco environment provided in d4rl).
 
 ```sh
-$ python bcq_reproduction.py --env='ant-expert-v0'
+$ python bcq_reproduction.py --env 'ant-expert-v0'
 ```
 
 ## Tested environments
