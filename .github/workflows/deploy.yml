@@ -1,10 +1,12 @@
 name: Deploy nnabla-rl
 
 on:
-  workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
   deploy:
+    if: github.repository == 'sony/nnabla-rl'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
