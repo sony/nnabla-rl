@@ -36,7 +36,9 @@ from nnabla_rl.utils.data import marshal_experiences
 
 @dataclass
 class ICML2015TRPOConfig(AlgorithmConfig):
-    '''ICML2015TRPO config
+    '''
+    List of configurations for ICML2015TRPO algorithm
+
     Args:
         gamma (float): Discount factor of rewards. Defaults to 0.99.
         num_steps_per_iteration (int): Number of steps per each training iteration for collecting on-policy experinces.\
