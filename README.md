@@ -65,12 +65,12 @@ Most of famous/SOTA deep reinforcement learning algorithms, such as DQN, SAC, BC
 For the list of implemented algorithms see [here](./nnabla_rl/algorithms/README.md).
 
 You can also find the reproduction and evaluation results of each algorithm [here](./reproductions).  
-Note that you may not get completely the same results when running the reproduction code on your computer. The result may slightly change depending on your machine, nnabla/nnabla-rl's package version, etc.
+Note that you may not get completely the same results when running the reproduction code on your computer. The result may slightly change depending on your machine, nnabla/nnabla-rl's package version, etc.fjj
 
-### Seemless switching of online and offline training
+### Seamless switching of online and offline training
 
 In reinforcement learning, there are two main training procedures, online and offline, to train the agent.
-Online training is a training procedure that executes both data collection and network update alternately. Conversely, offline training is a training procedure that updates the network using only existing data. With NNablaRL, you can switch these two training procedures seemlessly. For example, as shown below, you can easily train a robot's controller online using simulated environment and finetune it offline with real robot dataset.
+Online training is a training procedure that executes both data collection and network update alternately. Conversely, offline training is a training procedure that updates the network using only existing data. With NNablaRL, you can switch these two training procedures seamlessly. For example, as shown below, you can easily train a robot's controller online using simulated environment and finetune it offline with real robot dataset.
 
 ```py
 import nnabla_rl
