@@ -108,7 +108,7 @@ class NormcInitializer(NI.BaseInitializer):
         axis (int): dimension to normalize. Defaults to 0.
         rng (np.random.RandomState):
             Random number generator to sample numbers from. Defaults to None.
-            When None, NNabla's default random nunmber generator will be used.
+            When None, nnabla's default random nunmber generator will be used.
     Returns:
         NormcInitializer : weight initialzier
     '''

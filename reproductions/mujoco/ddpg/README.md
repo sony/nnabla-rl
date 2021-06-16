@@ -45,7 +45,7 @@ $ python ddpg_reproduction.py --showcase --snapshot-dir ./Ant-v2/seed-1/iteratio
 ## Evaluation
 
 We tested our implementation with 4(+4) MuJoCo environments using 3 different initial random seeds.
-NNablaRL's implementation of DDPG is same as the "OurDDPG" which was presented in [TD3 paper](https://arxiv.org/pdf/1802.09477.pdf) and is slightly different from original [DDPG paper](https://arxiv.org/pdf/1509.02971.pdf).
+nnablaRL's implementation of DDPG is same as the "OurDDPG" which was presented in [TD3 paper](https://arxiv.org/pdf/1802.09477.pdf) and is slightly different from original [DDPG paper](https://arxiv.org/pdf/1509.02971.pdf).
 
 - Ant-v2
 - HalfCheetah-v2

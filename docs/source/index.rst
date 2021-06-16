@@ -1,7 +1,7 @@
-NNabla RL
+nnablaRL
 ======================================
 
-NNablaRL is a deep reinforcement learning library built on top of `Neural Network Libraries <https://github.com/sony/nnabla>`_
+nnablaRL is a deep reinforcement learning library built on top of `Neural Network Libraries <https://github.com/sony/nnabla>`_
 that is intended to be used for research, development and production.
 
 

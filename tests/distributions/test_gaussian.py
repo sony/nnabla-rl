@@ -66,7 +66,7 @@ class TestGaussian(object):
 
         # FIXME: if you enable clear_no_need_grad seems to compute something different
         # Do NOT use forward_all and no_need_grad flag at same time
-        # NNabla's bug?
+        # nnabla's bug?
         nn.forward_all([sample, log_prob])
 
         x = sample.d
@@ -120,7 +120,7 @@ class TestGaussian(object):
             num_samples=num_samples)
         # FIXME: if you enable clear_no_need_grad seems to compute something different
         # Do NOT use forward_all and no_need_grad flag at same time
-        # NNabla's bug?
+        # nnabla's bug?
         nn.forward_all([samples, log_probs])
 
         x = samples.d[:, 0, :]

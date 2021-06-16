@@ -3,22 +3,22 @@
 
 # Deep Reinforcement Learning Library built on top of Neural Network Libraries
 
-NNablaRL is a deep reinforcement learning library built on top of [Neural Network Libraries](https://github.com/sony/nnabla) 
+nnablaRL is a deep reinforcement learning library built on top of [Neural Network Libraries](https://github.com/sony/nnabla) 
 that is intended to be used for research, development and production.
 
 ## Installation
 
-Installing NNablaRL is easy!
+Installing nnablaRL is easy!
 
 ```sh
 $ pip install nnabla-rl
 ```
 
-NNablaRL only supports Python version >= 3.6 and [NNabla](https://github.com/sony/nnabla) version >= 1.17.
+nnablaRL only supports Python version >= 3.6 and [nnabla](https://github.com/sony/nnabla) version >= 1.17.
 
 ### Enabling GPU accelaration (Optional)
 
-NNablaRL algorithms run on CPU by default. To run the algorithm on GPU, first install [nnabla-ext-cuda](https://github.com/sony/nnabla-ext-cuda) as follows.
+nnablaRL algorithms run on CPU by default. To run the algorithm on GPU, first install [nnabla-ext-cuda](https://github.com/sony/nnabla-ext-cuda) as follows.
 (Replace [cuda-version] depending on the CUDA version installed on your machine.)
 
 ```sh
@@ -44,7 +44,7 @@ dqn = A.DQN(env, config=config)
 
 ### Friendly API
 
-NNablaRL has friendly Python APIs which enables to start training with only 3 lines of python code.
+nnablaRL has friendly Python APIs which enables to start training with only 3 lines of python code.
 
 ```py
 import nnabla_rl
@@ -56,11 +56,11 @@ dqn = A.DQN(env)  # 2
 dqn.train(env)  # 3
 ```
 
-To get more details about NNablaRL, see [documentation](https://nnabla-rl.readthedocs.io/) and [examples](./examples).
+To get more details about nnablaRL, see [documentation](https://nnabla-rl.readthedocs.io/) and [examples](./examples).
 
 ### Many builtin algorithms
 
-Most of famous/SOTA deep reinforcement learning algorithms, such as DQN, SAC, BCQ, GAIL, etc., are implemented in NNablaRL. Implemented algorithms are carefully tested and evaluated. You can easily start training your agent using these verified implementations.  
+Most of famous/SOTA deep reinforcement learning algorithms, such as DQN, SAC, BCQ, GAIL, etc., are implemented in nnablaRL. Implemented algorithms are carefully tested and evaluated. You can easily start training your agent using these verified implementations.  
 
 For the list of implemented algorithms see [here](./nnabla_rl/algorithms/README.md).
 
@@ -70,7 +70,7 @@ Note that you may not get completely the same results when running the reproduct
 ### Seamless switching of online and offline training
 
 In reinforcement learning, there are two main training procedures, online and offline, to train the agent.
-Online training is a training procedure that executes both data collection and network update alternately. Conversely, offline training is a training procedure that updates the network using only existing data. With NNablaRL, you can switch these two training procedures seamlessly. For example, as shown below, you can easily train a robot's controller online using simulated environment and finetune it offline with real robot dataset.
+Online training is a training procedure that executes both data collection and network update alternately. Conversely, offline training is a training procedure that updates the network using only existing data. With nnablaRL, you can switch these two training procedures seamlessly. For example, as shown below, you can easily train a robot's controller online using simulated environment and finetune it offline with real robot dataset.
 
 ```py
 import nnabla_rl
@@ -107,8 +107,8 @@ Full documentation is [here](https://nnabla-rl.readthedocs.io/).
 
 ## Contribution guide
 
-Any kind of contribution to NNablaRL is welcome! See the [contribution guide](./CONTRIBUTING.md) for details.
+Any kind of contribution to nnablaRL is welcome! See the [contribution guide](./CONTRIBUTING.md) for details.
 
 ## License
 
-NNablaRL is provided under the [Apache License Version 2.0](LICENSE) license.
+nnablaRL is provided under the [Apache License Version 2.0](LICENSE) license.

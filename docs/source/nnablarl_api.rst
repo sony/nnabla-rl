@@ -1,4 +1,4 @@
-NNabla RL APIs
+nnablaRL APIs
 ===============
 
 .. toctree::
