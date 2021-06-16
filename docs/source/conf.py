@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 
 # -- Project information -----------------------------------------------------
-project = 'NNablaRL'
+project = 'nnablaRL'
 copyright = '2021, Sony Group Corporation'
 author = 'Sony Group Corporation'
 release = '0.0'

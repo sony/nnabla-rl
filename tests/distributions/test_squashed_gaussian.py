@@ -106,7 +106,7 @@ class TestSquashedGaussian(object):
         sample, actual = distribution.sample_and_compute_log_prob()
         # FIXME: if you enable clear_no_need_grad seems to compute something different
         # Do NOT use forward_all and no_need_grad flag at same time
-        # NNabla's bug?
+        # nnabla's bug?
         nn.forward_all([sample, actual])
 
         x = np.arctanh(sample.data.data, dtype=np.float64)
@@ -151,7 +151,7 @@ class TestSquashedGaussian(object):
             num_samples=num_samples)
         # FIXME: if you enable clear_no_need_grad seems to compute something different
         # Do NOT use forward_all and no_need_grad flag at same time
-        # NNabla's bug?
+        # nnabla's bug?
         nn.forward_all([samples, log_probs])
 
         assert np.alltrue(-1.0 <= samples.d)

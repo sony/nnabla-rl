@@ -1,4 +1,4 @@
-# Contributing to NNablaRL
+# Contributing to nnablaRL
 
 Contributions of any kind are welcome! Check below contribution options and select the option that fits you best.
 
@@ -9,17 +9,17 @@ We encourage thumbing up :+1: to good issues and/or pull requests in high demand
 ## Contributing by posting issues/proposals
 
 If you encounter any bugs, or come up with any feature/algorithm requests, check the [issue-tracker](https://github.com/sony/nnabla-rl/issues). If you can not find any existing issue, please feel free to post a new issue.  
-Please do **NOT** post questions about the library, such as usage, installation, etc., to the issue-tracker. Use [NNabla user group](https://groups.google.com/forum/#!forum/nnabla) for such questions.
+Please do **NOT** post questions about the library, such as usage, installation, etc., to the issue-tracker. Use [nnabla user group](https://groups.google.com/forum/#!forum/nnabla) for such questions.
 
 ## Contributing by improving the document
 
-If you find any typo, gramatical error, incorrect explanation etc. in [NNablaRL's documentation](https://github.com/sony/nnabla-rl/docs) or READMEs follow the below procedure and send pull request!
+If you find any typo, gramatical error, incorrect explanation etc. in [nnablaRL's documentation](https://github.com/sony/nnabla-rl/docs) or READMEs follow the below procedure and send pull request!
 
-1. Search existing issues and/or pull requests in the [NNablaRL GitHub repository](https://github.com/sony/nnabla-rl).
+1. Search existing issues and/or pull requests in the [nnablaRL GitHub repository](https://github.com/sony/nnabla-rl).
 2. If doesn't exist, post an issue for the improvement proposal.
 3. Fork the repository, and improve the document.
-4. (If you improve the NNablaRL's documentation) Check that the document successfully builds and properly displayed. (See: [How to build the document](#how-to-build-the-document) section to build the document on your machine)
-5. Create a pull request of your development branch to NNablaRL's master branch. Our maintainers will then review your changes.
+4. (If you improve the nnablaRL's documentation) Check that the document successfully builds and properly displayed. (See: [How to build the document](#how-to-build-the-document) section to build the document on your machine)
+5. Create a pull request of your development branch to nnablaRL's master branch. Our maintainers will then review your changes.
 6. Once your change is accepted, our maintainer will merge your change.
 
 ### How to build the document
@@ -43,24 +43,24 @@ make html
 
 ## Contributing code
 
-We appreciate contributors in the community, that are willing to improve NNablaRL. We follow the development style used in [NNabla](https://github.com/sony/nnabla) listed below.
+We appreciate contributors in the community, that are willing to improve nnablaRL. We follow the development style used in [nnabla](https://github.com/sony/nnabla) listed below.
 
-1. Search existing issues and/or pull requests in the [NNablaRL GitHub repository](https://github.com/sony/nnabla-rl).
+1. Search existing issues and/or pull requests in the [nnablaRL GitHub repository](https://github.com/sony/nnabla-rl).
 2. If doesn't exist, post an issue for the feature proposal.
 3. Fork the repository, and develop your feature.
-4. Format your code according to the NNablaRL's coding style. (See: [Code format guidelines](#code-format-guidelines) section below for details)
+4. Format your code according to the nnablaRL's coding style. (See: [Code format guidelines](#code-format-guidelines) section below for details)
 5. Write an unit test(s) and also check that linters do not raise any error. If you implement a deep reinforcement learning algorithm, please also check that your implementation reproduces the result presented in the paper that you referred. (See: [Testing guidelines](#testing-guidelines) section below for details)
-6. Create a pull request of your development branch to NNablaRL's master branch. Our maintainers will then review your changes.
+6. Create a pull request of your development branch to nnablaRL's master branch. Our maintainers will then review your changes.
 7. Once your change is accepted, our maintainer will merge your change.
 
-**NOTE**: Before starting to develop NNablaRL's code, install extra python packages that will be used for code formatting and testing. You can install extra packages as follows.
+**NOTE**: Before starting to develop nnablaRL's code, install extra python packages that will be used for code formatting and testing. You can install extra packages as follows.
 
 ```sh
 cd <nnabla-rl root directory>
 pip install -r requirements.txt
 ```
 
-We also recommend installing the NNablaRL package as follows to reflect code changes made during the development automatically.
+We also recommend installing the nnablaRL package as follows to reflect code changes made during the development automatically.
 
 ```sh
 $ cd <nnabla-rl root directory>
