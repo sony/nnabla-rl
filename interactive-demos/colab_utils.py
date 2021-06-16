@@ -42,3 +42,9 @@ class RenderHook(Hook):
         self._iteration_num += 1
         plt.axis('off')
         display.display(plt.gcf())
+
+    def reset(self):
+        self._image = None
+        self._iteration_num = 0
+        self._display = Display()
+        self._display.start()
