@@ -124,7 +124,7 @@ class TRPOPolicyTrainer(ModelTrainer):
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.array]:
+                      **kwargs) -> Dict[str, np.ndarray]:
         s = batch.s_current
         a = batch.a_current
         advantage = batch.extra['advantage']

@@ -46,8 +46,8 @@ class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
 
 class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
     def __init__(self,
-                 greedy_action_selector: Callable[[np.array], Tuple[np.array, Dict]],
-                 random_action_selector: Callable[[np.array], Tuple[np.array, Dict]],
+                 greedy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
+                 random_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
                  env_info: EnvironmentInfo,
                  config: LinearDecayEpsilonGreedyExplorerConfig = LinearDecayEpsilonGreedyExplorerConfig()):
         super().__init__(env_info, config)

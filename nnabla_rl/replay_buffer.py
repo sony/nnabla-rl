@@ -118,7 +118,7 @@ class ReplayBuffer(object):
         weights = np.ones([len(indices), 1])
         return [self.__getitem__(index) for index in indices], dict(weights=weights)
 
-    def update_priorities(self, errors: np.array):
+    def update_priorities(self, errors: np.ndarray):
         pass
 
     def __len__(self):

@@ -55,7 +55,7 @@ class SquaredTDQFunctionTrainer(ModelTrainer):
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.array]:
+                      **kwargs) -> Dict[str, np.ndarray]:
         training_variables.s_current.d = batch.s_current
         training_variables.a_current.d = batch.a_current
         training_variables.reward.d = batch.reward

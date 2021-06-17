@@ -35,7 +35,7 @@ class GaussianExplorerConfig(EnvironmentExplorerConfig):
 
 class GaussianExplorer(EnvironmentExplorer):
     def __init__(self,
-                 policy_action_selector: Callable[[np.array], Tuple[np.array, Dict]],
+                 policy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
                  env_info: EnvironmentInfo,
                  config: GaussianExplorerConfig = GaussianExplorerConfig()):
         super().__init__(env_info, config)

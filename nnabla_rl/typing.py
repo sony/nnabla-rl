@@ -17,10 +17,10 @@ from typing import Any, Dict, Tuple, Type
 
 import numpy as np
 
-State = Type[np.array]
-Action = Type[np.array]
+State = Type[np.ndarray]
+Action = Type[np.ndarray]
 Reward = float
 NonTerminal = float
-NextState = Type[np.array]
+NextState = Type[np.ndarray]
 Info = Dict[str, Any]
 Experience = Tuple[State, Action, Reward, NonTerminal, NextState, Info]

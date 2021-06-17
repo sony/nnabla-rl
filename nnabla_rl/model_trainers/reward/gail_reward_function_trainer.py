@@ -53,7 +53,7 @@ class GAILRewardFunctionTrainer(ModelTrainer):
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.array]:
+                      **kwargs) -> Dict[str, np.ndarray]:
         s_curr_agent = batch.extra['s_current_agent']
         a_curr_agent = batch.extra['a_current_agent']
         s_next_agent = batch.extra['s_next_agent']
