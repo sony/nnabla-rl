@@ -41,7 +41,9 @@ from nnabla_rl.utils.data import marshal_experiences
 
 @dataclass
 class TRPOConfig(AlgorithmConfig):
-    '''TRPO config
+    '''
+    List of configurations for TRPO algorithm
+
     Args:
         gamma (float): Discount factor of rewards. Defaults to 0.995.
         lmb (float): Scalar of lambda return's computation in GAE. Defaults to 0.97.\

@@ -36,7 +36,9 @@ from nnabla_rl.utils.data import marshal_experiences
 
 @dataclass
 class REINFORCEConfig(AlgorithmConfig):
-    '''REINFORCE config
+    '''
+    List of configurations for REINFORCE algorithm
+
     Args:
         reward_scale (float): Scale of reward. Defaults to 0.01.
         num_rollouts_per_train_iteration (int): Number of rollout per each training iteration \

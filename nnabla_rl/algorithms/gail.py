@@ -44,7 +44,9 @@ from nnabla_rl.utils.data import marshal_experiences
 
 @dataclass
 class GAILConfig(AlgorithmConfig):
-    '''GAIL config
+    '''
+    List of configurations for GAIL algorithm
+
     Args:
         act_deterministic_in_eval (bool): Enable act deterministically at evalution. Defaults to True.
         discriminator_batch_size (bool): Trainig batch size of discriminator.\
