@@ -85,7 +85,7 @@ def sample_gaussian_multiple(mean: nn.Variable,
 
 def expand_dims(x: nn.Variable, axis: int) -> nn.Variable:
     '''
-    Add dimension to target axis for the given variable
+    Add dimension to target axis of given variable
 
     Args:
         x (nn.Variable): Variable to expand the dimension
@@ -100,7 +100,7 @@ def expand_dims(x: nn.Variable, axis: int) -> nn.Variable:
 
 def repeat(x: nn.Variable, repeats: int, axis: int) -> nn.Variable:
     '''
-    repeats the value along given axis for repeats times.
+    Repeats the value along given axis for repeats times.
 
     Args:
         x (nn.Variable): Variable to repeat the values along given axis
@@ -171,10 +171,10 @@ def argmax(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -
 
 def quantile_huber_loss(x0: nn.Variable, x1: nn.Variable, kappa: float, tau: nn.Variable) -> nn.Variable:
     '''
-    Compute the quantile huber loss
+    Compute the quantile huber loss.
     See following papers for details:
-    https://arxiv.org/pdf/1710.10044.pdf
-    https://arxiv.org/pdf/1806.06923.pdf
+        * https://arxiv.org/pdf/1710.10044.pdf
+        * https://arxiv.org/pdf/1806.06923.pdf
 
     Args:
         x0 (nn.Variable): Quantile values
@@ -184,6 +184,7 @@ def quantile_huber_loss(x0: nn.Variable, x1: nn.Variable, kappa: float, tau: nn.
 
     Returns:
         nn.Variable: Quantile huber loss
+
     '''
     u = x0 - x1
     # delta(u < 0)
@@ -240,24 +241,20 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
                                   init_mean: nn.Variable, init_var: nn.Variable,
                                   pop_size: int = 500, num_elites: int = 10,
                                   num_iterations: int = 5, alpha: float = 0.25) -> Tuple[nn.Variable, nn.Variable]:
-    ''' Cross Entropy Method using gaussian distribution.
-        This function optimized objective function J(x), where x is variable.
+    '''
+    Optimize objective function with respect to input using cross entropy method using gaussian distribution
 
     Examples:
+        >>> import numpy as np
         >>> import nnabla as nn
         >>> import nnabla.functions as NF
-        >>> import numpy as np
         >>> import nnabla_rl.functions as RF
-
         >>> def objective_function(x): return -((x - 3.)**2)
-
         >>> batch_size = 1
         >>> variable_size = 1
-
         >>> init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, state_size)))
         >>> init_var = nn.Variable.from_numpy_array(np.ones((batch_size, state_size)))
         >>> optimal_x, _ = RF.gaussian_cross_entropy_method(objective_function, init_mean, init_var, alpha=0)
-
         >>> optimal_x.forward()
         >>> optimal_x.shape
         (1, 1)  # (batch_size, variable_size)
@@ -318,7 +315,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
 
 def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable] = None, upper=False) -> nn.Variable:
     '''
-    Compute triangular_matrix from given diagonal and non_diagonal elements
+    Compute triangular_matrix from given diagonal and non_diagonal elements.
     If non_diagonal is None, will create a diagonal matrix.
 
     Example:
