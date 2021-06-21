@@ -40,39 +40,39 @@ class TrainingBatch():
 
     Args:
        batch_size (int): the size of mini-batch
-       s_current (Optional[np.array]): the current state array
-       a_current (Optional[np.array]): the current action array
-       reward (Optional[np.array]): the reward value array
+       s_current (Optional[np.ndarray]): the current state array
+       a_current (Optional[np.ndarray]): the current action array
+       reward (Optional[np.ndarray]): the reward value array
        gamma (Optional[float]): gamma value
-       non_terminal (Optional[np.array]): the non_terminal flag array
-       s_next (Optional[np.array]): the next state array
-       weight (Optional[np.array]): the weight of loss array
-       extra (Dict[str, np.array]): the extra information
+       non_terminal (Optional[np.ndarray]): the non_terminal flag array
+       s_next (Optional[np.ndarray]): the next state array
+       weight (Optional[np.ndarray]): the weight of loss array
+       extra (Dict[str, np.ndarray]): the extra information
        next_step_batch (Optional[:py:class:`TrainingBatch <nnabla_rl.model_trainers.model_trainer.TrainingBatch>`]):\
            the mini-batch for next step (used in n-step learning)
     """
     batch_size: int
-    s_current: np.array
-    a_current: np.array
-    reward: np.array
+    s_current: np.ndarray
+    a_current: np.ndarray
+    reward: np.ndarray
     gamma: float
-    non_terminal: np.array
-    s_next: np.array
-    weight: np.array
-    extra: Dict[str, np.array]
+    non_terminal: np.ndarray
+    s_next: np.ndarray
+    weight: np.ndarray
+    extra: Dict[str, np.ndarray]
     # Used in n-step learning
     next_step_batch: Optional['TrainingBatch']
 
     def __init__(self,
                  batch_size: int,
-                 s_current: Optional[np.array] = None,
-                 a_current: Optional[np.array] = None,
-                 reward: Optional[np.array] = None,
+                 s_current: Optional[np.ndarray] = None,
+                 a_current: Optional[np.ndarray] = None,
+                 reward: Optional[np.ndarray] = None,
                  gamma: Optional[float] = None,
-                 non_terminal: Optional[np.array] = None,
-                 s_next: Optional[np.array] = None,
-                 weight: Optional[np.array] = None,
-                 extra: Dict[str, np.array] = {},
+                 non_terminal: Optional[np.ndarray] = None,
+                 s_next: Optional[np.ndarray] = None,
+                 weight: Optional[np.ndarray] = None,
+                 extra: Dict[str, np.ndarray] = {},
                  next_step_batch: Optional['TrainingBatch'] = None):
         assert 0 < batch_size
         self.batch_size = batch_size
@@ -90,7 +90,7 @@ class TrainingBatch():
             self.s_next = s_next
         if weight is not None:
             self.weight = weight
-        self.extra: Dict[str, np.array] = extra
+        self.extra: Dict[str, np.ndarray] = extra
         self.next_step_batch = next_step_batch
 
 
@@ -166,7 +166,7 @@ class ModelTrainer(metaclass=ABCMeta):
 
         self._setup_solver()
 
-    def train(self, batch: TrainingBatch, **kwargs) -> Dict[str, np.array]:
+    def train(self, batch: TrainingBatch, **kwargs) -> Dict[str, np.ndarray]:
         if self._models is None:
             raise RuntimeError('Call setup_training() first. Model is not set!')
         self._train_count += 1
@@ -195,7 +195,7 @@ class ModelTrainer(metaclass=ABCMeta):
                       solvers: Dict[str, nn.solver.Solver],
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.array]:
+                      **kwargs) -> Dict[str, np.ndarray]:
         raise NotImplementedError
 
     @abstractmethod

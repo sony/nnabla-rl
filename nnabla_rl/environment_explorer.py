@@ -43,9 +43,9 @@ class EnvironmentExplorer(metaclass=ABCMeta):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _env_info: EnvironmentInfo
     _config: EnvironmentExplorerConfig
-    _state: Optional[np.array]
-    _action: Optional[np.array]
-    _next_state: Optional[np.array]
+    _state: Optional[np.ndarray]
+    _action: Optional[np.ndarray]
+    _next_state: Optional[np.ndarray]
     _steps: int
 
     def __init__(self,
@@ -61,16 +61,16 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         self._steps = self._config.initial_step_num
 
     @abstractmethod
-    def action(self, steps: int, state: np.array) -> np.array:
+    def action(self, steps: int, state: np.ndarray) -> np.ndarray:
         '''
         Compute the action for given state at given timestep
 
         Args:
             steps(int): timesteps since the beginning of exploration
-            state(np.array): current state to compute the action
+            state(np.ndarray): current state to compute the action
 
         Returns:
-            np.array: action for current state at given timestep
+            np.ndarray: action for current state at given timestep
         '''
         raise NotImplementedError
 
@@ -142,11 +142,11 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         extra_info: Dict[str, Any] = {}
         extra_info.update(action_info)
         extra_info.update(step_info)
-        experience = (cast(np.array, self._state),
-                      cast(np.array, self._action),
+        experience = (cast(np.ndarray, self._state),
+                      cast(np.ndarray, self._action),
                       r * self._config.reward_scalar,
                       non_terminal,
-                      cast(np.array, self._next_state),
+                      cast(np.ndarray, self._next_state),
                       extra_info)
 
         if done:

@@ -202,7 +202,7 @@ class Algorithm(metaclass=ABCMeta):
             hook(self)
 
     @abstractmethod
-    def compute_eval_action(self, state) -> np.array:
+    def compute_eval_action(self, state) -> np.ndarray:
         '''
         Compute action for given state using current best policy.
         This is usually used for evaluation.
