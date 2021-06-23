@@ -382,3 +382,30 @@ def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable]
         non_diagonal_part = NF.reshape(non_diagonal_part, shape=(batch_size, diagonal_size, diagonal_size))
 
         return diagonal_part + non_diagonal_part
+
+
+def batch_flatten(x: nn.Variable) -> nn.Variable:
+    '''
+    Collapse the variable shape into (batch_size, rest).
+
+    Example:
+        >>> import numpy as np
+        >>> import nnabla as nn
+        >>> import nnabla_rl.functions as RF
+        >>> variable_shape = (3, 4, 5, 6)
+        >>> x = nn.Variable.from_numpy_array(np.random.normal(size=variable_shape))
+        >>> x.shape
+        (3, 4, 5, 6)
+        >>> flattened_x = RF.batch_flatten(x)
+        >>> flattened_x.shape
+        (3, 120)
+
+    Args:
+        x (nn.Variable): N-D array
+
+    Returns:
+        nn.Variable: Flattened variable.
+    '''
+    original_shape = x.shape
+    flatten_shape = (original_shape[0], np.prod(original_shape[1:]))
+    return NF.reshape(x, shape=flatten_shape)

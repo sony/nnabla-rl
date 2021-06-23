@@ -313,6 +313,16 @@ class TestFunctions(object):
                     else:
                         assert value == 0
 
+    @pytest.mark.parametrize("batch_size", [i for i in range(1, 4)])
+    @pytest.mark.parametrize("shape", [(1, ), (1, 2), (2, 3), (4, 5, 6)])
+    def test_batch_flatten(self, batch_size, shape):
+        x = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, *shape)).astype(np.float32))
+        flattened_x = RF.batch_flatten(x)
+
+        assert np.prod(x.shape) == np.prod(flattened_x.shape)
+        assert batch_size == flattened_x.shape[0]
+        assert len(flattened_x.shape) == 2
+
 
 if __name__ == "__main__":
     pytest.main()
