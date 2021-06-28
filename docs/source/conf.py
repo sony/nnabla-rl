@@ -20,13 +20,13 @@ import sphinx_rtd_theme
 
 sys.path.insert(0, os.path.abspath('../../'))
 
+import nnabla_rl  # noqa
 
 # -- Project information -----------------------------------------------------
 project = 'nnablaRL'
 copyright = '2021, Sony Group Corporation'
 author = 'Sony Group Corporation'
-release = '0.0'
-
+release = nnabla_rl.__version__
 
 # -- General configuration ---------------------------------------------------
 
