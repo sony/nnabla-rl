@@ -16,3 +16,4 @@ Functions
 .. autofunction:: minumum_n
 .. autofunction:: gaussian_cross_entropy_method
 .. autofunction:: triangular_matrix
+.. autofunction:: batch_flatten
