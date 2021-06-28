@@ -98,6 +98,29 @@ class TestInitializers(object):
         with pytest.raises(NotImplementedError):
             RI.HeUniform(inmaps, outmaps, kernel, factor, mode='fan_unknown')
 
+    def test_he_uniform_with_rng(self):
+        inmaps = 10
+        outmaps = 10
+        kernel = (10, 10)
+        factor = 10.0
+        rng = np.random.RandomState(0)
+
+        initializer1 = RI.HeUniform(inmaps, outmaps, kernel, factor, rng=rng)
+        params1 = initializer1(shape=(5, 5))
+
+        rng = np.random.RandomState(0)
+        initializer2 = RI.HeUniform(inmaps, outmaps, kernel, factor, rng=rng)
+        params2 = initializer2(shape=(5, 5))
+
+        assert np.allclose(params1, params2)
+
+        rng = np.random.RandomState(1)
+        initializer3 = RI.HeUniform(inmaps, outmaps, kernel, factor, rng=rng)
+        params3 = initializer3(shape=(5, 5))
+
+        assert not np.allclose(params1, params3)
+        assert not np.allclose(params2, params3)
+
     def test_lecun_normal_unknown_mode(self):
         inmaps = 10
         outmaps = 10
