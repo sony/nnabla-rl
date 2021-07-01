@@ -23,7 +23,8 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.logger import logger
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
 from nnabla_rl.models import Model, StochasticPolicy
-from nnabla_rl.utils.misc import copy_network_parameters
+from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import copy_network_parameters, create_variable
 from nnabla_rl.utils.optimization import conjugate_gradient
 
 
@@ -218,8 +219,8 @@ class TRPOPolicyTrainer(ModelTrainer):
 
         for block_index in range(total_blocks):
             start_idx = block_index * gpu_batch_size
-            training_variables.s_current.d = s_batch[start_idx:start_idx+gpu_batch_size]
-            training_variables.a_current.d = a_batch[start_idx:start_idx+gpu_batch_size]
+            set_data_to_variable(training_variables.s_current, s_batch[start_idx:start_idx+gpu_batch_size])
+            set_data_to_variable(training_variables.a_current, a_batch[start_idx:start_idx+gpu_batch_size])
 
             for param in policy.get_parameters().values():
                 param.grad.zero()
@@ -269,8 +270,8 @@ class TRPOPolicyTrainer(ModelTrainer):
 
         for block_index in range(total_blocks):
             start_idx = block_index * gpu_batch_size
-            training_variables.s_current.d = s_batch[start_idx:start_idx+gpu_batch_size]
-            training_variables.a_current.d = a_batch[start_idx:start_idx+gpu_batch_size]
+            set_data_to_variable(training_variables.s_current, s_batch[start_idx:start_idx+gpu_batch_size])
+            set_data_to_variable(training_variables.a_current, a_batch[start_idx:start_idx+gpu_batch_size])
             training_variables.extra['advantage'].d = adv_batch[start_idx:start_idx+gpu_batch_size]
 
             nn.forward_all([self._approximate_return,
@@ -288,12 +289,9 @@ class TRPOPolicyTrainer(ModelTrainer):
 
     def _setup_training_variables(self, batch_size: int) -> TrainingVariables:
         gpu_batch_size = self._gpu_batch_size(batch_size)
-        s_current_var = nn.Variable((gpu_batch_size, *self._env_info.state_shape))
-        if self._env_info.is_discrete_action_env():
-            a_current_var = nn.Variable((gpu_batch_size, 1))
-        else:
-            a_current_var = nn.Variable((gpu_batch_size, self._env_info.action_dim))
-        advantage_var = nn.Variable((gpu_batch_size, 1))
+        s_current_var = create_variable(gpu_batch_size, self._env_info.state_shape)
+        a_current_var = create_variable(gpu_batch_size, self._env_info.action_shape)
+        advantage_var = create_variable(gpu_batch_size, 1)
         extra = {}
         extra['advantage'] = advantage_var
         return TrainingVariables(gpu_batch_size, s_current_var, a_current_var, extra=extra)

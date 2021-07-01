@@ -123,7 +123,7 @@ class MunchausenIQNQTrainer(StateActionQuantileFunctionTrainer):
         non_terminal = training_variables.non_terminal
         s_next = training_variables.s_next
 
-        batch_size = s_next.shape[0]
+        batch_size = training_variables.batch_size
 
         tau_j = self._target_function.sample_tau(shape=(batch_size, self._config.N_prime))
         target_return_samples = self._target_function.all_quantile_values(s_next, tau_j)

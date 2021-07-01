@@ -22,7 +22,8 @@ import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
 from nnabla_rl.models import Model, StochasticPolicy
-from nnabla_rl.utils.misc import clip_grad_by_global_norm
+from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import clip_grad_by_global_norm, create_variable
 
 
 @dataclass
@@ -53,9 +54,9 @@ class A2CPolicyTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        training_variables.s_current.d = batch.s_current
-        training_variables.a_current.d = batch.a_current
-        training_variables.extra['advantage'].d = batch.extra['advantage']
+        set_data_to_variable(training_variables.s_current, batch.s_current)
+        set_data_to_variable(training_variables.a_current, batch.a_current)
+        set_data_to_variable(training_variables.extra['advantage'], batch.extra['advantage'])
 
         # update model
         for solver in solvers.values():
@@ -84,12 +85,9 @@ class A2CPolicyTrainer(ModelTrainer):
 
     def _setup_training_variables(self, batch_size):
         # Training input variables
-        s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
-        if self._env_info.is_discrete_action_env():
-            a_current_var = nn.Variable((batch_size, 1))
-        else:
-            a_current_var = nn.Variable((batch_size, self._env_info.action_dim))
-        advantage_var = nn.Variable((batch_size, 1))
+        s_current_var = create_variable(batch_size, self._env_info.state_shape)
+        a_current_var = create_variable(batch_size, self._env_info.action_shape)
+        advantage_var = create_variable(batch_size, 1)
         extra = {}
         extra['advantage'] = advantage_var
         return TrainingVariables(batch_size, s_current_var, a_current_var, extra=extra)

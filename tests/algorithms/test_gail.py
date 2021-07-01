@@ -39,6 +39,18 @@ class TestGAIL():
 
         assert gail.__name__ == 'GAIL'
 
+    def test_discrete_action_env_unsupported(self):
+        '''
+        Check that error occurs when training on discrete action env
+        '''
+
+        dummy_env = E.DummyDiscrete()
+        dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
+        dummy_buffer = self._create_dummy_buffer(dummy_env, batch_size=15)
+        config = A.GAILConfig()
+        with pytest.raises(Exception):
+            A.GAIL(dummy_env, dummy_buffer, config=config)
+
     def test_run_online_training(self):
         '''
         Check that no error occurs when calling online training
@@ -128,9 +140,7 @@ class TestGAIL():
 
 
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, "./")
     from testing_utils import EpisodicEnv, generate_dummy_experiences
     pytest.main()
 else:
-    from .testing_utils import EpisodicEnv, generate_dummy_experiences
+    from ..testing_utils import EpisodicEnv, generate_dummy_experiences

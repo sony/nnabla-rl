@@ -31,7 +31,8 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import REINFORCEContinousPolicy, REINFORCEDiscretePolicy, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -232,12 +233,12 @@ class REINFORCE(Algorithm):
 
     @eval_api
     def _compute_action(self, s):
-        s = np.expand_dims(s, axis=0)
+        s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
             distribution = self._policy.pi(self._eval_state_var)
             self._eval_action = distribution.sample()
-        self._eval_state_var.d = s
+        set_data_to_variable(self._eval_state_var, s)
         self._eval_action.forward()
         return np.squeeze(self._eval_action.d, axis=0), {}
 
@@ -250,6 +251,10 @@ class REINFORCE(Algorithm):
         solvers = {}
         solvers[self._policy.scope_name] = self._policy_solver
         return solvers
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        return True  # supports all enviroments
 
     @property
     def latest_iteration_state(self):

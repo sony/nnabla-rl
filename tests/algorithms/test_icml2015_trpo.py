@@ -113,9 +113,7 @@ class TestICML2015TRPO(object):
 
 
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, "./")
     from testing_utils import EpisodicEnv
     pytest.main()
 else:
-    from .testing_utils import EpisodicEnv
+    from ..testing_utils import EpisodicEnv

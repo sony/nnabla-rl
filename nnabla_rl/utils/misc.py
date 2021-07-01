@@ -13,10 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple, Union, cast
+
 import numpy as np
 
+import nnabla as nn
 from nnabla.solver import Solver
 from nnabla_rl.models import Model
+from nnabla_rl.typing import Shape
 
 
 def sync_model(src: Model, dst: Model, tau: float = 1.0):
@@ -37,3 +41,13 @@ def clip_grad_by_global_norm(solver: Solver, max_grad_norm: float):
     scalar = max_grad_norm / global_norm
     if scalar < 1.0:
         solver.scale_grad(scalar)
+
+
+def create_variable(batch_size: int, shape: Shape) -> Union[nn.Variable, Tuple[nn.Variable, ...]]:
+    if isinstance(shape, int):
+        return nn.Variable((batch_size, shape))
+    elif isinstance(shape[0], int):
+        return nn.Variable((batch_size, *shape))
+    else:
+        shape = cast(Tuple[Tuple[int, ...], ...], shape)
+        return tuple(nn.Variable((batch_size, *_shape)) for _shape in shape)

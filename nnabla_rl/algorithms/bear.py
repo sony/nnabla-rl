@@ -27,13 +27,12 @@ import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.exceptions import UnsupportedEnvironmentException
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import (BEARPolicy, DeterministicPolicy, QFunction, StochasticPolicy, TD3QFunction,
                               UnsquashedVariationalAutoEncoder, VariationalAutoEncoder)
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshal_experiences
-from nnabla_rl.utils.misc import sync_model
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
+from nnabla_rl.utils.misc import create_variable, sync_model
 
 
 @dataclass
@@ -207,8 +206,6 @@ class BEAR(Algorithm):
                  vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  lagrange_solver_builder: SolverBuilder = DefaultSolverBuilder()):
         super(BEAR, self).__init__(env_or_env_info, config=config)
-        if self._env_info.is_discrete_action_env():
-            raise UnsupportedEnvironmentException
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._q_ensembles = []
@@ -236,23 +233,29 @@ class BEAR(Algorithm):
             self._lagrange_solver = lagrange_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
-    def compute_eval_action(self, s):
+    def compute_eval_action(self, state):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            s = np.expand_dims(s, axis=0)
+            state = add_batch_dimension(state)
             if not hasattr(self, '_eval_state_var'):
-                self._eval_state_var = nn.Variable(s.shape)
+                self._eval_state_var = create_variable(1, self._env_info.state_shape)
                 if self._config.use_mean_for_eval:
                     eval_distribution = self._pi.pi(self._eval_state_var)
                     self._eval_action = NF.tanh(eval_distribution.mean())
                 else:
                     repeat_num = 100
-                    state = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
-                    assert state.shape == (repeat_num, self._eval_state_var.shape[1])
-                    eval_distribution = self._pi.pi(state)
+                    if isinstance(self._eval_state_var, tuple):
+                        state_var = tuple(RF.repeat(x=s_var, repeats=repeat_num, axis=0)
+                                          for s_var in self._eval_state_var)
+                    else:
+                        state_var = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
+                        assert state_var.shape == (repeat_num, self._eval_state_var.shape[1])
+
+                    eval_distribution = self._pi.pi(state_var)
                     self._eval_action = NF.tanh(eval_distribution.sample())
-                    q_values = self._q_ensembles[0].q(state, self._eval_action)
+                    q_values = self._q_ensembles[0].q(state_var, self._eval_action)
                     self._eval_max_index = RF.argmax(q_values, axis=0)
-            self._eval_state_var.d = s
+
+            set_data_to_variable(self._eval_state_var, state)
             if self._config.use_mean_for_eval:
                 self._eval_action.forward()
                 return np.squeeze(self._eval_action.d, axis=0)
@@ -392,6 +395,12 @@ class BEAR(Algorithm):
         if not self._config.fix_lagrange_multiplier:
             solvers[self._lagrange.scope_name] = self._lagrange_solver
         return solvers
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
+            else env_or_env_info
+        return not env_info.is_discrete_action_env()
 
     @property
     def latest_iteration_state(self):

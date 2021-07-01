@@ -25,7 +25,7 @@ import nnabla.solvers
 import nnabla_rl as rl
 from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.exceptions import UnsupportedTrainingException
+from nnabla_rl.exceptions import UnsupportedEnvironmentException, UnsupportedTrainingException
 from nnabla_rl.hook import Hook
 from nnabla_rl.logger import logger
 from nnabla_rl.replay_buffer import ReplayBuffer
@@ -81,6 +81,11 @@ class Algorithm(metaclass=ABCMeta):
         self._iteration_num = 0
         self._max_iterations = 0
         self._hooks = []
+
+        if not self.is_supported_env(env_info):
+            raise UnsupportedEnvironmentException("{} does not support the enviroment. \
+                See the algorithm catalog (https://github.com/sony/nnabla-rl/tree/master/nnabla_rl/algorithms) \
+                and confirm what kinds of enviroments are supported".format(self.__name__))
 
         if self._config.gpu_id < 0:
             logger.info('algorithm will run on cpu')
@@ -254,3 +259,18 @@ class Algorithm(metaclass=ABCMeta):
 
     def _is_buffer(self, env):
         return isinstance(env, ReplayBuffer)
+
+    @classmethod
+    @abstractmethod
+    def is_supported_env(cls, env_or_env_info: Union[gym.Env, EnvironmentInfo]):
+        '''
+        Check whether the algorithm supports the enviroment or not.
+
+        Args:
+            env_or_env_info\
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`)
+            : environment or environment info
+        Returns:
+            bool: True if the algorithm supports the environment. Otherwise False.
+        '''
+        raise NotImplementedError

@@ -23,6 +23,8 @@ import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
 from nnabla_rl.models import Model, QFunction, StochasticPolicy, VariationalAutoEncoder
+from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 class AdjustableLagrangeMultiplier(Model):
@@ -110,7 +112,7 @@ class BEARPolicyTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        training_variables.s_current.d = batch.s_current
+        set_data_to_variable(training_variables.s_current, batch.s_current)
 
         # Optimize actor
         # Always forward pi loss to update the graph
@@ -134,6 +136,13 @@ class BEARPolicyTrainer(ModelTrainer):
         trainer_state['pi_loss'] = float(self._pi_loss.d.copy())
         return trainer_state
 
+    def _repeat_state(self, s_var: nn.Variable, batch_size: int) -> nn.Variable:
+        s_hat = RF.expand_dims(s_var, axis=0)
+        s_hat = RF.repeat(s_hat, repeats=self._config.num_mmd_actions, axis=0)
+        s_hat = NF.reshape(s_hat, shape=(batch_size * self._config.num_mmd_actions,
+                                         s_var.shape[-1]))
+        return s_hat
+
     def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         models = cast(Sequence[StochasticPolicy], models)
         batch_size = training_variables.batch_size
@@ -156,10 +165,11 @@ class BEARPolicyTrainer(ModelTrainer):
                     'Unknown mmd type: {}'.format(self._config.mmd_type))
             assert mmd_loss.shape == (batch_size, 1)
 
-            s_hat = RF.expand_dims(training_variables.s_current, axis=0)
-            s_hat = RF.repeat(s_hat, repeats=self._config.num_mmd_actions, axis=0)
-            s_hat = NF.reshape(s_hat, shape=(batch_size * self._config.num_mmd_actions,
-                                             training_variables.s_current.shape[-1]))
+            if isinstance(training_variables.s_current, tuple):
+                s_hat = tuple(self._repeat_state(s_var, batch_size) for s_var in training_variables.s_current)
+            else:
+                s_hat = self._repeat_state(training_variables.s_current, batch_size)
+
             action_shape = policy_actions.shape[-1]
             a_hat = NF.transpose(policy_actions, axes=(1, 0, 2))
             a_hat = NF.reshape(a_hat, shape=(batch_size * self._config.num_mmd_actions, action_shape))
@@ -185,7 +195,7 @@ class BEARPolicyTrainer(ModelTrainer):
 
     def _setup_training_variables(self, batch_size):
         # Training input variables
-        s_current_var = nn.Variable((batch_size, *self._env_info.state_shape))
+        s_current_var = create_variable(batch_size, self._env_info.state_shape)
         return TrainingVariables(batch_size, s_current_var)
 
     def _setup_solver(self):

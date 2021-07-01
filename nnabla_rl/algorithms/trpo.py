@@ -36,7 +36,8 @@ from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -191,8 +192,6 @@ class TRPO(Algorithm):
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
                  state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
         super(TRPO, self).__init__(env_or_env_info, config=config)
-        if self._env_info.is_discrete_action_env():
-            raise NotImplementedError
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._v_function = v_function_builder('v', self._env_info, self._config)
@@ -208,9 +207,9 @@ class TRPO(Algorithm):
             self._v_function_solver = v_solver_builder(self._env_info, self._config)
 
     @eval_api
-    def compute_eval_action(self, s):
+    def compute_eval_action(self, state):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(s)
+            action, _ = self._compute_action(state)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -327,7 +326,7 @@ class TRPO(Algorithm):
             s_batch.append(s_seq)
             a_batch.append(a_seq)
 
-        s_batch = np.concatenate(s_batch, axis=0)
+        s_batch = np.concatenate(s_batch, axis=0) if not isinstance(s_batch, tuple) else s_batch
         a_batch = np.concatenate(a_batch, axis=0)
         return s_batch, a_batch
 
@@ -354,12 +353,12 @@ class TRPO(Algorithm):
 
     @eval_api
     def _compute_action(self, s):
-        s = np.expand_dims(s, axis=0)
+        s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
             distribution = self._policy.pi(self._eval_state_var)
             self._eval_action = distribution.sample()
-        self._eval_state_var.d = s
+        set_data_to_variable(self._eval_state_var, s)
         self._eval_action.forward()
         return np.squeeze(self._eval_action.d, axis=0), {}
 
@@ -375,6 +374,12 @@ class TRPO(Algorithm):
         solvers = {}
         solvers[self._v_function.scope_name] = self._v_function_solver
         return solvers
+
+    @classmethod
+    def is_supported_env(cls, env_or_env_info):
+        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
+            else env_or_env_info
+        return not env_info.is_discrete_action_env()
 
     @property
     def latest_iteration_state(self):

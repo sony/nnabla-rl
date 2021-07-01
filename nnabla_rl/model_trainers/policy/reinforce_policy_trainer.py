@@ -22,6 +22,8 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch, TrainingVariables
 from nnabla_rl.model_trainers.policy.spg_policy_trainer import SPGPolicyTrainer, SPGPolicyTrainerConfig
 from nnabla_rl.models import StochasticPolicy
+from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -52,11 +54,11 @@ class REINFORCEPolicyTrainer(SPGPolicyTrainer):
         if prev_batch_size != new_batch_size:
             self._target_return = nn.Variable((new_batch_size, 1))
         target_return = np.reshape(target_return, self._target_return.shape)
-        self._target_return.d = target_return
+        set_data_to_variable(self._target_return, target_return)
         return batch
 
     def _compute_target(self, training_variables: TrainingVariables) -> nn.Variable:
         batch_size = training_variables.batch_size
         if not hasattr(self, '_target_return') or self._target_return.shape[0] != batch_size:
-            self._target_return = nn.Variable((batch_size, 1))
+            self._target_return = create_variable(batch_size, 1)
         return self._target_return

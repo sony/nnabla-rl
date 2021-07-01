@@ -19,6 +19,7 @@ import gym
 import numpy as np
 
 import nnabla as nn
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
 from nnabla_rl.logger import logger
 
@@ -100,30 +101,16 @@ def print_env_info(env):
     else:
         env_name = 'Unknown'
 
-    if isinstance(env.observation_space, gym.spaces.Discrete):
-        state_dim = env.observation_space.n
-        state_high = 'N/A'
-        state_low = 'N/A'
-    elif isinstance(env.observation_space, gym.spaces.Box):
-        state_dim = env.observation_space.shape
-        state_high = env.observation_space.high
-        state_low = env.observation_space.low
-
-    if isinstance(env.action_space, gym.spaces.Discrete):
-        action_dim = env.action_space.n
-        action_high = 'N/A'
-        action_low = 'N/A'
-    elif isinstance(env.action_space, gym.spaces.Box):
-        action_dim = env.action_space.shape
-        action_high = env.action_space.high
-        action_low = env.action_space.low
+    env_info = EnvironmentInfo.from_env(env)
 
     info = f'''env: {env_name},
-               space_dim/classes: {state_dim},
-               space_high: {state_high},
-               space_low: {state_low},
-               action_dim/classes: {action_dim},
-               action_high: {action_high},
-               action_low: {action_low},
+               state_dim: {env_info.state_dim},
+               state_shape: {env_info.state_shape},
+               state_high: {env_info.state_high},
+               state_low: {env_info.state_low},
+               action_dim: {env_info.action_dim},
+               action_shape: {env_info.action_shape},
+               action_high: {env_info.action_high},
+               action_low: {env_info.action_low},
                max_episode_steps: {env.spec.max_episode_steps}'''
     logger.info(info)

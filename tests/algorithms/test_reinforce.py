@@ -35,7 +35,7 @@ class TestREINFORCE(object):
         Check that no error occurs when calling online training
         '''
 
-        dummy_env = E.DummyDiscrete()
+        dummy_env = E.DummyContinuous()
         dummy_env = EpisodicEnv(dummy_env)
         reinforce = A.REINFORCE(dummy_env)
         reinforce.train_online(dummy_env, total_iterations=1)
@@ -66,7 +66,7 @@ class TestREINFORCE(object):
         Check that latest iteration state has the keys and values we expected
         '''
 
-        dummy_env = E.DummyDiscrete()
+        dummy_env = E.DummyContinuous()
         reinforce = A.REINFORCE(dummy_env)
 
         reinforce._policy_trainer_state = {'pi_loss': 0.}
@@ -77,9 +77,7 @@ class TestREINFORCE(object):
 
 
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, "./")
     from testing_utils import EpisodicEnv
     pytest.main()
 else:
-    from .testing_utils import EpisodicEnv
+    from ..testing_utils import EpisodicEnv

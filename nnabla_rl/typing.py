@@ -13,14 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Tuple, Type
+from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 
-State = Type[np.ndarray]
-Action = Type[np.ndarray]
+State = Union[np.ndarray, Tuple[np.ndarray, ...]]
+# https://github.com/python/mypy/issues/7866
+# FIXME: This is a workaround for avoiding mypy error about creating a type alias.
+Action = Union[np.ndarray]
 Reward = float
 NonTerminal = float
-NextState = Type[np.ndarray]
+NextState = Union[np.ndarray, Tuple[np.ndarray, ...]]
 Info = Dict[str, Any]
 Experience = Tuple[State, Action, Reward, NonTerminal, NextState, Info]
+Shape = Union[int, Tuple[int, ...], Tuple[Tuple[int, ...], ...]]
+TupledData = Tuple

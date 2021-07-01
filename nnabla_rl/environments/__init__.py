@@ -16,7 +16,8 @@
 from gym.envs.registration import register
 
 from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyDiscrete,  # noqa
-                                          DummyDiscreteImg, DummyMujocoEnv)
+                                          DummyDiscreteImg, DummyMujocoEnv, DummyTupleContinuous,
+                                          DummyTupleDiscrete, DummyTupleMixed)
 
 register(
     id='FakeMujocoNNablaRL-v1',
