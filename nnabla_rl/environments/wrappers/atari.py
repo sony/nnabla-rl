@@ -81,8 +81,11 @@ class CHWLazyFrames(object):
         return out
 
 
-def make_atari(env_id):
+def make_atari(env_id, max_frames_per_episode=None):
     env = gym.make(env_id)
+    if max_frames_per_episode is not None:
+        env = env.unwrapped
+        env = gym.wrappers.TimeLimit(env, max_episode_steps=max_frames_per_episode)
     assert 'NoFrameskip' in env.spec.id
     assert isinstance(env, gym.wrappers.TimeLimit)
     env = NoopResetEnv(env, noop_max=30)

@@ -66,6 +66,7 @@ class CategoricalDQNConfig(AlgorithmConfig):
         v_min (float): lower limit of the value used in value distribution function. Defaults to -10.0.
         v_max (float): upper limit of the value used in value distribution function. Defaults to 10.0.
         num_atoms (int): the number of bins used in value distribution function. Defaults to 51.
+        loss_reduction_method (str): KL loss reduction method. "sum" or "mean" is supported. Defaults to mean.
     '''
 
     gamma: float = 0.99
@@ -83,6 +84,7 @@ class CategoricalDQNConfig(AlgorithmConfig):
     v_min: float = -10.0
     v_max: float = 10.0
     num_atoms: int = 51
+    loss_reduction_method: str = "mean"
 
 
 class DefaultValueDistFunctionBuilder(ModelBuilder[ValueDistributionFunction]):
@@ -216,7 +218,8 @@ class CategoricalDQN(Algorithm):
             num_steps=self._config.num_steps,
             v_min=self._config.v_min,
             v_max=self._config.v_max,
-            num_atoms=self._config.num_atoms)
+            num_atoms=self._config.num_atoms,
+            reduction_method=self._config.loss_reduction_method)
 
         model_trainer = MT.q_value_trainers.CategoricalDQNQTrainer(
             train_functions=self._atom_p,

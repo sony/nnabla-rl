@@ -50,6 +50,17 @@ BEAR
    :members:
    :show-inheritance:
 
+Categorical DDQN
+================
+.. autoclass:: nnabla_rl.algorithms.categorical_ddqn.CategoricalDDQNConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.categorical_ddqn.CategoricalDDQN
+   :members:
+   :show-inheritance:
+
+
 Categorical DQN
 ================
 .. autoclass:: nnabla_rl.algorithms.categorical_dqn.CategoricalDQNConfig
@@ -150,6 +161,17 @@ QRDQN
 .. autoclass:: nnabla_rl.algorithms.qrdqn.QRDQN
    :members:
    :show-inheritance:
+
+Rainbow
+==========
+.. autoclass:: nnabla_rl.algorithms.rainbow.RainbowConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.rainbow.Rainbow
+   :members:
+   :show-inheritance:
+
 
 REINFORCE
 ==========

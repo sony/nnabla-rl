@@ -29,9 +29,14 @@ from nnabla_rl.utils.misc import create_variable
 
 @dataclass
 class ValueDistributionFunctionTrainerConfig(MultiStepTrainerConfig):
+    reduction_method: str = 'mean'
     v_min: float = -10.0
     v_max: float = 10.0
     num_atoms: int = 51
+
+    def __post_init__(self):
+        self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
+        return super().__post_init__()
 
 
 class ValueDistributionFunctionTrainer(MultiStepTrainer):
@@ -114,8 +119,12 @@ class ValueDistributionFunctionTrainer(MultiStepTrainer):
         assert cross_entropy.shape == (batch_size, self._config.num_atoms)
 
         kl_loss = -NF.sum(cross_entropy, axis=1, keepdims=True)
-        loss = NF.mean(kl_loss * training_variables.weight)
-
+        if self._config.reduction_method == 'mean':
+            loss = NF.mean(kl_loss * training_variables.weight)
+        elif self._config.reduction_method == 'sum':
+            loss = NF.sum(kl_loss * training_variables.weight)
+        else:
+            raise RuntimeError
         extra = {'kl_loss': kl_loss}
         return loss, extra
 

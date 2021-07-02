@@ -32,11 +32,11 @@ def set_global_seed(seed: int):
     rl.seed(seed)
 
 
-def build_atari_env(id_or_env, test=False, seed=None, render=False, print_info=True):
+def build_atari_env(id_or_env, test=False, seed=None, render=False, print_info=True, max_frames_per_episode=None):
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
     else:
-        env = make_atari(id_or_env)
+        env = make_atari(id_or_env, max_frames_per_episode=max_frames_per_episode)
     if print_info:
         print_env_info(env)
 

@@ -35,9 +35,12 @@ class CategoricalDDQNConfig(CategoricalDQNConfig):
 class CategoricalDDQN(CategoricalDQN):
     '''Categorical Double DQN algorithm.
 
-    This class implements the Categorical Double DQN algorithm
-    introduced by M. Bellemare, et al. in the paper: "A Distributional Perspective on Reinfocement Learning"
-    For details see: https://arxiv.org/abs/1707.06887
+    This class implements the Categorical Double DQN algorithm introduced by M. Bellemare, et al.
+    in the paper: "Rainbow: Combining Improvements in Deep Reinforcement Learning"
+    For details see: https://arxiv.org/abs/1710.02298.
+    The difference between Categorical DQN and this algorithm is the update target of q-value.
+    This algorithm uses following double DQN style q-value target for Categorical Q value update.
+    :math:`r + \\gamma Q_{\\text{target}}(s_{t+1}, \\arg\\max_{a}{Q(s_{t+1}, a)})`.
 
     Args:
         env_or_env_info \
@@ -71,9 +74,11 @@ class CategoricalDDQN(CategoricalDQN):
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.CategoricalDDQNQTrainerConfig(
+            num_steps=self._config.num_steps,
             v_min=self._config.v_min,
             v_max=self._config.v_max,
-            num_atoms=self._config.num_atoms)
+            num_atoms=self._config.num_atoms,
+            reduction_method=self._config.loss_reduction_method)
 
         model_trainer = MT.q_value_trainers.CategoricalDDQNQTrainer(
             train_function=self._atom_p,
