@@ -17,6 +17,7 @@ from nnabla_rl.algorithm import Algorithm, AlgorithmConfig
 from nnabla_rl.algorithms.a2c import A2C, A2CConfig
 from nnabla_rl.algorithms.bcq import BCQ, BCQConfig
 from nnabla_rl.algorithms.bear import BEAR, BEARConfig
+from nnabla_rl.algorithms.categorical_ddqn import CategoricalDDQN, CategoricalDDQNConfig
 from nnabla_rl.algorithms.categorical_dqn import CategoricalDQN, CategoricalDQNConfig
 from nnabla_rl.algorithms.ddpg import DDPG, DDPGConfig
 from nnabla_rl.algorithms.dqn import DQN, DQNConfig
@@ -64,6 +65,7 @@ def get_class_of(name):
 register_algorithm(A2C, A2CConfig)
 register_algorithm(BCQ, BCQConfig)
 register_algorithm(BEAR, BEARConfig)
+register_algorithm(CategoricalDDQN, CategoricalDDQNConfig)
 register_algorithm(CategoricalDQN, CategoricalDQNConfig)
 register_algorithm(DDPG, DDPGConfig)
 register_algorithm(DQN, DQNConfig)
