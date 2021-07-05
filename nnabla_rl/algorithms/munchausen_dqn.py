@@ -301,7 +301,7 @@ class MunchausenDQN(Algorithm):
         if self.iteration_num % self._config.target_update_frequency == 0:
             sync_model(self._q, self._target_q)
 
-        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        td_errors = self._q_function_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
     def _models(self):

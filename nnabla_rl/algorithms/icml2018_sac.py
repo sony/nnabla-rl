@@ -340,7 +340,7 @@ class ICML2018SAC(Algorithm):
             sync_model(self._v, self._target_v, tau=self._config.tau)
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
-        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        td_errors = self._q_function_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
     @eval_api

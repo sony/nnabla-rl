@@ -291,7 +291,7 @@ class TD3(Algorithm):
                               weight=info['weights'])
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
-        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        td_errors = self._q_function_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
         if self.iteration_num % self._config.d == 0:

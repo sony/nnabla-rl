@@ -260,7 +260,7 @@ class DDPG(Algorithm):
         self._policy_trainer_state = self._policy_trainer.train(batch)
         sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
-        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        td_errors = self._q_function_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
     @eval_api
