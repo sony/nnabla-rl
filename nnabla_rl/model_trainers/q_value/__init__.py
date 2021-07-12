@@ -16,6 +16,8 @@ from nnabla_rl.model_trainers.q_value.bcq_q_trainer import (  # noqa
     BCQQTrainer, BCQQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.categorical_dqn_q_trainer import (  # noqa
     CategoricalDQNQTrainer, CategoricalDQNQTrainerConfig)
+from nnabla_rl.model_trainers.q_value.categorical_ddqn_q_trainer import (  # noqa
+    CategoricalDDQNQTrainer, CategoricalDDQNQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.clipped_double_q_trainer import (  # noqa
     ClippedDoubleQTrainer, ClippedDoubleQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.ddpg_q_trainer import (  # noqa
