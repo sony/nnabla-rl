@@ -66,6 +66,19 @@ class TestReplayBuffer(object):
         assert len(info["weights"]) == 10
         assert np.allclose(info["weights"], 1.0)
 
+    def test_sample_multiple_steps(self):
+        buffer = self._generate_buffer_with_experiences(experience_num=100)
+        num_samples = 10
+        num_steps = 5
+        experience, info = buffer.sample(num_samples=num_samples, num_steps=num_steps)
+        assert len(experience) == num_steps
+        assert isinstance(experience, tuple)
+        assert len(info["weights"]) == num_samples
+        assert np.allclose(info["weights"], 1.0)
+
+        for step_experience in experience:
+            assert len(step_experience) == num_samples
+
     def test_sample_from_insufficient_size_buffer(self):
         buffer = self._generate_buffer_with_experiences(experience_num=10)
         with pytest.raises(ValueError):
@@ -104,6 +117,20 @@ class TestReplayBuffer(object):
         indices = np.array(indices, dtype=np.int32)
         assert len(indices) == 10
         assert np.alltrue(0 <= indices) and np.alltrue(indices <= 100)
+
+        # check no duplicates
+        assert len(np.unique(indices)) == len(indices)
+
+    def test_random_indices_with_max_index(self):
+        buffer = ReplayBuffer()
+        for _ in range(100):
+            experience = self._generate_experience_mock()
+            buffer.append(experience)
+
+        indices = buffer._random_indices(num_samples=10, max_index=20)
+        indices = np.array(indices, dtype=np.int32)
+        assert len(indices) == 10
+        assert np.alltrue(0 <= indices) and np.alltrue(indices <= 20)
 
         # check no duplicates
         assert len(np.unique(indices)) == len(indices)

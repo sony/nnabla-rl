@@ -57,6 +57,22 @@ class TestMunchausenIQN(object):
 
         m_iqn.train_online(dummy_env, total_iterations=5)
 
+    def test_run_online_training_multistep(self):
+        '''
+        Check that no error occurs when calling online training
+        '''
+
+        dummy_env = E.DummyDiscreteImg()
+        config = A.MunchausenIQNConfig()
+        config.num_steps = 2
+        config.start_timesteps = 5
+        config.batch_size = 5
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        m_iqn = A.MunchausenIQN(dummy_env, config=config)
+
+        m_iqn.train_online(dummy_env, total_iterations=5)
+
     def test_run_offline_training(self):
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5

@@ -20,14 +20,15 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.q_value.multi_step_trainer import MultiStepTrainer, MultiStepTrainerConfig
 from nnabla_rl.models import Model, QFunction
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
-class SquaredTDQFunctionTrainerConfig(TrainerConfig):
+class SquaredTDQFunctionTrainerConfig(MultiStepTrainerConfig):
     reduction_method: str = 'mean'
     grad_clip: Optional[tuple] = None
     q_loss_scalar: float = 1.0
@@ -39,7 +40,7 @@ class SquaredTDQFunctionTrainerConfig(TrainerConfig):
             self._assert_length(self.grad_clip, 2, 'grad_clip')
 
 
-class SquaredTDQFunctionTrainer(ModelTrainer):
+class SquaredTDQFunctionTrainer(MultiStepTrainer):
     _config: SquaredTDQFunctionTrainerConfig
     # Training loss/output
     _td_error: nn.Variable

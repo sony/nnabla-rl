@@ -93,6 +93,24 @@ class TrainingBatch():
         self.extra: Dict[str, np.ndarray] = extra
         self.next_step_batch = next_step_batch
 
+    def __getitem__(self, index):
+        num_steps = len(self)
+        if num_steps <= index:
+            raise IndexError
+
+        batch = self
+        for _ in range(index):
+            batch = batch.next_step_batch
+        return batch
+
+    def __len__(self):
+        num_steps = 1
+        batch = self.next_step_batch
+        while batch is not None:
+            num_steps += 1
+            batch = batch.next_step_batch
+        return num_steps
+
 
 class TrainingVariables():
     batch_size: int
@@ -186,8 +204,8 @@ class ModelTrainer(metaclass=ABCMeta):
         for solver in self._solvers.values():
             solver.set_learning_rate(new_learning_rate)
 
-    def _setup_batch(self, batch: TrainingBatch) -> TrainingBatch:
-        return batch
+    def _setup_batch(self, training_batch: TrainingBatch) -> TrainingBatch:
+        return training_batch
 
     @abstractmethod
     def _update_model(self,

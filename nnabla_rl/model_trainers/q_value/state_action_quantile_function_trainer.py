@@ -21,21 +21,22 @@ import nnabla as nn
 import nnabla.functions as NF
 import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.q_value.multi_step_trainer import MultiStepTrainer, MultiStepTrainerConfig
 from nnabla_rl.models import Model, StateActionQuantileFunction
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
-class StateActionQuantileFunctionTrainerConfig(TrainerConfig):
+class StateActionQuantileFunctionTrainerConfig(MultiStepTrainerConfig):
     N: int = 64
     N_prime: int = 64
     K: int = 32
     kappa: float = 1.0
 
 
-class StateActionQuantileFunctionTrainer(ModelTrainer):
+class StateActionQuantileFunctionTrainer(MultiStepTrainer):
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details

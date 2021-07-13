@@ -47,7 +47,8 @@ class CategoricalDQNConfig(AlgorithmConfig):
             You can customize/override the learning rate for each solver by implementing the \
             (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
             Defaults to 0.001.
-        batch_size (int): training atch size. Defaults to 32.
+        batch_size (int): training batch size. Defaults to 32.
+        num_steps (int): number of steps for N-step Q targets. Defaults to 1.
         start_timesteps (int): the timestep when training starts.\
             The algorithm will collect experiences from the environment by acting randomly until this timestep.
             Defaults to 50000.
@@ -70,6 +71,7 @@ class CategoricalDQNConfig(AlgorithmConfig):
     gamma: float = 0.99
     learning_rate: float = 0.00025
     batch_size: int = 32
+    num_steps: int = 1
     start_timesteps: int = 50000
     replay_buffer_size: int = 1000000
     learner_update_frequency: int = 4
@@ -198,6 +200,7 @@ class CategoricalDQN(Algorithm):
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.CategoricalDQNQTrainerConfig(
+            num_steps=self._config.num_steps,
             v_min=self._config.v_min,
             v_max=self._config.v_max,
             num_atoms=self._config.num_atoms)
@@ -225,16 +228,23 @@ class CategoricalDQN(Algorithm):
         self._categorical_dqn_training(buffer)
 
     def _categorical_dqn_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
+        if self._config.num_steps == 1:
+            experiences_tuple = (experiences_tuple, )
+        assert len(experiences_tuple) == self._config.num_steps
+
+        batch = None
+        for experiences in reversed(experiences_tuple):
+            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            batch = TrainingBatch(batch_size=self._config.batch_size,
+                                  s_current=s,
+                                  a_current=a,
+                                  gamma=self._config.gamma,
+                                  reward=r,
+                                  non_terminal=non_terminal,
+                                  s_next=s_next,
+                                  weight=info['weights'],
+                                  next_step_batch=batch)
 
         self._model_trainer_state = self._model_trainer.train(batch)
         if self.iteration_num % self._config.target_update_frequency == 0:

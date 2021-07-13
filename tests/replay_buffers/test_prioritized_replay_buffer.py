@@ -53,82 +53,29 @@ class TestSumTree(object):
         assert buffer.total == 100.0
         tree_index = index + buffer._capacity - 1
         prev_priority = buffer._tree[tree_index].value
-        buffer.update(index=index, p=priority)
+        buffer._update(absolute_index=index, p=priority)
         assert buffer._tree[tree_index].value == priority
         assert buffer.total == 100.0 + (priority - prev_priority)
 
-    @pytest.mark.parametrize(
-        "beta, priority",
-        [(np.random.randint(low=0.0, high=1.0),
-          np.random.uniform(low=0.1, high=5.0))
-         for _ in range(1, 10)])
+    @pytest.mark.parametrize("beta, priority",
+                             [(np.random.randint(low=0.0, high=1.0),
+                               np.random.uniform(low=0.1, high=5.0))
+                              for _ in range(1, 10)])
     def test_weights_from_priorities(self, beta, priority):
         buffer = self._generate_buffer_with_experiences(experience_num=100)
         min_p = buffer._min_p
-        weights = buffer._weights_from_priorities(
-            priorities=np.array([priority]),
-            beta=beta)
+        weights = buffer.weights_from_priorities(priorities=np.array([priority]), beta=beta)
         assert weights == ((priority / min_p) ** (-beta))
 
-    @pytest.mark.parametrize(
-        "beta",
-        [np.random.randint(low=0.0, high=1.0) for _ in range(1, 10)])
-    def test_sample_one_experience(self, beta):
+    def test_relative_absolute_index_conversion(self):
         buffer = self._generate_buffer_with_experiences(experience_num=100)
-        experience, weights = buffer.sample(beta=beta)
-        lastest_index = buffer._latest_indices
-        assert len(experience) == 1
-        assert len(weights) == 1
-        assert len(lastest_index) == 1
 
-        for weight, index in zip(weights, lastest_index):
-            priority = buffer._get_priority(index)
-            assert weight == buffer._weights_from_priorities(priority, beta)
+        relative_indices = np.random.randint(low=0, high=100, size=10)
+        absolute_indices = [buffer._relative_to_absolute_index(relative_index) for relative_index in relative_indices]
 
-    @pytest.mark.parametrize(
-        "beta",
-        [np.random.randint(low=0.0, high=1.0) for _ in range(1, 10)])
-    def test_sample_multiple_experiences(self, beta):
-        buffer = self._generate_buffer_with_experiences(experience_num=100)
-        experience, weights = buffer.sample(num_samples=10, beta=beta)
-        lastest_index = buffer._latest_indices
-        assert len(experience) == 10
-        assert len(weights) == 10
-        assert len(lastest_index) == 10
-        for weight, index in zip(weights, lastest_index):
-            priority = buffer._get_priority(index)
-            assert weight == buffer._weights_from_priorities(priority, beta)
-
-    @pytest.mark.parametrize(
-        "beta",
-        [np.random.randint(low=0.0, high=1.0) for _ in range(1, 10)])
-    def test_sample_indices(self, beta):
-        buffer = self._generate_buffer_with_experiences(experience_num=100)
-        indices = [1, 67, 50, 4, 99]
-        experiences, weights = buffer.sample_indices(indices, beta=beta)
-
-        assert len(experiences) == len(indices)
-        assert len(weights) == len(indices)
-        for experience, weight, index in zip(experiences, weights, indices):
-            priority = buffer._get_priority(index)
-            assert experience == buffer[index]
-            assert weight == buffer._weights_from_priorities(priority, beta)
-
-    def test_sample_without_update(self):
-        beta = 0.5
-        buffer = self._generate_buffer_with_experiences(experience_num=100)
-        indices = [1, 67, 50, 4, 99]
-        _, weights = buffer.sample_indices(indices, beta=beta)
-
-        # update the priority and check that following sampling succeeds
-        errors = np.random.sample([len(weights), 1])
-        buffer.update_latest_priorities(errors)
-
-        _, _ = buffer.sample_indices(indices, beta=beta)
-
-        # sample without priority update
-        with pytest.raises(RuntimeError):
-            buffer.sample_indices(indices, beta=beta)
+        reconstructed_indices = \
+            [buffer._absolute_to_relative_index(absolute_index) for absolute_index in absolute_indices]
+        assert all(relative_indices == reconstructed_indices)
 
     def _generate_experience_mock(self):
         state_shape = (5, )
@@ -190,37 +137,54 @@ class TestPrioritizedReplayBuffer(object):
         buffer = self._generate_buffer_with_experiences(experience_num=100,
                                                         beta=beta)
         experiences, info = buffer.sample()
-        indices = buffer._buffer._latest_indices
+        indices = buffer._last_sampled_indices
         assert len(experiences) == 1
         assert "weights" in info
         assert len(info["weights"]) == 1
         assert len(indices) == 1
         weights = info["weights"]
         for index, experience, weight in zip(indices, experiences, weights):
-            priority = buffer._buffer._get_priority(index)
+            priority = buffer._buffer.get_priority(index)
             assert experience == buffer[index]
-            assert weight == buffer._buffer._weights_from_priorities(priority,
-                                                                     beta)
+            assert weight == buffer._buffer.weights_from_priorities(priority, beta)
 
     @pytest.mark.parametrize(
         "beta",
         [np.random.randint(low=0.0, high=1.0) for _ in range(1, 10)])
     def test_sample_multiple_experiences(self, beta):
-        buffer = self._generate_buffer_with_experiences(experience_num=100,
-                                                        beta=beta)
+        buffer = self._generate_buffer_with_experiences(experience_num=100, beta=beta)
         num_samples = 10
         experiences, info = buffer.sample(num_samples=num_samples)
-        indices = buffer._buffer._latest_indices
+        indices = buffer._last_sampled_indices
         assert len(experiences) == num_samples
         assert "weights" in info
         assert len(info["weights"]) == num_samples
         assert len(indices) == num_samples
         weights = info["weights"]
         for index, experience, weight in zip(indices, experiences, weights):
-            priority = buffer._buffer._get_priority(index)
+            priority = buffer._buffer.get_priority(index)
             assert experience == buffer[index]
-            assert weight == buffer._buffer._weights_from_priorities(priority,
-                                                                     beta)
+            assert weight == buffer._buffer.weights_from_priorities(priority, beta)
+
+    @pytest.mark.parametrize("beta", [np.random.randint(low=0.0, high=1.0) for _ in range(1, 5)])
+    @pytest.mark.parametrize("num_steps", range(1, 5))
+    def test_sample_multiple_step_experience(self, beta, num_steps):
+        buffer = self._generate_buffer_with_experiences(experience_num=100,
+                                                        beta=beta)
+        experiences_tuple, info = buffer.sample(num_steps=num_steps)
+        if num_steps == 1:
+            experiences_tuple = tuple([experiences_tuple, ])
+        indices = buffer._last_sampled_indices
+        assert len(experiences_tuple) == num_steps
+        assert "weights" in info
+        assert len(info["weights"]) == 1
+        assert len(indices) == 1
+        weights = info["weights"]
+        for i, experiences in enumerate(experiences_tuple):
+            for index, experience, weight in zip(indices, experiences, weights):
+                priority = buffer._buffer.get_priority(index)
+                assert weight == buffer._buffer.weights_from_priorities(priority, beta)
+                assert experience == buffer[index + i]
 
     def test_sample_from_insufficient_size_buffer(self):
         buffer = self._generate_buffer_with_experiences(experience_num=10)
@@ -242,10 +206,9 @@ class TestPrioritizedReplayBuffer(object):
         assert len(info["weights"]) == len(indices)
         weights = info["weights"]
         for index, experience, weight in zip(indices, experiences, weights):
-            priority = buffer._buffer._get_priority(index)
+            priority = buffer._buffer.get_priority(index)
             assert experience == buffer[index]
-            assert weight == buffer._buffer._weights_from_priorities(priority,
-                                                                     beta)
+            assert weight == buffer._buffer.weights_from_priorities(priority, beta)
 
     def test_sample_from_empty_indices(self):
         buffer = self._generate_buffer_with_experiences(experience_num=100)
@@ -255,7 +218,7 @@ class TestPrioritizedReplayBuffer(object):
     def test_sample_from_wrong_indices(self):
         buffer = self._generate_buffer_with_experiences(experience_num=100)
         indices = [-99, 100, 101]
-        with pytest.raises(IndexError):
+        with pytest.raises(KeyError):
             buffer.sample_indices(indices)
 
     def test_random_indices(self):
@@ -279,6 +242,22 @@ class TestPrioritizedReplayBuffer(object):
             buffer.append(experience)
 
         assert len(buffer) == 10
+
+    def test_sample_without_update(self):
+        beta = 0.5
+        buffer = self._generate_buffer_with_experiences(experience_num=100, beta=beta)
+        indices = [1, 67, 50, 4, 99]
+        _, weights = buffer.sample_indices(indices)
+
+        # update the priority and check that following sampling succeeds
+        errors = np.random.sample([len(weights), 1])
+        buffer.update_priorities(errors)
+
+        _, _ = buffer.sample_indices(indices)
+
+        # sample without priority update
+        with pytest.raises(RuntimeError):
+            buffer.sample_indices(indices)
 
     def _generate_experience_mock(self):
         state_shape = (5, )

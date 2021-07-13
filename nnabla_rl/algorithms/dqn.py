@@ -47,7 +47,8 @@ class DQNConfig(AlgorithmConfig):
             You can customize/override the learning rate for each solver by implementing the \
             (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
             Defaults to 0.00025.
-        batch_size (int): training atch size. Defaults to 32.
+        batch_size (int): training batch size. Defaults to 32.
+        num_steps (int): number of steps for N-step Q targets. Defaults to 1.
         learner_update_frequency (int): the interval of learner update. Defaults to 4.
         target_update_frequency (int): the interval of target q-function update. Defaults to 10000.
         start_timesteps (int): the timestep when training starts.\
@@ -67,6 +68,7 @@ class DQNConfig(AlgorithmConfig):
     gamma: float = 0.99
     learning_rate: float = 2.5e-4
     batch_size: int = 32
+    num_steps: int = 1
     # network update
     learner_update_frequency: float = 4
     target_update_frequency: float = 10000
@@ -87,8 +89,9 @@ class DQNConfig(AlgorithmConfig):
 
         '''
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.batch_size, 'batch_size')
         self._assert_positive(self.learning_rate, 'learning_rate')
+        self._assert_positive(self.batch_size, 'batch_size')
+        self._assert_positive(self.num_steps, 'num_steps')
         self._assert_positive(self.learner_update_frequency, 'learner_update_frequency')
         self._assert_positive(self.target_update_frequency, 'target_update_frequency')
         self._assert_positive(self.start_timesteps, 'start_timesteps')
@@ -219,6 +222,7 @@ class DQN(Algorithm):
 
     def _setup_q_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.DQNQTrainerConfig(
+            num_steps=self._config.num_steps,
             reduction_method='sum',
             grad_clip=self._config.grad_clip)
 
@@ -256,16 +260,23 @@ class DQN(Algorithm):
         return np.asarray(action).reshape((1, )), {}
 
     def _dqn_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
+        if self._config.num_steps == 1:
+            experiences_tuple = (experiences_tuple, )
+        assert len(experiences_tuple) == self._config.num_steps
+
+        batch = None
+        for experiences in reversed(experiences_tuple):
+            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            batch = TrainingBatch(batch_size=self._config.batch_size,
+                                  s_current=s,
+                                  a_current=a,
+                                  gamma=self._config.gamma,
+                                  reward=r,
+                                  non_terminal=non_terminal,
+                                  s_next=s_next,
+                                  weight=info['weights'],
+                                  next_step_batch=batch)
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         if self.iteration_num % self._config.target_update_frequency == 0:

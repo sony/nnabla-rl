@@ -47,7 +47,8 @@ class IQNConfig(AlgorithmConfig):
             You can customize/override the learning rate for each solver by implementing the \
             (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`) by yourself. \
             Defaults to 0.00005.
-        batch_size (int): training atch size. Defaults to 32.
+        batch_size (int): training batch size. Defaults to 32.
+        num_steps (int): number of steps for N-step Q targets. Defaults to 1.
         start_timesteps (int): the timestep when training starts.\
             The algorithm will collect experiences from the environment by acting randomly until this timestep.
             Defaults to 50000.
@@ -71,6 +72,7 @@ class IQNConfig(AlgorithmConfig):
     gamma: float = 0.99
     learning_rate: float = 0.00005
     batch_size: int = 32
+    num_steps: int = 1
     start_timesteps: int = 50000
     replay_buffer_size: int = 1000000
     learner_update_frequency: int = 4
@@ -94,6 +96,7 @@ class IQNConfig(AlgorithmConfig):
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.batch_size, 'batch_size')
         self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
+        self._assert_positive(self.num_steps, 'num_steps')
         self._assert_positive(self.learner_update_frequency, 'learner_update_frequency')
         self._assert_positive(self.target_update_frequency, 'target_update_frequency')
         self._assert_positive(self.max_explore_steps, 'max_explore_steps')
@@ -232,6 +235,7 @@ class IQN(Algorithm):
 
     def _setup_quantile_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.IQNQTrainerConfig(
+            num_steps=self._config.num_steps,
             N=self._config.N,
             N_prime=self._config.N_prime,
             K=self._config.K,
@@ -261,16 +265,23 @@ class IQN(Algorithm):
         self._iqn_training(buffer)
 
     def _iqn_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
+        if self._config.num_steps == 1:
+            experiences_tuple = (experiences_tuple, )
+        assert len(experiences_tuple) == self._config.num_steps
+
+        batch = None
+        for experiences in reversed(experiences_tuple):
+            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            batch = TrainingBatch(batch_size=self._config.batch_size,
+                                  s_current=s,
+                                  a_current=a,
+                                  gamma=self._config.gamma,
+                                  reward=r,
+                                  non_terminal=non_terminal,
+                                  s_next=s_next,
+                                  weight=info['weights'],
+                                  next_step_batch=batch)
 
         self._quantile_function_trainer_state = self._quantile_function_trainer.train(batch)
         if self.iteration_num % self._config.target_update_frequency:
