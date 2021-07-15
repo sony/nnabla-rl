@@ -24,7 +24,7 @@ import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import ModelBuilder, SolverBuilder
+from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
@@ -105,6 +105,23 @@ class DefaultSolverBuilder(SolverBuilder):
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
+class DefaultExplorerBuilder(ExplorerBuilder):
+    def build_explorer(self,  # type: ignore[override]
+                       env_info: EnvironmentInfo,
+                       algorithm_config: REINFORCEConfig,
+                       algorithm: "REINFORCE",
+                       **kwargs) -> EnvironmentExplorer:
+        explorer_config = EE.RawPolicyExplorerConfig(
+            reward_scalar=algorithm_config.reward_scale,
+            initial_step_num=algorithm.iteration_num,
+            timelimit_as_terminal=False
+        )
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._compute_action,
+                                        env_info=env_info,
+                                        config=explorer_config)
+        return explorer
+
+
 class REINFORCE(Algorithm):
     '''episodic REINFORCE implementation.
 
@@ -124,11 +141,14 @@ class REINFORCE(Algorithm):
             builder for policy function solvers
         policy_builder (:py:class:`ModelBuilder[StochasicPolicy] <nnabla_rl.builders.ModelBuilder>`):
             builder of policy models
+        explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
+            builder of environment explorer
     '''
     _config: REINFORCEConfig
     _policy: StochasticPolicy
     _policy_solver: nn.solver.Solver
 
+    _explorer_builder: ExplorerBuilder
     _environment_explorer: EnvironmentExplorer
     _policy_trainer: ModelTrainer
 
@@ -141,8 +161,11 @@ class REINFORCE(Algorithm):
                  env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: REINFORCEConfig = REINFORCEConfig(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder()):
+                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
         super(REINFORCE, self).__init__(env_or_env_info, config=config)
+
+        self._explorer_builder = explorer_builder
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._policy = policy_builder("pi", self._env_info, self._config)
@@ -161,17 +184,7 @@ class REINFORCE(Algorithm):
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
     def _setup_environment_explorer(self, env_or_buffer):
-        if self._is_buffer(env_or_buffer):
-            return None
-        explorer_config = EE.RawPolicyExplorerConfig(
-            reward_scalar=self._config.reward_scale,
-            initial_step_num=self.iteration_num,
-            timelimit_as_terminal=False
-        )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
-                                        env_info=self._env_info,
-                                        config=explorer_config)
-        return explorer
+        return None if self._is_buffer(env_or_buffer) else self._explorer_builder(self._env_info, self._config, self)
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.REINFORCEPolicyTrainerConfig(

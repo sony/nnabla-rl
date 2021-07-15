@@ -18,9 +18,10 @@ from typing import Union
 import gym
 
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.algorithms.categorical_dqn import (CategoricalDQN, CategoricalDQNConfig, DefaultReplayBufferBuilder,
-                                                  DefaultSolverBuilder, DefaultValueDistFunctionBuilder)
-from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.algorithms.categorical_dqn import (CategoricalDQN, CategoricalDQNConfig, DefaultExplorerBuilder,
+                                                  DefaultReplayBufferBuilder, DefaultSolverBuilder,
+                                                  DefaultValueDistFunctionBuilder)
+from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import ValueDistributionFunction
 from nnabla_rl.utils.misc import sync_model
@@ -50,6 +51,8 @@ class CategoricalDDQN(CategoricalDQN):
             builder of value distribution function solvers
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer
+        explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
+            builder of environment explorer
     '''
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
@@ -57,12 +60,14 @@ class CategoricalDDQN(CategoricalDQN):
                  value_distribution_builder: ModelBuilder[ValueDistributionFunction]
                  = DefaultValueDistFunctionBuilder(),
                  value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
         super(CategoricalDDQN, self).__init__(env_or_env_info,
                                               config=config,
                                               value_distribution_builder=value_distribution_builder,
                                               value_distribution_solver_builder=value_distribution_solver_builder,
-                                              replay_buffer_builder=replay_buffer_builder)
+                                              replay_buffer_builder=replay_buffer_builder,
+                                              explorer_builder=explorer_builder)
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.CategoricalDDQNQTrainerConfig(

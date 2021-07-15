@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nnabla_rl.builders.explorer_builder import ExplorerBuilder  # noqa
 from nnabla_rl.builders.model_builder import ModelBuilder  # noqa
 from nnabla_rl.builders.preprocessor_builder import PreprocessorBuilder  # noqa
 from nnabla_rl.builders.replay_buffer_builder import ReplayBufferBuilder  # noqa
