@@ -65,7 +65,7 @@ Most of famous/SOTA deep reinforcement learning algorithms, such as DQN, SAC, BC
 For the list of implemented algorithms see [here](./nnabla_rl/algorithms/README.md).
 
 You can also find the reproduction and evaluation results of each algorithm [here](./reproductions).  
-Note that you may not get completely the same results when running the reproduction code on your computer. The result may slightly change depending on your machine, nnabla/nnabla-rl's package version, etc.fjj
+Note that you may not get completely the same results when running the reproduction code on your computer. The result may slightly change depending on your machine, nnabla/nnabla-rl's package version, etc.
 
 ### Seamless switching of online and offline training
 
