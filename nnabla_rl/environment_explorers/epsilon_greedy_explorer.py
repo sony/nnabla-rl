@@ -33,6 +33,17 @@ def epsilon_greedy_action_selection(state, greedy_action_selector, random_action
 
 @dataclass
 class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
+    """
+    List of configurations for Linear decay epsilon-greedy explorer
+
+    Args:
+        initial_epsilon (float): Initial value of epsilon. Defaults to 1.0.
+        final_epsilon (float): Final value of epsilon after max_explore_steps.
+            This value must be smaller than initial_epsilon. Defaults to 0.05.
+        max_explore_steps (int): Number of steps to decay epsilon from initial_epsilon to final_epsilon.
+            Defaults to 1000000.
+    """
+
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.05
     max_explore_steps: float = 1000000
@@ -45,6 +56,21 @@ class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
 
 
 class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
+    '''Linear decay epsilon-greedy explorer
+
+    Epsilon-greedy style explorer. Epsilon is linearly decayed until max_eplore_steps set in the config.
+
+    Args:
+        greedy_action_selector (Callable[[np.ndarray], Tuple[np.ndarray, Dict]]):
+            callable which computes greedy action with respect to current state.
+        random_action_selector (Callable[[np.ndarray], Tuple[np.ndarray, Dict]]):
+            callable which computes random action that can be executed in the environment.
+        env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            environment info
+        config (:py:class:`LinearDecayEpsilonGreedyExplorerConfig\
+            <nnabla_rl.environment_explorers.LinearDecayEpsilonGreedyExplorerConfig>`): the config of this class.
+    '''
+
     def __init__(self,
                  greedy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
                  random_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],

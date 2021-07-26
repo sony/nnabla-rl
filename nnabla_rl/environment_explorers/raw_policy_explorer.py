@@ -28,6 +28,19 @@ class RawPolicyExplorerConfig(EnvironmentExplorerConfig):
 
 
 class RawPolicyExplorer(EnvironmentExplorer):
+    '''Raw policy explorer
+
+    Explore using policy's action without any changes.
+
+    Args:
+        policy_action_selector (Callable[[np.ndarray], Tuple[np.ndarray, Dict]]):
+            callable which computes current policy's action with respect to current state.
+        env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            environment info
+        config (:py:class:`LinearDecayEpsilonGreedyExplorerConfig\
+            <nnabla_rl.environment_explorers.RawPolicyExplorerConfig>`): the config of this class.
+    '''
+
     def __init__(self,
                  policy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
                  env_info: EnvironmentInfo,

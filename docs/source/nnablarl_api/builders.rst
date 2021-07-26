@@ -3,6 +3,11 @@ Builders
 =========
 Builder Class
 
+ExplorerBuilder
+=============
+.. autoclass:: nnabla_rl.builders.ExplorerBuilder
+   :members:
+
 ModelBuilder
 =============
 .. autoclass:: nnabla_rl.builders.ModelBuilder

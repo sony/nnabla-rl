@@ -25,6 +25,17 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 @dataclass
 class GaussianExplorerConfig(EnvironmentExplorerConfig):
+    """
+    List of configurations for gaussian explorer.
+
+    Args:
+        action_clip_low (float): Minimum noise value. Noise below this value will be clipped.
+            Defaults to sys.float_info.min.
+        action_clip_high (float): Maximum noise value. Noise above this value will be clipped.
+            Defaults to sys.float_info.max.
+        sigma (float): Standard deviation of gaussian noise. Must be positive. Defaults to 1.0.
+    """
+
     action_clip_low: float = sys.float_info.min
     action_clip_high: float = sys.float_info.max
     sigma: float = 1.0
@@ -34,6 +45,19 @@ class GaussianExplorerConfig(EnvironmentExplorerConfig):
 
 
 class GaussianExplorer(EnvironmentExplorer):
+    '''Gaussian explorer
+
+    Explore using policy's action without gaussian noise appended to it. Policy's action must be continuous action.
+
+    Args:
+        policy_action_selector (Callable[[np.ndarray], Tuple[np.ndarray, Dict]]):
+            callable which computes current policy's action with respect to current state.
+        env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
+            environment info
+        config (:py:class:`LinearDecayEpsilonGreedyExplorerConfig\
+            <nnabla_rl.environment_explorers.LinearDecayEpsilonGreedyExplorerConfig>`): the config of this class.
+    '''
+
     def __init__(self,
                  policy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
                  env_info: EnvironmentInfo,

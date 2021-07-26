@@ -27,7 +27,7 @@ import nnabla_rl.preprocessors as RP
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.algorithms.common_utils import (_StatePreprocessedPolicy, _StatePreprocessedVFunction,
                                                compute_v_target_and_advantage)
-from nnabla_rl.builders import ModelBuilder, PreprocessorBuilder, SolverBuilder
+from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
@@ -142,6 +142,22 @@ class DefaultPreprocessorBuilder(PreprocessorBuilder):
         return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
+class DefaultExplorerBuilder(ExplorerBuilder):
+    def build_explorer(self,  # type: ignore[override]
+                       env_info: EnvironmentInfo,
+                       algorithm_config: TRPOConfig,
+                       algorithm: "TRPO",
+                       **kwargs) -> EnvironmentExplorer:
+        explorer_config = EE.RawPolicyExplorerConfig(
+            initial_step_num=algorithm.iteration_num,
+            timelimit_as_terminal=False
+        )
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._compute_action,
+                                        env_info=env_info,
+                                        config=explorer_config)
+        return explorer
+
+
 class TRPO(Algorithm):
     '''Trust Region Policy Optimiation method with Generalized Advantage Estimation (GAE) implementation.
 
@@ -165,6 +181,8 @@ class TRPO(Algorithm):
             builder of policy models
         state_preprocessor_builder (None or :py:class:`PreprocessorBuilder <nnabla_rl.builders.PreprocessorBuilder>`):
             state preprocessor builder to preprocess the states
+        explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
+            builder of environment explorer
     '''
 
     # type declarations to type check with mypy
@@ -175,6 +193,7 @@ class TRPO(Algorithm):
     _v_function: VFunction
     _v_function_solver: nn.solvers.Solver
     _state_preprocessor: Optional[Preprocessor]
+    _explorer_builder: ExplorerBuilder
     _environment_explorer: EnvironmentExplorer
     _policy_trainer: ModelTrainer
     _v_function_trainer: ModelTrainer
@@ -190,8 +209,11 @@ class TRPO(Algorithm):
                  v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
                  v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
+                 state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder(),
+                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
         super(TRPO, self).__init__(env_or_env_info, config=config)
+
+        self._explorer_builder = explorer_builder
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._v_function = v_function_builder('v', self._env_info, self._config)
@@ -220,16 +242,7 @@ class TRPO(Algorithm):
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
     def _setup_environment_explorer(self, env_or_buffer):
-        if self._is_buffer(env_or_buffer):
-            return None
-        explorer_config = EE.RawPolicyExplorerConfig(
-            initial_step_num=self.iteration_num,
-            timelimit_as_terminal=False
-        )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
-                                        env_info=self._env_info,
-                                        config=explorer_config)
-        return explorer
+        return None if self._is_buffer(env_or_buffer) else self._explorer_builder(self._env_info, self._config, self)
 
     def _setup_v_function_training(self, env_or_buffer):
         v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(

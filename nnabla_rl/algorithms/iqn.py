@@ -24,7 +24,7 @@ import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -147,6 +147,27 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
         return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
+class DefaultExplorerBuilder(ExplorerBuilder):
+    def build_explorer(self,  # type: ignore[override]
+                       env_info: EnvironmentInfo,
+                       algorithm_config: IQNConfig,
+                       algorithm: "IQN",
+                       **kwargs) -> EnvironmentExplorer:
+        explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
+            warmup_random_steps=algorithm_config.start_timesteps,
+            initial_step_num=algorithm.iteration_num,
+            initial_epsilon=algorithm_config.initial_epsilon,
+            final_epsilon=algorithm_config.final_epsilon,
+            max_explore_steps=algorithm_config.max_explore_steps
+        )
+        explorer = EE.LinearDecayEpsilonGreedyExplorer(
+            greedy_action_selector=algorithm._greedy_action_selector,
+            random_action_selector=algorithm._random_action_selector,
+            env_info=env_info,
+            config=explorer_config)
+        return explorer
+
+
 class IQN(Algorithm):
     '''Implicit Quantile Network algorithm.
 
@@ -165,6 +186,8 @@ class IQN(Algorithm):
             builder for state action quantile function solvers
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer
+        explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
+            builder of environment explorer
     '''
 
     # type declarations to type check with mypy
@@ -176,6 +199,7 @@ class IQN(Algorithm):
     _quantile_function_solver: nn.solver.Solver
     _replay_buffer: ReplayBuffer
 
+    _explorer_builder: ExplorerBuilder
     _environment_explorer: EnvironmentExplorer
     _quantile_function_trainer: ModelTrainer
 
@@ -189,8 +213,11 @@ class IQN(Algorithm):
                  quantile_function_builder: ModelBuilder[StateActionQuantileFunction]
                  = DefaultQuantileFunctionBuilder(),
                  quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
         super(IQN, self).__init__(env_or_env_info, config=config)
+
+        self._explorer_builder = explorer_builder
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._quantile_function = quantile_function_builder('quantile_function', self._env_info, self._config)
@@ -217,21 +244,7 @@ class IQN(Algorithm):
         self._quantile_function_trainer = self._setup_quantile_function_training(env_or_buffer)
 
     def _setup_environment_explorer(self, env_or_buffer):
-        if self._is_buffer(env_or_buffer):
-            return None
-        explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
-            warmup_random_steps=self._config.start_timesteps,
-            initial_step_num=self.iteration_num,
-            initial_epsilon=self._config.initial_epsilon,
-            final_epsilon=self._config.final_epsilon,
-            max_explore_steps=self._config.max_explore_steps
-        )
-        explorer = EE.LinearDecayEpsilonGreedyExplorer(
-            greedy_action_selector=self._greedy_action_selector,
-            random_action_selector=self._random_action_selector,
-            env_info=self._env_info,
-            config=explorer_config)
-        return explorer
+        return None if self._is_buffer(env_or_buffer) else self._explorer_builder(self._env_info, self._config, self)
 
     def _setup_quantile_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.IQNQTrainerConfig(

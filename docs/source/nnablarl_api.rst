@@ -7,6 +7,7 @@ nnablaRL APIs
     nnablarl_api/algorithms.rst
     nnablarl_api/builders.rst
     nnablarl_api/distributions.rst
+    nnablarl_api/environment_explorers.rst
     nnablarl_api/environments.rst
     nnablarl_api/functions.rst
     nnablarl_api/hooks.rst

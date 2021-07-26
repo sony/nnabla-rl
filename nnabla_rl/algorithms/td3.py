@@ -24,7 +24,7 @@ import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
+from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
@@ -123,6 +123,26 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
         return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
+class DefaultExplorerBuilder(ExplorerBuilder):
+    def build_explorer(self,  # type: ignore[override]
+                       env_info: EnvironmentInfo,
+                       algorithm_config: TD3Config,
+                       algorithm: "TD3",
+                       **kwargs) -> EnvironmentExplorer:
+        explorer_config = EE.GaussianExplorerConfig(
+            warmup_random_steps=algorithm_config.start_timesteps,
+            initial_step_num=algorithm.iteration_num,
+            timelimit_as_terminal=False,
+            action_clip_low=env_info.action_space.low,
+            action_clip_high=env_info.action_space.high,
+            sigma=algorithm_config.exploration_noise_sigma
+        )
+        explorer = EE.GaussianExplorer(policy_action_selector=algorithm._compute_greedy_action,
+                                       env_info=env_info,
+                                       config=explorer_config)
+        return explorer
+
+
 class TD3(Algorithm):
     '''Twin Delayed Deep Deterministic policy gradient (TD3) algorithm.
 
@@ -146,6 +166,8 @@ class TD3(Algorithm):
             builder of actor solvers
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer
+        explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
+            builder of environment explorer
     '''
 
     # type declarations to type check with mypy
@@ -162,6 +184,7 @@ class TD3(Algorithm):
     _target_pi: DeterministicPolicy
     _replay_buffer: ReplayBuffer
 
+    _explorer_builder: ExplorerBuilder
     _environment_explorer: EnvironmentExplorer
     _policy_trainer: ModelTrainer
     _q_function_trainer: ModelTrainer
@@ -178,8 +201,11 @@ class TD3(Algorithm):
                  critic_solver_builder: SolverBuilder = DefaultSolverBuilder(),
                  actor_builder: ModelBuilder[DeterministicPolicy] = DefaultActorBuilder(),
                  actor_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
         super(TD3, self).__init__(env_or_env_info, config=config)
+
+        self._explorer_builder = explorer_builder
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
@@ -210,20 +236,7 @@ class TD3(Algorithm):
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
 
     def _setup_environment_explorer(self, env_or_buffer):
-        if self._is_buffer(env_or_buffer):
-            return None
-        explorer_config = EE.GaussianExplorerConfig(
-            warmup_random_steps=self._config.start_timesteps,
-            initial_step_num=self.iteration_num,
-            timelimit_as_terminal=False,
-            action_clip_low=self._env_info.action_space.low,
-            action_clip_high=self._env_info.action_space.high,
-            sigma=self._config.exploration_noise_sigma
-        )
-        explorer = EE.GaussianExplorer(policy_action_selector=self._compute_greedy_action,
-                                       env_info=self._env_info,
-                                       config=explorer_config)
-        return explorer
+        return None if self._is_buffer(env_or_buffer) else self._explorer_builder(self._env_info, self._config, self)
 
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
