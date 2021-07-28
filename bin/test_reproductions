@@ -49,7 +49,7 @@ do
     esac
 done
 
-REPRODUCTIONS_DIRS=$(find ${ROOT_DIR}/reproductions/${BASE_ENV}/* -maxdepth 0 -type d)
+REPRODUCTIONS_DIRS=$(find ${ROOT_DIR}/reproductions/algorithms/${BASE_ENV}/* -maxdepth 0 -type d)
 RESULT_BASE_DIR="${ROOT_DIR}/test_reproduction_results"
 
 for dir in $REPRODUCTIONS_DIRS;
