@@ -70,6 +70,16 @@ DDPG
    :members:
    :show-inheritance:
 
+DDQN
+=====
+.. autoclass:: nnabla_rl.algorithms.ddqn.DDQNConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.ddqn.DDQN
+   :members:
+   :show-inheritance:
+
 DQN
 ====
 .. autoclass:: nnabla_rl.algorithms.dqn.DQNConfig
