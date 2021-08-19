@@ -25,11 +25,13 @@ from nnabla_rl.models import VFunction
 class DummyVFunction(VFunction):
     def __init__(self):
         super(DummyVFunction, self).__init__("test_v_function")
-        self._state_dim = 1
 
     def v(self, s):
         with nn.parameter_scope(self.scope_name):
-            h = s * 2.
+            if isinstance(s, tuple):
+                h = s[0] * 2. + s[1] * 2.
+            else:
+                h = s * 2.
         return h
 
 
@@ -37,13 +39,13 @@ class TestCommonUtils():
     def setup_method(self, method):
         nn.clear_parameters()
 
-    def _collect_dummy_experince(self, num_episodes=1, episode_length=3):
+    def _collect_dummy_experience(self, num_episodes=1, episode_length=3, tupled_state=False):
         experience = []
         for _ in range(num_episodes):
             for i in range(episode_length):
-                s_current = np.ones(1, )
+                s_current = (np.ones(1, ), np.ones(1, )) if tupled_state else np.ones(1, )
                 a = np.ones(1, )
-                s_next = np.ones(1, )
+                s_next = (np.ones(1, ), np.ones(1, )) if tupled_state else np.ones(1, )
                 r = np.ones(1, )
                 non_terminal = np.ones(1, )
                 if i == episode_length-1:
@@ -51,20 +53,23 @@ class TestCommonUtils():
                 experience.append((s_current, a, r, non_terminal, s_next))
         return experience
 
-    @pytest.mark.parametrize("gamma, lmb, expected",
-                             [[1., 0., np.array([[1.], [1.], [-1.]])],
-                              [1., 1., np.array([[1.], [0.], [-1.]])],
-                              [0.9, 0.7, np.array([[0.9071], [0.17], [-1.]])],
+    @pytest.mark.parametrize("gamma, lmb, expected_adv, expected_vtarg, tupled_state",
+                             [[1., 0., np.array([[1.], [1.], [-1.]]), np.array([[3.], [3.], [1.]]), False],
+                              [1., 1., np.array([[1.], [0.], [-1.]]), np.array([[3.], [2.], [1.]]), False],
+                              [0.9, 0.7, np.array([[0.9071], [0.17], [-1.]]),
+                               np.array([[2.9071], [2.17], [1.]]), False],
+                              [1., 0., np.array([[1.], [1.], [-3.]]), np.array([[5.], [5.], [1.]]), True],
+                              [1., 1., np.array([[-1.], [-2.], [-3.]]), np.array([[3.], [2.], [1.]]), True],
                               ])
-    def test_compute(self, gamma, lmb, expected):
+    def test_compute_v_target_and_advantage(self, gamma, lmb, expected_adv, expected_vtarg, tupled_state):
         dummy_v_function = DummyVFunction()
-        dummy_experince = self._collect_dummy_experince()
+        dummy_experience = self._collect_dummy_experience(tupled_state=tupled_state)
 
         actual_vtarg, actual_adv = compute_v_target_and_advantage(
-            dummy_v_function, dummy_experince, gamma, lmb)
+            dummy_v_function, dummy_experience, gamma, lmb)
 
-        assert np.allclose(actual_adv, expected)
-        assert np.allclose(actual_vtarg, expected + 2.)
+        assert np.allclose(actual_adv, expected_adv)
+        assert np.allclose(actual_vtarg, expected_vtarg)
 
     def test_state_preprocessed_v_function(self):
         state_shape = (5, )
