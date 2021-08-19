@@ -13,7 +13,7 @@ Functions
 .. autofunction:: argmax
 .. autofunction:: quantile_huber_loss
 .. autofunction:: mean_squared_error
-.. autofunction:: minumum_n
+.. autofunction:: minimum_n
 .. autofunction:: gaussian_cross_entropy_method
 .. autofunction:: triangular_matrix
 .. autofunction:: batch_flatten
