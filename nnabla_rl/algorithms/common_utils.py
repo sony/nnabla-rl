@@ -13,62 +13,74 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Sequence, Tuple
+
 import numpy as np
 
 import nnabla as nn
 from nnabla_rl.models import Model, RewardFunction, StochasticPolicy, VFunction
 from nnabla_rl.preprocessors import Preprocessor
+from nnabla_rl.typing import Experience
+from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
-def compute_v_target_and_advantage(v_function, experiences, gamma=0.99, lmb=0.97):
+def compute_v_target_and_advantage(v_function: VFunction,
+                                   experiences: Sequence[Experience],
+                                   gamma: float = 0.99,
+                                   lmb: float = 0.97) -> Tuple[np.ndarray, np.ndarray]:
     ''' Compute value target and advantage by using Generalized Advantage Estimation (GAE)
 
     Args:
         v_function (M.VFunction): value function
-        experiences (list): list of experience.
+        experiences (Sequence[Experience]): list of experience.
             experience should have [state_current, action, reward, non_terminal, state_next]
         gamma (float): discount rate
         lmb (float): lambda
         preprocess_func (callable): preprocess function of states
     Returns:
-        v_target (numpy.ndarray): target of value
-        advantage (numpy.ndarray): advantage
+        Tuple[np.ndarray, np.ndarray]: target of value and advantage
     Ref:
         https://arxiv.org/pdf/1506.02438.pdf
     '''
     assert isinstance(v_function, VFunction), "Invalid v_function"
+
+    def get_shape(state):
+        if isinstance(state, tuple):
+            return tuple(s.shape for s in state)
+        else:
+            return state.shape
+
     T = len(experiences)
-    v_targets = []
-    advantages = []
+    v_targets: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
+    advantages: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
     advantage = 0.
 
     v_current = None
     v_next = None
-    state_shape = experiences[0][0].shape  # get state shape
-    s_var = nn.Variable((1, *state_shape))
+    s_var = create_variable(1, get_shape(experiences[0][0]))
     v = v_function.v(s_var)  # build graph
 
     for t in reversed(range(T)):
         s_current, _, r, non_terminal, s_next, *_ = experiences[t]
 
         # predict current v
-        s_var.d = s_current
+        set_data_to_variable(s_var, s_current)
         v.forward()
         v_current = np.squeeze(v.d)
 
         if v_next is None:
-            s_var.d = s_next
+            set_data_to_variable(s_var, s_next)
             v.forward()
             v_next = np.squeeze(v.d)
 
         delta = r + gamma * non_terminal * v_next - v_current
-        advantage = np.float32(
-            delta + gamma * lmb * non_terminal * advantage)
+        advantage = np.float32(delta + gamma * lmb * non_terminal * advantage)
         # A = Q - V, V = E[Q] -> v_target = A + V
         v_target = advantage + v_current
 
-        v_targets.insert(0, v_target)
-        advantages.insert(0, advantage)
+        v_targets[t] = v_target
+        advantages[t] = advantage
 
         v_next = v_current
 
