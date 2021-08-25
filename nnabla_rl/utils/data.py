@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, List, Tuple, TypeVar, Union
+from typing import Any, Generic, Iterable, List, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -119,8 +119,45 @@ def add_batch_dimension(data: Union[np.ndarray, Tuple[np.ndarray, ...]]) -> Unio
         return tuple(np.expand_dims(d, axis=0) for d in data)
 
 
-class RingBuffer(object):
-    def __init__(self, maxlen):
+class DataHolder(Generic[T]):
+    '''DataHolder
+
+    FIFO (First Input First Out) data container.
+    '''
+
+    def __len__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, index: int):
+        raise NotImplementedError
+
+    def append(self, data: T):
+        '''
+        Append new data. If the holder's capacity exceeds by appending new data, oldest data will be removed and
+        new data will be appended to the tail.
+
+        Args:
+            data T: data to append.
+        '''
+        raise NotImplementedError
+
+    def append_with_removed_item_check(self, data: T) -> Union[T, None]:
+        '''
+        Append new data. If the holder's capacity exceeds by appending new data, oldest data will be removed and
+        new data will be appended to the tail. If oldest data is removed from the holder, will return removed data
+        otherwise None.
+
+        Args:
+            data T: data to append.
+
+        Returns:
+            Union[T, None]: Removed item. If no data is removed, None will be returned.
+        '''
+        raise NotImplementedError
+
+
+class RingBuffer(DataHolder[Any]):
+    def __init__(self, maxlen: int):
         # Do NOT replace this list with collections.deque.
         # deque is too slow when randomly accessed to sample data for creating batch
         self._buffer = [None for _ in range(maxlen)]
@@ -131,12 +168,12 @@ class RingBuffer(object):
     def __len__(self):
         return self._length
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
         if index < 0 or index >= len(self):
             raise KeyError
         return self._buffer[(self._head + index) % self._maxlen]
 
-    def append(self, data):
+    def append(self, data: T):
         self.append_with_removed_item_check(data)
 
     def append_with_removed_item_check(self, data):

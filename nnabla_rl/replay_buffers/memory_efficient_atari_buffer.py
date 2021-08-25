@@ -14,29 +14,34 @@
 # limitations under the License.
 
 from collections import deque
+from typing import Optional, Tuple
 
 import numpy as np
 
 from nnabla_rl.replay_buffer import ReplayBuffer
-from nnabla_rl.replay_buffers.prioritized_replay_buffer import PrioritizedReplayBuffer
+from nnabla_rl.replay_buffers.prioritized_replay_buffer import (ProportionalPrioritizedReplayBuffer,
+                                                                RankBasedPrioritizedReplayBuffer)
 from nnabla_rl.utils.data import RingBuffer
 
 
 class MemoryEfficientAtariBuffer(ReplayBuffer):
     '''Buffer designed to compactly save experiences of Atari environments used in DQN.
-
     DQN (and other training algorithms) requires large replay buffer when training on Atari games.
     If you naively save the experiences, you'll need more than 100GB to save them (assuming 1M experiences).
     Which usually does not fit in the machine's memory (unless you have money:).
     This replay buffer reduces the size of experience by casting the images to uint8 and
     removing old frames concatenated to the observation.
     By using this buffer, you can hold 1M experiences using only 20GB(approx.) of memory.
-
     Note that this class is designed only for DQN style training on atari environment.
     (i.e. State consists of 4 concatenated grayscaled frames and its values are normalized between 0 and 1)
     '''
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _buffer: RingBuffer
+    _sub_buffer: deque
 
-    def __init__(self, capacity):
+    def __init__(self, capacity: int):
         super(MemoryEfficientAtariBuffer, self).__init__(capacity=capacity)
         self._reset = True
         self._buffer = RingBuffer(maxlen=capacity)
@@ -45,32 +50,79 @@ class MemoryEfficientAtariBuffer(ReplayBuffer):
     def append(self, experience):
         self._reset = _append_to_buffer(experience, self._buffer, self._sub_buffer, self._reset)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
         return _getitem_from_buffer(index, self._buffer, self._sub_buffer)
 
 
-class MemoryEfficientPrioritizedAtariBuffer(PrioritizedReplayBuffer):
+class ProportionalPrioritizedAtariBuffer(ProportionalPrioritizedReplayBuffer):
     '''Prioritized buffer designed to compactly save experiences of Atari environments used in DQN.
-
-    Prioritized version of efficient Atari buffer.
-
+    Proportional Prioritized version of efficient Atari buffer.
     Note that this class is designed only for DQN style training on atari environment.
     (i.e. State consists of 4 concatenated grayscaled frames and its values are normalized between 0 and 1)
     '''
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _sub_buffer: deque
 
-    def __init__(self, capacity, alpha=0.6, beta=0.4, betasteps=10000, epsilon=1e-8):
-        super(MemoryEfficientPrioritizedAtariBuffer, self).__init__(capacity=capacity,
-                                                                    alpha=alpha,
-                                                                    beta=beta,
-                                                                    betasteps=betasteps,
-                                                                    epsilon=epsilon)
+    def __init__(self,
+                 capacity: int,
+                 alpha: float = 0.6,
+                 beta: float = 0.4,
+                 betasteps: int = 50000000,
+                 error_clip: Optional[Tuple[float, float]] = (-1, 1),
+                 epsilon: float = 1e-8,
+                 normalization_method: str = "buffer_max"):
+        super(ProportionalPrioritizedAtariBuffer, self).__init__(capacity=capacity,
+                                                                 alpha=alpha,
+                                                                 beta=beta,
+                                                                 betasteps=betasteps,
+                                                                 error_clip=error_clip,
+                                                                 epsilon=epsilon,
+                                                                 normalization_method=normalization_method)
         self._reset = True
         self._sub_buffer = deque(maxlen=3)
 
     def append(self, experience):
         self._reset = _append_to_buffer(experience, self._buffer, self._sub_buffer, self._reset)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
+        return _getitem_from_buffer(index, self._buffer, self._sub_buffer)
+
+
+class RankBasedPrioritizedAtariBuffer(RankBasedPrioritizedReplayBuffer):
+    '''Prioritized buffer designed to compactly save experiences of Atari environments used in DQN.
+    RankBased Prioritized version of efficient Atari buffer.
+    Note that this class is designed only for DQN style training on atari environment.
+    (i.e. State consists of 4 concatenated grayscaled frames and its values are normalized between 0 and 1)
+    '''
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _sub_buffer: deque
+
+    def __init__(self,
+                 capacity: int,
+                 alpha: float = 0.7,
+                 beta: float = 0.5,
+                 betasteps: int = 50000000,
+                 error_clip: Optional[Tuple[float, float]] = (-1, 1),
+                 reset_segment_interval: int = 1000,
+                 sort_interval: int = 1000000):
+        super(RankBasedPrioritizedAtariBuffer, self).__init__(capacity=capacity,
+                                                              alpha=alpha,
+                                                              beta=beta,
+                                                              betasteps=betasteps,
+                                                              error_clip=error_clip,
+                                                              reset_segment_interval=reset_segment_interval,
+                                                              sort_interval=sort_interval)
+        self._reset = True
+        self._sub_buffer = deque(maxlen=3)
+
+    def append(self, experience):
+        self._reset = _append_to_buffer(experience, self._buffer, self._sub_buffer, self._reset)
+
+    def __getitem__(self, index: int):
         return _getitem_from_buffer(index, self._buffer, self._sub_buffer)
 
 

@@ -13,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import numpy as np
 import pytest
 
 from nnabla_rl.environments.dummy import DummyAtariEnv
 from nnabla_rl.environments.wrappers.atari import MaxAndSkipEnv, NoopResetEnv
 from nnabla_rl.replay_buffers.memory_efficient_atari_buffer import (MemoryEfficientAtariBuffer,
-                                                                    MemoryEfficientPrioritizedAtariBuffer)
+                                                                    ProportionalPrioritizedAtariBuffer,
+                                                                    RankBasedPrioritizedAtariBuffer)
 from nnabla_rl.utils.reproductions import build_atari_env
 
 
@@ -95,12 +97,12 @@ class TestMemoryEfficientAtariBuffer(object):
         assert len(buffer) == 10
 
 
-class TestMemoryEfficientPrioritizedAtariBuffer(object):
+class TestProportionalPrioritizedAtariBuffer(object):
     def test_append_float(self):
         experience = _generate_atari_experience_mock()[0]
 
         capacity = 10
-        buffer = MemoryEfficientPrioritizedAtariBuffer(capacity=capacity)
+        buffer = ProportionalPrioritizedAtariBuffer(capacity=capacity)
         buffer.append(experience)
 
         s, _, _, _, s_next, *_ = buffer._buffer[len(buffer._buffer)-1]
@@ -115,7 +117,7 @@ class TestMemoryEfficientPrioritizedAtariBuffer(object):
         experiences = _generate_atari_experience_mock(num_mocks=10)
 
         capacity = 10
-        buffer = MemoryEfficientPrioritizedAtariBuffer(capacity=capacity)
+        buffer = ProportionalPrioritizedAtariBuffer(capacity=capacity)
 
         for experience in experiences:
             buffer.append(experience)
@@ -131,7 +133,7 @@ class TestMemoryEfficientPrioritizedAtariBuffer(object):
         capacity = 10
         experiences = _generate_atari_experience_mock(
             num_mocks=(capacity + 5))
-        buffer = MemoryEfficientPrioritizedAtariBuffer(capacity=capacity)
+        buffer = ProportionalPrioritizedAtariBuffer(capacity=capacity)
 
         for i in range(capacity):
             buffer.append(experiences[i])
@@ -159,7 +161,7 @@ class TestMemoryEfficientPrioritizedAtariBuffer(object):
 
     def test_buffer_len(self):
         capacity = 10
-        buffer = MemoryEfficientPrioritizedAtariBuffer(capacity=capacity)
+        buffer = ProportionalPrioritizedAtariBuffer(capacity=capacity)
         for _ in range(10):
             experience = _generate_atari_experience_mock()[0]
             buffer.append(experience)
@@ -169,7 +171,100 @@ class TestMemoryEfficientPrioritizedAtariBuffer(object):
     def test_sample_without_update(self):
         beta = 0.5
         capacity = 10
-        buffer = MemoryEfficientPrioritizedAtariBuffer(capacity=capacity, beta=beta)
+        buffer = ProportionalPrioritizedAtariBuffer(capacity=capacity, beta=beta)
+        for _ in range(5):
+            experience = _generate_atari_experience_mock()[0]
+            buffer.append(experience)
+
+        indices = [1, 3, 2]
+        _, weights = buffer.sample_indices(indices)
+
+        # update the priority and check that following sampling succeeds
+        errors = np.random.sample([len(weights), 1])
+        buffer.update_priorities(errors)
+
+        _, _ = buffer.sample_indices(indices)
+
+        # sample without priority update
+        with pytest.raises(RuntimeError):
+            buffer.sample_indices(indices)
+
+
+class TestRankBasedPrioritizedAtariBuffer(object):
+    def test_append_float(self):
+        experience = _generate_atari_experience_mock()[0]
+
+        capacity = 10
+        buffer = RankBasedPrioritizedAtariBuffer(capacity=capacity)
+        buffer.append(experience)
+
+        s, _, _, _, s_next, *_ = buffer._buffer[len(buffer._buffer)-1]
+        assert s.dtype == np.uint8
+        assert s_next.dtype == np.uint8
+        assert np.alltrue(
+            (experience[0][-1] * 255.0).astype(np.uint8) == s)
+        assert np.alltrue(
+            (experience[4][-1] * 255.0).astype(np.uint8) == s_next)
+
+    def test_getitem(self):
+        experiences = _generate_atari_experience_mock(num_mocks=10)
+
+        capacity = 10
+        buffer = RankBasedPrioritizedAtariBuffer(capacity=capacity)
+
+        for experience in experiences:
+            buffer.append(experience)
+
+        for i, experience in enumerate(experiences):
+            s, _, _, _, s_next, *_ = buffer.__getitem__(i)
+            assert s.dtype == np.float32
+            assert s_next.dtype == np.float32
+            assert np.allclose(experience[0], s, atol=1e-2)
+            assert np.allclose(experience[4], s_next, atol=1e-2)
+
+    def test_full_buffer_getitem(self):
+        capacity = 10
+        experiences = _generate_atari_experience_mock(
+            num_mocks=(capacity + 5))
+        buffer = RankBasedPrioritizedAtariBuffer(capacity=capacity)
+
+        for i in range(capacity):
+            buffer.append(experiences[i])
+        assert len(buffer) == capacity
+
+        for i in range(capacity):
+            s, _, _, _, s_next, *_ = buffer[i]
+            experience = experiences[i]
+            assert s.dtype == np.float32
+            assert s_next.dtype == np.float32
+            assert np.allclose(experience[0], s, atol=1e-2)
+            assert np.allclose(experience[4], s_next, atol=1e-2)
+
+        for i in range(5):
+            buffer.append(experiences[i + capacity])
+        assert len(buffer) == capacity
+
+        for i in range(capacity):
+            s, _, _, _, s_next, *_ = buffer[i]
+            experience = experiences[i + 5]
+            assert s.dtype == np.float32
+            assert s_next.dtype == np.float32
+            assert np.allclose(experience[0], s, atol=1e-2)
+            assert np.allclose(experience[4], s_next, atol=1e-2)
+
+    def test_buffer_len(self):
+        capacity = 10
+        buffer = RankBasedPrioritizedAtariBuffer(capacity=capacity)
+        for _ in range(10):
+            experience = _generate_atari_experience_mock()[0]
+            buffer.append(experience)
+
+        assert len(buffer) == 10
+
+    def test_sample_without_update(self):
+        beta = 0.5
+        capacity = 10
+        buffer = RankBasedPrioritizedAtariBuffer(capacity=capacity, beta=beta)
         for _ in range(5):
             experience = _generate_atari_experience_mock()[0]
             buffer.append(experience)

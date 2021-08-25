@@ -262,7 +262,7 @@ class CategoricalDQN(Algorithm):
         self._model_trainer_state = self._model_trainer.train(batch)
         if self.iteration_num % self._config.target_update_frequency == 0:
             sync_model(self._atom_p, self._target_atom_p)
-        td_errors = np.abs(self._model_trainer_state['td_errors'])
+        td_errors = self._model_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
     @eval_api

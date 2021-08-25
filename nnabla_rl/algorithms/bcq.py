@@ -17,7 +17,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Union
 
 import gym
-import numpy as np
 
 import nnabla as nn
 import nnabla.solvers as NS
@@ -317,7 +316,7 @@ class BCQ(Algorithm):
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
             sync_model(q, target_q, tau=self._config.tau)
-        td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+        td_errors = self._q_function_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
         self._perturbator_trainer.train(batch)
