@@ -143,7 +143,7 @@ def spatial_softmax(inp: nn.Variable, alpha_init: float = 1., fix_alpha: bool = 
     r''' Spatial softmax layer proposed in https://arxiv.org/abs/1509.06113. Computes
 
     .. math::
-        s_{cij} &= \\frac{\exp(x_{cij} / \\alpha)}{\sum_{i'j'} \exp(x_{ci'j'} / \\alpha)}
+        s_{cij} &= \frac{\exp(x_{cij} / \alpha)}{\sum_{i'j'} \exp(x_{ci'j'} / \alpha)}
 
         f_{cx} &= \sum_{ij} s_{cij}px_{ij}, f_{cy} = \sum_{ij} s_{cij}py_{ij}
 
