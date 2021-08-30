@@ -17,6 +17,7 @@ import pytest
 
 import nnabla as nn
 import nnabla.functions as NF
+import nnabla.solvers as S
 import nnabla_rl.parametric_functions as RPF
 
 
@@ -130,6 +131,90 @@ class TestFunctions(object):
         assert y1.shape == (5, 10)
         assert 'b' not in params.keys()
         assert 'noisy_b' not in params.keys()
+
+    @pytest.mark.parametrize("x_c1, x_c2, x_c3, expected",
+                             [(np.array([[np.log(2), 0., 0.], [0., 0., 0.], [0., 0., np.log(2)]]),
+                               np.array([[0., np.log(2), 0.], [0., 0., 0.], [0., np.log(2), 0.]]),
+                               np.array([[0., 0., 0.], [np.log(2), 0., np.log(2)], [0., 0., 0.]]),
+                               np.array([[0., 0.], [0., 0.], [0., 0.]])),
+                              (np.array([[0., np.log(2), 0.], [0., 0., 0.], [0., 0., 0.]]),
+                               np.array([[0., 0., 0.], [0., 0., 0.], [0., 0., np.log(2)]]),
+                               np.array([[0., 0., 0.], [np.log(2), 0., 0.], [0., 0., 0.]]),
+                               np.array([[0., -0.1], [0.1, 0.1], [-0.1, 0.]])),
+                              (np.array([[0., np.log(4), 0.], [0., np.log(4), 0.], [0., 0., 0.]]),
+                               np.array([[0., 0., np.log(4)], [0., 0., 0.], [0., 0., np.log(4)]]),
+                               np.array([[0., 0., 0.], [0., 0., np.log(4)], [0., 0., 0.]]),
+                               np.array([[0., -0.2], [0.4, 0.], [0.25, 0.]]))
+                              ])
+    def test_spatial_softmax_forward(self, x_c1, x_c2, x_c3, expected):
+        batch_size = 1
+        channel = 3
+        x = np.stack([x_c1, x_c2, x_c3], axis=0)[np.newaxis, :, :, :]
+        expected = expected.reshape((-1, channel*2))
+
+        with nn.parameter_scope('spatial_softmax1'):
+            x = nn.Variable.from_numpy_array(x)
+            y1 = RPF.spatial_softmax(x, alpha_init=1.)
+            y1_params = nn.get_parameters()
+        assert y1.shape == (batch_size, channel*2)
+
+        for param_name in ['alpha']:
+            assert param_name in y1_params.keys()
+        nn.forward_all([y1])
+
+        assert np.allclose(y1.d, expected, atol=1e-5)
+
+    def test_spatial_softmax_backward(self):
+        batch_size = 10
+        channel = 3
+        height = 5
+        width = 5
+
+        with nn.parameter_scope('spatial_softmax1'):
+            x = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, channel, height, width)))
+            y1 = RPF.spatial_softmax(x, alpha_init=1.)
+            y1_params = nn.get_parameters()
+        assert y1.shape == (batch_size, channel*2)
+
+        with nn.parameter_scope('spatial_softmax2'):
+            y2 = RPF.spatial_softmax(x, alpha_init=1.)
+            y2_params = nn.get_parameters()
+        assert y1.shape == y2.shape
+
+        for y1_param, y2_param in zip(y1_params.values(), y2_params.values()):
+            y1_param.grad.zero()
+            y2_param.grad.zero()
+
+        loss = NF.sum((y1 - 1.0) ** 2 + (y2 - 5.0) ** 2)
+
+        loss.forward()
+        loss.backward()
+
+        for y1_param, y2_param in zip(y1_params.values(), y2_params.values()):
+            assert not np.allclose(y1_param.g, 0)
+            assert not np.allclose(y2_param.g, 0)
+            assert not np.allclose(y1_param.g, y2_param.g)
+
+    def test_spatial_softmax_with_fixed_alpha(self):
+        batch_size = 10
+        channel = 3
+        height = 5
+        width = 5
+
+        with nn.parameter_scope('spatial_softmax1'):
+            x = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, channel, height, width)))
+            y1 = RPF.spatial_softmax(x, alpha_init=1.5, fix_alpha=True)
+            y1_params = nn.get_parameters()
+
+        loss = NF.sum((y1 - 1.0) ** 2)
+        solver = S.Sgd()
+        solver.set_parameters(nn.get_parameters())
+        loss.forward()
+        solver.zero_grad()
+        loss.backward()
+        solver.update()
+
+        assert np.allclose(y1_params["alpha"].d, np.array([[1.5]]))
 
 
 if __name__ == "__main__":

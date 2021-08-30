@@ -137,3 +137,50 @@ def noisy_net(inp: nn.Variable,
     else:
         bias = None
     return NF.affine(inp, weight, bias, base_axis)
+
+
+def spatial_softmax(inp: nn.Variable, alpha_init: float = 1., fix_alpha: bool = False) -> nn.Variable:
+    r''' Spatial softmax layer proposed in https://arxiv.org/abs/1509.06113. Computes
+
+    .. math::
+        s_{cij} &= \\frac{\exp(x_{cij} / \\alpha)}{\sum_{i'j'} \exp(x_{ci'j'} / \\alpha)}
+
+        f_{cx} &= \sum_{ij} s_{cij}px_{ij}, f_{cy} = \sum_{ij} s_{cij}py_{ij}
+
+        y_{c} &= (f_{cx}, f_{cy})
+
+    where :math:`x, y, \\alpha` are the input, output and parameter respectively,
+    and :math:`c, i, j` are the number of channels, heights and widths respectively.
+    :math:`(px_{ij}, py_{ij})` is the image-space position of the point (i, j) in the response map.
+
+    Args:
+        inp (nn.Variables): Input of the layer. Shape should be (batch_size, C, H, W)
+        alpha_init (float): Initial temperature value. Defaults to 1.
+        fix_alpha (bool): If True, underlying alpha will Not be updated during training.
+            Defaults to False.
+
+    Returns:
+        nn.Variables: Feature points, Shape is (batch_size, C*2)
+    '''
+    assert len(inp.shape) == 4
+    (batch_size, channel, height, width) = inp.shape
+    alpha = get_parameter_or_create("alpha", shape=(1, 1), initializer=ConstantInitializer(alpha_init),
+                                    need_grad=True, as_need_grad=not fix_alpha)
+
+    features = NF.reshape(inp, (-1, height*width))
+    softmax_attention = NF.softmax(features / alpha)
+
+    # Image positions are normalized and defined by -1 to 1.
+    # This normalization is referring to the original Guided Policy Search implementation.
+    # See: https://github.com/cbfinn/gps/blob/master/python/gps/algorithm/policy_opt/tf_model_example.py#L238
+    pos_x, pos_y = np.meshgrid(np.linspace(-1., 1., height), np.linspace(-1., 1., width))
+    pos_x = nn.Variable.from_numpy_array(pos_x.reshape(-1, (height*width)))
+    pos_y = nn.Variable.from_numpy_array(pos_y.reshape(-1, (height*width)))
+
+    expected_x = NF.sum(pos_x*softmax_attention, axis=1, keepdims=True)
+    expected_y = NF.sum(pos_y*softmax_attention, axis=1, keepdims=True)
+    expected_xy = NF.concatenate(expected_x, expected_y, axis=1)
+
+    feature_points = NF.reshape(expected_xy, (batch_size, channel*2))
+
+    return feature_points
