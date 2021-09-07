@@ -138,7 +138,7 @@ do
     esac
 done
 
-REPRODUCTION_CODE_DIR="${ROOT_DIR}/reproductions/${BASE_ENV_NAME}/${ALGO_NAME}"
+REPRODUCTION_CODE_DIR="${ROOT_DIR}/reproductions/algorithms/${BASE_ENV_NAME}/${ALGO_NAME}"
 SAVE_DIR=$REPRODUCTION_CODE_DIR
 
 for ENV_NAME in ${ENVS}
