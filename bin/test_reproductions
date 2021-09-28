@@ -56,11 +56,22 @@ for dir in $REPRODUCTIONS_DIRS;
 do
     ALGORITHM=$(basename ${dir})
     SCRIPT="${dir}/${ALGORITHM}_reproduction.py"
-    echo "Test run of training for ${ALGORITHM}"
-    python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --save-dir "${RESULT_BASE_DIR}/${ALGORITHM}" --seed ${SEED} \
-        --total_iterations ${TOTAL_ITERATIONS} --save_timing ${TOTAL_ITERATIONS}
-    SNAPSHOT_DIR="${RESULT_BASE_DIR}/${ALGORITHM}/${ENV}_results/seed-${SEED}/iteration-${TOTAL_ITERATIONS}"
-    echo "Test run of showcase for ${ALGORITHM}"
-    python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --snapshot-dir ${SNAPSHOT_DIR} --showcase \
-        --showcase_runs ${SHOWCASE_RUNS}
+    if [ ${BASE_ENV} = "mujoco" ] && [ ${ALGORITHM} = "her" ]; then
+        TMP_ENV="FakeGoalConditionedNNablaRL-v1"
+        echo "Test run of training for ${ALGORITHM}"
+        python ${SCRIPT} --gpu ${GPU_ID} --env ${TMP_ENV} --save-dir "${RESULT_BASE_DIR}/${ALGORITHM}" --seed ${SEED} \
+            --total_iterations ${TOTAL_ITERATIONS} --save_timing ${TOTAL_ITERATIONS}
+        SNAPSHOT_DIR="${RESULT_BASE_DIR}/${ALGORITHM}/${TMP_ENV}_results/seed-${SEED}/iteration-${TOTAL_ITERATIONS}"
+        echo "Test run of showcase for ${ALGORITHM}"
+        python ${SCRIPT} --gpu ${GPU_ID} --env ${TMP_ENV} --snapshot-dir ${SNAPSHOT_DIR} --showcase \
+            --showcase_runs ${SHOWCASE_RUNS}
+    else
+        echo "Test run of training for ${ALGORITHM}"
+        python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --save-dir "${RESULT_BASE_DIR}/${ALGORITHM}" --seed ${SEED} \
+            --total_iterations ${TOTAL_ITERATIONS} --save_timing ${TOTAL_ITERATIONS}
+        SNAPSHOT_DIR="${RESULT_BASE_DIR}/${ALGORITHM}/${ENV}_results/seed-${SEED}/iteration-${TOTAL_ITERATIONS}"
+        echo "Test run of showcase for ${ALGORITHM}"
+        python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --snapshot-dir ${SNAPSHOT_DIR} --showcase \
+            --showcase_runs ${SHOWCASE_RUNS}
+    fi
 done

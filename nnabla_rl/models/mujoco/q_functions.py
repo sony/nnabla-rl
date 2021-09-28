@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -87,6 +87,34 @@ class SACQFunction(ContinuousQFunction):
             h = NF.relu(x=h)
             h = NPF.affine(h, n_outmaps=1, name="linear3")
         return h
+
+    def max_q(self, s: nn.Variable) -> nn.Variable:
+        assert self._optimal_policy, 'Optimal policy is not set!'
+        optimal_action = self._optimal_policy.pi(s)
+        return self.q(s, optimal_action)
+
+
+class HERQFunction(ContinuousQFunction):
+    def __init__(self, scope_name: str, optimal_policy: Optional[DeterministicPolicy] = None):
+        super(HERQFunction, self).__init__(scope_name)
+        self._optimal_policy = optimal_policy
+
+    def q(self, s: Tuple[nn.Variable, nn.Variable, nn.Variable], a: nn.Variable) -> nn.Variable:
+        obs, goal, _ = s
+        with nn.parameter_scope(self.scope_name):
+            h = NF.concatenate(obs, goal, a, axis=1)
+            linear1_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
+            h = NPF.affine(h, n_outmaps=64, name='linear1', w_init=linear1_init)
+            h = NF.relu(h)
+            linear2_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
+            h = NPF.affine(h, n_outmaps=64, name='linear2', w_init=linear2_init)
+            h = NF.relu(h)
+            linear3_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
+            h = NPF.affine(h, n_outmaps=64, name='linear3', w_init=linear3_init)
+            h = NF.relu(h)
+            pred_q_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=1)
+            q = NPF.affine(h, n_outmaps=1, name='pred_q', w_init=pred_q_init)
+        return q
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
         assert self._optimal_policy, 'Optimal policy is not set!'

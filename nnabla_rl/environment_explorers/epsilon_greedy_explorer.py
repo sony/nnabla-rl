@@ -32,6 +32,33 @@ def epsilon_greedy_action_selection(state, greedy_action_selector, random_action
 
 
 @dataclass
+class NoDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
+    epsilon: float = 1.0
+
+    def __post_init__(self):
+        self._assert_between(self.epsilon, 0.0, 1.0, 'epsilon')
+
+
+class NoDecayEpsilonGreedyExplorer(EnvironmentExplorer):
+    def __init__(self,
+                 greedy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
+                 random_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
+                 env_info: EnvironmentInfo,
+                 config: NoDecayEpsilonGreedyExplorerConfig = NoDecayEpsilonGreedyExplorerConfig()):
+        super().__init__(env_info, config)
+        self._greedy_action_selector = greedy_action_selector
+        self._random_action_selector = random_action_selector
+
+    def action(self, step, state):
+        epsilon = self._config.epsilon
+        (action, info), _ = epsilon_greedy_action_selection(state,
+                                                            self._greedy_action_selector,
+                                                            self._random_action_selector,
+                                                            epsilon)
+        return action, info
+
+
+@dataclass
 class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
     """
     List of configurations for Linear decay epsilon-greedy explorer

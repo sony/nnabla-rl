@@ -24,6 +24,7 @@ from nnabla_rl.algorithms.ddqn import DDQN, DDQNConfig
 from nnabla_rl.algorithms.dqn import DQN, DQNConfig
 from nnabla_rl.algorithms.dummy import Dummy, DummyConfig
 from nnabla_rl.algorithms.gail import GAIL, GAILConfig
+from nnabla_rl.algorithms.her import HER, HERConfig
 from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOConfig
 from nnabla_rl.algorithms.icml2018_sac import ICML2018SAC, ICML2018SACConfig
 from nnabla_rl.algorithms.iqn import IQN, IQNConfig
@@ -73,6 +74,7 @@ register_algorithm(DDPG, DDPGConfig)
 register_algorithm(DDQN, DDQNConfig)
 register_algorithm(DQN, DQNConfig)
 register_algorithm(Dummy, DummyConfig)
+register_algorithm(HER, HERConfig)
 register_algorithm(ICML2018SAC, ICML2018SACConfig)
 register_algorithm(IQN, IQNConfig)
 register_algorithm(MunchausenDQN, MunchausenDQNConfig)

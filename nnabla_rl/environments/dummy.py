@@ -142,3 +142,77 @@ class DummyMujocoEnv(AbstractDummyEnv):
         dataset['rewards'] = np.random.randn(datasize, 1)
         dataset['terminals'] = np.zeros((datasize, 1))
         return dataset
+
+
+class DummyContinuousActionGoalEnv(gym.GoalEnv):
+    def __init__(self, max_episode_steps=10):
+        self.spec = EnvSpec(id='dummy-continuou-action-goal-v0', max_episode_steps=max_episode_steps)
+        self.observation_space = gym.spaces.Dict({'observation': gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
+                                                  'achieved_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
+                                                  'desired_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))})
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))
+        self._max_episode_length = max_episode_steps
+        self._episode_length = 0
+        self._desired_goal = None
+
+    def reset(self):
+        super(DummyContinuousActionGoalEnv, self).reset()
+        self._episode_length = 0
+        state = self.observation_space.sample()
+        self._desired_goal = state['desired_goal']
+        return state
+
+    def step(self, a):
+        next_state = self.observation_space.sample()
+        next_state['desired_goal'] = self._desired_goal
+        reward = self.compute_reward(next_state['achieved_goal'], next_state['desired_goal'], {})
+        self._episode_length += 1
+        info = {'is_success': reward}
+        if self._episode_length >= self._max_episode_length:
+            done = True
+        else:
+            done = False
+        return next_state, reward, done, info
+
+    def compute_reward(self, achieved_goal, desired_goal, info):
+        if np.linalg.norm(achieved_goal - desired_goal) < 0.1:
+            return 1
+        else:
+            return 0
+
+
+class DummyDiscreteActionGoalEnv(gym.GoalEnv):
+    def __init__(self, max_episode_steps=10):
+        self.spec = EnvSpec(id='dummy-discrete-action-goal-v0', max_episode_steps=max_episode_steps)
+        self.observation_space = gym.spaces.Dict({'observation': gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
+                                                  'achieved_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
+                                                  'desired_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))})
+        self.action_space = gym.spaces.Discrete(n=3)
+        self._max_episode_length = max_episode_steps
+        self._episode_length = 0
+        self._desired_goal = None
+
+    def reset(self):
+        super(DummyDiscreteActionGoalEnv, self).reset()
+        self._episode_length = 0
+        state = self.observation_space.sample()
+        self._desired_goal = state['desired_goal']
+        return state
+
+    def step(self, a):
+        next_state = self.observation_space.sample()
+        next_state['desired_goal'] = self._desired_goal
+        reward = self.compute_reward(next_state['achieved_goal'], next_state['desired_goal'], {})
+        self._episode_length += 1
+        info = {'is_success': reward}
+        if self._episode_length >= self._max_episode_length:
+            done = True
+        else:
+            done = False
+        return next_state, reward, done, info
+
+    def compute_reward(self, achieved_goal, desired_goal, info):
+        if np.linalg.norm(achieved_goal - desired_goal) < 0.1:
+            return 1
+        else:
+            return 0

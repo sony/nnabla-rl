@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Union
 
 import numpy as np
 
 import nnabla as nn
-from nnabla_rl.models import Model, RewardFunction, StochasticPolicy, VFunction
+from nnabla_rl.models import DeterministicPolicy, Model, Policy, QFunction, RewardFunction, StochasticPolicy, VFunction
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.typing import Experience
 from nnabla_rl.utils.data import set_data_to_variable
@@ -107,11 +107,11 @@ class _StatePreprocessedVFunction(VFunction):
         return copied
 
 
-class _StatePreprocessedPolicy(StochasticPolicy):
-    _policy: StochasticPolicy
+class _StatePreprocessedPolicy(Policy):
+    _policy: Union[DeterministicPolicy, StochasticPolicy]
     _preprocessor: Preprocessor
 
-    def __init__(self, policy: StochasticPolicy, preprocessor: Preprocessor):
+    def __init__(self, policy: Union[DeterministicPolicy, StochasticPolicy], preprocessor: Preprocessor):
         super(_StatePreprocessedPolicy, self).__init__(policy.scope_name)
         self._policy = policy
         self._preprocessor = preprocessor
@@ -145,4 +145,36 @@ class _StatePreprocessedRewardFunction(RewardFunction):
         copied = super().deepcopy(new_scope_name=new_scope_name)
         assert isinstance(copied,  _StatePreprocessedRewardFunction)
         copied._reward_function._scope_name = new_scope_name
+        return copied
+
+
+class _StatePreprocessedQFunction(QFunction):
+    _q_function: QFunction
+    _preprocessor: Preprocessor
+
+    def __init__(self, q_function: QFunction, preprocessor: Preprocessor):
+        super(_StatePreprocessedQFunction, self).__init__(q_function.scope_name)
+        self._q_function = q_function
+        self._preprocessor = preprocessor
+
+    def q(self, s: nn.Variable, a: nn.Variable):
+        preprocessed_state = self._preprocessor.process(s)
+        return self._q_function.q(preprocessed_state, a)
+
+    def all_q(self, s: nn.Variable) -> nn.Variable:
+        preprocessed_state = self._preprocessor.process(s)
+        return self._q_function.all_q(preprocessed_state)
+
+    def max_q(self, s: nn.Variable) -> nn.Variable:
+        preprocessed_state = self._preprocessor.process(s)
+        return self._q_function.max_q(preprocessed_state)
+
+    def argmax_q(self, s: nn.Variable) -> nn.Variable:
+        preprocessed_state = self._preprocessor.process(s)
+        return self._q_function.argmax_q(preprocessed_state)
+
+    def deepcopy(self, new_scope_name: str) -> Model:
+        copied = super().deepcopy(new_scope_name=new_scope_name)
+        assert isinstance(copied,  _StatePreprocessedQFunction)
+        copied._q_function._scope_name = new_scope_name
         return copied

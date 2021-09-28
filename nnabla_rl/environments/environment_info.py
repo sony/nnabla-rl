@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, Optional
 
 import gym
 
@@ -31,10 +32,17 @@ class EnvironmentInfo(object):
     action_space: gym.spaces.Space
     max_episode_steps: int
 
-    def __init__(self, observation_space, action_space, max_episode_steps):
+    def __init__(self,
+                 observation_space,
+                 action_space,
+                 max_episode_steps,
+                 unwrapped_env,
+                 reward_function: Optional[Callable[[Any, Any, Dict], int]] = None):
         self.observation_space = observation_space
         self.action_space = action_space
         self.max_episode_steps = max_episode_steps
+        self.unwrapped_env = unwrapped_env
+        self.reward_function = reward_function
 
         if not (self.is_discrete_state_env() or self.is_continuous_state_env()):
             raise ValueError("Unsupported state space")
@@ -61,9 +69,13 @@ class EnvironmentInfo(object):
             >>> env_info.state_shape
             (4,)
         """
+        reward_function = env.compute_reward if hasattr(env, 'compute_reward') else None
+        unwrapped_env = env.unwrapped
         return EnvironmentInfo(observation_space=env.observation_space,
                                action_space=env.action_space,
-                               max_episode_steps=extract_max_episode_steps(env))
+                               max_episode_steps=extract_max_episode_steps(env),
+                               unwrapped_env=unwrapped_env,
+                               reward_function=reward_function)
 
     def is_discrete_action_env(self):
         '''
@@ -113,6 +125,15 @@ class EnvironmentInfo(object):
             bool: True if the state of the environment is tuple. Otherwise False.
         '''
         return isinstance(self.observation_space, gym.spaces.Tuple)
+
+    def is_goal_conditioned_env(self):
+        '''
+        Check whether the environment is gym.GoalEnv or not
+
+        Returns:
+            bool: True if the environment is gym.GoalEnv. Otherwise False.
+        '''
+        return issubclass(self.unwrapped_env.__class__, gym.GoalEnv)
 
     @property
     def state_shape(self):

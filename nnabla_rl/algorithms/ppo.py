@@ -251,7 +251,8 @@ class PPO(Algorithm):
                 preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
                 assert preprocessor is not None
                 self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
-                self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)
+                self._policy = \
+                    _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)  # type: ignore
                 self._state_preprocessor = preprocessor
 
             self._policy_solver = policy_solver_builder(self._env_info, self._config)
