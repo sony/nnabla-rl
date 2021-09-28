@@ -61,12 +61,12 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.IQNConfig(gpu_id=args.gpu)
-    iqn = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    iqn = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(iqn, A.IQN):
         raise ValueError('Loaded snapshot is not trained with IQN!')
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(iqn, eval_env)
 

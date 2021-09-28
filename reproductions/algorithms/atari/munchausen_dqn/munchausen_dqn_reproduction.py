@@ -60,12 +60,12 @@ def run_training(args):
 def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.MunchausenDQNConfig(gpu_id=args.gpu)
-    m_dqn = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    m_dqn = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(m_dqn, A.MunchausenDQN):
         raise ValueError('Loaded snapshot is not trained with DQN!')
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     returns = evaluator(m_dqn, eval_env)
     mean = np.mean(returns)

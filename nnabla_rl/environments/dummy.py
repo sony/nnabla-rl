@@ -34,11 +34,11 @@ class AbstractDummyEnv(gym.Env):
 
 
 class DummyContinuous(AbstractDummyEnv):
-    def __init__(self, max_episode_steps=None):
+    def __init__(self, max_episode_steps=None, observation_shape=(5, ), action_shape=(5, )):
         super(DummyContinuous, self).__init__(
             max_episode_steps=max_episode_steps)
-        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))
-        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=observation_shape)
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=action_shape)
 
 
 class DummyDiscrete(AbstractDummyEnv):

@@ -29,9 +29,9 @@ def build_env():
 
 def main():
     snapshot_dir = './pendulum_v0_snapshot/iteration-10000'
-    algorithm = serializers.load_snapshot(snapshot_dir)
-
     env = build_env()
+
+    algorithm = serializers.load_snapshot(snapshot_dir, env)
 
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluator(algorithm, env)

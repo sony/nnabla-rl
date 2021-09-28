@@ -56,12 +56,12 @@ def run_training(args):
 def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=False)
     config = A.A2CConfig(gpu_id=args.gpu)
-    a2c = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    a2c = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(a2c, A.A2C):
         raise ValueError('Loaded snapshot is not trained with A2C!')
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=False)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     returns = evaluator(a2c, eval_env)
     mean = np.mean(returns)

@@ -29,7 +29,7 @@ def main():
     snapshot_dir = serializers.save_snapshot(outdir, ddpg)
 
     # This actually loads the model and solver state which is saved with the code above
-    algorithm = serializers.load_snapshot(snapshot_dir)
+    algorithm = serializers.load_snapshot(snapshot_dir, env)
     assert isinstance(algorithm, A.DDPG)
 
 

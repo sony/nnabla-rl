@@ -66,12 +66,12 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.DDPGConfig(gpu_id=args.gpu)
-    ddpg = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    ddpg = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(ddpg, A.DDPG):
         raise ValueError('Loaded snapshot is not trained with DDPG!')
 
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(args.showcase_runs)
     evaluator(ddpg, eval_env)
 

@@ -15,15 +15,16 @@
 
 import json
 import pathlib
-import pickle
 import warnings
+
+import gym
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.utils.files as files
 from nnabla_rl.algorithm import Algorithm
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 _TRAINING_INFO_FILENAME = 'training_info.json'
-_ENV_INFO_FILENAME = 'env_info.pickle'
 
 _KEY_ALGORITHM_NAME = 'algorithm_name'
 _KEY_ALGORITHM_CLASS_NAME = 'algorithm_class_name'
@@ -52,7 +53,6 @@ def save_snapshot(path, algorithm):
 
     training_info = _create_training_info(algorithm)
     _save_training_info(outdir, training_info)
-    _save_env_info(outdir, algorithm)
     _save_network_parameters(outdir, algorithm)
     _save_solver_states(outdir, algorithm)
 
@@ -60,6 +60,7 @@ def save_snapshot(path, algorithm):
 
 
 def load_snapshot(path,
+                  env_or_env_info,
                   algorithm_kwargs={}):
     '''Load training snapshot from file
 
@@ -72,10 +73,13 @@ def load_snapshot(path,
     '''
     if isinstance(path, str):
         path = pathlib.Path(path)
+    if not isinstance(env_or_env_info, (gym.Env, EnvironmentInfo)):
+        raise RuntimeError(
+            'load_snapshot requires training gym.Env or EnvironmentInfo. '
+            'Automatic loading of env_info is no longer supported since v0.10.0')
     training_info = _load_training_info(path)
-    env_info = _load_env_info(path)
     algorithm = _instantiate_algorithm_from_training_info(
-        training_info, env_info, **algorithm_kwargs)
+        training_info, env_or_env_info, **algorithm_kwargs)
     _load_network_parameters(path, algorithm)
     _load_solver_states(path, algorithm)
     return algorithm
@@ -103,18 +107,6 @@ def _create_training_info(algorithm):
     training_info[_KEY_SOLVERS] = list(algorithm._solvers().keys())
 
     return training_info
-
-
-def _save_env_info(path, algorithm):
-    filepath = path / _ENV_INFO_FILENAME
-    with open(filepath, 'wb+') as outfile:
-        pickle.dump(algorithm._env_info, outfile)
-
-
-def _load_env_info(path):
-    filepath = path / _ENV_INFO_FILENAME
-    with open(filepath, 'rb') as infile:
-        return pickle.load(infile)
 
 
 def _save_training_info(path, training_info):
