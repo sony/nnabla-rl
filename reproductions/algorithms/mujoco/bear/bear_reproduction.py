@@ -80,12 +80,12 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.BEARConfig(gpu_id=args.gpu)
-    bear = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    bear = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(bear, A.BEAR):
         raise ValueError('Loaded snapshot is not trained with BEAR!')
 
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(args.showcase_runs)
     evaluator(bear, eval_env)
 

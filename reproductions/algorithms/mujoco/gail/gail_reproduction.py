@@ -64,13 +64,14 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
     config = A.GAILConfig(gpu_id=args.gpu)
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     gail = serializers.load_snapshot(args.snapshot_dir,
+                                     eval_env,
                                      algorithm_kwargs={"config": config,
                                                        "expert_buffer": ReplacementSamplingReplayBuffer()})
     if not isinstance(gail, A.GAIL):
         raise ValueError('Loaded snapshot is not trained with GAIL!')
 
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(gail, eval_env)
 

@@ -61,15 +61,15 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.PPOConfig(gpu_id=args.gpu,
                          timelimit_as_terminal=True,
                          seed=args.seed,
                          preprocess_state=False)
-    ppo = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    ppo = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(ppo, A.PPO):
         raise ValueError('Loaded snapshot is not trained with PPO!')
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(ppo, eval_env)
 

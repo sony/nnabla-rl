@@ -91,12 +91,12 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.ICML2018SACConfig(gpu_id=args.gpu)
-    icml2018sac = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    icml2018sac = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(icml2018sac, A.ICML2018SAC):
         raise ValueError('Loaded snapshot is not trained with ICML2018SAC!')
 
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(icml2018sac, eval_env)
 

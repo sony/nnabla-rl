@@ -53,12 +53,12 @@ def run_training(args):
 def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.ICML2015TRPOConfig(gpu_id=args.gpu)
-    trpo = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    trpo = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(trpo, A.ICML2015TRPO):
         raise ValueError('Loaded snapshot is not trained with ICML2015TRPO')
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(trpo, eval_env)
 

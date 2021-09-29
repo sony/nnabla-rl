@@ -19,13 +19,15 @@ import numpy as np
 import pytest
 
 import nnabla_rl.algorithms as A
+from nnabla_rl.environments.dummy import DummyContinuous
 from nnabla_rl.utils.serializers import load_snapshot
 
 
 class TestLoadSnapshot(object):
     def test_load_snapshot(self):
         snapshot_path = pathlib.Path('test_resources/utils/ddpg-snapshot')
-        ddpg = load_snapshot(snapshot_path)
+        env = DummyContinuous(observation_shape=(3, ), action_shape=(1, ))
+        ddpg = load_snapshot(snapshot_path, env)
 
         assert isinstance(ddpg, A.DDPG)
         assert ddpg.iteration_num == 10000
@@ -35,6 +37,11 @@ class TestLoadSnapshot(object):
         assert np.isclose(ddpg._config.batch_size, 100)
         assert np.isclose(ddpg._config.start_timesteps, 200)
         assert ddpg._config.replay_buffer_size == 1000000
+
+    def test_load_snapshot_no_env(self):
+        snapshot_path = pathlib.Path('test_resources/utils/ddpg-snapshot')
+        with pytest.raises(RuntimeError):
+            load_snapshot(snapshot_path, {})
 
 
 if __name__ == '__main__':

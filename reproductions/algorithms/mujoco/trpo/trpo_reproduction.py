@@ -60,12 +60,12 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.TRPOConfig(gpu_id=args.gpu)
-    trpo = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    trpo = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(trpo, A.TRPO):
         raise ValueError('Loaded snapshot is not trained with TRPO!')
 
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     returns = evaluator(trpo, eval_env)
     mean = np.mean(returns)

@@ -65,12 +65,12 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.TD3Config(gpu_id=args.gpu)
-    td3 = serializers.load_snapshot(args.snapshot_dir, algorithm_kwargs={"config": config})
+    td3 = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(td3, A.TD3):
         raise ValueError('Loaded snapshot is not trained with TD3!')
 
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(td3, eval_env)
 
