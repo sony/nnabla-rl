@@ -47,9 +47,12 @@ from nnabla_rl.models.atari.q_functions import DQNQFunction  # noqa
 from nnabla_rl.models.atari.v_functions import PPOVFunction as PPOAtariVFunction  # noqa
 from nnabla_rl.models.atari.v_functions import A3CVFunction  # noqa
 from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead, A3CSharedFunctionHead  # noqa
-from nnabla_rl.models.atari.distributional_functions import IQNQuantileFunction  # noqa
 from nnabla_rl.models.atari.distributional_functions import (C51ValueDistributionFunction,  # noqa
-                                                             QRDQNQuantileDistributionFunction)
+                                                             RainbowValueDistributionFunction,
+                                                             RainbowNoDuelValueDistributionFunction,
+                                                             RainbowNoNoisyValueDistributionFunction,
+                                                             QRDQNQuantileDistributionFunction,
+                                                             IQNQuantileFunction)
 from nnabla_rl.models.atari.policies import ICML2015TRPOPolicy as ICML2015TRPOAtariPolicy  # noqa
 
 from nnabla_rl.models.classic_control.policies import REINFORCEContinousPolicy, REINFORCEDiscretePolicy  # noqa

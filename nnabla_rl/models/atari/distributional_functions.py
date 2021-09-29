@@ -21,6 +21,7 @@ import nnabla as nn
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 import nnabla_rl.functions as RF
+import nnabla_rl.parametric_functions as RPF
 from nnabla_rl.models import (DiscreteQuantileDistributionFunction, DiscreteStateActionQuantileFunction,
                               DiscreteValueDistributionFunction)
 
@@ -48,6 +49,104 @@ class C51ValueDistributionFunction(DiscreteValueDistributionFunction):
             h = NF.reshape(h, (-1, self._n_action, self._n_atom))
         assert h.shape == (batch_size, self._n_action, self._n_atom)
         return NF.softmax(h, axis=2)
+
+
+class RainbowValueDistributionFunction(DiscreteValueDistributionFunction):
+    def all_probs(self, s: nn.Variable) -> nn.Variable:
+        batch_size = s.shape[0]
+        with nn.parameter_scope(self.scope_name):
+            with nn.parameter_scope("conv1"):
+                h = NPF.convolution(s, outmaps=32, kernel=(8, 8), stride=(4, 4))
+            h = NF.relu(x=h)
+            with nn.parameter_scope("conv2"):
+                h = NPF.convolution(h, outmaps=64, kernel=(4, 4), stride=(2, 2))
+            h = NF.relu(x=h)
+            with nn.parameter_scope("conv3"):
+                h = NPF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1))
+            h = NF.relu(x=h)
+            h = NF.reshape(h, shape=(batch_size, -1))
+            with nn.parameter_scope("affine1"):
+                h = RPF.noisy_net(h, n_outmap=512 * 2)
+            h = NF.relu(x=h)
+
+            h = NF.reshape(h, shape=(batch_size, 2, -1))
+            value, advantage = NF.split(h, axis=1)
+
+            with nn.parameter_scope("affine_v"):
+                value = RPF.noisy_net(value, n_outmap=self._n_atom)
+                value = NF.reshape(value, (-1, 1, self._n_atom))
+
+            with nn.parameter_scope("affine_a"):
+                advantage = RPF.noisy_net(advantage, n_outmap=self._n_action * self._n_atom)
+                advantage = NF.reshape(advantage, (-1, self._n_action, self._n_atom))
+
+            average = NF.mean(advantage, axis=1, keepdims=True)
+            assert average.shape == (batch_size, 1, self._n_atom)
+
+            out = value + advantage - average
+        assert out.shape == (batch_size, self._n_action, self._n_atom)
+        return NF.softmax(out, axis=2)
+
+
+class RainbowNoDuelValueDistributionFunction(DiscreteValueDistributionFunction):
+    def all_probs(self, s: nn.Variable) -> nn.Variable:
+        batch_size = s.shape[0]
+        with nn.parameter_scope(self.scope_name):
+            with nn.parameter_scope("conv1"):
+                h = NPF.convolution(s, outmaps=32, kernel=(8, 8), stride=(4, 4))
+            h = NF.relu(x=h)
+            with nn.parameter_scope("conv2"):
+                h = NPF.convolution(h, outmaps=64, kernel=(4, 4), stride=(2, 2))
+            h = NF.relu(x=h)
+            with nn.parameter_scope("conv3"):
+                h = NPF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1))
+            h = NF.relu(x=h)
+            h = NF.reshape(h, shape=(batch_size, -1))
+            with nn.parameter_scope("affine1"):
+                h = RPF.noisy_net(h, n_outmap=512)
+            h = NF.relu(x=h)
+            with nn.parameter_scope("affine2"):
+                h = RPF.noisy_net(h, n_outmap=self._n_action * self._n_atom)
+            h = NF.reshape(h, (-1, self._n_action, self._n_atom))
+        assert h.shape == (batch_size, self._n_action, self._n_atom)
+        return NF.softmax(h, axis=2)
+
+
+class RainbowNoNoisyValueDistributionFunction(DiscreteValueDistributionFunction):
+    def all_probs(self, s: nn.Variable) -> nn.Variable:
+        batch_size = s.shape[0]
+        with nn.parameter_scope(self.scope_name):
+            with nn.parameter_scope("conv1"):
+                h = NPF.convolution(s, outmaps=32, kernel=(8, 8), stride=(4, 4))
+            h = NF.relu(x=h)
+            with nn.parameter_scope("conv2"):
+                h = NPF.convolution(h, outmaps=64, kernel=(4, 4), stride=(2, 2))
+            h = NF.relu(x=h)
+            with nn.parameter_scope("conv3"):
+                h = NPF.convolution(h, outmaps=64, kernel=(3, 3), stride=(1, 1))
+            h = NF.relu(x=h)
+            h = NF.reshape(h, shape=(batch_size, -1))
+            with nn.parameter_scope("affine1"):
+                h = NPF.affine(h, n_outmaps=512 * 2)
+            h = NF.relu(x=h)
+
+            h = NF.reshape(h, shape=(batch_size, 2, -1))
+            value, advantage = NF.split(h, axis=1)
+
+            with nn.parameter_scope("affine_v"):
+                value = NPF.affine(value, n_outmaps=self._n_atom)
+                value = NF.reshape(value, (-1, 1, self._n_atom))
+
+            with nn.parameter_scope("affine_a"):
+                advantage = NPF.affine(advantage, n_outmaps=self._n_action * self._n_atom)
+                advantage = NF.reshape(advantage, (-1, self._n_action, self._n_atom))
+
+            average = NF.mean(advantage, axis=1, keepdims=True)
+            assert average.shape == (batch_size, 1, self._n_atom)
+
+            out = value + advantage - average
+        assert out.shape == (batch_size, self._n_action, self._n_atom)
+        return NF.softmax(out, axis=2)
 
 
 class QRDQNQuantileDistributionFunction(DiscreteQuantileDistributionFunction):

@@ -87,6 +87,8 @@ class TestFunctions(object):
         for y1_param, y2_param in zip(y1_params.values(), y2_params.values()):
             y1_param.grad.zero()
             y2_param.grad.zero()
+            assert np.allclose(y1_param.g, 0)
+            assert np.allclose(y2_param.g, 0)
 
         loss = NF.sum((y1 - 1.0) ** 2 + (y2 - 5.0) ** 2)
 

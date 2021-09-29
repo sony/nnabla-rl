@@ -16,12 +16,22 @@
 
 import argparse
 import pathlib
-import sys
-from datetime import datetime as dt
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import ScalarFormatter
+
+
+def smooth_with_moving_average(data, k=1):
+    if k == 1:
+        # no smoothing
+        return data
+    # assuming that the data is flat
+    data = np.insert(data, obj=0, values=[data[0]] * (k - 1))
+    cumsum = np.cumsum(data, dtype=float)
+    cumsum[k:] = cumsum[k:] - cumsum[:-k]
+    moving_average = cumsum[k - 1:] / k
+    return moving_average
 
 
 def load_data(path):
@@ -69,13 +79,16 @@ def plot_results(args):
         mean_label = 'mean'
         if i < len(args.tsvlabels):
             mean_label = f'{mean_label}({args.tsvlabels[i]})'
+        avg_y = smooth_with_moving_average(avg_y, k=args.smooth_k)
         ax.plot(x, avg_y, label=mean_label, linewidth=1)
-        ax.fill_between(x, avg_y + std_y, avg_y - std_y, alpha=0.3)
+        if not args.no_stddev:
+            ax.fill_between(x, avg_y + std_y, avg_y - std_y, alpha=0.3)
 
         if args.plot_median:
             median_label = 'mean'
             if i < len(args.tsvlabels):
                 median_label = f'{median_label}({args.tsvlabels[i]})'
+                med_y = smooth_with_moving_average(med_y, k=args.smooth_k)
                 ax.plot(x, med_y, label=median_label, linewidth=1)
     ax.set_xlim(args.xnlim, args.xplim)
     ax.set_ylim(args.ynlim, args.yplim)
@@ -126,6 +139,8 @@ if __name__ == '__main__':
     parser.add_argument('--hlines', type=float, nargs='*', default=[])
 
     parser.add_argument('--plot-median', action='store_true')
+    parser.add_argument('--no-stddev', action='store_true')
+    parser.add_argument('--smooth-k', type=int, default=1)
 
     parser.add_argument('--show-fig', action='store_true')
 
