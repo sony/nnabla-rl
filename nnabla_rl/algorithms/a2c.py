@@ -64,6 +64,8 @@ class A2CConfig(AlgorithmConfig):
             Defaults to False.
         max_grad_norm (float): threshold value for clipping gradient. Defaults to 0.5.
         seed (int): base seed of random number generator used by the actors. Defaults to 1.
+        learning_rate_decay_iterations (int): learning rate will be decreased lineary to 0 till this iteration number.
+            If 0 or negative, learning rate will be kept fixed. Defaults to 50000000.
     """
     gamma: float = 0.99
     n_steps: int = 5
@@ -77,6 +79,7 @@ class A2CConfig(AlgorithmConfig):
     timelimit_as_terminal: bool = False
     max_grad_norm: Optional[float] = 0.5
     seed: int = -1
+    learning_rate_decay_iterations: int = 50000000
 
     def __post_init__(self):
         '''__post_init__
@@ -331,7 +334,10 @@ class A2C(Algorithm):
                               extra=extra)
 
         # lr decay
-        alpha = self._config.learning_rate * (1.0 - self._iteration_num / self.max_iterations)
+        alpha = self._config.learning_rate
+        if 0 < self._config.learning_rate_decay_iterations:
+            learning_rate_decay = max(1.0 - self._iteration_num / self._config.learning_rate_decay_iterations, 0.0)
+            alpha = alpha * learning_rate_decay
         self._policy_trainer.set_learning_rate(alpha)
         self._v_function_trainer.set_learning_rate(alpha)
 
