@@ -70,7 +70,6 @@ class Algorithm(metaclass=ABCMeta):
     _env_info: EnvironmentInfo
     _config: AlgorithmConfig
     _iteration_num: int
-    _max_iterations: int
     _hooks: Sequence[Hook]
 
     def __init__(self, env_info, config=AlgorithmConfig()):
@@ -79,7 +78,6 @@ class Algorithm(metaclass=ABCMeta):
         self._env_info = env_info
         self._config = config
         self._iteration_num = 0
-        self._max_iterations = 0
         self._hooks = []
 
         if not self.is_supported_env(env_info):
@@ -122,16 +120,6 @@ class Algorithm(metaclass=ABCMeta):
         '''
         return self._iteration_num
 
-    @property
-    def max_iterations(self) -> int:
-        '''
-        Maximum iteration number of running training.
-
-        Returns:
-            int: Maximum iteration number of running training.
-        '''
-        return self._max_iterations
-
     def train(self, env_or_buffer: Union[gym.Env, ReplayBuffer], total_iterations: int):
         '''
         Train the policy with reinforcement learning algorithm
@@ -164,9 +152,8 @@ class Algorithm(metaclass=ABCMeta):
             UnsupportedTrainingException:
                 Raises if the algorithm does not support online training
         '''
-        self._max_iterations = self._iteration_num + total_iterations
         self._before_training_start(train_env)
-        while self._iteration_num < self.max_iterations:
+        for _ in range(total_iterations):
             self._iteration_num += 1
             self._run_online_training_iteration(train_env)
             self._invoke_hooks()
@@ -184,9 +171,8 @@ class Algorithm(metaclass=ABCMeta):
             UnsupportedTrainingException:
                 Raises if the algorithm does not support offline training
         '''
-        self._max_iterations = self._iteration_num + total_iterations
         self._before_training_start(replay_buffer)
-        while self._iteration_num < self.max_iterations:
+        for _ in range(total_iterations):
             self._iteration_num += 1
             self._run_offline_training_iteration(replay_buffer)
             self._invoke_hooks()
