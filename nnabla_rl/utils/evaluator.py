@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable, List, Union
+
 import numpy as np
 
 from nnabla_rl.logger import logger
+from nnabla_rl.typing import Experience
 
 
 class EpisodicEvaluator():
@@ -62,6 +65,27 @@ class TimestepEvaluator():
         return returns
 
 
+class EpisodicSuccessEvaluator():
+    def __init__(self, check_success: Callable[[List[Experience]], Union[bool, float]],
+                 run_per_evaluation=10):
+        self._num_episodes = run_per_evaluation
+        self._compute_success_func = check_success
+
+    def __call__(self, algorithm, env):
+        results = []
+        for num in range(1, self._num_episodes + 1):
+            experiences, _ = run_rollout(algorithm, env)
+            success = self._compute_success_func(experiences)
+            results.append(success)
+            success_tag = 'Success' if success else 'Failed'
+            logger.info(
+                'Finished evaluation run: #{} out of {}. {}'
+                .format(num, self._num_episodes, success_tag)
+            )
+
+        return results
+
+
 def run_one_episode(algorithm, env, timestep_limit=lambda t: False):
     rewards = []
     timesteps = 0
@@ -77,3 +101,21 @@ def run_one_episode(algorithm, env, timestep_limit=lambda t: False):
         else:
             state = next_state
     return np.sum(rewards), timesteps
+
+
+def run_rollout(algorithm, env, timestep_limit=lambda t: False):
+    experiences = []
+    timesteps = 0
+    state = env.reset()
+    while True:
+        action = algorithm.compute_eval_action(state)
+        next_state, reward, done, info = env.step(action)
+        non_terminal = 0.0 if done else 1.0
+        experience = (state, action, reward, non_terminal, next_state, info)
+        experiences.append(experience)
+        timesteps += 1
+        if done or timestep_limit(timesteps):
+            break
+        else:
+            state = next_state
+    return experiences, timesteps

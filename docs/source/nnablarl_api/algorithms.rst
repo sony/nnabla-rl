@@ -111,6 +111,16 @@ GAIL
    :members:
    :show-inheritance:
 
+HER
+====
+.. autoclass:: nnabla_rl.algorithms.her.HERConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.her.HER
+   :members:
+   :show-inheritance:
+
 IQN
 ====
 .. autoclass:: nnabla_rl.algorithms.iqn.IQNConfig

@@ -277,7 +277,7 @@ class GAIL(Algorithm):
                     raise ValueError('State preprocessing is enabled but no preprocessor builder is given')
                 pi_v_preprocessor = state_preprocessor_builder('pi_v_preprocessor', self._env_info, self._config)
                 v_function = _StatePreprocessedVFunction(v_function=v_function, preprocessor=pi_v_preprocessor)
-                policy = _StatePreprocessedPolicy(policy=policy, preprocessor=pi_v_preprocessor)
+                policy = _StatePreprocessedPolicy(policy=policy, preprocessor=pi_v_preprocessor)  # type: ignore
                 r_preprocessor = state_preprocessor_builder('r_preprocessor', self._env_info, self._config)
                 discriminator = _StatePreprocessedRewardFunction(
                     reward_function=discriminator, preprocessor=r_preprocessor)

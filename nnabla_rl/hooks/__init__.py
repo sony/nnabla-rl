@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nnabla_rl.hooks.epoch_num_hook import EpochNumHook  # noqa
 from nnabla_rl.hooks.evaluation_hook import EvaluationHook  # noqa
 from nnabla_rl.hooks.save_snapshot_hook import SaveSnapshotHook  # noqa
 from nnabla_rl.hooks.iteration_num_hook import IterationNumHook  # noqa

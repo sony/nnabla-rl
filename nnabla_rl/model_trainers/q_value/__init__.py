@@ -26,6 +26,8 @@ from nnabla_rl.model_trainers.q_value.ddqn_q_trainer import (  # noqa
     DDQNQTrainer, DDQNQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.dqn_q_trainer import (  # noqa
     DQNQTrainer, DQNQTrainerConfig)
+from nnabla_rl.model_trainers.q_value.her_q_trainer import (  # noqa
+    HERQTrainer, HERQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.iqn_q_trainer import (  # noqa
     IQNQTrainer, IQNQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.munchausen_rl_q_trainer import (  # noqa

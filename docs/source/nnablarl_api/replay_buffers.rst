@@ -15,6 +15,10 @@ List of ReplayBuffer
     :members:
     :show-inheritance:
 
+.. autoclass:: nnabla_rl.replay_buffers.HindsightReplayBuffer
+    :members:
+    :show-inheritance:
+
 .. autoclass:: nnabla_rl.replay_buffers.MemoryEfficientAtariBuffer
     :members:
     :show-inheritance:

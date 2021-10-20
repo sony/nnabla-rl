@@ -15,9 +15,9 @@
 
 from gym.envs.registration import register
 
-from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyDiscrete,  # noqa
-                                          DummyDiscreteImg, DummyMujocoEnv, DummyTupleContinuous,
-                                          DummyTupleDiscrete, DummyTupleMixed)
+from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyContinuousActionGoalEnv, DummyDiscrete, # noqa
+                                          DummyDiscreteActionGoalEnv, DummyDiscreteImg, DummyMujocoEnv,
+                                          DummyTupleContinuous, DummyTupleDiscrete, DummyTupleMixed)
 
 register(
     id='FakeMujocoNNablaRL-v1',
@@ -28,5 +28,11 @@ register(
 register(
     id='FakeAtariNNablaRLNoFrameskip-v1',
     entry_point='nnabla_rl.environments.dummy:DummyAtariEnv',
+    max_episode_steps=10
+)
+
+register(
+    id='FakeGoalConditionedNNablaRL-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyContinuousActionGoalEnv',
     max_episode_steps=10
 )

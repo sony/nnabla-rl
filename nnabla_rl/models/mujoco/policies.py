@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import numpy as np
 
 import nnabla as nn
@@ -270,3 +272,28 @@ class GAILPolicy(StochasticPolicy):
             ln_var = NF.broadcast(
                 ln_sigma, (s.shape[0], self._action_dim)) * 2.0
         return D.Gaussian(mean, ln_var)
+
+
+class HERPolicy(DeterministicPolicy):
+    def __init__(self, scope_name: str, action_dim: int, max_action_value: float):
+        super(HERPolicy, self).__init__(scope_name)
+        self._action_dim = action_dim
+        self._max_action_value = max_action_value
+
+    def pi(self, s: Tuple[nn.Variable, nn.Variable, nn.Variable]) -> nn.Variable:
+        # s = (observation, goal, achieved_goal)
+        obs, goal, _ = s
+        with nn.parameter_scope(self.scope_name):
+            h = NF.concatenate(obs, goal, axis=1)
+            linear1_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
+            h = NPF.affine(h, n_outmaps=64, name='linear1', w_init=linear1_init)
+            h = NF.relu(h)
+            linear2_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
+            h = NPF.affine(h, n_outmaps=64, name='linear2', w_init=linear2_init)
+            h = NF.relu(h)
+            linear3_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
+            h = NPF.affine(h, n_outmaps=64, name='linear3', w_init=linear3_init)
+            h = NF.relu(h)
+            action_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=self._action_dim)
+            h = NPF.affine(h, n_outmaps=self._action_dim, name='action', w_init=action_init)
+        return NF.tanh(h) * self._max_action_value
