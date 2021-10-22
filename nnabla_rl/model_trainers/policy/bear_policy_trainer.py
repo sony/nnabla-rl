@@ -21,7 +21,8 @@ import nnabla as nn
 import nnabla.functions as NF
 import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
+                                                    TrainingVariables)
 from nnabla_rl.models import Model, QFunction, StochasticPolicy, VariationalAutoEncoder
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
@@ -100,6 +101,7 @@ class BEARPolicyTrainer(ModelTrainer):
                  env_info: EnvironmentInfo,
                  config: BEARPolicyTrainerConfig = BEARPolicyTrainerConfig()):
         self._q_ensembles = q_ensembles
+
         self._vae = vae
 
         self._lagrange = lagrange_multiplier
@@ -112,7 +114,8 @@ class BEARPolicyTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        set_data_to_variable(training_variables.s_current, batch.s_current)
+        for t, b in zip(training_variables, batch):
+            set_data_to_variable(t.s_current, b.s_current)
 
         # Optimize actor
         # Always forward pi loss to update the graph
@@ -133,7 +136,7 @@ class BEARPolicyTrainer(ModelTrainer):
             self._lagrange.clip(-5.0, 10.0)
 
         trainer_state = {}
-        trainer_state['pi_loss'] = float(self._pi_loss.d.copy())
+        trainer_state['pi_loss'] = self._pi_loss.d.copy()
         return trainer_state
 
     def _repeat_state(self, s_var: nn.Variable, batch_size: int) -> nn.Variable:
@@ -145,14 +148,29 @@ class BEARPolicyTrainer(ModelTrainer):
 
     def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         models = cast(Sequence[StochasticPolicy], models)
-        batch_size = training_variables.batch_size
         self._pi_loss = 0
         self._pi_warmup_loss = 0
+        self._lagrange_loss = 0
+        ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
+        for step_index, variables in enumerate(training_variables):
+            is_burn_in_steps = step_index < self._config.burn_in_steps
+            is_intermediate_steps = step_index < self._config.burn_in_steps + self._config.unroll_steps - 1
+            ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
+            self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
+
+    def _build_one_step_graph(self,
+                              models: Sequence[Model],
+                              training_variables: TrainingVariables,
+                              ignore_loss: bool):
+        models = cast(Sequence[StochasticPolicy], models)
+        batch_size = training_variables.batch_size
+
         for policy in models:
             sampled_actions = self._vae.decode_multiple(z=None,
                                                         decode_num=self._config.num_mmd_actions,
                                                         state=training_variables.s_current)
             policy_distribution = policy.pi(training_variables.s_current)
+
             policy_actions = policy_distribution.sample_multiple(
                 num_samples=self._config.num_mmd_actions, noise_clip=(-0.5, 0.5))
 
@@ -174,12 +192,19 @@ class BEARPolicyTrainer(ModelTrainer):
             a_hat = NF.transpose(policy_actions, axes=(1, 0, 2))
             a_hat = NF.reshape(a_hat, shape=(batch_size * self._config.num_mmd_actions, action_shape))
 
+            q_values = []
+            for q in self._q_ensembles:
+                q_value = q.q(s_hat, a_hat)
+                q_values.append(q_value)
+
+            q_values = NF.stack(*q_values)
             num_q_ensembles = len(self._q_ensembles)
-            q_values = NF.stack(*(q.q(s_hat, a_hat) for q in self._q_ensembles))
+            assert isinstance(q_values, nn.Variable)
             assert q_values.shape == (num_q_ensembles, self._config.num_mmd_actions * batch_size, 1)
             q_values = NF.reshape(q_values, shape=(num_q_ensembles, self._config.num_mmd_actions, batch_size, 1))
             # Compute mean among sampled actions
             q_values = NF.mean(q_values, axis=1)
+            assert isinstance(q_values, nn.Variable)
             assert q_values.shape == (num_q_ensembles, batch_size, 1)
 
             # Compute the minimum among ensembles
@@ -187,11 +212,12 @@ class BEARPolicyTrainer(ModelTrainer):
 
             assert q_min.shape == (batch_size, 1)
 
-            self._pi_loss += NF.mean(-q_min + self._lagrange() * mmd_loss)
-            self._pi_warmup_loss += NF.mean(self._lagrange() * mmd_loss)
+            self._pi_loss += 0.0 if ignore_loss else NF.mean(-q_min + self._lagrange() * mmd_loss)
+            self._pi_warmup_loss += 0.0 if ignore_loss else NF.mean(self._lagrange() * mmd_loss)
 
         # Must forward pi_loss before forwarding lagrange_loss
-        self._lagrange_loss = -NF.mean(-q_min + self._lagrange() * (mmd_loss - self._config.epsilon))
+        self._lagrange_loss += 0.0 if ignore_loss else - \
+            NF.mean(-q_min + self._lagrange() * (mmd_loss - self._config.epsilon))
 
     def _setup_training_variables(self, batch_size):
         # Training input variables

@@ -18,7 +18,8 @@ import pytest
 
 import nnabla as nn
 import nnabla_rl.environments as E
-from nnabla_rl.utils.data import RingBuffer, add_batch_dimension, marshal_experiences, set_data_to_variable
+from nnabla_rl.utils.data import (RingBuffer, add_batch_dimension, list_of_dict_to_dict_of_list,
+                                  marshal_dict_experiences, marshal_experiences, set_data_to_variable)
 
 
 class TestData():
@@ -50,19 +51,27 @@ class TestData():
         batch_size = 3
         dummy_env = E.DummyContinuous()
         experiences = generate_dummy_experiences(dummy_env, batch_size)
-        state, action, reward, done, next_state = marshal_experiences(experiences)
+        state, action, reward, done, next_state, info = marshal_experiences(experiences)
+        rnn_states = info['rnn_states']
+        rnn_dummy_state1 = rnn_states['dummy_scope']['dummy_state1']
+        rnn_dummy_state2 = rnn_states['dummy_scope']['dummy_state2']
 
         assert state.shape == (batch_size, dummy_env.observation_space.shape[0])
         assert action.shape == (batch_size, dummy_env.action_space.shape[0])
         assert reward.shape == (batch_size, 1)
         assert done.shape == (batch_size, 1)
         assert next_state.shape == (batch_size, dummy_env.observation_space.shape[0])
+        assert rnn_dummy_state1.shape == (batch_size, 1)
+        assert rnn_dummy_state2.shape == (batch_size, 1)
 
     def test_marshal_experiences_tuple_continous(self):
         batch_size = 2
         dummy_env = E.DummyTupleContinuous()
         experiences = generate_dummy_experiences(dummy_env, batch_size)
-        state, action, reward, done, next_state = marshal_experiences(experiences)
+        state, action, reward, done, next_state, info = marshal_experiences(experiences)
+        rnn_states = info['rnn_states']
+        rnn_dummy_state1 = rnn_states['dummy_scope']['dummy_state1']
+        rnn_dummy_state2 = rnn_states['dummy_scope']['dummy_state2']
 
         assert state[0].shape == (batch_size, dummy_env.observation_space[0].shape[0])
         assert state[1].shape == (batch_size, dummy_env.observation_space[1].shape[0])
@@ -71,12 +80,17 @@ class TestData():
         assert done.shape == (batch_size, 1)
         assert next_state[0].shape == (batch_size, dummy_env.observation_space[0].shape[0])
         assert next_state[1].shape == (batch_size, dummy_env.observation_space[1].shape[0])
+        assert rnn_dummy_state1.shape == (batch_size, 1)
+        assert rnn_dummy_state2.shape == (batch_size, 1)
 
     def test_marshal_experiences_tuple_discrete(self):
         batch_size = 2
         dummy_env = E.DummyTupleDiscrete()
         experiences = generate_dummy_experiences(dummy_env, batch_size)
-        state, action, reward, done, next_state = marshal_experiences(experiences)
+        state, action, reward, done, next_state, info = marshal_experiences(experiences)
+        rnn_states = info['rnn_states']
+        rnn_dummy_state1 = rnn_states['dummy_scope']['dummy_state1']
+        rnn_dummy_state2 = rnn_states['dummy_scope']['dummy_state2']
 
         assert state[0].shape == (batch_size, 1)
         assert state[1].shape == (batch_size, 1)
@@ -85,6 +99,50 @@ class TestData():
         assert done.shape == (batch_size, 1)
         assert next_state[0].shape == (batch_size, 1)
         assert next_state[1].shape == (batch_size, 1)
+        assert rnn_dummy_state1.shape == (batch_size, 1)
+        assert rnn_dummy_state2.shape == (batch_size, 1)
+
+    def test_marshal_dict_experiences(self):
+        experiences = {'key1': 1, 'key2': 2}
+        dict_experiences = [{'key_parent': experiences}, {'key_parent': experiences}]
+        marshaled_experience = marshal_dict_experiences(dict_experiences)
+
+        key1_experiences = marshaled_experience['key_parent']['key1']
+        key2_experiences = marshaled_experience['key_parent']['key2']
+
+        assert key1_experiences.shape == (2, 1)
+        assert key2_experiences.shape == (2, 1)
+
+        np.testing.assert_allclose(np.asarray(key1_experiences), 1)
+        np.testing.assert_allclose(np.asarray(key2_experiences), 2)
+
+    def test_marshal_triple_nested_dict_experiences(self):
+        experiences = {'key1': 1, 'key2': 2}
+        nested_experiences = {'nest1': experiences, 'nest2': experiences}
+        dict_experiences = [{'key_parent': nested_experiences}, {'key_parent': nested_experiences}]
+        marshaled_experience = marshal_dict_experiences(dict_experiences)
+
+        key1_experiences = marshaled_experience['key_parent']['nest1']['key1']
+        key2_experiences = marshaled_experience['key_parent']['nest2']['key2']
+
+        assert len(key1_experiences) == 2
+        assert len(key2_experiences) == 2
+
+        np.testing.assert_allclose(np.asarray(key1_experiences), 1)
+        np.testing.assert_allclose(np.asarray(key2_experiences), 2)
+
+    def test_list_of_dict_to_dict_of_list(self):
+        list_of_dict = [{'key1': 1, 'key2': 2}, {'key1': 1, 'key2': 2}]
+        dict_of_list = list_of_dict_to_dict_of_list(list_of_dict)
+
+        key1_list = dict_of_list['key1']
+        key2_list = dict_of_list['key2']
+
+        assert len(key1_list) == 2
+        assert len(key2_list) == 2
+
+        np.testing.assert_allclose(np.asarray(key1_list), 1)
+        np.testing.assert_allclose(np.asarray(key2_list), 2)
 
     def test_add_batch_dimension_array(self):
         array = np.random.randn(4)

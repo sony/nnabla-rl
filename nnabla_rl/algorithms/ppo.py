@@ -261,9 +261,9 @@ class PPO(Algorithm):
             self._v_solver_builder = v_solver_builder  # keep for later use
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            return self._compute_action(state)
+            return self._compute_action(state, begin_of_episode=begin_of_episode)
 
     def _before_training_start(self, env_or_buffer):
         if not self._is_env(env_or_buffer):
@@ -406,7 +406,7 @@ class PPO(Algorithm):
         self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     @eval_api
-    def _compute_action(self, s):
+    def _compute_action(self, s, *, begin_of_episode=False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
@@ -456,9 +456,9 @@ class PPO(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(PPO, self).latest_iteration_state
         if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
         if hasattr(self, '_v_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+            latest_iteration_state['scalar'].update({'v_loss': float(self._v_function_trainer_state['v_loss'])})
         return latest_iteration_state
 
 
@@ -612,7 +612,7 @@ class _PPOActor(object):
         return experiences, v_targets, advantages
 
     @eval_api
-    def _compute_action(self, s):
+    def _compute_action(self, s, *, begin_of_episode=False):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = nn.Variable(s.shape)

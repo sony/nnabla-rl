@@ -23,12 +23,67 @@ import nnabla.functions as NF
 import nnabla.initializer as NI
 import nnabla.parametric_functions as NPF
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.model_trainers.policy.soft_policy_trainer import AdjustableTemperature
+from nnabla_rl.distributions.gaussian import Gaussian
+from nnabla_rl.environments.dummy import DummyContinuous
+from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.model_trainers.model_trainer import LossIntegration
+from nnabla_rl.model_trainers.policy.dpg_policy_trainer import DPGPolicyTrainer
+from nnabla_rl.model_trainers.policy.soft_policy_trainer import AdjustableTemperature, SoftPolicyTrainer
 from nnabla_rl.model_trainers.policy.trpo_policy_trainer import (_concat_network_params_in_ndarray,
                                                                  _hessian_vector_product,
                                                                  _update_network_params_by_flat_params)
+from nnabla_rl.models import TD3Policy, TD3QFunction
+from nnabla_rl.models.mujoco.policies import SACPolicy
+from nnabla_rl.models.mujoco.q_functions import SACQFunction
+from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy
 from nnabla_rl.utils.matrices import compute_hessian
 from nnabla_rl.utils.optimization import conjugate_gradient
+
+
+class DeterministicRnnPolicy(DeterministicPolicy):
+    def __init__(self, scope_name: str):
+        super().__init__(scope_name)
+        self._internal_state_shape = (10, )
+        self._fake_internal_state = None
+
+    def is_recurrent(self) -> bool:
+        return True
+
+    def internal_state_shapes(self):
+        return {'fake': self._internal_state_shape}
+
+    def set_internal_states(self, states):
+        self._fake_internal_state = states['fake']
+
+    def get_internal_states(self):
+        return {'fake': self._fake_internal_state}
+
+    def pi(self, s):
+        self._fake_internal_state = self._fake_internal_state * 2
+        return s
+
+
+class StochasticRnnPolicy(StochasticPolicy):
+    def __init__(self, scope_name: str):
+        super().__init__(scope_name)
+        self._internal_state_shape = (10, )
+        self._fake_internal_state = None
+
+    def is_recurrent(self) -> bool:
+        return True
+
+    def internal_state_shapes(self):
+        return {'fake': self._internal_state_shape}
+
+    def set_internal_states(self, states):
+        self._fake_internal_state = states['fake']
+
+    def get_internal_states(self):
+        return {'fake': self._fake_internal_state}
+
+    def pi(self, s):
+        self._fake_internal_state = self._fake_internal_state * 2
+        return Gaussian(mean=np.zeros(s.shape), ln_var=np.ones(s.shape))
 
 
 class TrainerTest(metaclass=ABCMeta):
@@ -200,11 +255,90 @@ class TestTRPOPolicyTrainer(TrainerTest):
 
 
 class TestDPGPolicyTrainer(TrainerTest):
-    pass
+    def setup_method(self, method):
+        nn.clear_parameters()
+
+    @pytest.mark.parametrize('unroll_steps', [1, 2])
+    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
+    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    def test_with_non_rnn_model(self, unroll_steps, burn_in_steps, loss_integration):
+        env_info = EnvironmentInfo.from_env(DummyContinuous())
+
+        policy = TD3Policy('stub_pi', action_dim=env_info.action_dim, max_action_value=1)
+        train_q = TD3QFunction('stub_q', None)
+        # Using DQN Q trainer as representative trainer
+        config = MT.policy_trainers.DPGPolicyTrainerConfig(unroll_steps=unroll_steps,
+                                                           burn_in_steps=burn_in_steps,
+                                                           loss_integration=loss_integration)
+        DPGPolicyTrainer(models=policy, q_function=train_q, solvers={}, env_info=env_info, config=config)
+
+        # pass: If no ecror occurs
+
+    @pytest.mark.parametrize('unroll_steps', [1, 2])
+    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
+    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    def test_with_rnn_model(self, unroll_steps, burn_in_steps, loss_integration):
+        env_info = EnvironmentInfo.from_env(DummyContinuous())
+
+        policy = DeterministicRnnPolicy('stub_pi')
+        train_q = TD3QFunction('stub_q', None)
+        # Using DQN Q trainer as representative trainer
+        config = MT.policy_trainers.DPGPolicyTrainerConfig(unroll_steps=unroll_steps,
+                                                           burn_in_steps=burn_in_steps,
+                                                           loss_integration=loss_integration)
+        DPGPolicyTrainer(models=policy, q_function=train_q, solvers={}, env_info=env_info, config=config)
+
+        # pass: If no ecror occurs
 
 
 class TestSoftPolicyTrainer(TrainerTest):
-    pass
+    def setup_method(self, method):
+        nn.clear_parameters()
+
+    @pytest.mark.parametrize('unroll_steps', [1, 2])
+    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
+    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    def test_with_non_rnn_model(self, unroll_steps, burn_in_steps, loss_integration):
+        env_info = EnvironmentInfo.from_env(DummyContinuous())
+
+        policy = SACPolicy('stub_pi', action_dim=env_info.action_dim)
+        train_q1 = SACQFunction('stub_q1', None)
+        train_q2 = SACQFunction('stub_q2', None)
+        # Using DQN Q trainer as representative trainer
+        config = MT.policy_trainers.SoftPolicyTrainerConfig(unroll_steps=unroll_steps,
+                                                            burn_in_steps=burn_in_steps,
+                                                            loss_integration=loss_integration,
+                                                            fixed_temperature=True)
+        SoftPolicyTrainer(policy,
+                          solvers={},
+                          q_functions=[train_q1, train_q2],
+                          temperature=AdjustableTemperature('stub_t'),
+                          temperature_solver=None,
+                          env_info=env_info, config=config)
+
+        # pass: If no ecror occurs
+
+    @pytest.mark.parametrize('unroll_steps', [1, 2])
+    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
+    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    def test_with_rnn_model(self, unroll_steps, burn_in_steps, loss_integration):
+        env_info = EnvironmentInfo.from_env(DummyContinuous())
+
+        policy = StochasticRnnPolicy('stub_pi')
+        train_q1 = SACQFunction('stub_q1', None)
+        train_q2 = SACQFunction('stub_q2', None)
+        config = MT.policy_trainers.SoftPolicyTrainerConfig(unroll_steps=unroll_steps,
+                                                            burn_in_steps=burn_in_steps,
+                                                            loss_integration=loss_integration,
+                                                            fixed_temperature=True)
+        SoftPolicyTrainer(policy,
+                          solvers={},
+                          q_functions=[train_q1, train_q2],
+                          temperature=AdjustableTemperature('stub_t'),
+                          temperature_solver=None,
+                          env_info=env_info, config=config)
+
+        # pass: If no ecror occurs
 
 
 class TestAdjustableTemperature(TrainerTest):

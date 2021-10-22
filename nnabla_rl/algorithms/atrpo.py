@@ -235,9 +235,9 @@ class ATRPO(Algorithm):
             self._v_function_solver.weight_decay(self._config.vf_l2_reg_coefficient)
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(state, act_deterministic=True)
+            action, _ = self._compute_action(state, act_deterministic=True, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -378,7 +378,7 @@ class ATRPO(Algorithm):
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
     @eval_api
-    def _compute_action(self, s, act_deterministic=False):
+    def _compute_action(self, s, act_deterministic=False, *, begin_of_episode=False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)

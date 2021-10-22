@@ -172,9 +172,9 @@ class REINFORCE(Algorithm):
             self._policy_solver = policy_solver_builder(self._env_info, self._config)
 
     @eval_api
-    def compute_eval_action(self, s):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(s)
+            action, _ = self._compute_action(state, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -213,9 +213,10 @@ class REINFORCE(Algorithm):
         # sample all experience in the buffer
         experiences, *_ = buffer.sample(buffer.capacity)
         s_batch, a_batch, target_return = self._align_experiences_and_compute_accumulated_reward(experiences)
+        batch_size = len(s_batch)
         extra = {}
-        extra['target_return'] = target_return
-        batch = TrainingBatch(batch_size=len(s_batch),
+        extra['target_return'] = np.reshape(target_return, newshape=(batch_size, 1))
+        batch = TrainingBatch(batch_size,
                               s_current=s_batch,
                               a_current=a_batch,
                               extra=extra)
@@ -245,7 +246,7 @@ class REINFORCE(Algorithm):
         return s_batch, a_batch, accumulated_reward_batch
 
     @eval_api
-    def _compute_action(self, s):
+    def _compute_action(self, s, *, begin_of_episode=False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
@@ -273,5 +274,5 @@ class REINFORCE(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(REINFORCE, self).latest_iteration_state
         if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
         return latest_iteration_state

@@ -19,7 +19,8 @@ import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
+                                                    TrainingVariables)
 from nnabla_rl.models import Model, RewardFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
@@ -55,8 +56,9 @@ class GAILRewardFunctionTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        for key in batch.extra.keys():
-            set_data_to_variable(training_variables.extra[key], batch.extra[key])
+        for t, b in zip(training_variables, batch):
+            for key in batch.extra.keys():
+                set_data_to_variable(t.extra[key], b.extra[key])
 
         # update model
         for solver in solvers.values():
@@ -66,8 +68,8 @@ class GAILRewardFunctionTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
 
-        trainer_state = {}
-        trainer_state['reward_loss'] = float(self._binary_classification_loss.d.copy())
+        trainer_state: Dict[str, np.ndarray] = {}
+        trainer_state['reward_loss'] = self._binary_classification_loss.d.copy()
         return trainer_state
 
     def _build_training_graph(self, models: Union[Model, Sequence[Model]],
@@ -76,6 +78,18 @@ class GAILRewardFunctionTrainer(ModelTrainer):
         models = cast(Sequence[RewardFunction], models)
 
         self._binary_classification_loss = 0
+        ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
+        for step_index, variables in enumerate(training_variables):
+            is_burn_in_steps = step_index < self._config.burn_in_steps
+            is_intermediate_steps = step_index < self._config.burn_in_steps + self._config.unroll_steps - 1
+            ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
+            self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
+
+    def _build_one_step_graph(self,
+                              models: Sequence[Model],
+                              training_variables: TrainingVariables,
+                              ignore_loss: bool):
+        models = cast(Sequence[RewardFunction], models)
         for model in models:
             # fake path
             logits_fake = model.r(training_variables.extra['s_current_agent'],
@@ -91,7 +105,7 @@ class GAILRewardFunctionTrainer(ModelTrainer):
             logits = NF.concatenate(logits_fake, logits_real, axis=0)
             entropy = NF.mean((1. - NF.sigmoid(logits)) * logits - NF.log_sigmoid(logits))
             entropy_loss = - self._config.entropy_coef * entropy  # maximize
-            self._binary_classification_loss += fake_loss + real_loss + entropy_loss
+            self._binary_classification_loss += 0.0 if ignore_loss else fake_loss + real_loss + entropy_loss
 
     def _setup_training_variables(self, batch_size):
         s_current_agent_var = create_variable(batch_size, self._env_info.state_shape)
@@ -107,6 +121,5 @@ class GAILRewardFunctionTrainer(ModelTrainer):
                      's_current_agent': s_current_agent_var,
                      'a_current_agent': a_current_agent_var,
                      's_next_agent': s_next_agent_var}
-        training_variables = TrainingVariables(batch_size, extra=variables)
 
-        return training_variables
+        return TrainingVariables(batch_size, extra=variables)

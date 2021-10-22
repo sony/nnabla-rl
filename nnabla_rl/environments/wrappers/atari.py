@@ -19,10 +19,28 @@ import gym
 import numpy as np
 from gym import spaces
 
+import nnabla_rl as rl
 from nnabla_rl.external.atari_wrappers import (ClipRewardEnv, EpisodicLifeEnv, FireResetEnv, MaxAndSkipEnv,
                                                NoopResetEnv, ScaledFloatFrame)
 
 cv2.ocl.setUseOpenCL(False)
+
+
+class FlickerFrame(gym.ObservationWrapper):
+    '''
+    Obscure (blackout) screen with flicker_probability
+    '''
+
+    def __init__(self, env, flicker_probability=0.5):
+        gym.ObservationWrapper.__init__(self, env)
+        self.width = 84
+        self.height = 84
+        obs_shape = (1, self.height, self.width)  # 'chw' order
+        self.observation_space = spaces.Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
+        self.flicker_probability = flicker_probability
+
+    def observation(self, frame):
+        return frame * float(self.flicker_probability < rl.random.drng.uniform())
 
 
 class CHWWarpFrame(gym.ObservationWrapper):
@@ -93,13 +111,21 @@ def make_atari(env_id, max_frames_per_episode=None):
     return env
 
 
-def wrap_deepmind(env, episode_life=True, clip_rewards=True, normalize=True, frame_stack=True, fire_reset=False):
+def wrap_deepmind(env,
+                  episode_life=True,
+                  clip_rewards=True,
+                  normalize=True,
+                  frame_stack=True,
+                  fire_reset=False,
+                  flicker_probability=0.0):
     """Configure environment for DeepMind-style Atari."""
     if episode_life:
         env = EpisodicLifeEnv(env)
     if fire_reset and 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     env = CHWWarpFrame(env)
+    if 0.0 < flicker_probability:
+        env = FlickerFrame(env, flicker_probability=flicker_probability)
     if normalize:
         env = ScaledFloatFrame(env)
     if clip_rewards:

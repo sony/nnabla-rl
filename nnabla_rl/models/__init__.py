@@ -45,7 +45,7 @@ from nnabla_rl.models.mujoco.v_functions import GAILVFunction  # noqa
 from nnabla_rl.models.mujoco.reward_functions import GAILDiscriminator  # noqa
 from nnabla_rl.models.atari.policies import PPOPolicy as PPOAtariPolicy  # noqa
 from nnabla_rl.models.atari.policies import A3CPolicy  # noqa
-from nnabla_rl.models.atari.q_functions import DQNQFunction  # noqa
+from nnabla_rl.models.atari.q_functions import DQNQFunction, DRQNQFunction  # noqa
 from nnabla_rl.models.atari.v_functions import PPOVFunction as PPOAtariVFunction  # noqa
 from nnabla_rl.models.atari.v_functions import A3CVFunction  # noqa
 from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead, A3CSharedFunctionHead  # noqa

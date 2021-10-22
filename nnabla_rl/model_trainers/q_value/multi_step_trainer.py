@@ -44,35 +44,47 @@ class MultiStepTrainer(ModelTrainer):
                  models: Union[Model, Sequence[Model]],
                  solvers: Dict[str, nn.solver.Solver],
                  env_info: EnvironmentInfo,
-                 config: TrainerConfig):
+                 config: MultiStepTrainerConfig):
         super(MultiStepTrainer, self).__init__(models, solvers, env_info, config)
 
     def _setup_batch(self, training_batch: TrainingBatch) -> TrainingBatch:
         if self._config.num_steps == 1:
             return training_batch
         else:
-            n_step_non_terminal = np.copy(training_batch.non_terminal)
-            n_step_reward = np.copy(training_batch.reward)
-            n_step_gamma = np.copy(training_batch.gamma)
-            n_step_state = np.copy(training_batch.s_next)
-            next_batch = cast(TrainingBatch, training_batch.next_step_batch)
+            training_batch_length = len(training_batch)
+            total_timesteps = self._config.unroll_steps + self._config.burn_in_steps
+            assert training_batch_length == (total_timesteps + self._config.num_steps - 1)
+            n_step_reward = np.zeros(shape=(training_batch.batch_size, self._config.num_steps))
+            n_step_gamma = np.ones(shape=(training_batch.batch_size, self._config.num_steps))
+            n_step_non_terminal = np.ones(shape=(training_batch.batch_size, self._config.num_steps))
+            n_step_batch = None
+            next_step_batch = None
 
-            for _ in range(self._config.num_steps - 1):
-                # Do not add reward if previous state is terminal state
-                n_step_reward += next_batch.reward * n_step_non_terminal * n_step_gamma
-                n_step_non_terminal *= next_batch.non_terminal
-                n_step_gamma *= next_batch.gamma
-                n_step_state = next_batch.s_next
+            training_batch_list = list(training_batch)
+            for i, batch in enumerate(reversed(training_batch_list)):
+                n_step_reward = np.roll(n_step_reward, 1)
+                n_step_gamma = np.roll(n_step_gamma, 1)
+                n_step_non_terminal = np.roll(n_step_non_terminal, 1)
 
-                next_batch = cast(TrainingBatch, next_batch.next_step_batch)
+                n_step_reward[:, 0:1] = batch.reward
+                n_step_reward[:, 1:] *= batch.non_terminal * batch.gamma
+                n_step_gamma[:, 0:1] = batch.gamma
+                n_step_non_terminal[:, 0:1] = batch.non_terminal
 
-            return TrainingBatch(batch_size=training_batch.batch_size,
-                                 s_current=training_batch.s_current,
-                                 a_current=training_batch.a_current,
-                                 reward=n_step_reward,
-                                 gamma=n_step_gamma,
-                                 non_terminal=n_step_non_terminal,
-                                 s_next=n_step_state,
-                                 weight=training_batch.weight,
-                                 extra=training_batch.extra,
-                                 next_step_batch=None)
+                if i < self._config.num_steps - 1:
+                    continue
+
+                last_batch = training_batch_list[training_batch_length - 1 - (i - self._config.num_steps + 1)]
+                n_step_batch = TrainingBatch(batch_size=batch.batch_size,
+                                             s_current=batch.s_current,
+                                             a_current=batch.a_current,
+                                             reward=np.sum(n_step_reward, axis=1, keepdims=True),
+                                             gamma=np.prod(n_step_gamma, axis=1, keepdims=True),
+                                             non_terminal=np.prod(n_step_non_terminal, axis=1, keepdims=True),
+                                             s_next=last_batch.s_next,
+                                             weight=batch.weight,
+                                             extra=batch.extra,
+                                             next_step_batch=next_step_batch)
+                next_step_batch = n_step_batch
+
+            return cast(TrainingBatch, n_step_batch)

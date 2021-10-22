@@ -41,6 +41,24 @@ class TestMemoryEfficientAtariBuffer(object):
         assert np.alltrue(
             (experience[4][-1] * 255.0).astype(np.uint8) == s_next)
 
+    def test_unstacked_frame(self):
+        experiences = _generate_atari_experience_mock(num_mocks=10, frame_stack=False)
+
+        capacity = 10
+        buffer = MemoryEfficientAtariBuffer(capacity=capacity, stacked_frames=1)
+
+        for experience in experiences:
+            buffer.append(experience)
+
+        for i, experience in enumerate(experiences):
+            s, _, _, _, s_next, *_ = buffer.__getitem__(i)
+            assert s.shape[0] == 1
+            assert s_next.shape[0] == 1
+            assert s.dtype == np.float32
+            assert s_next.dtype == np.float32
+            assert np.allclose(experience[0], s, atol=1e-2)
+            assert np.allclose(experience[4], s_next, atol=1e-2)
+
     def test_getitem(self):
         experiences = _generate_atari_experience_mock(num_mocks=10)
 
@@ -112,6 +130,24 @@ class TestProportionalPrioritizedAtariBuffer(object):
             (experience[0][-1] * 255.0).astype(np.uint8) == s)
         assert np.alltrue(
             (experience[4][-1] * 255.0).astype(np.uint8) == s_next)
+
+    def test_unstacked_frame(self):
+        experiences = _generate_atari_experience_mock(num_mocks=10, frame_stack=False)
+
+        capacity = 10
+        buffer = ProportionalPrioritizedAtariBuffer(capacity=capacity, stacked_frames=1)
+
+        for experience in experiences:
+            buffer.append(experience)
+
+        for i, experience in enumerate(experiences):
+            s, _, _, _, s_next, *_ = buffer.__getitem__(i)
+            assert s.shape[0] == 1
+            assert s_next.shape[0] == 1
+            assert s.dtype == np.float32
+            assert s_next.dtype == np.float32
+            assert np.allclose(experience[0], s, atol=1e-2)
+            assert np.allclose(experience[4], s_next, atol=1e-2)
 
     def test_getitem(self):
         experiences = _generate_atari_experience_mock(num_mocks=10)
@@ -206,6 +242,24 @@ class TestRankBasedPrioritizedAtariBuffer(object):
         assert np.alltrue(
             (experience[4][-1] * 255.0).astype(np.uint8) == s_next)
 
+    def test_unstacked_frame(self):
+        experiences = _generate_atari_experience_mock(num_mocks=10, frame_stack=False)
+
+        capacity = 10
+        buffer = RankBasedPrioritizedAtariBuffer(capacity=capacity, stacked_frames=1)
+
+        for experience in experiences:
+            buffer.append(experience)
+
+        for i, experience in enumerate(experiences):
+            s, _, _, _, s_next, *_ = buffer.__getitem__(i)
+            assert s.shape[0] == 1
+            assert s_next.shape[0] == 1
+            assert s.dtype == np.float32
+            assert s_next.dtype == np.float32
+            assert np.allclose(experience[0], s, atol=1e-2)
+            assert np.allclose(experience[4], s_next, atol=1e-2)
+
     def test_getitem(self):
         experiences = _generate_atari_experience_mock(num_mocks=10)
 
@@ -283,17 +337,17 @@ class TestRankBasedPrioritizedAtariBuffer(object):
             buffer.sample_indices(indices)
 
 
-def _generate_atari_experience_mock(low=0.0, high=1.0, num_mocks=1):
+def _generate_atari_experience_mock(low=0.0, high=1.0, num_mocks=1, frame_stack=True):
     env = DummyAtariEnv()
     env = NoopResetEnv(env)
     env = MaxAndSkipEnv(env)
-    env = build_atari_env(env, test=True, print_info=False)
+    env = build_atari_env(env, test=True, print_info=False, frame_stack=frame_stack)
     experiences = []
     state = env.reset()
     for _ in range(num_mocks):
         action = env.action_space.sample()
-        s_next, reward, done, _ = env.step(action)
-        experience = (state, action, reward, 1.0 - done, s_next)
+        s_next, reward, done, info = env.step(action)
+        experience = (state, action, reward, 1.0 - done, s_next, info)
         experiences.append(experience)
         if done:
             state = env.reset()

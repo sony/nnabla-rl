@@ -20,7 +20,8 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
+                                                    TrainingVariables)
 from nnabla_rl.models import Model, StochasticPolicy
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import clip_grad_by_global_norm, create_variable
@@ -54,9 +55,10 @@ class A2CPolicyTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        set_data_to_variable(training_variables.s_current, batch.s_current)
-        set_data_to_variable(training_variables.a_current, batch.a_current)
-        set_data_to_variable(training_variables.extra['advantage'], batch.extra['advantage'])
+        for t, b in zip(training_variables, batch):
+            set_data_to_variable(t.s_current, b.s_current)
+            set_data_to_variable(t.a_current, b.a_current)
+            set_data_to_variable(t.extra['advantage'], b.extra['advantage'])
 
         # update model
         for solver in solvers.values():
@@ -69,12 +71,24 @@ class A2CPolicyTrainer(ModelTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['pi_loss'] = float(self._pi_loss.d.copy())
+        trainer_state['pi_loss'] = self._pi_loss.d.copy()
         return trainer_state
 
     def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         models = cast(Sequence[StochasticPolicy], models)
         self._pi_loss = 0
+        ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
+        for step_index, variables in enumerate(training_variables):
+            is_burn_in_steps = step_index < self._config.burn_in_steps
+            is_intermediate_steps = step_index < self._config.burn_in_steps + self._config.unroll_steps - 1
+            ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
+            self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
+
+    def _build_one_step_graph(self,
+                              models: Sequence[Model],
+                              training_variables: TrainingVariables,
+                              ignore_loss: bool):
+        models = cast(Sequence[StochasticPolicy], models)
         for policy in models:
             distribution = policy.pi(training_variables.s_current)
             log_prob = distribution.log_prob(training_variables.a_current)
@@ -88,6 +102,7 @@ class A2CPolicyTrainer(ModelTrainer):
         s_current_var = create_variable(batch_size, self._env_info.state_shape)
         a_current_var = create_variable(batch_size, self._env_info.action_shape)
         advantage_var = create_variable(batch_size, 1)
+
         extra = {}
         extra['advantage'] = advantage_var
         return TrainingVariables(batch_size, s_current_var, a_current_var, extra=extra)

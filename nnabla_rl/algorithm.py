@@ -21,7 +21,6 @@ import gym
 import numpy as np
 
 import nnabla as nn
-import nnabla.solvers
 import nnabla_rl as rl
 from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -152,6 +151,8 @@ class Algorithm(metaclass=ABCMeta):
             UnsupportedTrainingException:
                 Raises if the algorithm does not support online training
         '''
+        if self._has_rnn_models():
+            self._assert_rnn_is_supported()
         self._before_training_start(train_env)
         for _ in range(total_iterations):
             self._iteration_num += 1
@@ -171,6 +172,8 @@ class Algorithm(metaclass=ABCMeta):
             UnsupportedTrainingException:
                 Raises if the algorithm does not support offline training
         '''
+        if self._has_rnn_models():
+            self._assert_rnn_is_supported()
         self._before_training_start(replay_buffer)
         for _ in range(total_iterations):
             self._iteration_num += 1
@@ -193,13 +196,14 @@ class Algorithm(metaclass=ABCMeta):
             hook(self)
 
     @abstractmethod
-    def compute_eval_action(self, state) -> np.ndarray:
+    def compute_eval_action(self, state, *, begin_of_episode=False) -> np.ndarray:
         '''
         Compute action for given state using current best policy.
         This is usually used for evaluation.
 
         Args:
             state (np.ndarray): state to compute the action.
+            begin_of_episode (bool): Used for rnn state resetting. This flag informs the beginning of episode.
 
         Returns:
             np.ndarray: Action for given state using current trained policy.
@@ -246,9 +250,19 @@ class Algorithm(metaclass=ABCMeta):
     def _is_buffer(self, env):
         return isinstance(env, ReplayBuffer)
 
+    def _has_rnn_models(self):
+        for model in self._models().values():
+            if model.is_recurrent():
+                return True
+        return False
+
+    def _assert_rnn_is_supported(self):
+        if not self.is_rnn_supported():
+            raise RuntimeError(f'{self.__name__} does not support rnn models but rnn models where given!')
+
     @classmethod
     @abstractmethod
-    def is_supported_env(cls, env_or_env_info: Union[gym.Env, EnvironmentInfo]):
+    def is_supported_env(cls, env_or_env_info: Union[gym.Env, EnvironmentInfo]) -> bool:
         '''
         Check whether the algorithm supports the enviroment or not.
 
@@ -260,3 +274,13 @@ class Algorithm(metaclass=ABCMeta):
             bool: True if the algorithm supports the environment. Otherwise False.
         '''
         raise NotImplementedError
+
+    @classmethod
+    def is_rnn_supported(cls) -> bool:
+        '''
+        Check whether the algorithm supports rnn models or not
+
+        Returns:
+            bool: True if the algorithm supports rnn models. Otherwise False.
+        '''
+        return False

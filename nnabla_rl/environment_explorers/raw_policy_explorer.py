@@ -14,12 +14,13 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Callable, Dict, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerConfig
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.typing import ActionSelector
 
 
 @dataclass
@@ -33,7 +34,7 @@ class RawPolicyExplorer(EnvironmentExplorer):
     Explore using policy's action without any changes.
 
     Args:
-        policy_action_selector (Callable[[np.ndarray], Tuple[np.ndarray, Dict]]):
+        policy_action_selector (ActionSelector):
             callable which computes current policy's action with respect to current state.
         env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
             environment info
@@ -42,11 +43,11 @@ class RawPolicyExplorer(EnvironmentExplorer):
     '''
 
     def __init__(self,
-                 policy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
+                 policy_action_selector: ActionSelector,
                  env_info: EnvironmentInfo,
                  config: RawPolicyExplorerConfig = RawPolicyExplorerConfig()):
         super().__init__(env_info, config)
         self._policy_action_selector = policy_action_selector
 
-    def action(self, step, state):
-        return self._policy_action_selector(state)
+    def action(self, step: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
+        return self._policy_action_selector(state, begin_of_episode=begin_of_episode)

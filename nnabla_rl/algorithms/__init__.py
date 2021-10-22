@@ -23,6 +23,7 @@ from nnabla_rl.algorithms.categorical_dqn import CategoricalDQN, CategoricalDQNC
 from nnabla_rl.algorithms.ddpg import DDPG, DDPGConfig
 from nnabla_rl.algorithms.ddqn import DDQN, DDQNConfig
 from nnabla_rl.algorithms.dqn import DQN, DQNConfig
+from nnabla_rl.algorithms.drqn import DRQN, DRQNConfig
 from nnabla_rl.algorithms.dummy import Dummy, DummyConfig
 from nnabla_rl.algorithms.gail import GAIL, GAILConfig
 from nnabla_rl.algorithms.her import HER, HERConfig
@@ -75,6 +76,7 @@ register_algorithm(CategoricalDQN, CategoricalDQNConfig)
 register_algorithm(DDPG, DDPGConfig)
 register_algorithm(DDQN, DDQNConfig)
 register_algorithm(DQN, DQNConfig)
+register_algorithm(DRQN, DRQNConfig)
 register_algorithm(Dummy, DummyConfig)
 register_algorithm(HER, HERConfig)
 register_algorithm(ICML2018SAC, ICML2018SACConfig)

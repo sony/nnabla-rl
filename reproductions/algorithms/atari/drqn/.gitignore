@@ -1,0 +1,6 @@
+*-v4*_results*/**
+**/best*/**
+*.h5
+*.pickle
+*.json
+

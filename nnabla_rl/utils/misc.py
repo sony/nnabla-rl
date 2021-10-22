@@ -13,12 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple, Union, cast
+from typing import TYPE_CHECKING, Dict, Tuple, Union, cast
 
 import numpy as np
 
 import nnabla as nn
 from nnabla.solver import Solver
+
+if TYPE_CHECKING:
+    from nnabla_rl.model_trainers.model_trainer import TrainingVariables
+
 from nnabla_rl.models import Model
 from nnabla_rl.typing import Shape
 
@@ -51,3 +55,34 @@ def create_variable(batch_size: int, shape: Shape) -> Union[nn.Variable, Tuple[n
     else:
         shape = cast(Tuple[Tuple[int, ...], ...], shape)
         return tuple(nn.Variable((batch_size, *_shape)) for _shape in shape)
+
+
+def create_variables(batch_size: int, shapes: Dict[str, Tuple[int, ...]]) -> Dict[str, nn.Variable]:
+    variables: Dict[str, nn.Variale] = {}
+    for name, shape in shapes.items():
+        state: nn.Variable = create_variable(batch_size, shape)
+        state.data.zero()
+        variables[name] = state
+    return variables
+
+
+def retrieve_internal_states(scope_name: str,
+                             prev_rnn_states: Dict[str, Dict[str, nn.Variable]],
+                             train_rnn_states: Dict[str, Dict[str, nn.Variable]],
+                             training_variables: 'TrainingVariables',
+                             reset_on_terminal: bool) -> Dict[str, nn.Variable]:
+    internal_states: Dict[str, nn.Variable] = {}
+    if training_variables.is_initial_step():
+        internal_states = train_rnn_states[scope_name]
+    else:
+        prev_non_terminal = training_variables.prev_step_variables.non_terminal
+        prev_states = prev_rnn_states[scope_name]
+        train_states = train_rnn_states[scope_name]
+        for state_name in train_states.keys():
+            prev_state = prev_states[state_name]
+            train_state = train_states[state_name]
+            if reset_on_terminal:
+                internal_states[state_name] = prev_non_terminal * prev_state + (1.0 - prev_non_terminal) * train_state
+            else:
+                internal_states[state_name] = prev_state
+    return internal_states

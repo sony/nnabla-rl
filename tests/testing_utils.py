@@ -44,8 +44,8 @@ def generate_dummy_experiences(env, experience_num):
             action = np.reshape(action, newshape=(1, ))
         else:
             action = env.action_space.sample()
-        next_state, reward, done, _ = env.step(action)
-        experience = (state, action, [reward], [1.0 - done], next_state)
+        next_state, reward, done, info = env.step(action)
+        experience = (state, action, [reward], [1.0 - done], next_state, info)
         experiences.append(experience)
     return experiences
 

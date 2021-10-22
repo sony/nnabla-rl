@@ -22,7 +22,8 @@ import nnabla.functions as NF
 import nnabla_rl.functions as RNF
 from nnabla_rl.distributions import Gaussian
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
+                                                    TrainingVariables)
 from nnabla_rl.models import Model, VariationalAutoEncoder
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
@@ -53,8 +54,9 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        set_data_to_variable(training_variables.s_current, batch.s_current)
-        set_data_to_variable(training_variables.a_current, batch.a_current)
+        for t, b in zip(training_variables, batch):
+            set_data_to_variable(t.s_current, b.s_current)
+            set_data_to_variable(t.a_current, b.a_current)
 
         # update model
         for solver in solvers.values():
@@ -65,16 +67,26 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['encoder_loss'] = float(self._encoder_loss.d.copy())
+        trainer_state['encoder_loss'] = self._encoder_loss.d.copy()
         return trainer_state
 
-    def _build_training_graph(self,
-                              models: Iterable[Model],
-                              training_variables: TrainingVariables):
-        models = cast(Iterable[VariationalAutoEncoder], models)
+    def _build_training_graph(self, models: Union[Model, Sequence[Model]], training_variables: TrainingVariables):
+        self._encoder_loss = 0
+        models = cast(Sequence[VariationalAutoEncoder], models)
+        ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
+        for step_index, variables in enumerate(training_variables):
+            is_burn_in_steps = step_index < self._config.burn_in_steps
+            is_intermediate_steps = step_index < self._config.burn_in_steps + self._config.unroll_steps - 1
+            ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
+            self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
+
+    def _build_one_step_graph(self,
+                              models: Sequence[Model],
+                              training_variables: TrainingVariables,
+                              ignore_loss: bool):
         batch_size = training_variables.batch_size
 
-        self._encoder_loss = 0
+        models = cast(Sequence[VariationalAutoEncoder], models)
         for vae in models:
             latent_distribution, reconstructed_action = vae.encode_and_decode(training_variables.s_current,
                                                                               action=training_variables.a_current)
@@ -86,11 +98,11 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
             reconstruction_loss = RNF.mean_squared_error(training_variables.a_current, reconstructed_action)
             kl_divergence = latent_distribution.kl_divergence(target_latent_distribution)
             latent_loss = 0.5 * NF.mean(kl_divergence)
-            self._encoder_loss += reconstruction_loss + latent_loss
+            self._encoder_loss += 0.0 if ignore_loss else reconstruction_loss + latent_loss
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables
         s_current_var = create_variable(batch_size, self._env_info.state_shape)
         a_current_var = create_variable(batch_size, self._env_info.action_shape)
-        training_variables = TrainingVariables(batch_size, s_current_var, a_current_var)
-        return training_variables
+
+        return TrainingVariables(batch_size, s_current_var, a_current_var)

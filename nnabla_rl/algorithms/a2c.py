@@ -198,7 +198,7 @@ class A2C(Algorithm):
             self._v_solver_builder = v_solver_builder  # keep for later use
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             state = add_batch_dimension(state)
             if not hasattr(self, '_eval_state_var'):
@@ -380,9 +380,9 @@ class A2C(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(A2C, self).latest_iteration_state
         if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
         if hasattr(self, '_v_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+            latest_iteration_state['scalar'].update({'v_loss': float(self._v_function_trainer_state['v_loss'])})
         return latest_iteration_state
 
 
@@ -522,7 +522,7 @@ class _A2CActor(object):
         np_to_mp_array(returns, *array_and_dtype(self._mp_arrays.returns))
 
     @eval_api
-    def _compute_action(self, s):
+    def _compute_action(self, s, *, begin_of_episode=False):
         s = np.expand_dims(s, axis=0)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = nn.Variable(s.shape)
