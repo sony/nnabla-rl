@@ -245,6 +245,44 @@ class TRPOPolicy(StochasticPolicy):
         return D.Gaussian(mean, ln_var)
 
 
+class ATRPOPolicy(StochasticPolicy):
+    '''
+    Actor model proposed by Yiming Zhang, et al.
+    in On-Policy Deep Reinforcement Learning for the Average-Reward Criterion
+    See: https://arxiv.org/pdf/2106.07329.pdf
+    '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _action_dim: int
+
+    def __init__(self, scope_name: str, action_dim: int):
+        super(ATRPOPolicy, self).__init__(scope_name)
+        self._action_dim = action_dim
+
+    def pi(self, s: nn.Variable) -> Distribution:
+        with nn.parameter_scope(self.scope_name):
+            h = NPF.affine(s, n_outmaps=64, name="linear1",
+                           w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.),
+                           b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=64, name="linear2",
+                           w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.),
+                           b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.))
+            h = NF.tanh(x=h)
+            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
+                              w_init=RI.HeUniform(inmaps=64, outmaps=self._action_dim, factor=0.01/3.),
+                              b_init=NI.ConstantInitializer(0.))
+            assert mean.shape == (s.shape[0], self._action_dim)
+
+            ln_sigma = get_parameter_or_create(
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(-0.5))
+            ln_var = NF.broadcast(
+                ln_sigma, (s.shape[0], self._action_dim)) * 2.0
+        return D.Gaussian(mean, ln_var)
+
+
 class GAILPolicy(StochasticPolicy):
     '''
     Actor model proposed by Jonathan Ho, et al.

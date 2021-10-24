@@ -20,9 +20,16 @@ import numpy as np
 import nnabla as nn
 from nnabla_rl.models import DeterministicPolicy, Model, Policy, QFunction, RewardFunction, StochasticPolicy, VFunction
 from nnabla_rl.preprocessors import Preprocessor
-from nnabla_rl.typing import Experience
-from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.typing import Experience, State
+from nnabla_rl.utils.data import marshal_experiences, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
+
+
+def _get_shape(state: State) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+    if isinstance(state, tuple):
+        return tuple(s.shape for s in state)
+    else:
+        return state.shape
 
 
 def compute_v_target_and_advantage(v_function: VFunction,
@@ -45,12 +52,6 @@ def compute_v_target_and_advantage(v_function: VFunction,
     '''
     assert isinstance(v_function, VFunction), "Invalid v_function"
 
-    def get_shape(state):
-        if isinstance(state, tuple):
-            return tuple(s.shape for s in state)
-        else:
-            return state.shape
-
     T = len(experiences)
     v_targets: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
     advantages: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
@@ -58,7 +59,7 @@ def compute_v_target_and_advantage(v_function: VFunction,
 
     v_current = None
     v_next = None
-    s_var = create_variable(1, get_shape(experiences[0][0]))
+    s_var = create_variable(1, _get_shape(experiences[0][0]))
     v = v_function.v(s_var)  # build graph
 
     for t in reversed(range(T)):
@@ -76,6 +77,60 @@ def compute_v_target_and_advantage(v_function: VFunction,
 
         delta = r + gamma * non_terminal * v_next - v_current
         advantage = np.float32(delta + gamma * lmb * non_terminal * advantage)
+        # A = Q - V, V = E[Q] -> v_target = A + V
+        v_target = advantage + v_current
+
+        v_targets[t] = v_target
+        advantages[t] = advantage
+
+        v_next = v_current
+
+    return np.array(v_targets, dtype=np.float32), np.array(advantages, dtype=np.float32)
+
+
+def compute_average_v_target_and_advantage(v_function: VFunction,
+                                           experiences: Sequence[Experience],
+                                           lmb=0.95):
+    ''' Compute value target and advantage by using Average Reward Criterion
+    See: https://arxiv.org/pdf/2106.07329.pdf
+
+    Args:
+        v_function (VFunction): value function
+        experiences (Sequence[Experience]): list of experience.
+            experience should have [state_current, action, reward, non_terminal, state_next]
+        lmb (float): lambda
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: target of value and advantage
+    '''
+    assert isinstance(v_function, VFunction), "Invalid v_function"
+    T = len(experiences)
+    v_targets: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
+    advantages: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
+    advantage = 0.
+
+    v_current = None
+    v_next = None
+    s_var = create_variable(1, _get_shape(experiences[0][0]))
+    v = v_function.v(s_var)  # build graph
+
+    _, _, batch_r, *_ = marshal_experiences(experiences)
+    average_r = np.mean(batch_r)
+
+    for t in reversed(range(T)):
+        s_current, _, r, non_terminal, s_next, *_ = experiences[t]
+
+        # predict current v
+        set_data_to_variable(s_var, s_current)
+        v.forward()
+        v_current = np.squeeze(v.d)
+
+        if v_next is None:
+            set_data_to_variable(s_var, s_next)
+            v.forward()
+            v_next = np.squeeze(v.d)
+
+        delta = (r - average_r) + non_terminal * v_next - v_current
+        advantage = np.float32(delta + lmb * non_terminal * advantage)
         # A = Q - V, V = E[Q] -> v_target = A + V
         v_target = advantage + v_current
 

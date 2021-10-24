@@ -18,7 +18,7 @@ import pytest
 
 import nnabla as nn
 from nnabla_rl.algorithms.common_utils import (_StatePreprocessedPolicy, _StatePreprocessedVFunction,
-                                               compute_v_target_and_advantage)
+                                               compute_average_v_target_and_advantage, compute_v_target_and_advantage)
 from nnabla_rl.models import VFunction
 
 
@@ -67,6 +67,23 @@ class TestCommonUtils():
 
         actual_vtarg, actual_adv = compute_v_target_and_advantage(
             dummy_v_function, dummy_experience, gamma, lmb)
+
+        assert np.allclose(actual_adv, expected_adv)
+        assert np.allclose(actual_vtarg, expected_vtarg)
+
+    @pytest.mark.parametrize("lmb, expected_adv, expected_vtarg, tupled_state",
+                             [[0., np.array([[0.], [0.], [-2.]]), np.array([[2.], [2.], [0.]]), False],
+                              [1., np.array([[-2.], [-2.], [-2.]]), np.array([[0.], [0.], [0.]]), False],
+                              [0.7, np.array([[-0.98], [-1.4], [-2.]]), np.array([[1.02], [0.6], [0.]]), False],
+                              [0., np.array([[0.], [0.], [-4.]]), np.array([[4.], [4.], [0.]]), True],
+                              [1., np.array([[-4.], [-4.], [-4.]]), np.array([[0.], [0.], [0.]]), True],
+                              ])
+    def test_compute_average_v_target_and_advantage(self, lmb, expected_adv, expected_vtarg, tupled_state):
+        dummy_v_function = DummyVFunction()
+        dummy_experience = self._collect_dummy_experience(tupled_state=tupled_state)
+
+        actual_vtarg, actual_adv = compute_average_v_target_and_advantage(
+            dummy_v_function, dummy_experience, lmb)
 
         assert np.allclose(actual_adv, expected_adv)
         assert np.allclose(actual_vtarg, expected_vtarg)
