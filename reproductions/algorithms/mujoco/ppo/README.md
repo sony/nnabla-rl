@@ -22,7 +22,7 @@ $ python ppo_reproduction.py --env <env_name> --gpu <gpu_id>
 # Example1: run the script on cpu and train the agent with HalfCheetah:
 $ python ppo_reproduction.py --env HalfCheetah-v2 --gpu -1
 # Example2: run the script on gpu 1 and train the agent with Walker2d:
-$ python ppo_reproduction.py --env -Walker2d-v2 --gpu 1
+$ python ppo_reproduction.py --env Walker2d-v2 --gpu 1
 ```
 
 To check all available options type:
