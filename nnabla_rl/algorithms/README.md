@@ -27,4 +27,4 @@
 |[TRPO](https://arxiv.org/abs/1502.05477)|:heavy_check_mark:|:x:|:heavy_check_mark:|(We will support discrete action in the future)|
 |[TRPO (ICML 2015 version)](https://arxiv.org/abs/1502.05477)|:heavy_check_mark:|:x:|:heavy_check_mark:|:heavy_check_mark:|
 
-**<sup>*</sup>We do NOT support recurrent network structure (as of version 0.9)**
+**<sup>*</sup>We do NOT support recurrent network structure (as of version 0.10)**
