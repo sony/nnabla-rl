@@ -227,13 +227,14 @@ class TestFunctions(object):
         var_size = 1
 
         init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, var_size)))
-        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, var_size)))
-        optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(objective_function, init_mean, init_var, alpha=0)
+        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, var_size))*4.)
+        optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(
+            objective_function, init_mean, init_var, alpha=0., num_iterations=10)
 
         nn.forward_all([optimal_mean, optimal_top])
 
-        assert np.allclose(optimal_mean.d, np.array([[3.]]), atol=1e-3)
-        assert np.allclose(optimal_top.d, np.array([[3.]]), atol=1e-3)
+        assert np.allclose(optimal_mean.d, np.array([[3.]]), atol=1e-2)
+        assert np.allclose(optimal_top.d, np.array([[3.]]), atol=1e-2)
 
     def test_gaussian_cross_entropy_method_with_complicated_objective_function(self):
 
@@ -252,14 +253,14 @@ class TestFunctions(object):
         def objective_function(x): return dummy_q_function(s_var, x)
 
         init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, action_size)))
-        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, action_size))*2)
+        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, action_size))*4)
         optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(
-            objective_function, init_mean, init_var, pop_size, alpha=0)
+            objective_function, init_mean, init_var, pop_size, alpha=0., num_iterations=10)
 
         nn.forward_all([optimal_mean, optimal_top])
 
-        assert np.allclose(optimal_mean.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-3)
-        assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-3)
+        assert np.allclose(optimal_mean.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-2)
+        assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-2)
 
     @pytest.mark.parametrize("batch_size", [i for i in range(1, 3)])
     @pytest.mark.parametrize("diag_size", [i for i in range(1, 5)])
