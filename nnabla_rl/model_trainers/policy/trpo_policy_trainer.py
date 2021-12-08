@@ -95,6 +95,7 @@ class TRPOPolicyTrainerConfig(TrainerConfig):
     maximum_backtrack_numbers: int = 10
     conjugate_gradient_damping: float = 0.1
     conjugate_gradient_iterations: int = 20
+    backtrack_coefficient: float = 0.5
 
     def __post_init__(self):
         self._assert_positive(self.sigma_kl_divergence_constraint, 'sigma_kl_divergence_constraint')
@@ -239,7 +240,7 @@ class TRPOPolicyTrainer(ModelTrainer):
         current_approximate_return, _, _ = self._forward_all_variables(
             s_batch, a_batch, adv_batch, training_variables)
 
-        for step_size in 0.5**np.arange(self._config.maximum_backtrack_numbers):
+        for step_size in self._config.backtrack_coefficient**np.arange(self._config.maximum_backtrack_numbers):
             new_flat_params = current_flat_params + step_size * full_step_params_update
             _update_network_params_by_flat_params(policy.get_parameters(), new_flat_params)
 

@@ -29,6 +29,15 @@ A2C
    :members:
    :show-inheritance:
 
+ATRPO
+====
+.. autoclass:: nnabla_rl.algorithms.atrpo.ATRPOConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.atrpo.ATRPO
+   :members:
+   :show-inheritance:
 
 BCQ
 ====

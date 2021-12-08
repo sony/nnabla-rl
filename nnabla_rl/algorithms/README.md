@@ -7,6 +7,7 @@
 |Algorithm|Online training|Offline(Batch) training|Continuous action|Discrete action|
 |:---|:---:|:---:|:---:|:---:|
 |[A2C](https://arxiv.org/abs/1602.01783)|:heavy_check_mark:|:x:|(We will support continuous action in the future)|:heavy_check_mark:|
+|[ATRPO](https://arxiv.org/pdf/2106.07329)|:heavy_check_mark:|:x:|:heavy_check_mark:|(We will support discrete action in the future)|
 |[BCQ](https://arxiv.org/abs/1812.02900)|:x:|:heavy_check_mark:|:heavy_check_mark:|:x:|
 |[BEAR](https://arxiv.org/abs/1906.00949)|:x:|:heavy_check_mark:|:heavy_check_mark:|:x:|
 |[Categorical DDQN](https://arxiv.org/abs/1710.02298)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|

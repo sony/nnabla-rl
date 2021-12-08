@@ -102,3 +102,26 @@ class GAILVFunction(VFunction):
             h = NPF.affine(h, n_outmaps=1, name="linear3",
                            w_init=RI.NormcInitializer(std=1.0))
         return h
+
+
+class ATRPOVFunction(VFunction):
+    '''
+    Actor model proposed by Yiming Zhang, et al.
+    in On-Policy Deep Reinforcement Learning for the Average-Reward Criterion
+    See: https://arxiv.org/pdf/2106.07329.pdf
+    '''
+
+    def v(self, s: nn.Variable) -> nn.Variable:
+        with nn.parameter_scope(self.scope_name):
+            h = NPF.affine(s, n_outmaps=64, name="linear1",
+                           w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.),
+                           b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=64, name="linear2",
+                           w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.),
+                           b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.))
+            h = NF.tanh(x=h)
+            h = NPF.affine(h, n_outmaps=1, name="linear3",
+                           w_init=RI.HeUniform(inmaps=64, outmaps=1, factor=0.01/3.),
+                           b_init=NI.ConstantInitializer(0.))
+        return h
