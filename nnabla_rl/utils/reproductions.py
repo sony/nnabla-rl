@@ -32,7 +32,14 @@ def set_global_seed(seed: int):
     rl.seed(seed)
 
 
-def build_atari_env(id_or_env, test=False, seed=None, render=False, print_info=True, max_frames_per_episode=None):
+def build_atari_env(id_or_env,
+                    test=False,
+                    seed=None,
+                    render=False,
+                    print_info=True,
+                    max_frames_per_episode=None,
+                    frame_stack=True,
+                    flicker_probability=0.0):
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
     else:
@@ -40,7 +47,11 @@ def build_atari_env(id_or_env, test=False, seed=None, render=False, print_info=T
     if print_info:
         print_env_info(env)
 
-    env = wrap_deepmind(env, episode_life=not test, clip_rewards=not test)
+    env = wrap_deepmind(env,
+                        episode_life=not test,
+                        clip_rewards=not test,
+                        frame_stack=frame_stack,
+                        flicker_probability=flicker_probability)
     env = NumpyFloat32Env(env)
 
     if render:

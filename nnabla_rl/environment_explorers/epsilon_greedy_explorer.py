@@ -14,21 +14,27 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Callable, Dict, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerConfig
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.typing import ActionSelector
 
 
-def epsilon_greedy_action_selection(state, greedy_action_selector, random_action_selector, epsilon):
+def epsilon_greedy_action_selection(state: np.ndarray,
+                                    greedy_action_selector: ActionSelector,
+                                    random_action_selector: ActionSelector,
+                                    epsilon: float,
+                                    *,
+                                    begin_of_episode: bool = False):
     if np.random.rand() > epsilon:
         # optimal action
-        return greedy_action_selector(state), True
+        return greedy_action_selector(state, begin_of_episode=begin_of_episode), True
     else:
         # random action
-        return random_action_selector(state), False
+        return random_action_selector(state, begin_of_episode=begin_of_episode), False
 
 
 @dataclass
@@ -40,21 +46,27 @@ class NoDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
 
 
 class NoDecayEpsilonGreedyExplorer(EnvironmentExplorer):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _config: NoDecayEpsilonGreedyExplorerConfig
+
     def __init__(self,
-                 greedy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
-                 random_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
+                 greedy_action_selector: ActionSelector,
+                 random_action_selector: ActionSelector,
                  env_info: EnvironmentInfo,
                  config: NoDecayEpsilonGreedyExplorerConfig = NoDecayEpsilonGreedyExplorerConfig()):
         super().__init__(env_info, config)
         self._greedy_action_selector = greedy_action_selector
         self._random_action_selector = random_action_selector
 
-    def action(self, step, state):
+    def action(self, step: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
         epsilon = self._config.epsilon
         (action, info), _ = epsilon_greedy_action_selection(state,
                                                             self._greedy_action_selector,
                                                             self._random_action_selector,
-                                                            epsilon)
+                                                            epsilon,
+                                                            begin_of_episode=begin_of_episode)
         return action, info
 
 
@@ -88,9 +100,9 @@ class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
     Epsilon-greedy style explorer. Epsilon is linearly decayed until max_eplore_steps set in the config.
 
     Args:
-        greedy_action_selector (Callable[[np.ndarray], Tuple[np.ndarray, Dict]]):
+        greedy_action_selector (ActionSelector):
             callable which computes greedy action with respect to current state.
-        random_action_selector (Callable[[np.ndarray], Tuple[np.ndarray, Dict]]):
+        random_action_selector (ActionSelector):
             callable which computes random action that can be executed in the environment.
         env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
             environment info
@@ -98,21 +110,27 @@ class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
             <nnabla_rl.environment_explorers.LinearDecayEpsilonGreedyExplorerConfig>`): the config of this class.
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _config: LinearDecayEpsilonGreedyExplorerConfig
+
     def __init__(self,
-                 greedy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
-                 random_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
+                 greedy_action_selector: ActionSelector,
+                 random_action_selector: ActionSelector,
                  env_info: EnvironmentInfo,
                  config: LinearDecayEpsilonGreedyExplorerConfig = LinearDecayEpsilonGreedyExplorerConfig()):
         super().__init__(env_info, config)
         self._greedy_action_selector = greedy_action_selector
         self._random_action_selector = random_action_selector
 
-    def action(self, step, state):
+    def action(self, step: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
         epsilon = self._compute_epsilon(step)
         (action, info), _ = epsilon_greedy_action_selection(state,
                                                             self._greedy_action_selector,
                                                             self._random_action_selector,
-                                                            epsilon)
+                                                            epsilon,
+                                                            begin_of_episode=begin_of_episode)
         return action, info
 
     def _compute_epsilon(self, step):

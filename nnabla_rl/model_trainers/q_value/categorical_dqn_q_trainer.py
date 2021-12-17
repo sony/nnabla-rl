@@ -20,10 +20,11 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
 from nnabla_rl.model_trainers.q_value.value_distribution_function_trainer import (
     ValueDistributionFunctionTrainer, ValueDistributionFunctionTrainerConfig)
 from nnabla_rl.models import ValueDistributionFunction
+from nnabla_rl.utils.misc import create_variables
 
 
 @dataclass
@@ -36,6 +37,7 @@ class CategoricalDQNQTrainer(ValueDistributionFunctionTrainer):
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_function: ValueDistributionFunction
+    _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
     def __init__(self,
                  train_functions: Union[ValueDistributionFunction, Sequence[ValueDistributionFunction]],
@@ -44,7 +46,11 @@ class CategoricalDQNQTrainer(ValueDistributionFunctionTrainer):
                  env_info: EnvironmentInfo,
                  config: CategoricalDQNQTrainerConfig = CategoricalDQNQTrainerConfig()):
         self._target_function = target_function
+        self._prev_target_rnn_states = {}
         super(CategoricalDQNQTrainer, self).__init__(train_functions, solvers, env_info, config)
+
+    def support_rnn(self) -> bool:
+        return True
 
     def _compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:
         batch_size = training_variables.batch_size
@@ -57,7 +63,10 @@ class CategoricalDQNQTrainer(ValueDistributionFunctionTrainer):
         v_max = self._config.v_max
         v_min = self._config.v_min
 
-        pj = self._target_function.max_q_probs(s_next)
+        prev_rnn_states = self._prev_target_rnn_states
+        train_rnn_states = training_variables.rnn_states
+        with rnn_support(self._target_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
+            pj = self._target_function.max_q_probs(s_next)
 
         delta_z = (v_max - v_min) / (N - 1)
         z = np.asarray([v_min + i * delta_z for i in range(N)])
@@ -92,3 +101,15 @@ class CategoricalDQNQTrainer(ValueDistributionFunctionTrainer):
         result_lower = NF.scatter_add(mi, mu_indices, pj * (bj - lower), axis=-1)
 
         return (result_upper + result_lower)
+
+    def _setup_training_variables(self, batch_size: int) -> TrainingVariables:
+        training_variables = super()._setup_training_variables(batch_size)
+
+        rnn_states = {}
+        if self._target_function.is_recurrent():
+            shapes = self._target_function.internal_state_shapes()
+            rnn_state_variables = create_variables(batch_size, shapes)
+            rnn_states[self._target_function.scope_name] = rnn_state_variables
+
+        training_variables.rnn_states.update(rnn_states)
+        return training_variables

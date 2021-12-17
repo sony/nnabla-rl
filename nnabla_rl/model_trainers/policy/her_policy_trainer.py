@@ -18,7 +18,7 @@ from typing import Dict, Sequence, Union, cast
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
 from nnabla_rl.model_trainers.policy import DPGPolicyTrainer, DPGPolicyTrainerConfig
 from nnabla_rl.models import DeterministicPolicy, Model, QFunction
 
@@ -30,6 +30,8 @@ class HERPolicyTrainerConfig(DPGPolicyTrainerConfig):
 
 class HERPolicyTrainer(DPGPolicyTrainer):
     _config: HERPolicyTrainerConfig
+    _train_rnn_states: Dict[str, Dict[str, nn.Variable]]
+    _prev_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
     def __init__(self,
                  models: Union[DeterministicPolicy, Sequence[DeterministicPolicy]],
@@ -40,12 +42,22 @@ class HERPolicyTrainer(DPGPolicyTrainer):
         self._max_action_value = float(env_info.action_space.high[0])
         super(HERPolicyTrainer, self).__init__(models, solvers, q_function, env_info, config)
 
-    def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
+    def _build_one_step_graph(self,
+                              models: Sequence[Model],
+                              training_variables: TrainingVariables,
+                              ignore_loss: bool):
         models = cast(Sequence[DeterministicPolicy], models)
-        self._pi_loss = 0
+        train_rnn_states = training_variables.rnn_states
         for policy in models:
-            action = policy.pi(training_variables.s_current)
-            q = self._q_function.q(training_variables.s_current, action)
-            self._pi_loss += -NF.mean(q)
-            self._pi_loss += self._config.action_loss_coef \
+            prev_rnn_states = self._prev_policy_rnn_states
+            with rnn_support(policy, prev_rnn_states, train_rnn_states, training_variables, self._config):
+                action = policy.pi(training_variables.s_current)
+
+            prev_rnn_states = self._prev_q_rnn_states[policy.scope_name]
+            with rnn_support(self._q_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
+                q = self._q_function.q(training_variables.s_current, action)
+            self._prev_q_rnn_states[policy.scope_name] = prev_rnn_states
+
+            self._pi_loss += 0.0 if ignore_loss else -NF.mean(q)
+            self._pi_loss += 0.0 if ignore_loss else self._config.action_loss_coef \
                 * NF.mean(NF.pow_scalar(action / self._max_action_value, 2.0))

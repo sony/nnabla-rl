@@ -15,7 +15,7 @@
 
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Tuple, Union, cast
 
 import gym
 import numpy as np
@@ -43,9 +43,9 @@ class EnvironmentExplorer(metaclass=ABCMeta):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _env_info: EnvironmentInfo
     _config: EnvironmentExplorerConfig
-    _state: Optional[np.ndarray]
-    _action: Optional[np.ndarray]
-    _next_state: Optional[np.ndarray]
+    _state: Union[np.ndarray, None]
+    _action: Union[np.ndarray, None]
+    _next_state: Union[np.ndarray, None]
     _steps: int
 
     def __init__(self,
@@ -57,17 +57,19 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         self._state = None
         self._action = None
         self._next_state = None
+        self._begin_of_episode = True
 
         self._steps = self._config.initial_step_num
 
     @abstractmethod
-    def action(self, steps: int, state: np.ndarray) -> np.ndarray:
+    def action(self, steps: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
         '''
         Compute the action for given state at given timestep
 
         Args:
             steps(int): timesteps since the beginning of exploration
             state(np.ndarray): current state to compute the action
+            begin_of_episode(bool): Informs the beginning of episode. Used for rnn state reset.
 
         Returns:
             np.ndarray: action for current state at given timestep
@@ -92,9 +94,10 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             self._state = env.reset()
 
         for _ in range(n):
-            experience, done = self._step_once(env)
+            experience, done = self._step_once(env, begin_of_episode=self._begin_of_episode)
             experiences.append(experience)
 
+            self._begin_of_episode = done
             if done and break_if_done:
                 break
         return experiences
@@ -116,21 +119,24 @@ class EnvironmentExplorer(metaclass=ABCMeta):
 
         experiences = []
         while not done:
-            experience, done = self._step_once(env)
+            experience, done = self._step_once(env, begin_of_episode=self._begin_of_episode)
             experiences.append(experience)
+            self._begin_of_episode = done
         return experiences
 
-    def _step_once(self, env) -> Tuple[Experience, bool]:
+    def _step_once(self, env, *, begin_of_episode=False) -> Tuple[Experience, bool]:
         self._steps += 1
         if self._steps < self._config.warmup_random_steps:
-            action_info = {}
+            action_info: Dict[str, Any] = {}
             if self._env_info.is_discrete_action_env():
                 action = env.action_space.sample()
                 self._action = np.asarray(action).reshape((1, ))
             else:
                 self._action = env.action_space.sample()
         else:
-            self._action, action_info = self.action(self._steps, self._state)
+            self._action, action_info = self.action(self._steps,
+                                                    cast(np.ndarray, self._state),
+                                                    begin_of_episode=begin_of_episode)
 
         self._next_state, r, done, step_info = env.step(self._action)
         timelimit = step_info.get('TimeLimit.truncated', False)
@@ -153,7 +159,6 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             self._state = env.reset()
         else:
             self._state = self._next_state
-
         return experience, done
 
 

@@ -15,12 +15,13 @@
 
 import sys
 from dataclasses import dataclass
-from typing import Callable, Dict, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerConfig
 from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.typing import ActionSelector
 
 
 @dataclass
@@ -50,7 +51,7 @@ class GaussianExplorer(EnvironmentExplorer):
     Explore using policy's action without gaussian noise appended to it. Policy's action must be continuous action.
 
     Args:
-        policy_action_selector (Callable[[np.ndarray], Tuple[np.ndarray, Dict]]):
+        policy_action_selector (ActionSelector):
             callable which computes current policy's action with respect to current state.
         env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
             environment info
@@ -58,15 +59,20 @@ class GaussianExplorer(EnvironmentExplorer):
             <nnabla_rl.environment_explorers.LinearDecayEpsilonGreedyExplorerConfig>`): the config of this class.
     '''
 
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _config: GaussianExplorerConfig
+
     def __init__(self,
-                 policy_action_selector: Callable[[np.ndarray], Tuple[np.ndarray, Dict]],
+                 policy_action_selector: ActionSelector,
                  env_info: EnvironmentInfo,
                  config: GaussianExplorerConfig = GaussianExplorerConfig()):
         super().__init__(env_info, config)
         self._policy_action_selector = policy_action_selector
 
-    def action(self, step, state):
-        (action, info) = self._policy_action_selector(state)
+    def action(self, step: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
+        (action, info) = self._policy_action_selector(state, begin_of_episode=begin_of_episode)
         return self._append_noise(action, self._config.action_clip_low, self._config.action_clip_high), info
 
     def _append_noise(self, action, low, high):

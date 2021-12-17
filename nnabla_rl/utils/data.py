@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Generic, Iterable, List, Tuple, TypeVar, Union
+from typing import Any, Dict, Generic, Iterable, List, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 
@@ -61,16 +61,33 @@ def marshal_experiences(experiences: Iterable[TupledData]) -> TupledData:
         TupledData: marshaled experiences
     '''
     unzipped_experiences = unzip(experiences)
-    marshaled_experiences = []
+    marshaled_experiences: List = []
     for data in unzipped_experiences:
         if isinstance(data[0], tuple):
             marshaled_experiences.append(marshal_experiences(data))
+        elif isinstance(data[0], dict):
+            marshaled_experiences.append(marshal_dict_experiences(data))
         else:
             marshaled_experiences.append(add_axis_if_single_dim(np.asarray(data)))
     return tuple(marshaled_experiences)
 
 
-def unzip(zipped_data):
+def marshal_dict_experiences(dict_experiences: Sequence[Dict[str, Any]]) -> Dict:
+    dict_of_list = list_of_dict_to_dict_of_list(dict_experiences)
+    marshaled_experiences = {}
+    for key, data in dict_of_list.items():
+        if isinstance(data[0], Dict):
+            marshaled_experiences.update({key: marshal_dict_experiences(data)})
+        else:
+            marshaled_experiences.update({key: add_axis_if_single_dim(np.asarray(data))})
+    return marshaled_experiences
+
+
+def list_of_dict_to_dict_of_list(list_of_dict: Sequence[Dict[Any, Any]]):
+    return {key: [d.get(key, None) for d in list_of_dict] for key in list_of_dict[0]}
+
+
+def unzip(zipped_data) -> List[Tuple]:
     return list(zip(*zipped_data))
 
 
@@ -114,7 +131,7 @@ def add_batch_dimension(data: Union[np.ndarray, Tuple[np.ndarray, ...]]) -> Unio
         Union[np.ndarray, Tuple[np.ndarray, ...]]: expanded data
     '''
     if isinstance(data, np.ndarray):
-        return np.expand_dims(data, axis=0)
+        return cast(np.ndarray, np.expand_dims(data, axis=0))
     else:
         return tuple(np.expand_dims(d, axis=0) for d in data)
 

@@ -223,9 +223,9 @@ class TD3(Algorithm):
             self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_greedy_action(state)
+            action, _ = self._compute_greedy_action(state, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -304,7 +304,7 @@ class TD3(Algorithm):
             sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
     @eval_api
-    def _compute_greedy_action(self, s):
+    def _compute_greedy_action(self, s, *, begin_of_episode=False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
@@ -337,9 +337,9 @@ class TD3(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(TD3, self).latest_iteration_state
         if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
         if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
             latest_iteration_state['histogram'].update(
                 {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state

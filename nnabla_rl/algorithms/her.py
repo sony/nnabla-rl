@@ -299,7 +299,7 @@ class HER(DDPG):
         sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
     @eval_api
-    def _compute_greedy_action(self, s):
+    def _compute_greedy_action(self, s, *, begin_of_episode=False):
         # evaluation input/action variables
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
@@ -310,8 +310,8 @@ class HER(DDPG):
         return np.squeeze(self._eval_action.d, axis=0), {}
 
     @eval_api
-    def _compute_greedy_with_gaussian_action(self, s):
-        action, info = self._compute_greedy_action(s)
+    def _compute_greedy_with_gaussian_action(self, s, *, begin_of_episode=False):
+        action, info = self._compute_greedy_action(s, begin_of_episode=begin_of_episode)
         action_clip_low = self._env_info.action_space.low
         action_clip_high = self._env_info.action_space.high
         action_with_noise = self._append_noise(action, action_clip_low, action_clip_high)
@@ -323,7 +323,7 @@ class HER(DDPG):
         action_with_noise = np.clip(action + noise, low, high)
         return action_with_noise
 
-    def _compute_random_action(self, s):
+    def _compute_random_action(self, s, *, begin_of_episode=False):
         action = self._env_info.action_space.sample()
         return action, {}
 

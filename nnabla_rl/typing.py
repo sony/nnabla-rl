@@ -16,6 +16,7 @@
 from typing import Any, Dict, Tuple, Union
 
 import numpy as np
+from typing_extensions import Protocol
 
 State = Union[np.ndarray, Tuple[np.ndarray, ...]]
 # https://github.com/python/mypy/issues/7866
@@ -28,3 +29,7 @@ Info = Dict[str, Any]
 Experience = Tuple[State, Action, Reward, NonTerminal, NextState, Info]
 Shape = Union[int, Tuple[int, ...], Tuple[Tuple[int, ...], ...]]
 TupledData = Tuple
+
+
+class ActionSelector(Protocol):
+    def __call__(self, state: np.ndarray, *, begin_of_episode=False) -> Tuple[np.ndarray, Dict]: ...

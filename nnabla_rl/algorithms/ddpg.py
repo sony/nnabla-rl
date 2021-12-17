@@ -228,9 +228,10 @@ class DDPG(Algorithm):
         sync_model(self._pi, self._target_pi, tau=1.0)
         return policy_trainer
 
-    def compute_eval_action(self, state):
+    @eval_api
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_greedy_action(state)
+            action, _ = self._compute_greedy_action(state, begin_of_episode=begin_of_episode)
             return action
 
     def _run_online_training_iteration(self, env):
@@ -264,7 +265,7 @@ class DDPG(Algorithm):
         replay_buffer.update_priorities(td_errors)
 
     @eval_api
-    def _compute_greedy_action(self, s):
+    def _compute_greedy_action(self, s, *, begin_of_episode=False):
         # evaluation input/action variables
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
@@ -297,9 +298,9 @@ class DDPG(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(DDPG, self).latest_iteration_state
         if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': self._policy_trainer_state['pi_loss']})
+            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
         if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
             latest_iteration_state['histogram'].update(
                 {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state

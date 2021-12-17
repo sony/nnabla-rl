@@ -196,12 +196,13 @@ class CategoricalDQN(Algorithm):
             self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             (action, _), _ = epsilon_greedy_action_selection(state,
                                                              self._greedy_action_selector,
                                                              self._random_action_selector,
-                                                             epsilon=self._config.test_epsilon)
+                                                             epsilon=self._config.test_epsilon,
+                                                             begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -269,7 +270,7 @@ class CategoricalDQN(Algorithm):
         replay_buffer.update_priorities(td_errors)
 
     @eval_api
-    def _greedy_action_selector(self, s):
+    def _greedy_action_selector(self, s, *, begin_of_episode=False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
@@ -279,7 +280,7 @@ class CategoricalDQN(Algorithm):
         self._a_greedy.forward()
         return np.squeeze(self._a_greedy.d, axis=0), {}
 
-    def _random_action_selector(self, s):
+    def _random_action_selector(self, s, *, begin_of_episode=False):
         action = self._env_info.action_space.sample()
         return np.asarray(action).reshape((1, )), {}
 
@@ -304,6 +305,6 @@ class CategoricalDQN(Algorithm):
         latest_iteration_state = super(CategoricalDQN, self).latest_iteration_state
         if hasattr(self, '_model_trainer_state'):
             latest_iteration_state['scalar'].update(
-                {'cross_entropy_loss': self._model_trainer_state['cross_entropy_loss']})
+                {'cross_entropy_loss': float(self._model_trainer_state['cross_entropy_loss'])})
             latest_iteration_state['histogram'].update({'td_errors': self._model_trainer_state['td_errors'].flatten()})
         return latest_iteration_state

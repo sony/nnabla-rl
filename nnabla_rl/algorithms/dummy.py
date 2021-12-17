@@ -32,7 +32,7 @@ class Dummy(Algorithm):
         self._action_space = self._env_info.action_space
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         return self._action_space.sample()
 
     def _build_evaluation_graph(self):

@@ -29,7 +29,7 @@ class AbstractDummyEnv(gym.Env):
         next_state = self.observation_space.sample()
         reward = np.random.randn()
         done = False
-        info = {}
+        info = {'rnn_states': {'dummy_scope': {'dummy_state1': 1, 'dummy_state2': 2}}}
         return next_state, reward, done, info
 
 

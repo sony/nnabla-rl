@@ -27,6 +27,7 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 class TestAlgorithm(object):
     @patch.multiple(Algorithm, __abstractmethods__=set())
     @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
+    @patch('nnabla_rl.algorithm.Algorithm._has_rnn_models', lambda self: False)
     def test_resume_online_training(self):
         env = E.DummyContinuous()
         algorithm = Algorithm(env)
@@ -41,6 +42,7 @@ class TestAlgorithm(object):
 
     @patch.multiple(Algorithm, __abstractmethods__=set())
     @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
+    @patch('nnabla_rl.algorithm.Algorithm._has_rnn_models', lambda self: False)
     def test_resume_offline_training(self):
         env = E.DummyContinuous()
         algorithm = Algorithm(env)
@@ -54,6 +56,38 @@ class TestAlgorithm(object):
 
         algorithm.train(buffer, total_iterations=total_iterations)
         assert algorithm._run_offline_training_iteration.call_count == total_iterations * 2
+
+    @patch.multiple(Algorithm, __abstractmethods__=set())
+    @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
+    @patch('nnabla_rl.algorithm.Algorithm.is_rnn_supported', lambda self: False)
+    @patch('nnabla_rl.algorithm.Algorithm._has_rnn_models', lambda self: True)
+    def test_rnn_unsupported_algorithm(self):
+        env = E.DummyContinuous()
+        algorithm = Algorithm(env)
+        algorithm._run_offline_training_iteration = MagicMock()
+
+        total_iterations = 10
+        # It is ok to pass empty buffer because this algorithm never use the buffer
+        buffer = ReplayBuffer()
+        with pytest.raises(RuntimeError):
+            algorithm.train(buffer, total_iterations=total_iterations)
+
+    @patch.multiple(Algorithm, __abstractmethods__=set())
+    @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
+    @patch('nnabla_rl.algorithm.Algorithm.is_rnn_supported', lambda self: True)
+    @patch('nnabla_rl.algorithm.Algorithm._has_rnn_models', lambda self: True)
+    def test_rnn_supported_algorithm(self):
+        env = E.DummyContinuous()
+        algorithm = Algorithm(env)
+        algorithm._run_offline_training_iteration = MagicMock()
+
+        total_iterations = 10
+        # It is ok to pass empty buffer because this algorithm never use the buffer
+        buffer = ReplayBuffer()
+        try:
+            algorithm.train(buffer, total_iterations=total_iterations)
+        except RuntimeError:
+            assert False
 
     def test_eval_scope(self):
         class EvalScopeCheck(Algorithm):

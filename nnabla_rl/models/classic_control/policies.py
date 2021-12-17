@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Union, cast
+
 import numpy as np
 
 import nnabla as nn
@@ -66,13 +68,13 @@ class REINFORCEContinousPolicy(StochasticPolicy):
     _action_dim: int
     _fixed_ln_var: np.ndarray
 
-    def __init__(self, scope_name: str, action_dim: int, fixed_ln_var: np.ndarray):
+    def __init__(self, scope_name: str, action_dim: int, fixed_ln_var: Union[np.ndarray, float]):
         super(REINFORCEContinousPolicy, self).__init__(scope_name=scope_name)
         self._action_dim = action_dim
         if np.isscalar(fixed_ln_var):
             self._fixed_ln_var = np.full(self._action_dim, fixed_ln_var)
         else:
-            self._fixed_ln_var = fixed_ln_var
+            self._fixed_ln_var = cast(np.ndarray, fixed_ln_var)
 
     def pi(self, s: nn.Variable) -> nn.Variable:
         batch_size = s.shape[0]

@@ -38,7 +38,7 @@ def get_space_dim(space: gym.spaces.Space) -> int:
 
 def get_space_high(space: gym.spaces.Space) -> Union[np.ndarray, str]:
     if isinstance(space, gym.spaces.Box):
-        return space.high
+        return np.asarray(space.high)
     elif isinstance(space, gym.spaces.Discrete):
         return 'N/A'
     else:
@@ -47,7 +47,7 @@ def get_space_high(space: gym.spaces.Space) -> Union[np.ndarray, str]:
 
 def get_space_low(space: gym.spaces.Space) -> Union[np.ndarray, str]:
     if isinstance(space, gym.spaces.Box):
-        return space.low
+        return np.asarray(space.low)
     elif isinstance(space, gym.spaces.Discrete):
         return 'N/A'
     else:

@@ -20,7 +20,8 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainerConfig, TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
+                                                    TrainingVariables)
 from nnabla_rl.models import Model, VFunction
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import clip_grad_by_global_norm, create_variable
@@ -57,7 +58,8 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        set_data_to_variable(training_variables.s_current, batch.s_current)
+        for t, b in zip(training_variables, batch):
+            set_data_to_variable(t.s_current, b.s_current)
 
         # update model
         for solver in solvers.values():
@@ -69,21 +71,30 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
                 clip_grad_by_global_norm(solver, self._config.max_grad_norm)
             solver.update()
 
-        trainer_state = {}
-        trainer_state['v_loss'] = float(self._v_loss.d.copy())
+        trainer_state: Dict[str, np.ndarray] = {}
+        trainer_state['v_loss'] = self._v_loss.d.copy()
         return trainer_state
 
-    def _build_training_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables):
+    def _build_training_graph(self, models: Union[Model, Sequence[Model]], training_variables: TrainingVariables):
+        self._v_loss = 0
         models = cast(Sequence[VFunction], models)
+        ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
+        for step_index, variables in enumerate(training_variables):
+            is_burn_in_steps = step_index < self._config.burn_in_steps
+            is_intermediate_steps = step_index < self._config.burn_in_steps + self._config.unroll_steps - 1
+            ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
+            self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
+    def _build_one_step_graph(self,
+                              models: Sequence[Model],
+                              training_variables: TrainingVariables,
+                              ignore_loss: bool):
         # value function learning
         target_v = self._compute_target(training_variables)
 
-        self._v_loss = 0
         for v_function in models:
-            self._v_loss += self._compute_loss(v_function, target_v, training_variables)
+            v_function = cast(VFunction, v_function)
+            self._v_loss += 0.0 if ignore_loss else self._compute_loss(v_function, target_v, training_variables)
 
     def _compute_loss(self,
                       model: VFunction,
@@ -105,5 +116,5 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables
         s_current_var = create_variable(batch_size, self._env_info.state_shape)
-        training_variables = TrainingVariables(batch_size, s_current_var)
-        return training_variables
+
+        return TrainingVariables(batch_size, s_current_var)

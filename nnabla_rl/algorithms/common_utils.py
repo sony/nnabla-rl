@@ -25,11 +25,13 @@ from nnabla_rl.utils.data import marshal_experiences, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
 
 
-def _get_shape(state: State) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+def _get_shape(state: State) -> Union[Tuple[int, ...], Tuple[Tuple[int, ...], ...]]:
+    shape: Union[Tuple[int, ...], Tuple[Tuple[int, ...], ...]]
     if isinstance(state, tuple):
-        return tuple(s.shape for s in state)
+        shape = tuple(s.shape for s in state)
     else:
-        return state.shape
+        shape = state.shape
+    return shape
 
 
 def compute_v_target_and_advantage(v_function: VFunction,
@@ -55,7 +57,7 @@ def compute_v_target_and_advantage(v_function: VFunction,
     T = len(experiences)
     v_targets: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
     advantages: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
-    advantage = 0.
+    advantage: np.float32 = np.float32(0.)
 
     v_current = None
     v_next = None
@@ -106,7 +108,7 @@ def compute_average_v_target_and_advantage(v_function: VFunction,
     T = len(experiences)
     v_targets: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
     advantages: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
-    advantage = 0.
+    advantage: np.float32 = np.float32(0.)
 
     v_current = None
     v_next = None

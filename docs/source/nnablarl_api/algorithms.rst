@@ -110,6 +110,16 @@ DQN
    :members:
    :show-inheritance:
 
+DRQN
+====
+.. autoclass:: nnabla_rl.algorithms.drqn.DRQNConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.drqn.DRQN
+   :members:
+   :show-inheritance:
+
 GAIL
 =====
 .. autoclass:: nnabla_rl.algorithms.gail.GAILConfig

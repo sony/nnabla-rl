@@ -63,6 +63,10 @@ class Configuration():
         if config > ref_value:
             raise ValueError(f'{config_name} is not in smaller than reference value!: {config} > {ref_value}')
 
+    def _assert_greater_than(self, config, ref_value, config_name):
+        if config < ref_value:
+            raise ValueError(f'{config_name} is not greater than reference value!: {config} < {ref_value}')
+
     def _assert_length(self, config, expected_length, config_name):
         if len(config) != expected_length:
             raise ValueError(f'{config_name} length is not {expected_length}')

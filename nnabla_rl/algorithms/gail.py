@@ -293,9 +293,11 @@ class GAIL(Algorithm):
             self._expert_buffer = expert_buffer
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(state, act_deterministic=self._config.act_deterministic_in_eval)
+            action, _ = self._compute_action(state,
+                                             act_deterministic=self._config.act_deterministic_in_eval,
+                                             begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -510,7 +512,7 @@ class GAIL(Algorithm):
         self._discriminator_trainer_state = self._discriminator_trainer.train(batch)
 
     @eval_api
-    def _compute_action(self, s, act_deterministic=False):
+    def _compute_action(self, s, act_deterministic=False, *, begin_of_episode=False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
@@ -562,7 +564,8 @@ class GAIL(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(GAIL, self).latest_iteration_state
         if hasattr(self, '_discriminator_trainer_state'):
-            latest_iteration_state['scalar'].update({'reward_loss': self._discriminator_trainer_state['reward_loss']})
+            latest_iteration_state['scalar'].update(
+                {'reward_loss': float(self._discriminator_trainer_state['reward_loss'])})
         if hasattr(self, '_v_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+            latest_iteration_state['scalar'].update({'v_loss': float(self._v_function_trainer_state['v_loss'])})
         return latest_iteration_state

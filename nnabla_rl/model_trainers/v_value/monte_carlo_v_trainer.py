@@ -15,13 +15,17 @@
 from dataclasses import dataclass
 from typing import Dict, Sequence, Union
 
+import numpy as np
+
 import nnabla as nn
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch, TrainingVariables
 from nnabla_rl.model_trainers.v_value.squared_td_v_function_trainer import (SquaredTDVFunctionTrainer,
                                                                             SquaredTDVFunctionTrainerConfig)
 from nnabla_rl.models import VFunction
+from nnabla_rl.models.model import Model
 from nnabla_rl.utils.data import set_data_to_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
@@ -30,11 +34,6 @@ class MonteCarloVTrainerConfig(SquaredTDVFunctionTrainerConfig):
 
 
 class MonteCarloVTrainer(SquaredTDVFunctionTrainer):
-    # type declarations to type check with mypy
-    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
-    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
-    _v_target: nn.Variable
-
     def __init__(self,
                  train_functions: Union[VFunction, Sequence[VFunction]],
                  solvers: Dict[str, nn.solver.Solver],
@@ -42,16 +41,24 @@ class MonteCarloVTrainer(SquaredTDVFunctionTrainer):
                  config: MonteCarloVTrainerConfig = MonteCarloVTrainerConfig()):
         super(MonteCarloVTrainer, self).__init__(train_functions, solvers, env_info, config)
 
-    def _setup_batch(self, batch: TrainingBatch):
-        batch_size = batch.batch_size
-        v_target = batch.extra['v_target']
-        if self._v_target is None or self._v_target.shape[0] != batch_size:
-            self._v_target = nn.Variable((batch_size, 1))
-        set_data_to_variable(self._v_target, v_target)
-        return batch
+    def _update_model(self,
+                      models: Sequence[Model],
+                      solvers: Dict[str, nn.solver.Solver],
+                      batch: TrainingBatch,
+                      training_variables: TrainingVariables,
+                      **kwargs) -> Dict[str, np.ndarray]:
+        for t, b in zip(training_variables, batch):
+            set_data_to_variable(t.extra['v_target'], b.extra['v_target'])
+        return super()._update_model(models, solvers, batch, training_variables, **kwargs)
 
     def _compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:
-        batch_size = training_variables.batch_size
-        if not hasattr(self, '_v_target') or self._v_target.shape[0] != batch_size:
-            self._v_target = nn.Variable((batch_size, 1))
-        return self._v_target
+        return training_variables.extra['v_target']
+
+    def _setup_training_variables(self, batch_size) -> TrainingVariables:
+        training_variables = super()._setup_training_variables(batch_size)
+
+        extra = {}
+        extra['v_target'] = create_variable(batch_size, 1)
+        training_variables.extra.update(extra)
+
+        return training_variables

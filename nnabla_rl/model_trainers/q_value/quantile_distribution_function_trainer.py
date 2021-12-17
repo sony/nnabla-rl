@@ -22,11 +22,11 @@ import nnabla.functions as NF
 import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.logger import logger
-from nnabla_rl.model_trainers.model_trainer import TrainingBatch, TrainingVariables
+from nnabla_rl.model_trainers.model_trainer import LossIntegration, TrainingBatch, TrainingVariables, rnn_support
 from nnabla_rl.model_trainers.q_value.multi_step_trainer import MultiStepTrainer, MultiStepTrainerConfig
 from nnabla_rl.models import Model, QuantileDistributionFunction
 from nnabla_rl.utils.data import set_data_to_variable
-from nnabla_rl.utils.misc import create_variable
+from nnabla_rl.utils.misc import create_variable, create_variables
 
 
 @dataclass
@@ -42,6 +42,7 @@ class QuantileDistributionFunctionTrainer(MultiStepTrainer):
     _config: QuantileDistributionFunctionTrainerConfig
     _tau_hat_var: nn.Variable
     _quantile_huber_loss: nn.Variable
+    _prev_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
     def __init__(self,
                  models: Union[QuantileDistributionFunction, Sequence[QuantileDistributionFunction]],
@@ -55,6 +56,7 @@ class QuantileDistributionFunctionTrainer(MultiStepTrainer):
 
         tau_hat = self._precompute_tau_hat(config.num_quantiles)
         self._tau_hat_var = nn.Variable.from_numpy_array(tau_hat)
+        self._prev_rnn_states = {}
         super(QuantileDistributionFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
     def _update_model(self,
@@ -63,12 +65,22 @@ class QuantileDistributionFunctionTrainer(MultiStepTrainer):
                       batch: TrainingBatch,
                       training_variables: TrainingVariables,
                       **kwargs) -> Dict[str, np.ndarray]:
-        set_data_to_variable(training_variables.s_current, batch.s_current)
-        set_data_to_variable(training_variables.a_current, batch.a_current)
-        set_data_to_variable(training_variables.reward, batch.reward)
-        set_data_to_variable(training_variables.gamma, batch.gamma)
-        set_data_to_variable(training_variables.non_terminal, batch.non_terminal)
-        set_data_to_variable(training_variables.s_next, batch.s_next)
+        for t, b in zip(training_variables, batch):
+            set_data_to_variable(t.s_current, b.s_current)
+            set_data_to_variable(t.a_current, b.a_current)
+            set_data_to_variable(t.reward, b.reward)
+            set_data_to_variable(t.gamma, b.gamma)
+            set_data_to_variable(t.non_terminal, b.non_terminal)
+            set_data_to_variable(t.s_next, b.s_next)
+
+            # Check batch keys. Because it can be empty.
+            # If batch does not provide rnn states, train with zero initial state.
+            for scope_name in b.rnn_states.keys():
+                b_rnn_states = b.rnn_states[scope_name]
+                t_rnn_states = t.rnn_states[scope_name]
+
+                for state_name in t_rnn_states.keys():
+                    set_data_to_variable(t_rnn_states[state_name], b_rnn_states[state_name])
 
         for solver in solvers.values():
             solver.zero_grad()
@@ -78,12 +90,24 @@ class QuantileDistributionFunctionTrainer(MultiStepTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['q_loss'] = float(self._quantile_huber_loss.d.copy())
+        trainer_state['q_loss'] = self._quantile_huber_loss.d.copy()
         return trainer_state
 
     def _build_training_graph(self,
                               models: Sequence[Model],
                               training_variables: TrainingVariables):
+        self._quantile_huber_loss = 0
+        ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
+        for step_index, variables in enumerate(training_variables):
+            is_burn_in_steps = step_index < self._config.burn_in_steps
+            is_intermediate_steps = step_index < self._config.burn_in_steps + self._config.unroll_steps - 1
+            ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
+            self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
+
+    def _build_one_step_graph(self,
+                              models: Sequence[Model],
+                              training_variables: TrainingVariables,
+                              ignore_loss: bool):
         models = cast(Sequence[QuantileDistributionFunction], models)
 
         # Ttheta_j is the target quantile distribution
@@ -91,10 +115,12 @@ class QuantileDistributionFunctionTrainer(MultiStepTrainer):
         Ttheta_j = RF.expand_dims(Ttheta_j, axis=1)
         Ttheta_j.need_grad = False
 
-        self._quantile_huber_loss = 0
+        prev_rnn_states = self._prev_rnn_states
+        train_rnn_states = training_variables.rnn_states
         for model in models:
-            loss, _ = self._compute_loss(model, Ttheta_j, training_variables)
-            self._quantile_huber_loss += loss
+            with rnn_support(model, prev_rnn_states, train_rnn_states, training_variables, self._config):
+                loss, _ = self._compute_loss(model, Ttheta_j, training_variables)
+            self._quantile_huber_loss += 0.0 if ignore_loss else loss
 
     def _compute_target(self, training_variables: TrainingVariables) -> nn.Variable:
         raise NotImplementedError
@@ -132,13 +158,21 @@ class QuantileDistributionFunctionTrainer(MultiStepTrainer):
         gamma_var = create_variable(batch_size, 1)
         non_terminal_var = create_variable(batch_size, 1)
 
+        rnn_states = {}
+        for model in self._models:
+            if model.is_recurrent():
+                rnn_state_variables = create_variables(batch_size, model.internal_state_shapes())
+                rnn_states[model.scope_name] = rnn_state_variables
+
         training_variables = TrainingVariables(batch_size=batch_size,
                                                s_current=s_current_var,
                                                a_current=a_current_var,
                                                reward=reward_var,
                                                gamma=gamma_var,
                                                non_terminal=non_terminal_var,
-                                               s_next=s_next_var)
+                                               s_next=s_next_var,
+                                               rnn_states=rnn_states)
+
         return training_variables
 
     @staticmethod

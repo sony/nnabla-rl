@@ -28,7 +28,7 @@ class EpisodicEvaluator():
     def __call__(self, algorithm, env):
         returns = []
         for num in range(1, self._num_episodes + 1):
-            reward_sum, _ = run_one_episode(algorithm, env)
+            reward_sum, *_ = run_one_episode(algorithm, env)
             returns.append(reward_sum)
             logger.info(
                 'Finished evaluation run: #{} out of {}. Total reward: {}'
@@ -48,8 +48,7 @@ class TimestepEvaluator():
             return t + timesteps > self._num_timesteps
 
         while True:
-            reward_sum, episode_timesteps = run_one_episode(
-                algorithm, env, timestep_limit=limit_checker)
+            reward_sum, episode_timesteps, *_ = run_one_episode(algorithm, env, timestep_limit=limit_checker)
             timesteps += episode_timesteps
 
             if timesteps > self._num_timesteps:
@@ -74,7 +73,7 @@ class EpisodicSuccessEvaluator():
     def __call__(self, algorithm, env):
         results = []
         for num in range(1, self._num_episodes + 1):
-            experiences, _ = run_rollout(algorithm, env)
+            _, _, experiences = run_one_episode(algorithm, env)
             success = self._compute_success_func(experiences)
             results.append(success)
             success_tag = 'Success' if success else 'Failed'
@@ -87,12 +86,16 @@ class EpisodicSuccessEvaluator():
 
 
 def run_one_episode(algorithm, env, timestep_limit=lambda t: False):
+    experiences = []
     rewards = []
     timesteps = 0
     state = env.reset()
+    action = algorithm.compute_eval_action(state, begin_of_episode=True)
     while True:
-        action = algorithm.compute_eval_action(state)
-        next_state, reward, done, _ = env.step(action)
+        next_state, reward, done, info = env.step(action)
+        non_terminal = 0.0 if done else 1.0
+        experience = (state, action, reward, non_terminal, next_state, info)
+        experiences.append(experience)
 
         rewards.append(reward)
         timesteps += 1
@@ -100,22 +103,5 @@ def run_one_episode(algorithm, env, timestep_limit=lambda t: False):
             break
         else:
             state = next_state
-    return np.sum(rewards), timesteps
-
-
-def run_rollout(algorithm, env, timestep_limit=lambda t: False):
-    experiences = []
-    timesteps = 0
-    state = env.reset()
-    while True:
-        action = algorithm.compute_eval_action(state)
-        next_state, reward, done, info = env.step(action)
-        non_terminal = 0.0 if done else 1.0
-        experience = (state, action, reward, non_terminal, next_state, info)
-        experiences.append(experience)
-        timesteps += 1
-        if done or timestep_limit(timesteps):
-            break
-        else:
-            state = next_state
-    return experiences, timesteps
+            action = algorithm.compute_eval_action(state, begin_of_episode=False)
+    return np.sum(rewards), timesteps, experiences

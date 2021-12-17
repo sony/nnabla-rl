@@ -210,12 +210,13 @@ class QRDQN(Algorithm):
             self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             (action, _), _ = epsilon_greedy_action_selection(state,
                                                              self._greedy_action_selector,
                                                              self._random_action_selector,
-                                                             epsilon=self._config.test_epsilon)
+                                                             epsilon=self._config.test_epsilon,
+                                                             begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -279,7 +280,7 @@ class QRDQN(Algorithm):
             sync_model(self._quantile_dist, self._target_quantile_dist)
 
     @eval_api
-    def _greedy_action_selector(self, s):
+    def _greedy_action_selector(self, s, *, begin_of_episode=False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
@@ -289,7 +290,7 @@ class QRDQN(Algorithm):
         self._a_greedy.forward()
         return np.squeeze(self._a_greedy.d, axis=0), {}
 
-    def _random_action_selector(self, s):
+    def _random_action_selector(self, s, *,  begin_of_episode=False):
         action = self._env_info.action_space.sample()
         return np.asarray(action).reshape((1, )), {}
 
@@ -313,5 +314,5 @@ class QRDQN(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(QRDQN, self).latest_iteration_state
         if hasattr(self, '_quantile_dist_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': self._quantile_dist_trainer_state['q_loss']})
+            latest_iteration_state['scalar'].update({'q_loss': float(self._quantile_dist_trainer_state['q_loss'])})
         return latest_iteration_state

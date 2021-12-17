@@ -209,7 +209,7 @@ class BCQ(Algorithm):
                 scope_name="target_xi", env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             state = add_batch_dimension(state)
             if not hasattr(self, '_eval_state_var'):
@@ -346,12 +346,13 @@ class BCQ(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(BCQ, self).latest_iteration_state
         if hasattr(self, '_encoder_trainer_state'):
-            latest_iteration_state['scalar'].update({'encoder_loss': self._encoder_trainer_state['encoder_loss']})
+            latest_iteration_state['scalar'].update(
+                {'encoder_loss': float(self._encoder_trainer_state['encoder_loss'])})
         if hasattr(self, '_perturbator_trainer_state'):
             latest_iteration_state['scalar'].update(
-                {'perturbator_loss': self._perturbator_trainer_state['perturbator_loss']})
+                {'perturbator_loss': float(self._perturbator_trainer_state['perturbator_loss'])})
         if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
             latest_iteration_state['histogram'].update(
                 {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state

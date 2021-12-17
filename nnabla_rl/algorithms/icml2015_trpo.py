@@ -163,7 +163,7 @@ class ICML2015TRPO(Algorithm):
             self._policy = policy_builder("pi", self._env_info, self._config)
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             action, _ = self._compute_action(state)
             return action
@@ -260,7 +260,7 @@ class ICML2015TRPO(Algorithm):
         return np.sum(reward_sequence*gamma_seqs, axis=1, keepdims=True)
 
     @eval_api
-    def _compute_action(self, s):
+    def _compute_action(self, s, *, begin_of_episode=False):
         # evaluation input/action variables
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):

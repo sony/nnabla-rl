@@ -218,7 +218,7 @@ class DQN(Algorithm):
                                                           algorithm=self)
 
     @eval_api
-    def compute_eval_action(self, state):
+    def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             (action, _), _ = epsilon_greedy_action_selection(state,
                                                              self._greedy_action_selector,
@@ -261,7 +261,7 @@ class DQN(Algorithm):
         self._dqn_training(buffer)
 
     @eval_api
-    def _greedy_action_selector(self, s):
+    def _greedy_action_selector(self, s, *, begin_of_episode=False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
@@ -270,7 +270,7 @@ class DQN(Algorithm):
         self._a_greedy.forward()
         return np.squeeze(self._a_greedy.d, axis=0), {}
 
-    def _random_action_selector(self, s):
+    def _random_action_selector(self, s, *, begin_of_episode=False):
         action = self._env_info.action_space.sample()
         return np.asarray(action).reshape((1, )), {}
 
@@ -320,7 +320,7 @@ class DQN(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(DQN, self).latest_iteration_state
         if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': self._q_function_trainer_state['q_loss']})
+            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
             latest_iteration_state['histogram'].update(
                 {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state

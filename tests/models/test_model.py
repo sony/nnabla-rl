@@ -28,13 +28,14 @@ class ModelMock(Model):
         self._input_dim = input_dim
         self._output_dim = output_dim
 
+        self._hidden_sizes = [10, 20]
+
     def __call__(self, s):
         assert s.shape[-1] == self._input_dim
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=10, name="linear1")
-            h = NF.relu(x=h)
-            h = NPF.affine(h, n_outmaps=20, name="linear2")
-            h = NF.relu(x=h)
+            for i, hidden_size in enumerate(self._hidden_sizes):
+                h = NPF.affine(s, n_outmaps=hidden_size, name=f"linear{i+1}")
+                h = NF.relu(x=h)
             h = NPF.affine(h, n_outmaps=self._output_dim, name="linear3")
         return NF.tanh(h)
 
@@ -142,6 +143,32 @@ class TestModel(object):
         # Can not create with same scope twice
         with pytest.raises(RuntimeError):
             model.deepcopy(new_scope_name)
+
+    def test_shallowcopy(self):
+        scope_name = 'src'
+        input_dim = 5
+        x = nn.Variable.from_numpy_array(np.empty(shape=(1, input_dim)))
+        model = self._create_model_from_input(scope_name=scope_name, x=x)
+
+        # Call once to create params
+        model(x)
+
+        copied = model.shallowcopy()
+        assert copied.scope_name == model.scope_name
+        assert len(copied.get_parameters()) == len(model.get_parameters())
+
+        # Check all attributies are deep copied
+        copied_values = copied.__dict__.values()
+        original_values = model.__dict__.values()
+        for copied_value, original_value in zip(copied_values, original_values):
+            assert isinstance(copied_value, original_value.__class__)
+            if type(copied_value) in (int, float, str, bool, tuple):
+                # immutable objects has same value
+                assert copied_value == original_value
+            else:
+                # mutable objects points different place but has same value
+                assert copied_value is not original_value
+                assert copied_value == original_value
 
     def _create_model_from_input(self, scope_name, x, output_dim=5):
         input_dim = x.shape[-1]
