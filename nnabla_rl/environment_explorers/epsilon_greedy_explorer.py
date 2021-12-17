@@ -100,9 +100,9 @@ class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
     Epsilon-greedy style explorer. Epsilon is linearly decayed until max_eplore_steps set in the config.
 
     Args:
-        greedy_action_selector (ActionSelector):
+        greedy_action_selector (:py:class:`ActionSelector <nnabla_rl.typing.ActionSelector>`):
             callable which computes greedy action with respect to current state.
-        random_action_selector (ActionSelector):
+        random_action_selector (:py:class:`ActionSelector <nnabla_rl.typing.ActionSelector>`):
             callable which computes random action that can be executed in the environment.
         env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
             environment info

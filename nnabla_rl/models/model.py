@@ -77,7 +77,7 @@ class Model(object):
         to setup training variables.
         Model which use LSTM, GRU and/or any other recurrent network component must implement this method.
 
-        Args:
+        Returns:
             Dict[str, Tuple[int, ...]]: internal state shapes. key is the name of each internal state.
         '''
         raise NotImplementedError

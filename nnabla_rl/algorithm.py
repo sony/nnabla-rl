@@ -267,9 +267,10 @@ class Algorithm(metaclass=ABCMeta):
         Check whether the algorithm supports the enviroment or not.
 
         Args:
-            env_or_env_info\
-        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`)
+            env_or_env_info \
+        (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`) \
             : environment or environment info
+
         Returns:
             bool: True if the algorithm supports the environment. Otherwise False.
         '''

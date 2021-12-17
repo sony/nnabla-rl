@@ -171,10 +171,9 @@ def argmax(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -
 
 def quantile_huber_loss(x0: nn.Variable, x1: nn.Variable, kappa: float, tau: nn.Variable) -> nn.Variable:
     '''
-    Compute the quantile huber loss.
-    See following papers for details:
-        * https://arxiv.org/pdf/1710.10044.pdf
-        * https://arxiv.org/pdf/1806.06923.pdf
+    Compute the quantile huber loss. See the following papers for details.
+      - https://arxiv.org/pdf/1710.10044.pdf
+      - https://arxiv.org/pdf/1806.06923.pdf
 
     Args:
         x0 (nn.Variable): Quantile values
