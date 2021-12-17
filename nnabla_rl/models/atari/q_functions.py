@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional, Tuple, Union, cast
-
-import numpy as np
+from typing import Any, Dict, Optional, Tuple, Union
 
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
-import nnabla_rl as rl
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.q_function import DiscreteQFunction
 
@@ -149,17 +146,6 @@ class DRQNQFunction(DiscreteQFunction):
                     self._create_internal_states(batch_size)
                 w_init = RI.HeNormal(h.shape[1], self._lstm_state_size)
                 self._h, self._c = NPF.lstm_cell(h, self._h, self._c, self._lstm_state_size, w_init=w_init)
-
-                if not rl.is_eval_scope():
-                    # Add gradient clip if it is training
-                    self._h = cast(nn.Variable, self._h)
-                    self._c = cast(nn.Variable, self._c)
-                    h_clip_min = nn.Variable.from_numpy_array(np.full(self._h.shape, -10))
-                    h_clip_max = nn.Variable.from_numpy_array(np.full(self._h.shape, 10))
-                    c_clip_min = nn.Variable.from_numpy_array(np.full(self._h.shape, -10))
-                    c_clip_max = nn.Variable.from_numpy_array(np.full(self._h.shape, 10))
-                    self._h = NF.clip_grad_by_value(self._h, min=h_clip_min, max=h_clip_max)
-                    self._c = NF.clip_grad_by_value(self._c, min=c_clip_min, max=c_clip_max)
                 h = self._h
 
             with nn.parameter_scope("affine2"):

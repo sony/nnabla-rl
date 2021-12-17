@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ class DRQNConfig(DQNConfig):
     List of configurations for DRQN algorithm. Most of the configs are inherited from DQNConfig
 
     Args:
+        clip_grad_norm (float): Limit the model parameter's gradient on parameter updates up to this value.
+            If you implement SolverBuilder by yourself, this value will not take effect. Defaults to 10.0.
         learning_rate (float): Solver learning rate. Value overridden from DQN. Defaults to 0.1.
         replay_buffer_size (int): Replay buffer size. Value overridden from DQN. Defaults to 400000.
         unroll_steps (int): Number of steps to unroll recurrent layer during training.
@@ -40,6 +42,8 @@ class DRQNConfig(DQNConfig):
         reset_rnn_on_terminal (bool): Reset recurrent internal states to zero during training if episode ends.
             Value overridden from DQN. Defaults to False.
     """
+
+    clip_grad_norm: float = 10.0
 
     # Overriding some configurations from original DQNConfig
     learning_rate: float = 0.1
@@ -55,6 +59,7 @@ class DefaultSolverBuilder(SolverBuilder):
                      **kwargs) -> nn.solver.Solver:
         decay: float = 0.95
         solver = NS.Adadelta(lr=algorithm_config.learning_rate, decay=decay)
+        solver.clip_grad_by_norm(algorithm_config.clip_grad_norm)
         return solver
 
 

@@ -1,2 +1,2 @@
 iteration	best_mean_iteration	mean	std_dev	best_median_iteration	median
-1	9500000.000	1189.000	537.428	9500000.000	1340.000
+1	150000.000	336.000	198.504	150000.000	245.000
