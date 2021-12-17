@@ -57,6 +57,7 @@ class TD3Config(AlgorithmConfig):
         train_action_noise_sigma (float): Standard deviation of the gaussian action noise used in the training.\
             Defaults to 0.2.
         train_action_noise_abs (float): Absolute limit value of action noise used in the training. Defaults to 0.5.
+        num_steps (int): number of steps for N-step Q targets. Defaults to 1.
     '''
 
     gamma: float = 0.99
@@ -69,6 +70,7 @@ class TD3Config(AlgorithmConfig):
     exploration_noise_sigma: float = 0.1
     train_action_noise_sigma: float = 0.2
     train_action_noise_abs: float = 0.5
+    num_steps: int = 1
 
     def __post_init__(self):
         '''__post_init__
@@ -244,7 +246,8 @@ class TD3(Algorithm):
             reduction_method='mean',
             grad_clip=None,
             train_action_noise_sigma=self._config.train_action_noise_sigma,
-            train_action_noise_abs=self._config.train_action_noise_abs)
+            train_action_noise_abs=self._config.train_action_noise_abs,
+            num_steps=self._config.num_steps)
         q_function_trainer = MT.q_value_trainers.TD3QTrainer(
             train_functions=self._train_q_functions,
             solvers=self._train_q_solvers,
@@ -279,16 +282,23 @@ class TD3(Algorithm):
         self._td3_training(buffer)
 
     def _td3_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
+        if self._config.num_steps == 1:
+            experiences_tuple = (experiences_tuple, )
+        assert len(experiences_tuple) == self._config.num_steps
+
+        batch = None
+        for experiences in reversed(experiences_tuple):
+            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            batch = TrainingBatch(batch_size=self._config.batch_size,
+                                  s_current=s,
+                                  a_current=a,
+                                  gamma=self._config.gamma,
+                                  reward=r,
+                                  non_terminal=non_terminal,
+                                  s_next=s_next,
+                                  weight=info['weights'],
+                                  next_step_batch=batch)
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         td_errors = self._q_function_trainer_state['td_errors']
