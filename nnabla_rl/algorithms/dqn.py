@@ -33,7 +33,7 @@ from nnabla_rl.models import DQNQFunction, QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable, sync_model
+from nnabla_rl.utils.misc import create_variable, create_variables, sync_model
 
 
 @dataclass
@@ -64,6 +64,15 @@ class DQNConfig(AlgorithmConfig):
         final_epsilon (float): the last epsilon value for ε-greedy explorer. Defaults to 0.1.
         test_epsilon (float): the epsilon value on testing. Defaults to 0.05.
         grad_clip (Optional[Tuple[float, float]]): Clip the gradient of final layer. Defaults to (-1.0, 1.0).
+        unroll_steps (int): Number of steps to unroll tranining network.
+            The network will be unrolled even though the provided model doesn't have RNN layers.
+            Defaults to 1.
+        burn_in_steps (int): Number of burn-in steps to initiaze recurrent layer states during training.
+            This flag does not take effect if given model is not an RNN model.
+            Defaults to 0.
+        reset_rnn_on_terminal (bool): Reset recurrent internal states to zero during training if episode ends.
+            This flag does not take effect if given model is not an RNN model.
+            Defaults to False.
     """
     gamma: float = 0.99
     learning_rate: float = 2.5e-4
@@ -81,6 +90,10 @@ class DQNConfig(AlgorithmConfig):
     final_epsilon: float = 0.1
     test_epsilon: float = 0.05
     grad_clip: Optional[Tuple[float, float]] = (-1.0, 1.0)
+    # rnn model support
+    unroll_steps: int = 1
+    burn_in_steps: int = 0
+    reset_rnn_on_terminal: bool = True
 
     def __post_init__(self):
         '''__post_init__
@@ -101,6 +114,8 @@ class DQNConfig(AlgorithmConfig):
         self._assert_between(self.final_epsilon, 0.0, 1.0, 'final_epsilon')
         self._assert_between(self.test_epsilon, 0.0, 1.0, 'test_epsilon')
         self._assert_positive(self.max_explore_steps, 'max_explore_steps')
+        self._assert_positive(self.unroll_steps, 'unroll_steps')
+        self._assert_positive_or_zero(self.burn_in_steps, 'burn_in_steps')
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
@@ -148,11 +163,38 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             max_explore_steps=algorithm_config.max_explore_steps
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
-            greedy_action_selector=algorithm._greedy_action_selector,
+            greedy_action_selector=algorithm._exploration_action_selector,
             random_action_selector=algorithm._random_action_selector,
             env_info=env_info,
             config=explorer_config)
         return explorer
+
+
+class _GreedyActionSelector(object):
+    def __init__(self, env_info, q_function: QFunction):
+        self._env_info = env_info
+        self._q = q_function.shallowcopy()
+
+    @eval_api
+    def __call__(self, s, *, begin_of_episode=False):
+        s = add_batch_dimension(s)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
+            if self._q.is_recurrent():
+                self._rnn_internal_states = create_variables(1, self._q.internal_state_shapes())
+                self._q.set_internal_states(self._rnn_internal_states)
+            self._a_greedy = self._q.argmax_q(self._eval_state_var)
+        if self._q.is_recurrent() and begin_of_episode:
+            self._q.reset_internal_states()
+        set_data_to_variable(self._eval_state_var, s)
+        if self._q.is_recurrent():
+            prev_rnn_states = self._q.get_internal_states()
+            for key in self._rnn_internal_states.keys():
+                # copy internal states of previous iteration
+                self._rnn_internal_states[key].d = prev_rnn_states[key].d
+        self._a_greedy.forward()
+        # No need to save internal states
+        return np.squeeze(self._a_greedy.d, axis=0), {}
 
 
 class DQN(Algorithm):
@@ -197,6 +239,9 @@ class DQN(Algorithm):
 
     _q_function_trainer_state: Dict[str, Any]
 
+    _evaluation_actor: _GreedyActionSelector
+    _exploration_actor: _GreedyActionSelector
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: DQNConfig = DQNConfig(),
                  q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
@@ -217,13 +262,17 @@ class DQN(Algorithm):
                                                           algorithm_config=self._config,
                                                           algorithm=self)
 
+        self._evaluation_actor = _GreedyActionSelector(self._env_info, self._q)
+        self._exploration_actor = _GreedyActionSelector(self._env_info, self._q)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             (action, _), _ = epsilon_greedy_action_selection(state,
-                                                             self._greedy_action_selector,
+                                                             self._evaluation_action_selector,
                                                              self._random_action_selector,
-                                                             epsilon=self._config.test_epsilon)
+                                                             epsilon=self._config.test_epsilon,
+                                                             begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -239,7 +288,10 @@ class DQN(Algorithm):
         trainer_config = MT.q_value_trainers.DQNQTrainerConfig(
             num_steps=self._config.num_steps,
             reduction_method='sum',
-            grad_clip=self._config.grad_clip)
+            grad_clip=self._config.grad_clip,
+            unroll_steps=self._config.unroll_steps,
+            burn_in_steps=self._config.burn_in_steps,
+            reset_on_terminal=self._config.reset_rnn_on_terminal)
 
         q_function_trainer = MT.q_value_trainers.DQNQTrainer(
             train_functions=self._q,
@@ -260,29 +312,27 @@ class DQN(Algorithm):
     def _run_offline_training_iteration(self, buffer):
         self._dqn_training(buffer)
 
-    @eval_api
-    def _greedy_action_selector(self, s, *, begin_of_episode=False):
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            self._a_greedy = self._q.argmax_q(self._eval_state_var)
-        set_data_to_variable(self._eval_state_var, s)
-        self._a_greedy.forward()
-        return np.squeeze(self._a_greedy.d, axis=0), {}
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
+
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _random_action_selector(self, s, *, begin_of_episode=False):
         action = self._env_info.action_space.sample()
         return np.asarray(action).reshape((1, )), {}
 
     def _dqn_training(self, replay_buffer):
-        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
-        if self._config.num_steps == 1:
+        num_steps = self._config.num_steps + self._config.burn_in_steps + self._config.unroll_steps - 1
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
+        if num_steps == 1:
             experiences_tuple = (experiences_tuple, )
-        assert len(experiences_tuple) == self._config.num_steps
+        assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
-            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
+            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
             batch = TrainingBatch(batch_size=self._config.batch_size,
                                   s_current=s,
                                   a_current=a,
@@ -291,7 +341,8 @@ class DQN(Algorithm):
                                   non_terminal=non_terminal,
                                   s_next=s_next,
                                   weight=info['weights'],
-                                  next_step_batch=batch)
+                                  next_step_batch=batch,
+                                  rnn_states=rnn_states)
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         if self.iteration_num % self._config.target_update_frequency == 0:
@@ -315,6 +366,10 @@ class DQN(Algorithm):
         env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
             else env_or_env_info
         return not env_info.is_continuous_action_env()
+
+    @classmethod
+    def is_rnn_supported(self):
+        return True
 
     @property
     def latest_iteration_state(self):

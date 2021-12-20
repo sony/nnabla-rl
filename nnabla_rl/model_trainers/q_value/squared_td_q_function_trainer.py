@@ -70,11 +70,15 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
             set_data_to_variable(t.s_next, b.s_next)
             set_data_to_variable(t.weight, b.weight)
 
-            # Check batch keys. Because it can be empty.
-            # If batch does not provide rnn states, train with zero initial state.
-            for scope_name in b.rnn_states.keys():
-                b_rnn_states = b.rnn_states[scope_name]
-                t_rnn_states = t.rnn_states[scope_name]
+            for model in models:
+                if not model.is_recurrent():
+                    continue
+                # Check batch keys. Because it can be empty.
+                # If batch does not provide rnn states, train with zero initial state.
+                if model.scope_name not in batch.rnn_states.keys():
+                    continue
+                b_rnn_states = b.rnn_states[model.scope_name]
+                t_rnn_states = t.rnn_states[model.scope_name]
 
                 for state_name in t_rnn_states.keys():
                     set_data_to_variable(t_rnn_states[state_name], b_rnn_states[state_name])
