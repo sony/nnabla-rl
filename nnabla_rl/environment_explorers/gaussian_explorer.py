@@ -51,7 +51,7 @@ class GaussianExplorer(EnvironmentExplorer):
     Explore using policy's action without gaussian noise appended to it. Policy's action must be continuous action.
 
     Args:
-        policy_action_selector (ActionSelector):
+        policy_action_selector (:py:class:`ActionSelector <nnabla_rl.typing.ActionSelector>`):
             callable which computes current policy's action with respect to current state.
         env_info (:py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
             environment info

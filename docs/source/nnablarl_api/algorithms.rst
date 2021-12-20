@@ -30,7 +30,7 @@ A2C
    :show-inheritance:
 
 ATRPO
-====
+======
 .. autoclass:: nnabla_rl.algorithms.atrpo.ATRPOConfig
    :members:
    :show-inheritance:
@@ -111,7 +111,7 @@ DQN
    :show-inheritance:
 
 DRQN
-====
+=====
 .. autoclass:: nnabla_rl.algorithms.drqn.DRQNConfig
    :members:
    :show-inheritance:
