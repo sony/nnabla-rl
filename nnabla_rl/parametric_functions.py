@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,11 @@ import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
+import nnabla.parametric_functions as NPF
 import nnabla_rl.functions as RF
 from nnabla.initializer import ConstantInitializer
 from nnabla.parameter import get_parameter_or_create
+from nnabla.parametric_functions import parametric_function_api
 from nnabla_rl.initializers import HeUniform
 
 
@@ -184,3 +186,53 @@ def spatial_softmax(inp: nn.Variable, alpha_init: float = 1., fix_alpha: bool = 
     feature_points = NF.reshape(expected_xy, (batch_size, channel*2))
 
     return feature_points
+
+
+@parametric_function_api("lstm", [
+    ('affine/W', 'Stacked weight matrixes of LSTM block',
+     '(inmaps, 4, state_size)', True),
+    ('affine/b', 'Stacked bias vectors of LSTM block', '(4, state_size,)', True),
+])
+def lstm_cell(x, h, c, state_size, w_init=None, b_init=None, fix_parameters=False, base_axis=1):
+    """Long Short-Term Memory with base_axis.
+
+    Long Short-Term Memory, or LSTM, is a building block for recurrent neural networks (RNN) layers.
+    LSTM unit consists of a cell and input, output, forget gates whose functions are defined as following:
+
+    .. math::
+        f_t&&=\\sigma(W_fx_t+U_fh_{t-1}+b_f) \\\\
+        i_t&&=\\sigma(W_ix_t+U_ih_{t-1}+b_i) \\\\
+        o_t&&=\\sigma(W_ox_t+U_oh_{t-1}+b_o) \\\\
+        c_t&&=f_t\\odot c_{t-1}+i_t\\odot\\tanh(W_cx_t+U_ch_{t-1}+b_c) \\\\
+        h_t&&=o_t\\odot\\tanh(c_t).
+
+    References:
+
+        S. Hochreiter, and J. Schmidhuber. "Long Short-Term Memory."
+        Neural Computation. 1997.
+
+    Args:
+        x (~nnabla.Variable): Input N-D array with shape (batch_size, input_size).
+        h (~nnabla.Variable): Input N-D array with shape (batch_size, state_size).
+        c (~nnabla.Variable): Input N-D array with shape (batch_size, state_size).
+        state_size (int): Internal state size is set to `state_size`.
+        w_init (:obj:`nnabla.initializer.BaseInitializer` or :obj:`numpy.ndarray`, optional): Initializer for weight.
+            By default, it is initialized with :obj:`nnabla.initializer.UniformInitializer`
+            within the range determined by :obj:`nnabla.initializer.calc_uniform_lim_glorot`.
+        b_init (:obj:`nnabla.initializer.BaseInitializer` or :obj:`numpy.ndarray`, optional): Initializer for bias.
+            By default, it is initialized with zeros if `with_bias` is `True`.
+        fix_parameters (bool): When set to `True`, the weights and biases will not be updated.
+        base_axis (int): Dimensions up to base_axis are treated as sample dimensions.
+
+    Returns:
+        :class:`~nnabla.Variable`
+
+    """
+
+    xh = NF.concatenate(*(x, h), axis=base_axis)
+    iofc = NPF.affine(xh, (4, state_size), base_axis=base_axis, w_init=w_init,
+                      b_init=b_init, fix_parameters=fix_parameters)
+    i_t, o_t, f_t, gate = NF.split(iofc, axis=base_axis)
+    c_t = NF.sigmoid(f_t) * c + NF.sigmoid(i_t) * NF.tanh(gate)
+    h_t = NF.sigmoid(o_t) * NF.tanh(c_t)
+    return h_t, c_t

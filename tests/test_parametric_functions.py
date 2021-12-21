@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -217,6 +217,21 @@ class TestFunctions(object):
         solver.update()
 
         assert np.allclose(y1_params["alpha"].d, np.array([[1.5]]))
+
+    @pytest.mark.parametrize("batch_size", [i for i in range(1, 3)])
+    @pytest.mark.parametrize("shape", [(1, ), (5, ), (1, 5), (5, 5)])
+    def test_lstm_cell_in_out_shape(self, batch_size, shape):
+        out_size = 10
+        input_shape = (batch_size, *shape)
+        x = nn.Variable.from_numpy_array(np.random.normal(size=input_shape))
+        hidden_shape = (batch_size, *(shape[0:-1] + (out_size, )))
+        h = nn.Variable.from_numpy_array(np.random.normal(size=hidden_shape))
+        cell_shape = (batch_size, *(shape[0:-1] + (out_size, )))
+        c = nn.Variable.from_numpy_array(np.random.normal(size=cell_shape))
+        with nn.parameter_scope('test'):
+            y, c = RPF.lstm_cell(x, h, c, state_size=out_size, base_axis=(len(shape)))
+        assert y.shape == hidden_shape
+        assert c.shape == cell_shape
 
 
 if __name__ == "__main__":

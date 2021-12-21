@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -162,7 +162,7 @@ class TRPOPolicyTrainer(ModelTrainer):
         models = cast(Sequence[StochasticPolicy], models)
         policy = models[0]
         if not hasattr(self, '_old_policy'):
-            self._old_policy = cast(StochasticPolicy, policy.deepcopy('old_policy'))
+            self._old_policy = policy.deepcopy('old_policy')
         old_policy = self._old_policy
 
         # policy learning

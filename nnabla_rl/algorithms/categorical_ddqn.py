@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,7 +78,10 @@ class CategoricalDDQN(CategoricalDQN):
             v_min=self._config.v_min,
             v_max=self._config.v_max,
             num_atoms=self._config.num_atoms,
-            reduction_method=self._config.loss_reduction_method)
+            reduction_method=self._config.loss_reduction_method,
+            unroll_steps=self._config.unroll_steps,
+            burn_in_steps=self._config.burn_in_steps,
+            reset_on_terminal=self._config.reset_rnn_on_terminal)
 
         model_trainer = MT.q_value_trainers.CategoricalDDQNQTrainer(
             train_function=self._atom_p,

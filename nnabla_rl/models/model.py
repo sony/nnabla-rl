@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +15,12 @@
 
 import copy
 import pathlib
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, TypeVar, Union
 
 import nnabla as nn
 from nnabla_rl.logger import logger
+
+T = TypeVar('T', bound='Model')
 
 
 class Model(object):
@@ -132,7 +134,7 @@ class Model(object):
         with nn.parameter_scope(self.scope_name):
             nn.load_parameters(path=filepath)
 
-    def deepcopy(self, new_scope_name: str) -> 'Model':
+    def deepcopy(self: T, new_scope_name: str) -> T:
         '''deepcopy
         Create a (deep) copy of the model. All the model parameter's (if exist) associated with will be copied and
         new_scope_name will be assigned.
@@ -160,7 +162,7 @@ class Model(object):
                 nn.parameter.get_parameter_or_create(param_name, shape=param.shape, initializer=param.d)
         return copied
 
-    def shallowcopy(self) -> 'Model':
+    def shallowcopy(self: T) -> T:
         '''shallowcopy
         Create a (shallow) copy of the model.
         Unlike deepcopy, shallowcopy will KEEP sharing the original network parameter

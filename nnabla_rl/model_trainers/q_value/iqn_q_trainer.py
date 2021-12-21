@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,8 @@ class IQNQTrainer(StateActionQuantileFunctionTrainer):
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_function: StateActionQuantileFunction
-    _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
+    _prev_a_star_rnn_states: Dict[str, Dict[str, nn.Variable]]
+    _prev_z_tau_j_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
     def __init__(self,
                  train_functions: Union[StateActionQuantileFunction, Sequence[StateActionQuantileFunction]],
@@ -43,7 +44,8 @@ class IQNQTrainer(StateActionQuantileFunctionTrainer):
                  env_info: EnvironmentInfo,
                  config: IQNQTrainerConfig = IQNQTrainerConfig()):
         self._target_function = target_function
-        self._prev_target_rnn_states = {}
+        self._prev_a_star_rnn_states = {}
+        self._prev_z_tau_j_rnn_states = {}
         super(IQNQTrainer, self).__init__(train_functions, solvers, env_info, config)
 
     def support_rnn(self) -> bool:
@@ -60,10 +62,16 @@ class IQNQTrainer(StateActionQuantileFunctionTrainer):
 
         tau_j = self._target_function.sample_tau(shape=(batch_size, N_prime))
 
-        prev_rnn_states = self._prev_target_rnn_states
         train_rnn_states = training_variables.rnn_states
-        with rnn_support(self._target_function, prev_rnn_states,  train_rnn_states, training_variables, self._config):
-            Z_tau_j = self._target_function.max_q_quantile_values(s_next, tau_j)
+        prev_rnn_states = self._prev_a_star_rnn_states
+        with rnn_support(self._target_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
+            a_star = self._target_function.as_q_function().argmax_q(s_next)
+
+        train_rnn_states = training_variables.rnn_states
+        prev_rnn_states = self._prev_z_tau_j_rnn_states
+        with rnn_support(self._target_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
+            Z_tau_j = self._target_function.quantile_values(s_next, a_star, tau_j)
+
         assert Z_tau_j.shape == (batch_size, N_prime)
         target = reward + non_terminal * gamma * Z_tau_j
         return target

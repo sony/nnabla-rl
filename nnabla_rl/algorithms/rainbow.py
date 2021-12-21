@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             warmup_random_steps=algorithm_config.warmup_random_steps,
             initial_step_num=algorithm.iteration_num
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._greedy_action_selector,
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
                                         env_info=env_info,
                                         config=explorer_config)
         return explorer

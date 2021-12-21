@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Union, cast
+from typing import Any, Dict, List, Union
 
 import gym
 import numpy as np
@@ -225,7 +225,7 @@ class ICML2018SAC(Algorithm):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_config=self._config)
             self._v_solver = v_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-            self._target_v = cast(VFunction, self._v.deepcopy('target_' + self._v.scope_name))
+            self._target_v = self._v.deepcopy('target_' + self._v.scope_name)
 
             self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
             self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
