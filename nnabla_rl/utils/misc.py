@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,13 +75,13 @@ def retrieve_internal_states(scope_name: str,
     if training_variables.is_initial_step():
         internal_states = train_rnn_states[scope_name]
     else:
-        prev_non_terminal = training_variables.prev_step_variables.non_terminal
         prev_states = prev_rnn_states[scope_name]
         train_states = train_rnn_states[scope_name]
         for state_name in train_states.keys():
             prev_state = prev_states[state_name]
             train_state = train_states[state_name]
             if reset_on_terminal:
+                prev_non_terminal = training_variables.prev_step_variables.non_terminal
                 internal_states[state_name] = prev_non_terminal * prev_state + (1.0 - prev_non_terminal) * train_state
             else:
                 internal_states[state_name] = prev_state

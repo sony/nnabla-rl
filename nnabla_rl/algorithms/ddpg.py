@@ -17,13 +17,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, Union
 
 import gym
-import numpy as np
 
 import nnabla as nn
 import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import _DeterministicPolicyActionSelector
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -31,8 +31,8 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import DeterministicPolicy, QFunction, TD3Policy, TD3QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable, sync_model
+from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -54,6 +54,24 @@ class DDPGConfig(AlgorithmConfig):
         replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
         exploration_noise_sigma (float): standard deviation of gaussian exploration noise. Defaults to 0.1.
         num_steps (int): number of steps for N-step Q targets. Defaults to 1.
+        actor_unroll_steps (int): Number of steps to unroll actor's tranining network.\
+            The network will be unrolled even though the provided model doesn't have RNN layers.\
+            Defaults to 1.
+        actor_burn_in_steps (int): Number of burn-in steps to initiaze actor's recurrent layer states during training.\
+            This flag does not take effect if given model is not an RNN model.\
+            Defaults to 0.
+        actor_reset_rnn_on_terminal (bool): Reset actor's recurrent internal states to zero during training\
+            if episode ends. This flag does not take effect if given model is not an RNN model.\
+            Defaults to False.
+        critic_unroll_steps (int): Number of steps to unroll critic's tranining network.\
+            The network will be unrolled even though the provided model doesn't have RNN layers.\
+            Defaults to 1.
+        critic_burn_in_steps (int): Number of burn-in steps to initiaze critic's recurrent layer states\
+            during training. This flag does not take effect if given model is not an RNN model.\
+            Defaults to 0.
+        critic_reset_rnn_on_terminal (bool): Reset critic's recurrent internal states to zero during training\
+            if episode ends. This flag does not take effect if given model is not an RNN model.\
+            Defaults to False.
     '''
 
     gamma: float = 0.99
@@ -64,6 +82,33 @@ class DDPGConfig(AlgorithmConfig):
     replay_buffer_size: int = 1000000
     exploration_noise_sigma: float = 0.1
     num_steps: int = 1
+
+    # rnn model support
+    actor_unroll_steps: int = 1
+    actor_burn_in_steps: int = 0
+    actor_reset_rnn_on_terminal: bool = True
+
+    critic_unroll_steps: int = 1
+    critic_burn_in_steps: int = 0
+    critic_reset_rnn_on_terminal: bool = True
+
+    def __post_init__(self):
+        '''__post_init__
+
+        Check set values are in valid range.
+
+        '''
+        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
+        self._assert_positive(self.learning_rate, 'learning_rate')
+        self._assert_positive(self.batch_size, 'batch_size')
+        self._assert_positive(self.start_timesteps, 'start_timesteps')
+        self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
+        self._assert_positive(self.exploration_noise_sigma, 'exploration_noise_sigma')
+
+        self._assert_positive(self.critic_unroll_steps, 'critic_unroll_steps')
+        self._assert_positive_or_zero(self.critic_burn_in_steps, 'critic_burn_in_steps')
+        self._assert_positive(self.actor_unroll_steps, 'actor_unroll_steps')
+        self._assert_positive_or_zero(self.actor_burn_in_steps, 'actor_burn_in_steps')
 
 
 class DefaultCriticBuilder(ModelBuilder[QFunction]):
@@ -116,7 +161,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             action_clip_high=env_info.action_space.high,
             sigma=algorithm_config.exploration_noise_sigma
         )
-        explorer = EE.GaussianExplorer(policy_action_selector=algorithm._compute_greedy_action,
+        explorer = EE.GaussianExplorer(policy_action_selector=algorithm._exploration_action_selector,
                                        env_info=env_info,
                                        config=explorer_config)
         return explorer
@@ -194,6 +239,15 @@ class DDPG(Algorithm):
 
             self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
+        self._evaluation_actor = _DeterministicPolicyActionSelector(self._env_info, self._pi.shallowcopy())
+        self._exploration_actor = _DeterministicPolicyActionSelector(self._env_info, self._pi.shallowcopy())
+
+    @eval_api
+    def compute_eval_action(self, state, *, begin_of_episode=False):
+        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
+            action, _ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
+            return action
+
     def _before_training_start(self, env_or_buffer):
         # set context globally to ensure that the training runs on configured gpu
         context.set_nnabla_context(self._config.gpu_id)
@@ -205,12 +259,15 @@ class DDPG(Algorithm):
         return None if self._is_buffer(env_or_buffer) else self._explorer_builder(self._env_info, self._config, self)
 
     def _setup_q_function_training(self, env_or_buffer):
-        q_function_trainer_config = MT.q_value.DDPGQTrainerConfig(
+        q_function_trainer_config = MT.q_value_trainers.DDPGQTrainerConfig(
             reduction_method='mean',
             grad_clip=None,
-            num_steps=self._config.num_steps)
+            num_steps=self._config.num_steps,
+            unroll_steps=self._config.critic_unroll_steps,
+            burn_in_steps=self._config.critic_burn_in_steps,
+            reset_on_terminal=self._config.critic_reset_rnn_on_terminal)
 
-        q_function_trainer = MT.q_value.DDPGQTrainer(
+        q_function_trainer = MT.q_value_trainers.DDPGQTrainer(
             train_functions=self._q,
             solvers={self._q.scope_name: self._q_solver},
             target_functions=self._target_q,
@@ -221,7 +278,11 @@ class DDPG(Algorithm):
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_config = MT.policy_trainers.DPGPolicyTrainerConfig()
+        policy_trainer_config = MT.policy_trainers.DPGPolicyTrainerConfig(
+            unroll_steps=self._config.actor_unroll_steps,
+            burn_in_steps=self._config.actor_burn_in_steps,
+            reset_on_terminal=self._config.actor_reset_rnn_on_terminal)
+
         policy_trainer = MT.policy_trainers.DPGPolicyTrainer(
             models=self._pi,
             solvers={self._pi.scope_name: self._pi_solver},
@@ -230,12 +291,6 @@ class DDPG(Algorithm):
             config=policy_trainer_config)
         sync_model(self._pi, self._target_pi, tau=1.0)
         return policy_trainer
-
-    @eval_api
-    def compute_eval_action(self, state, *, begin_of_episode=False):
-        with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_greedy_action(state, begin_of_episode=begin_of_episode)
-            return action
 
     def _run_online_training_iteration(self, env):
         experiences = self._environment_explorer.step(env)
@@ -247,14 +302,18 @@ class DDPG(Algorithm):
         self._ddpg_training(buffer)
 
     def _ddpg_training(self, replay_buffer):
-        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
-        if self._config.num_steps == 1:
+        actor_steps = self._config.actor_burn_in_steps + self._config.actor_unroll_steps
+        critic_steps = self._config.num_steps + self._config.critic_burn_in_steps + self._config.critic_unroll_steps - 1
+        num_steps = max(actor_steps, critic_steps)
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
+        if num_steps == 1:
             experiences_tuple = (experiences_tuple, )
-        assert len(experiences_tuple) == self._config.num_steps
+        assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
-            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
+            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
             batch = TrainingBatch(batch_size=self._config.batch_size,
                                   s_current=s,
                                   a_current=a,
@@ -263,7 +322,8 @@ class DDPG(Algorithm):
                                   non_terminal=non_terminal,
                                   s_next=s_next,
                                   weight=info['weights'],
-                                  next_step_batch=batch)
+                                  next_step_batch=batch,
+                                  rnn_states=rnn_states)
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         sync_model(self._q, self._target_q, tau=self._config.tau)
@@ -274,16 +334,11 @@ class DDPG(Algorithm):
         td_errors = self._q_function_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
-    @eval_api
-    def _compute_greedy_action(self, s, *, begin_of_episode=False):
-        # evaluation input/action variables
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            self._eval_action = self._pi.pi(self._eval_state_var)
-        set_data_to_variable(self._eval_state_var, s)
-        self._eval_action.forward()
-        return np.squeeze(self._eval_action.d, axis=0), {}
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
+
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _models(self):
         models = {}
@@ -297,6 +352,10 @@ class DDPG(Algorithm):
         solvers[self._pi.scope_name] = self._pi_solver
         solvers[self._q.scope_name] = self._q_solver
         return solvers
+
+    @classmethod
+    def is_rnn_supported(self):
+        return True
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):

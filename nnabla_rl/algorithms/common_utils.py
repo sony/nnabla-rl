@@ -13,13 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Sequence, Tuple, Union
+from abc import ABCMeta, abstractmethod
+from typing import Dict, Generic, Optional, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
 
 import nnabla as nn
 from nnabla_rl.algorithm import eval_api
-from nnabla_rl.models import DeterministicPolicy, Policy, QFunction, RewardFunction, StochasticPolicy, VFunction
+from nnabla_rl.distributions.distribution import Distribution
+from nnabla_rl.environments.environment_info import EnvironmentInfo
+from nnabla_rl.models import DeterministicPolicy, Model, QFunction, RewardFunction, StochasticPolicy, VFunction
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.typing import Experience, State
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
@@ -164,25 +167,81 @@ class _StatePreprocessedVFunction(VFunction):
         copied._v_function._scope_name = new_scope_name
         return copied
 
+    def is_recurrent(self) -> bool:
+        return self._v_function.is_recurrent()
 
-class _StatePreprocessedPolicy(Policy):
-    _policy: Union[DeterministicPolicy, StochasticPolicy]
+    def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+        return self._v_function.internal_state_shapes()
+
+    def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+        return self._v_function.set_internal_states(states)
+
+    def get_internal_states(self) -> Dict[str, nn.Variable]:
+        return self._v_function.get_internal_states()
+
+
+class _StatePreprocessedDeterministicPolicy(DeterministicPolicy):
+    _policy: DeterministicPolicy
     _preprocessor: Preprocessor
 
-    def __init__(self, policy: Union[DeterministicPolicy, StochasticPolicy], preprocessor: Preprocessor):
-        super(_StatePreprocessedPolicy, self).__init__(policy.scope_name)
+    def __init__(self, policy: DeterministicPolicy, preprocessor: Preprocessor):
+        super(_StatePreprocessedDeterministicPolicy, self).__init__(policy.scope_name)
         self._policy = policy
         self._preprocessor = preprocessor
 
-    def pi(self, s: nn.Variable):
+    def pi(self, s: nn.Variable) -> nn.Variable:
         preprocessed_state = self._preprocessor.process(s)
         return self._policy.pi(preprocessed_state)
 
-    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedPolicy':
+    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedDeterministicPolicy':
         copied = super().deepcopy(new_scope_name=new_scope_name)
-        assert isinstance(copied,  _StatePreprocessedPolicy)
+        assert isinstance(copied,  _StatePreprocessedDeterministicPolicy)
         copied._policy._scope_name = new_scope_name
         return copied
+
+    def is_recurrent(self) -> bool:
+        return self._policy.is_recurrent()
+
+    def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+        return self._policy.internal_state_shapes()
+
+    def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+        return self._policy.set_internal_states(states)
+
+    def get_internal_states(self) -> Dict[str, nn.Variable]:
+        return self._policy.get_internal_states()
+
+
+class _StatePreprocessedStochasticPolicy(StochasticPolicy):
+    _policy: StochasticPolicy
+    _preprocessor: Preprocessor
+
+    def __init__(self, policy: StochasticPolicy, preprocessor: Preprocessor):
+        super(_StatePreprocessedStochasticPolicy, self).__init__(policy.scope_name)
+        self._policy = policy
+        self._preprocessor = preprocessor
+
+    def pi(self, s: nn.Variable) -> Distribution:
+        preprocessed_state = self._preprocessor.process(s)
+        return self._policy.pi(preprocessed_state)
+
+    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedStochasticPolicy':
+        copied = super().deepcopy(new_scope_name=new_scope_name)
+        assert isinstance(copied,  _StatePreprocessedStochasticPolicy)
+        copied._policy._scope_name = new_scope_name
+        return copied
+
+    def is_recurrent(self) -> bool:
+        return self._policy.is_recurrent()
+
+    def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+        return self._policy.internal_state_shapes()
+
+    def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+        return self._policy.set_internal_states(states)
+
+    def get_internal_states(self) -> Dict[str, nn.Variable]:
+        return self._policy.get_internal_states()
 
 
 class _StatePreprocessedRewardFunction(RewardFunction):
@@ -204,6 +263,18 @@ class _StatePreprocessedRewardFunction(RewardFunction):
         assert isinstance(copied,  _StatePreprocessedRewardFunction)
         copied._reward_function._scope_name = new_scope_name
         return copied
+
+    def is_recurrent(self) -> bool:
+        return self._reward_function.is_recurrent()
+
+    def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+        return self._reward_function.internal_state_shapes()
+
+    def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+        return self._reward_function.set_internal_states(states)
+
+    def get_internal_states(self) -> Dict[str, nn.Variable]:
+        return self._reward_function.get_internal_states()
 
 
 class _StatePreprocessedQFunction(QFunction):
@@ -237,29 +308,88 @@ class _StatePreprocessedQFunction(QFunction):
         copied._q_function._scope_name = new_scope_name
         return copied
 
+    def is_recurrent(self) -> bool:
+        return self._q_function.is_recurrent()
 
-class _GreedyActionSelector(object):
-    def __init__(self, env_info, q_function: QFunction):
+    def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+        return self._q_function.internal_state_shapes()
+
+    def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+        return self._q_function.set_internal_states(states)
+
+    def get_internal_states(self) -> Dict[str, nn.Variable]:
+        return self._q_function.get_internal_states()
+
+
+M = TypeVar('M', bound=Model)
+
+
+class _ActionSelector(Generic[M], metaclass=ABCMeta):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _env_info: EnvironmentInfo
+    _model: M
+
+    def __init__(self, env_info: EnvironmentInfo, model: M):
         self._env_info = env_info
-        self._q = q_function
+        self._model = model
 
     @eval_api
-    def __call__(self, s, *, begin_of_episode=False):
+    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], *, begin_of_episode: bool = False):
         s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
+            # Variable creation
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            if self._q.is_recurrent():
-                self._rnn_internal_states = create_variables(1, self._q.internal_state_shapes())
-                self._q.set_internal_states(self._rnn_internal_states)
-            self._a_greedy = self._q.argmax_q(self._eval_state_var)
-        if self._q.is_recurrent() and begin_of_episode:
-            self._q.reset_internal_states()
+            if self._model.is_recurrent():
+                self._rnn_internal_states = create_variables(1, self._model.internal_state_shapes())
+                self._model.set_internal_states(self._rnn_internal_states)
+            self._action = self._compute_action(self._eval_state_var)
+        # Forward network
+        if self._model.is_recurrent() and begin_of_episode:
+            self._model.reset_internal_states()
         set_data_to_variable(self._eval_state_var, s)
-        if self._q.is_recurrent():
-            prev_rnn_states = self._q.get_internal_states()
+        if self._model.is_recurrent():
+            prev_rnn_states = self._model.get_internal_states()
             for key in self._rnn_internal_states.keys():
                 # copy internal states of previous iteration
                 self._rnn_internal_states[key].d = prev_rnn_states[key].d
-        self._a_greedy.forward()
+        self._action.forward()
         # No need to save internal states
-        return np.squeeze(self._a_greedy.d, axis=0), {}
+        return np.squeeze(self._action.d, axis=0), {}
+
+    @abstractmethod
+    def _compute_action(self, state_var: nn.Variable) -> nn.Variable:
+        raise NotImplementedError
+
+
+class _GreedyActionSelector(_ActionSelector[QFunction]):
+    def __init__(self, env_info: EnvironmentInfo, q_function: QFunction):
+        super().__init__(env_info, q_function)
+        self._env_info = env_info
+        self._q = q_function
+
+    def _compute_action(self, state_var: nn.Variable) -> nn.Variable:
+        return self._q.argmax_q(self._eval_state_var)
+
+
+class _StochasticPolicyActionSelector(_ActionSelector[StochasticPolicy]):
+    def __init__(self, env_info, policy: StochasticPolicy, deterministic: bool = True):
+        super().__init__(env_info, policy)
+        self._deterministic = deterministic
+
+    def _compute_action(self, state_var: nn.Variable) -> nn.Variable:
+        distribution = self._model.pi(self._eval_state_var)
+
+        if self._deterministic:
+            return distribution.choose_probable()
+        else:
+            return distribution.sample()
+
+
+class _DeterministicPolicyActionSelector(_ActionSelector[DeterministicPolicy]):
+    def __init__(self, env_info, policy: DeterministicPolicy):
+        super().__init__(env_info, policy)
+
+    def _compute_action(self, state_var: nn.Variable) -> nn.Variable:
+        return self._model.pi(self._eval_state_var)
