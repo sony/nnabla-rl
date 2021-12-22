@@ -57,6 +57,7 @@ class SACConfig(AlgorithmConfig):
             The algorithm will collect experiences from the environment by acting randomly until this timestep.\
             Defaults to 10000.
         replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
+        num_steps (int): number of steps for N-step Q targets. Defaults to 1.
     '''
 
     gamma: float = 0.99
@@ -70,6 +71,7 @@ class SACConfig(AlgorithmConfig):
     fix_temperature: bool = False
     start_timesteps: int = 10000
     replay_buffer_size: int = 1000000
+    num_steps: int = 1
 
     def __post_init__(self):
         '''__post_init__
@@ -267,7 +269,8 @@ class SAC(Algorithm):
         # training input/loss variables
         q_function_trainer_config = MT.q_value_trainers.SoftQTrainerConfig(
             reduction_method='mean',
-            grad_clip=None)
+            grad_clip=None,
+            num_steps=self._config.num_steps)
 
         q_function_trainer = MT.q_value_trainers.SoftQTrainer(
             train_functions=self._train_q_functions,
@@ -299,16 +302,23 @@ class SAC(Algorithm):
             self._sac_training(replay_buffer)
 
     def _sac_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
+        if self._config.num_steps == 1:
+            experiences_tuple = (experiences_tuple, )
+        assert len(experiences_tuple) == self._config.num_steps
+
+        batch = None
+        for experiences in reversed(experiences_tuple):
+            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            batch = TrainingBatch(batch_size=self._config.batch_size,
+                                  s_current=s,
+                                  a_current=a,
+                                  gamma=self._config.gamma,
+                                  reward=r,
+                                  non_terminal=non_terminal,
+                                  s_next=s_next,
+                                  weight=info['weights'],
+                                  next_step_batch=batch)
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):

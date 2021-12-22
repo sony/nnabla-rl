@@ -276,17 +276,23 @@ class HER(DDPG):
 
     def _her_training(self, replay_buffer):
         for i in range(self._config.n_update):
-            experiences, info = replay_buffer.sample(self._config.batch_size)
-            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
+            if self._config.num_steps == 1:
+                experiences_tuple = (experiences_tuple, )
+            assert len(experiences_tuple) == self._config.num_steps
 
-            batch = TrainingBatch(batch_size=self._config.batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  gamma=self._config.gamma,
-                                  reward=r,
-                                  non_terminal=non_terminal,
-                                  s_next=s_next,
-                                  weight=info['weights'])
+            batch = None
+            for experiences in reversed(experiences_tuple):
+                (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+                batch = TrainingBatch(batch_size=self._config.batch_size,
+                                      s_current=s,
+                                      a_current=a,
+                                      gamma=self._config.gamma,
+                                      reward=r,
+                                      non_terminal=non_terminal,
+                                      s_next=s_next,
+                                      weight=info['weights'],
+                                      next_step_batch=batch)
 
             self._q_function_trainer_state = self._q_function_trainer.train(batch)
             self._policy_trainer_state = self._policy_trainer.train(batch)

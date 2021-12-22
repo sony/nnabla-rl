@@ -53,6 +53,7 @@ class DDPGConfig(AlgorithmConfig):
             Defaults to 10000.
         replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
         exploration_noise_sigma (float): standard deviation of gaussian exploration noise. Defaults to 0.1.
+        num_steps (int): number of steps for N-step Q targets. Defaults to 1.
     '''
 
     gamma: float = 0.99
@@ -62,6 +63,7 @@ class DDPGConfig(AlgorithmConfig):
     start_timesteps: int = 10000
     replay_buffer_size: int = 1000000
     exploration_noise_sigma: float = 0.1
+    num_steps: int = 1
 
 
 class DefaultCriticBuilder(ModelBuilder[QFunction]):
@@ -205,7 +207,8 @@ class DDPG(Algorithm):
     def _setup_q_function_training(self, env_or_buffer):
         q_function_trainer_config = MT.q_value.DDPGQTrainerConfig(
             reduction_method='mean',
-            grad_clip=None)
+            grad_clip=None,
+            num_steps=self._config.num_steps)
 
         q_function_trainer = MT.q_value.DDPGQTrainer(
             train_functions=self._q,
@@ -244,16 +247,23 @@ class DDPG(Algorithm):
         self._ddpg_training(buffer)
 
     def _ddpg_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
+        if self._config.num_steps == 1:
+            experiences_tuple = (experiences_tuple, )
+        assert len(experiences_tuple) == self._config.num_steps
+
+        batch = None
+        for experiences in reversed(experiences_tuple):
+            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            batch = TrainingBatch(batch_size=self._config.batch_size,
+                                  s_current=s,
+                                  a_current=a,
+                                  gamma=self._config.gamma,
+                                  reward=r,
+                                  non_terminal=non_terminal,
+                                  s_next=s_next,
+                                  weight=info['weights'],
+                                  next_step_batch=batch)
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         sync_model(self._q, self._target_q, tau=self._config.tau)
