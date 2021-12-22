@@ -18,6 +18,8 @@
 |[DQN](https://www.nature.com/articles/nature14236)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|:x:|
 |[DRQN](https://arxiv.org/abs/1507.06527)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|:heavy_check_mark:|
 |[GAIL](https://arxiv.org/abs/1606.03476)|:heavy_check_mark:|:x:|:heavy_check_mark:|(We will support discrete action in the future)|:x:|
+|[HER](https://arxiv.org/abs/1707.06347)|:heavy_check_mark:|:heavy_check_mark:|:heavy_check_mark:|:x:|:x:|
+|[IQN](https://arxiv.org/abs/1806.06923)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|:x:|
 |[M-DQN](https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|:x:|
 |[M-IQN](https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|:x:|
 |[PPO](https://arxiv.org/abs/1707.06347)|:heavy_check_mark:|:x:|:heavy_check_mark:|:heavy_check_mark:|:x:|
