@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,6 +56,14 @@ for dir in $REPRODUCTIONS_DIRS;
 do
     ALGORITHM=$(basename ${dir})
     SCRIPT="${dir}/${ALGORITHM}_reproduction.py"
+    if [ ${BASE_ENV} == "sparse_mujoco" ] && [ ${ALGORITHM} == "environment" ]; then
+        # Do nothing this is not a reproduction code
+        continue
+    fi
+    if [ ${BASE_ENV} == "delayed_mujoco" ] && [ ${ALGORITHM} == "environment" ]; then
+        # Do nothing this is not a reproduction code
+        continue
+    fi
     if [ ${BASE_ENV} = "mujoco" ] && [ ${ALGORITHM} = "her" ]; then
         TMP_ENV="FakeGoalConditionedNNablaRL-v1"
         echo "Test run of training for ${ALGORITHM}"

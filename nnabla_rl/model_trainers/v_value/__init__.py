@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,3 +16,5 @@ from nnabla_rl.model_trainers.v_value.monte_carlo_v_trainer import (  # noqa
     MonteCarloVTrainer, MonteCarloVTrainerConfig)
 from nnabla_rl.model_trainers.v_value.soft_v_trainer import (  # noqa
     SoftVTrainer, SoftVTrainerConfig)
+from nnabla_rl.model_trainers.v_value.mme_v_trainer import (  # noqa
+    MMEVTrainer, MMEVTrainerConfig)

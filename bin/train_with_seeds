@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ $# -ne 4 ]; then
-    echo "usage: $0 <script_file_name> <gpu_id> <env> <save_dir>"
+if [ $# -ne 5 ]; then
+    echo "usage: $0 <script_file_name> <gpu_id> <env> <save_dir> <num_seeds>"
     exit 1
 fi
 RESULTDIR="$4/$3_results"
-for seed in 1 10 100
-do
-    python $1 --gpu $2 --seed $seed --env $3 --save-dir $4
-done
+NUM_SEEDS=$5
+
+if [ $NUM_SEEDS -eq 3 ]; then
+    for seed in 1 10 100
+    do
+        python $1 --gpu $2 --seed $seed --env $3 --save-dir $4
+    done
+else
+    for seed in $(seq 1 $NUM_SEEDS);
+    do
+        python $1 --gpu $2 --seed $seed --env $3 --save-dir $4
+    done
+fi
