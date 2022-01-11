@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 from nnabla_rl.model_trainers.policy.a2c_policy_trainer import A2CPolicyTrainer, A2CPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.bear_policy_trainer import BEARPolicyTrainer, BEARPolicyTrainerConfig  # noqa
+from nnabla_rl.model_trainers.policy.demme_policy_trainer import DEMMEPolicyTrainer, DEMMEPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.dpg_policy_trainer import DPGPolicyTrainer, DPGPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.her_policy_trainer import HERPolicyTrainer, HERPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.ppo_policy_trainer import PPOPolicyTrainer, PPOPolicyTrainerConfig  # noqa
