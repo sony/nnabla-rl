@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,6 +91,7 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
                               ignore_loss: bool):
         # value function learning
         target_v = self._compute_target(training_variables)
+        target_v.need_grad = False
 
         for v_function in models:
             v_function = cast(VFunction, v_function)
