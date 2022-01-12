@@ -25,7 +25,7 @@ import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.algorithms.common_utils import (_StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
-                                               compute_average_v_target_and_advantage)
+                                               _StochasticPolicyActionSelector, compute_average_v_target_and_advantage)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -35,8 +35,7 @@ from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable
+from nnabla_rl.utils.data import marshal_experiences
 
 
 @dataclass
@@ -157,7 +156,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             initial_step_num=algorithm.iteration_num,
             timelimit_as_terminal=True
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._compute_action,
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
                                         env_info=env_info,
                                         config=explorer_config)
         return explorer
@@ -234,10 +233,15 @@ class ATRPO(Algorithm):
             self._v_function_solver = v_solver_builder(self._env_info, self._config)
             self._v_function_solver.weight_decay(self._config.vf_l2_reg_coefficient)
 
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=True)
+        self._exploration_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=False)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(state, act_deterministic=True, begin_of_episode=begin_of_episode)
+            action, _ = self._evaluation_action_selector(state,  begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -377,31 +381,11 @@ class ATRPO(Algorithm):
 
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
-    @eval_api
-    def _compute_action(self, s, act_deterministic=False, *, begin_of_episode=False):
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            self._eval_a_distribution = self._policy.pi(self._eval_state_var)
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
 
-        if act_deterministic:
-            eval_a = self._deterministic_action()
-        else:
-            eval_a = self._probabilistic_action()
-
-        set_data_to_variable(self._eval_state_var, s)
-        eval_a.forward()
-        return np.squeeze(eval_a.d, axis=0), {}
-
-    def _deterministic_action(self):
-        if not hasattr(self, '_eval_deterministic_a'):
-            self._eval_deterministic_a = self._eval_a_distribution.choose_probable()
-        return self._eval_deterministic_a
-
-    def _probabilistic_action(self):
-        if not hasattr(self, '_eval_probabilistic_a'):
-            self._eval_probabilistic_a = self._eval_a_distribution.sample()
-        return self._eval_probabilistic_a
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _models(self):
         models = {}

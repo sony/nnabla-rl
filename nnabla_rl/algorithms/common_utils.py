@@ -38,6 +38,13 @@ def _get_shape(state: State) -> Union[Tuple[int, ...], Tuple[Tuple[int, ...], ..
     return shape
 
 
+def has_batch_dimension(state: State, env_info: EnvironmentInfo):
+    fed_state_shape = _get_shape(state)
+    env_state_shape = env_info.state_shape
+
+    return not (fed_state_shape == env_state_shape)
+
+
 def compute_v_target_and_advantage(v_function: VFunction,
                                    experiences: Sequence[Experience],
                                    gamma: float = 0.99,
@@ -334,17 +341,23 @@ class _ActionSelector(Generic[M], metaclass=ABCMeta):
     def __init__(self, env_info: EnvironmentInfo, model: M):
         self._env_info = env_info
         self._model = model
+        self._batch_size = 1
 
     @eval_api
     def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], *, begin_of_episode: bool = False):
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
+        if not has_batch_dimension(s, self._env_info):
+            s = add_batch_dimension(s)
+        batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
+        if not hasattr(self, '_eval_state_var') or batch_size != self._batch_size:
             # Variable creation
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
+            self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)
             if self._model.is_recurrent():
-                self._rnn_internal_states = create_variables(1, self._model.internal_state_shapes())
+                self._rnn_internal_states = create_variables(batch_size, self._model.internal_state_shapes())
                 self._model.set_internal_states(self._rnn_internal_states)
             self._action = self._compute_action(self._eval_state_var)
+            if self._model.is_recurrent():
+                self._model.reset_internal_states()
+            self._batch_size = batch_size
         # Forward network
         if self._model.is_recurrent() and begin_of_episode:
             self._model.reset_internal_states()
@@ -354,9 +367,10 @@ class _ActionSelector(Generic[M], metaclass=ABCMeta):
             for key in self._rnn_internal_states.keys():
                 # copy internal states of previous iteration
                 self._rnn_internal_states[key].d = prev_rnn_states[key].d
-        self._action.forward()
+        self._action.forward(clear_no_need_grad=True)
         # No need to save internal states
-        return np.squeeze(self._action.d, axis=0), {}
+        action = np.squeeze(self._action.d, axis=0) if batch_size == 1 else self._action.d
+        return action, {}
 
     @abstractmethod
     def _compute_action(self, state_var: nn.Variable) -> nn.Variable:

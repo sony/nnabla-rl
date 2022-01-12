@@ -17,9 +17,13 @@ import numpy as np
 import pytest
 
 import nnabla as nn
-from nnabla_rl.algorithms.common_utils import (_StatePreprocessedDeterministicPolicy,
+from nnabla_rl.algorithms.common_utils import (_DeterministicPolicyActionSelector,
+                                               _StatePreprocessedDeterministicPolicy,
                                                _StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
-                                               compute_average_v_target_and_advantage, compute_v_target_and_advantage)
+                                               compute_average_v_target_and_advantage, compute_v_target_and_advantage,
+                                               has_batch_dimension)
+from nnabla_rl.environments.dummy import DummyContinuous, DummyContinuousActionGoalEnv, DummyTupleContinuous
+from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import VFunction
 
 
@@ -53,6 +57,30 @@ class TestCommonUtils():
                     non_terminal = 0
                 experience.append((s_current, a, r, non_terminal, s_next))
         return experience
+
+    def test_has_batch_dimension_tupled_state(self):
+        env = DummyTupleContinuous()
+        env_info = EnvironmentInfo.from_env(env)
+
+        batch_size = 5
+        state_shapes = env_info.state_shape
+        batched_state = tuple(np.empty(shape=(batch_size, *state_shape)) for state_shape in state_shapes)
+        non_batched_state = tuple(np.empty(shape=state_shape) for state_shape in state_shapes)
+
+        assert has_batch_dimension(batched_state, env_info)
+        assert not has_batch_dimension(non_batched_state, env_info)
+
+    def test_has_batch_dimension_non_tupled_state(self):
+        env = DummyContinuous()
+        env_info = EnvironmentInfo.from_env(env)
+
+        batch_size = 5
+        state_shape = env_info.state_shape
+        batched_state = np.empty(shape=(batch_size, *state_shape))
+        non_batched_state = np.empty(shape=state_shape)
+
+        assert has_batch_dimension(batched_state, env_info)
+        assert not has_batch_dimension(non_batched_state, env_info)
 
     @pytest.mark.parametrize("gamma, lmb, expected_adv, expected_vtarg, tupled_state",
                              [[1., 0., np.array([[1.], [1.], [-1.]]), np.array([[3.], [3.], [1.]]), False],
@@ -156,6 +184,59 @@ class TestCommonUtils():
 
         assert pi_old.scope_name != pi_new.scope_name
         assert pi_old._preprocessor.scope_name == pi_new._preprocessor.scope_name
+
+    def test_action_selector_tupled_state(self):
+        from nnabla_rl.environments.wrappers.goal_conditioned import GoalConditionedTupleObservationEnv
+
+        env = DummyContinuousActionGoalEnv()
+        env = GoalConditionedTupleObservationEnv(env)
+        env_info = EnvironmentInfo.from_env(env)
+
+        action_dim = env_info.action_dim
+
+        from nnabla_rl.models import HERPolicy
+        pi_scope_name = 'pi'
+        pi = HERPolicy(pi_scope_name, action_dim=action_dim, max_action_value=1.0)
+
+        selector = _DeterministicPolicyActionSelector(env_info, pi)
+
+        batch_size = 5
+        state_shapes = env_info.state_shape
+        batched_state = tuple(np.empty(shape=(batch_size, *state_shape)) for state_shape in state_shapes)
+
+        action, *_ = selector(batched_state)
+        assert len(action) == batch_size
+        assert action.shape[1:] == env_info.action_shape
+
+        non_batched_state = tuple(np.empty(shape=state_shape) for state_shape in state_shapes)
+        action, *_ = selector(non_batched_state)
+
+        assert action.shape == env_info.action_shape
+
+    def test_action_selector_non_tupled_state(self):
+        env = DummyContinuous()
+        env_info = EnvironmentInfo.from_env(env)
+
+        action_dim = env_info.action_dim
+
+        from nnabla_rl.models import TD3Policy
+        pi_scope_name = 'pi'
+        pi = TD3Policy(pi_scope_name, action_dim=action_dim, max_action_value=1.0)
+
+        selector = _DeterministicPolicyActionSelector(env_info, pi)
+
+        batch_size = 5
+        state_shape = env_info.state_shape
+        batched_state = np.empty(shape=(batch_size, *state_shape))
+
+        action, *_ = selector(batched_state)
+        assert len(action) == batch_size
+        assert action.shape[1:] == env_info.action_shape
+
+        non_batched_state = np.empty(shape=state_shape)
+        action, *_ = selector(non_batched_state)
+
+        assert action.shape == env_info.action_shape
 
 
 if __name__ == "__main__":

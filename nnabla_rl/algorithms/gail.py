@@ -28,7 +28,8 @@ import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.algorithms.common_utils import (_StatePreprocessedRewardFunction, _StatePreprocessedStochasticPolicy,
-                                               _StatePreprocessedVFunction, compute_v_target_and_advantage)
+                                               _StatePreprocessedVFunction, _StochasticPolicyActionSelector,
+                                               compute_v_target_and_advantage)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -195,7 +196,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             initial_step_num=algorithm.iteration_num,
             timelimit_as_terminal=False
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._compute_action,
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
                                         env_info=env_info,
                                         config=explorer_config)
         return explorer
@@ -253,6 +254,9 @@ class GAIL(Algorithm):
     _policy_trainer_state: Dict[str, Any]
     _discriminator_trainer_state: Dict[str, Any]
 
+    _evaluation_actor: _StochasticPolicyActionSelector
+    _exploration_actor: _StochasticPolicyActionSelector
+
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  expert_buffer: ReplayBuffer,
                  config: GAILConfig = GAILConfig(),
@@ -292,12 +296,15 @@ class GAIL(Algorithm):
 
             self._expert_buffer = expert_buffer
 
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=self._config.act_deterministic_in_eval)
+        self._exploration_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=False)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(state,
-                                             act_deterministic=self._config.act_deterministic_in_eval,
-                                             begin_of_episode=begin_of_episode)
+            action, _ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -511,31 +518,11 @@ class GAIL(Algorithm):
 
         self._discriminator_trainer_state = self._discriminator_trainer.train(batch)
 
-    @eval_api
-    def _compute_action(self, s, act_deterministic=False, *, begin_of_episode=False):
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            self._eval_a_distribution = self._policy.pi(self._eval_state_var)
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
 
-        if act_deterministic:
-            eval_a = self._deterministic_action()
-        else:
-            eval_a = self._probabilistic_action()
-
-        set_data_to_variable(self._eval_state_var, s)
-        eval_a.forward()
-        return np.squeeze(eval_a.d, axis=0), {}
-
-    def _deterministic_action(self):
-        if not hasattr(self, '_eval_deterministic_a'):
-            self._eval_deterministic_a = self._eval_a_distribution.choose_probable()
-        return self._eval_deterministic_a
-
-    def _probabilistic_action(self):
-        if not hasattr(self, '_eval_probabilistic_a'):
-            self._eval_probabilistic_a = self._eval_a_distribution.sample()
-        return self._eval_probabilistic_a
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _models(self):
         models = {}

@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,12 +28,12 @@ import nnabla_rl.utils.context as context
 from nnabla import solvers as NS
 from nnabla_rl import environment_explorers as EE
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import _StochasticPolicyActionSelector
 from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import A3CPolicy, A3CSharedFunctionHead, A3CVFunction, StochasticPolicy, VFunction
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable, unzip
-from nnabla_rl.utils.misc import create_variable
+from nnabla_rl.utils.data import marshal_experiences, unzip
 from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
                                           mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
@@ -164,8 +164,6 @@ class A2C(Algorithm):
     _policy_solver: nn.solver.Solver
     _actors: List['_A2CActor']
     _actor_processes: List[mp.Process]
-    _eval_state_var: nn.Variable
-    _eval_action: nn.Variable
     _s_current_var: nn.Variable
     _a_current_var: nn.Variable
     _returns_var: nn.Variable
@@ -178,6 +176,8 @@ class A2C(Algorithm):
 
     _policy_trainer_state: Dict[str, Any]
     _v_function_trainer_state: Dict[str, Any]
+
+    _evaluation_actor: _StochasticPolicyActionSelector
 
     def __init__(self, env_or_env_info,
                  v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
@@ -197,23 +197,14 @@ class A2C(Algorithm):
             self._v_function_solver = v_solver_builder(self._env_info, self._config)
             self._v_solver_builder = v_solver_builder  # keep for later use
 
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=False)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            state = add_batch_dimension(state)
-            if not hasattr(self, '_eval_state_var'):
-                self._eval_state_var = create_variable(1, self._env_info.state_shape)
-                distribution = self._policy.pi(self._eval_state_var)
-                self._eval_action = distribution.sample()
-                self._eval_action.need_grad = False
-
-            set_data_to_variable(self._eval_state_var, state)
-            self._eval_action.forward(clear_no_need_grad=True)
-            action = np.squeeze(self._eval_action.d, axis=0)
-            if self._env_info.is_discrete_action_env():
-                return np.int(action)
-            else:
-                return action
+            action, *_ = self._evaluation_actor(state, begin_of_episode=begin_of_episode)
+            return action
 
     def _before_training_start(self, env_or_buffer):
         if not self._is_env(env_or_buffer):
@@ -438,6 +429,8 @@ class _A2CActor(object):
             (returns_mp_array, scalar_mp_array_shape, np.float32)
         )
 
+        self._exploration_actor = _StochasticPolicyActionSelector(env_info, policy, deterministic=False)
+
     def __call__(self):
         self._run_actor_loop()
 
@@ -523,20 +516,11 @@ class _A2CActor(object):
 
     @eval_api
     def _compute_action(self, s, *, begin_of_episode=False):
-        s = np.expand_dims(s, axis=0)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
-            distribution = self._policy.pi(self._eval_state_var)
-            self._eval_action = distribution.sample()
-            self._eval_state_var.need_grad = False
-            self._eval_action.need_grad = False
-        self._eval_state_var.d = s
-        self._eval_action.forward(clear_no_need_grad=True)
-        action = np.squeeze(self._eval_action.d, axis=0)
+        action, info = self._exploration_actor(s, begin_of_episode=begin_of_episode)
         if self._env_info.is_discrete_action_env():
-            return np.int(action), {}
+            return np.int(action), info
         else:
-            return action, {}
+            return action, info
 
     def _update_params(self, src, dest):
         copy_params_to_mp_arrays(src, dest)

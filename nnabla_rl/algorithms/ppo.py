@@ -30,7 +30,7 @@ import nnabla_rl.preprocessors as RP
 import nnabla_rl.utils.context as context
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.algorithms.common_utils import (_StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
-                                               compute_v_target_and_advantage)
+                                               _StochasticPolicyActionSelector, compute_v_target_and_advantage)
 from nnabla_rl.builders import ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -40,8 +40,7 @@ from nnabla_rl.models import (Model, PPOAtariPolicy, PPOAtariVFunction, PPOMujoc
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable, unzip
-from nnabla_rl.utils.misc import create_variable
+from nnabla_rl.utils.data import marshal_experiences, unzip
 from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
                                           mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
@@ -259,10 +258,14 @@ class PPO(Algorithm):
             self._v_function_solver = v_solver_builder(self._env_info, self._config)
             self._v_solver_builder = v_solver_builder  # keep for later use
 
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=False)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            return self._compute_action(state, begin_of_episode=begin_of_episode)
+            action, *_ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
+            return action
 
     def _before_training_start(self, env_or_buffer):
         if not self._is_env(env_or_buffer):
@@ -404,20 +407,8 @@ class PPO(Algorithm):
         self._v_function_trainer.set_learning_rate(self._config.learning_rate * alpha)
         self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
-    @eval_api
-    def _compute_action(self, s, *, begin_of_episode=False):
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            distribution = self._policy.pi(self._eval_state_var)
-            self._eval_action = distribution.sample()
-        set_data_to_variable(self._eval_state_var, s)
-        self._eval_action.forward()
-        action = np.squeeze(self._eval_action.d, axis=0)
-        if self._env_info.is_discrete_action_env():
-            return np.int(action)
-        else:
-            return action
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
 
     def _models(self):
         models = {}
