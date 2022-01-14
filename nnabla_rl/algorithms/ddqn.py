@@ -13,20 +13,17 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Dict, Union
+from typing import Union
 
 import gym
 
-import nnabla as nn
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.algorithms.dqn import (DQN, DefaultQFunctionBuilder, DefaultReplayBufferBuilder, DefaultSolverBuilder,
-                                      DQNConfig)
+from nnabla_rl.algorithms.dqn import (DQN, DefaultExplorerBuilder, DefaultQFunctionBuilder, DefaultReplayBufferBuilder,
+                                      DefaultSolverBuilder, DQNConfig)
 from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
-from nnabla_rl.environment_explorer import EnvironmentExplorer
+from nnabla_rl.builders.explorer_builder import ExplorerBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import ModelTrainer
 from nnabla_rl.models import QFunction
-from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils.misc import sync_model
 
 
@@ -90,32 +87,27 @@ class DDQN(DQN):
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: DDQNConfig
-    _q: QFunction
-    _q_solver: nn.solver.Solver
-    _target_q: QFunction
-    _replay_buffer: ReplayBuffer
-    _environment_explorer: EnvironmentExplorer
-    _q_function_trainer: ModelTrainer
-    _eval_state_var: nn.Variable
-    _a_greedy: nn.Variable
-
-    _q_function_trainer_state: Dict[str, Any]
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: DDQNConfig = DDQNConfig(),
                  q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
                  q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
+                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
         super(DDQN, self).__init__(env_or_env_info=env_or_env_info,
                                    config=config,
                                    q_func_builder=q_func_builder,
                                    q_solver_builder=q_solver_builder,
-                                   replay_buffer_builder=replay_buffer_builder)
+                                   replay_buffer_builder=replay_buffer_builder,
+                                   explorer_builder=explorer_builder)
 
     def _setup_q_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.DDQNQTrainerConfig(num_steps=self._config.num_steps,
                                                                 reduction_method='sum',
-                                                                grad_clip=self._config.grad_clip)
+                                                                grad_clip=self._config.grad_clip,
+                                                                unroll_steps=self._config.unroll_steps,
+                                                                burn_in_steps=self._config.burn_in_steps,
+                                                                reset_on_terminal=self._config.reset_rnn_on_terminal)
 
         q_function_trainer = MT.q_value_trainers.DDQNQTrainer(train_function=self._q,
                                                               solvers={self._q.scope_name: self._q_solver},

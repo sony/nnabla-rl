@@ -19,6 +19,9 @@ import pytest
 import nnabla as nn
 import nnabla_rl.algorithms as A
 import nnabla_rl.environments as E
+from nnabla_rl.builders.model_builder import ModelBuilder
+from nnabla_rl.models import DRQNQFunction
+from nnabla_rl.models.q_function import QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
@@ -64,10 +67,30 @@ class TestDQN(object):
         config = A.DQNConfig()
         config.num_steps = 2
         config.start_timesteps = 5
-        config.batch_size = 5
+        config.batch_size = 2
         config.learner_update_frequency = 1
         config.target_update_frequency = 1
         dqn = A.DQN(dummy_env, config=config)
+
+        dqn.train_online(dummy_env, total_iterations=10)
+
+    def test_run_online_rnn_training(self):
+        '''
+        Check that no error occurs when calling online training with RNN model
+        '''
+        class RNNModelBuilder(ModelBuilder[QFunction]):
+            def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
+                return DRQNQFunction(scope_name, env_info.action_dim)
+        dummy_env = E.DummyDiscreteImg()
+        config = A.DQNConfig()
+        config.num_steps = 2
+        config.unroll_steps = 2
+        config.burn_in_steps = 2
+        config.start_timesteps = 7
+        config.batch_size = 2
+        config.learner_update_frequency = 1
+        config.target_update_frequency = 1
+        dqn = A.DQN(dummy_env, config=config, q_func_builder=RNNModelBuilder())
 
         dqn.train_online(dummy_env, total_iterations=10)
 

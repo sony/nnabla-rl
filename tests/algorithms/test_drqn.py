@@ -64,8 +64,8 @@ class TestDRQN(object):
         config = A.DRQNConfig()
         config.num_steps = 2
         config.unroll_steps = 2
-        config.start_timesteps = 10
-        config.batch_size = 5
+        config.start_timesteps = 5
+        config.batch_size = 2
         config.learner_update_frequency = 1
         config.target_update_frequency = 1
         drqn = A.DRQN(dummy_env, config=config)
