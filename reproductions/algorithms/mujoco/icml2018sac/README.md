@@ -55,10 +55,10 @@ We tested our implementation with 4 MuJoCo environments as in the [original pape
 
 |Env|nnabla_rl best mean score|Reported score|
 |:---|:---:|:---:|
-|Ant-v2|6040.918+/-549.097|~6000|
-|HalfCheetah-v2|14708.591+/-909.247|~15000|
-|Hopper-v2|3388.758+/-135.154|~3300|
-|Walker2d-v2|3814.35+/-233.07|~3800|
+|Ant-v2|6619.949+/-147.777|~6000|
+|HalfCheetah-v2|14959.349+/-460.147|~15000|
+|Hopper-v2|3221.963+/-103.799|~3300|
+|Walker2d-v2|3865.123+/-298.745|~3800|
 
 ## Learning curves
 
