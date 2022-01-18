@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,17 +24,17 @@ import nnabla_rl as rl
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
-from nnabla_rl.algorithm import eval_api
 from nnabla_rl.algorithms import DDPG, DDPGConfig
-from nnabla_rl.algorithms.common_utils import _StatePreprocessedPolicy, _StatePreprocessedQFunction
+from nnabla_rl.algorithms.common_utils import (_DeterministicPolicyActionSelector,
+                                               _StatePreprocessedDeterministicPolicy, _StatePreprocessedQFunction)
 from nnabla_rl.builders import ModelBuilder, PreprocessorBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
 from nnabla_rl.models import DeterministicPolicy, HERPolicy, HERQFunction, Model, QFunction
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.replay_buffers.hindsight_replay_buffer import HindsightReplayBuffer
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable, sync_model
+from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -190,29 +190,39 @@ class HER(DDPG):
             assert preprocessor is not None
             self._q = _StatePreprocessedQFunction(q_function=self._q, preprocessor=preprocessor)
             self._target_q = _StatePreprocessedQFunction(q_function=self._target_q, preprocessor=preprocessor)
-            self._pi = \
-                _StatePreprocessedPolicy(policy=self._pi, preprocessor=preprocessor)  # type: ignore
-            self._target_pi = \
-                _StatePreprocessedPolicy(policy=self._target_pi, preprocessor=preprocessor)  # type: ignore
+            self._pi = _StatePreprocessedDeterministicPolicy(policy=self._pi, preprocessor=preprocessor)
+            self._target_pi = _StatePreprocessedDeterministicPolicy(policy=self._target_pi, preprocessor=preprocessor)
             self._state_preprocessor = preprocessor
 
-    def _setup_q_function_training(self, env_or_buffer):
-        q_function_trainer_config = MT.q_value.HERQTrainerConfig(reduction_method='mean',
-                                                                 grad_clip=None,
-                                                                 return_clip=self._config.return_clip)
+        # Override actor here
+        self._evaluation_actor = _DeterministicPolicyActionSelector(self._env_info, self._pi.shallowcopy())
+        self._exploration_actor = _DeterministicPolicyActionSelector(self._env_info, self._pi.shallowcopy())
 
-        q_function_trainer = MT.q_value.HERQTrainer(train_functions=self._q,
-                                                    solvers={self._q.scope_name: self._q_solver},
-                                                    target_functions=self._target_q,
-                                                    target_policy=self._target_pi,
-                                                    env_info=self._env_info,
-                                                    config=q_function_trainer_config)
+    def _setup_q_function_training(self, env_or_buffer):
+        q_function_trainer_config = MT.q_value_trainers.HERQTrainerConfig(
+            reduction_method='mean',
+            grad_clip=None,
+            return_clip=self._config.return_clip,
+            unroll_steps=self._config.critic_unroll_steps,
+            burn_in_steps=self._config.critic_burn_in_steps,
+            reset_on_terminal=self._config.critic_reset_rnn_on_terminal)
+
+        q_function_trainer = MT.q_value_trainers.HERQTrainer(train_functions=self._q,
+                                                             solvers={self._q.scope_name: self._q_solver},
+                                                             target_functions=self._target_q,
+                                                             target_policy=self._target_pi,
+                                                             env_info=self._env_info,
+                                                             config=q_function_trainer_config)
         sync_model(self._q, self._target_q)
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
-        policy_trainer_config = \
-            MT.policy_trainers.HERPolicyTrainerConfig(action_loss_coef=self._config.action_loss_coef)
+        policy_trainer_config = MT.policy_trainers.HERPolicyTrainerConfig(
+            action_loss_coef=self._config.action_loss_coef,
+            unroll_steps=self._config.actor_unroll_steps,
+            burn_in_steps=self._config.actor_burn_in_steps,
+            reset_on_terminal=self._config.actor_reset_rnn_on_terminal)
+
         policy_trainer = MT.policy_trainers.HERPolicyTrainer(models=self._pi,
                                                              solvers={self._pi.scope_name: self._pi_solver},
                                                              q_function=self._q,
@@ -232,7 +242,7 @@ class HER(DDPG):
             timelimit_as_terminal=False,
         )
         epsilon_greedy_explorer = EE.NoDecayEpsilonGreedyExplorer(
-            greedy_action_selector=self._compute_greedy_with_gaussian_action,
+            greedy_action_selector=self._exploration_action_selector,
             random_action_selector=self._compute_random_action,
             env_info=self._env_info,
             config=epsilon_greedy_explorer_config,
@@ -275,15 +285,19 @@ class HER(DDPG):
         return goal_for_compute_mean_std
 
     def _her_training(self, replay_buffer):
+        actor_steps = self._config.actor_burn_in_steps + self._config.actor_unroll_steps
+        critic_steps = self._config.num_steps + self._config.critic_burn_in_steps + self._config.critic_unroll_steps - 1
+        num_steps = max(actor_steps, critic_steps)
         for i in range(self._config.n_update):
-            experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
-            if self._config.num_steps == 1:
+            experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
+            if num_steps == 1:
                 experiences_tuple = (experiences_tuple, )
-            assert len(experiences_tuple) == self._config.num_steps
+            assert len(experiences_tuple) == num_steps
 
             batch = None
             for experiences in reversed(experiences_tuple):
-                (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+                (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
+                rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
                 batch = TrainingBatch(batch_size=self._config.batch_size,
                                       s_current=s,
                                       a_current=a,
@@ -292,7 +306,8 @@ class HER(DDPG):
                                       non_terminal=non_terminal,
                                       s_next=s_next,
                                       weight=info['weights'],
-                                      next_step_batch=batch)
+                                      next_step_batch=batch,
+                                      rnn_states=rnn_states)
 
             self._q_function_trainer_state = self._q_function_trainer.train(batch)
             self._policy_trainer_state = self._policy_trainer.train(batch)
@@ -304,20 +319,8 @@ class HER(DDPG):
         sync_model(self._q, self._target_q, tau=self._config.tau)
         sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
-    @eval_api
-    def _compute_greedy_action(self, s, *, begin_of_episode=False):
-        # evaluation input/action variables
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            self._eval_action = self._pi.pi(self._eval_state_var)
-        set_data_to_variable(self._eval_state_var, s)
-        self._eval_action.forward()
-        return np.squeeze(self._eval_action.d, axis=0), {}
-
-    @eval_api
-    def _compute_greedy_with_gaussian_action(self, s, *, begin_of_episode=False):
-        action, info = self._compute_greedy_action(s, begin_of_episode=begin_of_episode)
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        action, info = super()._exploration_action_selector(s, begin_of_episode=begin_of_episode)
         action_clip_low = self._env_info.action_space.low
         action_clip_high = self._env_info.action_space.high
         action_with_noise = self._append_noise(action, action_clip_low, action_clip_high)

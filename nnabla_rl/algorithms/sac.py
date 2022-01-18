@@ -17,13 +17,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
 import gym
-import numpy as np
 
 import nnabla as nn
 import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import _StochasticPolicyActionSelector
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -31,8 +31,8 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, StochasticPolicy
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable, sync_model
+from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -58,6 +58,24 @@ class SACConfig(AlgorithmConfig):
             Defaults to 10000.
         replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
         num_steps (int): number of steps for N-step Q targets. Defaults to 1.
+        actor_unroll_steps (int): Number of steps to unroll actor's tranining network.\
+            The network will be unrolled even though the provided model doesn't have RNN layers.\
+            Defaults to 1.
+        actor_burn_in_steps (int): Number of burn-in steps to initiaze actor's recurrent layer states during training.\
+            This flag does not take effect if given model is not an RNN model.\
+            Defaults to 0.
+        actor_reset_rnn_on_terminal (bool): Reset actor's recurrent internal states to zero during training\
+            if episode ends. This flag does not take effect if given model is not an RNN model.\
+            Defaults to False.
+        critic_unroll_steps (int): Number of steps to unroll critic's tranining network.\
+            The network will be unrolled even though the provided model doesn't have RNN layers.\
+            Defaults to 1.
+        critic_burn_in_steps (int): Number of burn-in steps to initiaze critic's recurrent layer states\
+            during training. This flag does not take effect if given model is not an RNN model.\
+            Defaults to 0.
+        critic_reset_rnn_on_terminal (bool): Reset critic's recurrent internal states to zero during training\
+            if episode ends. This flag does not take effect if given model is not an RNN model.\
+            Defaults to False.
     '''
 
     gamma: float = 0.99
@@ -73,6 +91,15 @@ class SACConfig(AlgorithmConfig):
     replay_buffer_size: int = 1000000
     num_steps: int = 1
 
+    # rnn model support
+    actor_unroll_steps: int = 1
+    actor_burn_in_steps: int = 0
+    actor_reset_rnn_on_terminal: bool = True
+
+    critic_unroll_steps: int = 1
+    critic_burn_in_steps: int = 0
+    critic_reset_rnn_on_terminal: bool = True
+
     def __post_init__(self):
         '''__post_init__
         Check set values are in valid range.
@@ -85,6 +112,11 @@ class SACConfig(AlgorithmConfig):
             self._assert_positive(
                 self.initial_temperature, 'initial_temperature')
         self._assert_positive(self.start_timesteps, 'start_timesteps')
+
+        self._assert_positive(self.critic_unroll_steps, 'critic_unroll_steps')
+        self._assert_positive_or_zero(self.critic_burn_in_steps, 'critic_burn_in_steps')
+        self._assert_positive(self.actor_unroll_steps, 'actor_unroll_steps')
+        self._assert_positive_or_zero(self.actor_burn_in_steps, 'actor_burn_in_steps')
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
@@ -132,7 +164,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             initial_step_num=algorithm.iteration_num,
             timelimit_as_terminal=False
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._compute_greedy_action,
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
                                         env_info=env_info,
                                         config=explorer_config)
         return explorer
@@ -192,10 +224,6 @@ class SAC(Algorithm):
     _policy_trainer: ModelTrainer
     _q_function_trainer: ModelTrainer
 
-    _eval_state_var: nn.Variable
-    _eval_deterministic_action: nn.Variable
-    _eval_probabilistic_action: nn.Variable
-
     _policy_trainer_state: Dict[str, Any]
     _q_function_trainer_state: Dict[str, Any]
 
@@ -233,10 +261,15 @@ class SAC(Algorithm):
 
             self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._pi.shallowcopy(), deterministic=True)
+        self._exploration_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._pi.shallowcopy(), deterministic=False)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_greedy_action(state, deterministic=True, begin_of_episode=begin_of_episode)
+            action, _ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -253,7 +286,10 @@ class SAC(Algorithm):
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.SoftPolicyTrainerConfig(
             fixed_temperature=self._config.fix_temperature,
-            target_entropy=self._config.target_entropy)
+            target_entropy=self._config.target_entropy,
+            unroll_steps=self._config.actor_unroll_steps,
+            burn_in_steps=self._config.actor_burn_in_steps,
+            reset_on_terminal=self._config.actor_reset_rnn_on_terminal)
         policy_trainer = MT.policy_trainers.SoftPolicyTrainer(
             models=self._pi,
             solvers={self._pi.scope_name: self._pi_solver},
@@ -269,7 +305,10 @@ class SAC(Algorithm):
         q_function_trainer_config = MT.q_value_trainers.SoftQTrainerConfig(
             reduction_method='mean',
             grad_clip=None,
-            num_steps=self._config.num_steps)
+            num_steps=self._config.num_steps,
+            unroll_steps=self._config.critic_unroll_steps,
+            burn_in_steps=self._config.critic_burn_in_steps,
+            reset_on_terminal=self._config.critic_reset_rnn_on_terminal)
 
         q_function_trainer = MT.q_value_trainers.SoftQTrainer(
             train_functions=self._train_q_functions,
@@ -301,14 +340,18 @@ class SAC(Algorithm):
             self._sac_training(replay_buffer)
 
     def _sac_training(self, replay_buffer):
-        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
-        if self._config.num_steps == 1:
+        actor_steps = self._config.actor_burn_in_steps + self._config.actor_unroll_steps
+        critic_steps = self._config.num_steps + self._config.critic_burn_in_steps + self._config.critic_unroll_steps - 1
+        num_steps = max(actor_steps, critic_steps)
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
+        if num_steps == 1:
             experiences_tuple = (experiences_tuple, )
-        assert len(experiences_tuple) == self._config.num_steps
+        assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
-            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
+            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
             batch = TrainingBatch(batch_size=self._config.batch_size,
                                   s_current=s,
                                   a_current=a,
@@ -317,7 +360,8 @@ class SAC(Algorithm):
                                   non_terminal=non_terminal,
                                   s_next=s_next,
                                   weight=info['weights'],
-                                  next_step_batch=batch)
+                                  next_step_batch=batch,
+                                  rnn_states=rnn_states)
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
@@ -327,22 +371,11 @@ class SAC(Algorithm):
         td_errors = self._q_function_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
-    @eval_api
-    def _compute_greedy_action(self, s, deterministic=False, *, begin_of_episode=False):
-        # evaluation input/action variables
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            distribution = self._pi.pi(self._eval_state_var)
-            self._eval_deterministic_action = distribution.choose_probable()
-            self._eval_probabilistic_action = distribution.sample()
-        set_data_to_variable(self._eval_state_var, s)
-        if deterministic:
-            self._eval_deterministic_action.forward()
-            return np.squeeze(self._eval_deterministic_action.d, axis=0), {}
-        else:
-            self._eval_probabilistic_action.forward()
-            return np.squeeze(self._eval_probabilistic_action.d, axis=0), {}
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
+
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _models(self):
         models = [self._q1, self._q2, self._pi, self._temperature]
@@ -355,6 +388,10 @@ class SAC(Algorithm):
         if self._temperature_solver is not None:
             solvers[self._temperature.scope_name] = self._temperature_solver
         return solvers
+
+    @classmethod
+    def is_rnn_supported(self):
+        return True
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):

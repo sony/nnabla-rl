@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,17 +24,21 @@ class HERMeanNormalizer(RunningMeanNormalizer):
     def __init__(self, scope_name, shape, epsilon=1e-8, value_clip=None):
         super(HERMeanNormalizer, self).__init__(scope_name, shape, epsilon, value_clip)
 
-        self._epsilon = create_variable(batch_size=1, shape=shape)
-        self._epsilon.d = epsilon
-
     def process(self, x):
         assert 0 < self._count.d
-        std = NF.maximum2(self._var ** 0.5, self._epsilon)
+        std = NF.maximum2(self._var ** 0.5, self._fixed_epsilon)
         normalized = (x - self._mean) / std
         if self._value_clip is not None:
             normalized = NF.clip_by_value(normalized, min=self._value_clip[0], max=self._value_clip[1])
         normalized.need_grad = False
         return normalized
+
+    @property
+    def _fixed_epsilon(self):
+        if not hasattr(self, '_epsilon_var'):
+            self._epsilon_var = create_variable(batch_size=1, shape=self._shape)
+            self._epsilon_var.d = self._epsilon
+        return self._epsilon_var
 
 
 class HERPreprocessor(Preprocessor, Model):

@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.algorithms.common_utils import (_StatePreprocessedPolicy, _StatePreprocessedRewardFunction,
+from nnabla_rl.algorithms.common_utils import (_StatePreprocessedRewardFunction, _StatePreprocessedStochasticPolicy,
                                                _StatePreprocessedVFunction, compute_v_target_and_advantage)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
@@ -277,7 +277,7 @@ class GAIL(Algorithm):
                     raise ValueError('State preprocessing is enabled but no preprocessor builder is given')
                 pi_v_preprocessor = state_preprocessor_builder('pi_v_preprocessor', self._env_info, self._config)
                 v_function = _StatePreprocessedVFunction(v_function=v_function, preprocessor=pi_v_preprocessor)
-                policy = _StatePreprocessedPolicy(policy=policy, preprocessor=pi_v_preprocessor)  # type: ignore
+                policy = _StatePreprocessedStochasticPolicy(policy=policy, preprocessor=pi_v_preprocessor)
                 r_preprocessor = state_preprocessor_builder('r_preprocessor', self._env_info, self._config)
                 discriminator = _StatePreprocessedRewardFunction(
                     reward_function=discriminator, preprocessor=r_preprocessor)

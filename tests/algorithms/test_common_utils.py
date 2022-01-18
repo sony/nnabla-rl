@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,8 @@ import numpy as np
 import pytest
 
 import nnabla as nn
-from nnabla_rl.algorithms.common_utils import (_StatePreprocessedPolicy, _StatePreprocessedVFunction,
+from nnabla_rl.algorithms.common_utils import (_StatePreprocessedDeterministicPolicy,
+                                               _StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
                                                compute_average_v_target_and_advantage, compute_v_target_and_advantage)
 from nnabla_rl.models import VFunction
 
@@ -110,7 +111,7 @@ class TestCommonUtils():
         assert v_function_old.scope_name != v_function_new.scope_name
         assert v_function_old._preprocessor.scope_name == v_function_new._preprocessor.scope_name
 
-    def test_state_preprocessed_policy(self):
+    def test_state_preprocessed_stochastic_policy(self):
         state_shape = (5, )
         action_dim = 10
 
@@ -122,12 +123,35 @@ class TestCommonUtils():
         preprocessor_scope_name = 'test_preprocessor'
         preprocessor = RP.RunningMeanNormalizer(preprocessor_scope_name, shape=state_shape)
 
-        pi_old = _StatePreprocessedPolicy(policy=pi, preprocessor=preprocessor)
+        pi_old = _StatePreprocessedStochasticPolicy(policy=pi, preprocessor=preprocessor)
 
         s = nn.Variable.from_numpy_array(np.empty(shape=(1, *state_shape)))
         _ = pi_old.pi(s)
 
-        pi_new_scope_name = 'new_v'
+        pi_new_scope_name = 'new_pi'
+        pi_new = pi_old.deepcopy(pi_new_scope_name)
+
+        assert pi_old.scope_name != pi_new.scope_name
+        assert pi_old._preprocessor.scope_name == pi_new._preprocessor.scope_name
+
+    def test_state_preprocessed_deterministic_policy(self):
+        state_shape = (5, )
+        action_dim = 10
+
+        from nnabla_rl.models import TD3Policy
+        pi_scope_name = 'old_pi'
+        pi = TD3Policy(pi_scope_name, action_dim=action_dim, max_action_value=1.0)
+
+        import nnabla_rl.preprocessors as RP
+        preprocessor_scope_name = 'test_preprocessor'
+        preprocessor = RP.RunningMeanNormalizer(preprocessor_scope_name, shape=state_shape)
+
+        pi_old = _StatePreprocessedDeterministicPolicy(policy=pi, preprocessor=preprocessor)
+
+        s = nn.Variable.from_numpy_array(np.empty(shape=(1, *state_shape)))
+        _ = pi_old.pi(s)
+
+        pi_new_scope_name = 'new_pi'
         pi_new = pi_old.deepcopy(pi_new_scope_name)
 
         assert pi_old.scope_name != pi_new.scope_name

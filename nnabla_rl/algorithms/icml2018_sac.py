@@ -17,13 +17,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Union
 
 import gym
-import numpy as np
 
 import nnabla as nn
 import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import _StochasticPolicyActionSelector
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -31,8 +31,8 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import QFunction, SACPolicy, SACQFunction, SACVFunction, StochasticPolicy, VFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable, sync_model
+from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -56,6 +56,33 @@ class ICML2018SACConfig(AlgorithmConfig):
             Defaults to 10000.
         replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
         target_update_interval (float): the interval of target v function parameter's update. Defaults to 1.
+        pi_unroll_steps (int): Number of steps to unroll policy's tranining network.\
+            The network will be unrolled even though the provided model doesn't have RNN layers.\
+            Defaults to 1.
+        pi_burn_in_steps (int): Number of burn-in steps to initiaze policy's recurrent layer states during training.\
+            This flag does not take effect if given model is not an RNN model.\
+            Defaults to 0.
+        pi_reset_rnn_on_terminal (bool): Reset policy's recurrent internal states to zero during training\
+            if episode ends. This flag does not take effect if given model is not an RNN model.\
+            Defaults to False.
+        q_unroll_steps (int): Number of steps to unroll q-function's tranining network.\
+            The network will be unrolled even though the provided model doesn't have RNN layers.\
+            Defaults to 1.
+        q_burn_in_steps (int): Number of burn-in steps to initiaze q-function's recurrent layer states\
+            during training. This flag does not take effect if given model is not an RNN model.\
+            Defaults to 0.
+        q_reset_rnn_on_terminal (bool): Reset q-function's recurrent internal states to zero during training\
+            if episode ends. This flag does not take effect if given model is not an RNN model.\
+            Defaults to False.
+        v_unroll_steps (int): Number of steps to unroll v-function's tranining network.\
+            The network will be unrolled even though the provided model doesn't have RNN layers.\
+            Defaults to 1.
+        v_burn_in_steps (int): Number of burn-in steps to initiaze v-function's recurrent layer states\
+            during training. This flag does not take effect if given model is not an RNN model.\
+            Defaults to 0.
+        v_reset_rnn_on_terminal (bool): Reset v-function's recurrent internal states to zero during training\
+            if episode ends. This flag does not take effect if given model is not an RNN model.\
+            Defaults to False.
     '''
 
     gamma: float = 0.99
@@ -69,6 +96,19 @@ class ICML2018SACConfig(AlgorithmConfig):
     replay_buffer_size: int = 1000000
     target_update_interval: int = 1
 
+    # rnn model support
+    pi_unroll_steps: int = 1
+    pi_burn_in_steps: int = 0
+    pi_reset_rnn_on_terminal: bool = True
+
+    q_unroll_steps: int = 1
+    q_burn_in_steps: int = 0
+    q_reset_rnn_on_terminal: bool = True
+
+    v_unroll_steps: int = 1
+    v_burn_in_steps: int = 0
+    v_reset_rnn_on_terminal: bool = True
+
     def __post_init__(self):
         '''__post_init__
 
@@ -81,6 +121,13 @@ class ICML2018SACConfig(AlgorithmConfig):
         self._assert_positive(self.environment_steps, 'environment_steps')
         self._assert_positive(self.start_timesteps, 'start_timesteps')
         self._assert_positive(self.target_update_interval, 'target_update_interval')
+
+        self._assert_positive(self.pi_unroll_steps, 'pi_unroll_steps')
+        self._assert_positive_or_zero(self.pi_burn_in_steps, 'pi_burn_in_steps')
+        self._assert_positive(self.q_unroll_steps, 'q_unroll_steps')
+        self._assert_positive_or_zero(self.q_burn_in_steps, 'q_burn_in_steps')
+        self._assert_positive(self.v_unroll_steps, 'v_unroll_steps')
+        self._assert_positive_or_zero(self.v_burn_in_steps, 'v_burn_in_steps')
 
 
 class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
@@ -140,7 +187,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             initial_step_num=algorithm.iteration_num,
             timelimit_as_terminal=False
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._compute_greedy_action,
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
                                         env_info=env_info,
                                         config=explorer_config)
         return explorer
@@ -241,10 +288,15 @@ class ICML2018SAC(Algorithm):
 
             self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._pi.shallowcopy(), deterministic=True)
+        self._exploration_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._pi.shallowcopy(), deterministic=False)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_greedy_action(state, deterministic=True, begin_of_episode=begin_of_episode)
+            action, _ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -252,17 +304,19 @@ class ICML2018SAC(Algorithm):
         context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
-        self._q_function_trainer = self._setup_q_function_training(
-            env_or_buffer)
-        self._v_function_trainer = self._setup_v_function_training(
-            env_or_buffer)
+        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
+        self._v_function_trainer = self._setup_v_function_training(env_or_buffer)
 
     def _setup_environment_explorer(self, env_or_buffer):
         return None if self._is_buffer(env_or_buffer) else self._explorer_builder(self._env_info, self._config, self)
 
     def _setup_policy_training(self, env_or_buffer):
         # NOTE: Fix temperature to 1.0. Because This version of SAC adjusts it by scaling the reward
-        policy_trainer_config = MT.policy_trainers.SoftPolicyTrainerConfig(fixed_temperature=True)
+        policy_trainer_config = MT.policy_trainers.SoftPolicyTrainerConfig(
+            fixed_temperature=True,
+            unroll_steps=self._config.pi_unroll_steps,
+            burn_in_steps=self._config.pi_burn_in_steps,
+            reset_on_terminal=self._config.pi_reset_rnn_on_terminal)
         temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
             scope_name='temperature',
             initial_value=1.0)
@@ -279,7 +333,10 @@ class ICML2018SAC(Algorithm):
     def _setup_q_function_training(self, env_or_buffer):
         q_function_trainer_param = MT.q_value_trainers.VTargetedQTrainerConfig(
             reduction_method='mean',
-            q_loss_scalar=0.5)
+            q_loss_scalar=0.5,
+            unroll_steps=self._config.q_unroll_steps,
+            burn_in_steps=self._config.q_burn_in_steps,
+            reset_on_terminal=self._config.q_reset_rnn_on_terminal)
         q_function_trainer = MT.q_value_trainers.VTargetedQTrainer(
             train_functions=self._train_q_functions,
             solvers=self._train_q_solvers,
@@ -289,11 +346,13 @@ class ICML2018SAC(Algorithm):
         return q_function_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_config = MT.v_value.SoftVTrainerConfig(
+        v_function_trainer_config = MT.v_value_trainers.SoftVTrainerConfig(
             reduction_method='mean',
-            v_loss_scalar=0.5
-        )
-        v_function_trainer = MT.v_value.SoftVTrainer(
+            v_loss_scalar=0.5,
+            unroll_steps=self._config.v_unroll_steps,
+            burn_in_steps=self._config.v_burn_in_steps,
+            reset_on_terminal=self._config.v_reset_rnn_on_terminal)
+        v_function_trainer = MT.v_value_trainers.SoftVTrainer(
             train_functions=self._v,
             solvers={self._v.scope_name: self._v_solver},
             target_functions=self._train_q_functions,  # Set training q as target
@@ -322,16 +381,29 @@ class ICML2018SAC(Algorithm):
             self._sac_training(replay_buffer)
 
     def _sac_training(self, replay_buffer):
-        experiences, info = replay_buffer.sample(self._config.batch_size)
-        (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        pi_steps = self._config.pi_burn_in_steps + self._config.pi_unroll_steps
+        q_steps = self._config.q_burn_in_steps + self._config.q_unroll_steps
+        v_steps = self._config.v_burn_in_steps + self._config.v_unroll_steps
+        num_steps = max(pi_steps, max(q_steps, v_steps))
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
+        if num_steps == 1:
+            experiences_tuple = (experiences_tuple, )
+        assert len(experiences_tuple) == num_steps
+
+        batch = None
+        for experiences in reversed(experiences_tuple):
+            (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
+            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
+            batch = TrainingBatch(batch_size=self._config.batch_size,
+                                  s_current=s,
+                                  a_current=a,
+                                  gamma=self._config.gamma,
+                                  reward=r,
+                                  non_terminal=non_terminal,
+                                  s_next=s_next,
+                                  weight=info['weights'],
+                                  next_step_batch=batch,
+                                  rnn_states=rnn_states)
 
         # Train in the order of v -> q -> policy
         self._v_function_trainer_state = self._v_function_trainer.train(batch)
@@ -343,22 +415,11 @@ class ICML2018SAC(Algorithm):
         td_errors = self._q_function_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
-    @eval_api
-    def _compute_greedy_action(self, s, deterministic=False, *, begin_of_episode=False):
-        # evaluation input/action variables
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            distribution = self._pi.pi(self._eval_state_var)
-            self._eval_deterministic_action = distribution.choose_probable()
-            self._eval_probabilistic_action = distribution.sample()
-        set_data_to_variable(self._eval_state_var, s)
-        if deterministic:
-            self._eval_deterministic_action.forward()
-            return np.squeeze(self._eval_deterministic_action.d, axis=0), {}
-        else:
-            self._eval_probabilistic_action.forward()
-            return np.squeeze(self._eval_probabilistic_action.d, axis=0), {}
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
+
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _models(self):
         models = [self._v, self._target_v, self._q1, self._q2, self._pi]
@@ -370,6 +431,10 @@ class ICML2018SAC(Algorithm):
         solvers[self._v.scope_name] = self._v_solver
         solvers[self._pi.scope_name] = self._pi_solver
         return solvers
+
+    @classmethod
+    def is_rnn_supported(cls):
+        return True
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):

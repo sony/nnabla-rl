@@ -21,10 +21,10 @@ import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables)
+                                                    TrainingVariables, rnn_support)
 from nnabla_rl.models import Model, VFunction
 from nnabla_rl.utils.data import set_data_to_variable
-from nnabla_rl.utils.misc import clip_grad_by_global_norm, create_variable
+from nnabla_rl.utils.misc import clip_grad_by_global_norm, create_variable, create_variables
 
 
 @dataclass
@@ -44,12 +44,14 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: SquaredTDVFunctionTrainerConfig
     _v_loss: nn.Variable  # Training loss/output
+    _prev_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
     def __init__(self,
                  models: Union[VFunction, Sequence[VFunction]],
                  solvers: Dict[str, nn.solver.Solver],
                  env_info: EnvironmentInfo,
                  config: SquaredTDVFunctionTrainerConfig = SquaredTDVFunctionTrainerConfig()):
+        self._prev_rnn_states = {}
         super(SquaredTDVFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
     def _update_model(self,
@@ -60,6 +62,21 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
                       **kwargs) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
+            if self.support_rnn() and self._config.reset_on_terminal and self._need_rnn_support(models):
+                set_data_to_variable(t.non_terminal, b.non_terminal)
+
+            for model in models:
+                if not model.is_recurrent():
+                    continue
+                # Check batch keys. Because it can be empty.
+                # If batch does not provide rnn states, train with zero initial state.
+                if model.scope_name not in batch.rnn_states.keys():
+                    continue
+                b_rnn_states = b.rnn_states[model.scope_name]
+                t_rnn_states = t.rnn_states[model.scope_name]
+
+                for state_name in t_rnn_states.keys():
+                    set_data_to_variable(t_rnn_states[state_name], b_rnn_states[state_name])
 
         # update model
         for solver in solvers.values():
@@ -93,9 +110,13 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
         target_v = self._compute_target(training_variables)
         target_v.need_grad = False
 
+        prev_rnn_states = self._prev_rnn_states
+        train_rnn_states = training_variables.rnn_states
         for v_function in models:
             v_function = cast(VFunction, v_function)
-            self._v_loss += 0.0 if ignore_loss else self._compute_loss(v_function, target_v, training_variables)
+            with rnn_support(v_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
+                v_loss = self._compute_loss(v_function, target_v, training_variables)
+            self._v_loss += 0.0 if ignore_loss else v_loss
 
     def _compute_loss(self,
                       model: VFunction,
@@ -117,5 +138,17 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables
         s_current_var = create_variable(batch_size, self._env_info.state_shape)
+        # Only used with rnn training
+        non_terminal_var = create_variable(batch_size, 1)
 
-        return TrainingVariables(batch_size, s_current_var)
+        rnn_states = {}
+        for model in self._models:
+            if model.is_recurrent():
+                rnn_state_variables = create_variables(batch_size, model.internal_state_shapes())
+                rnn_states[model.scope_name] = rnn_state_variables
+
+        training_variables = TrainingVariables(batch_size=batch_size,
+                                               s_current=s_current_var,
+                                               non_terminal=non_terminal_var,
+                                               rnn_states=rnn_states)
+        return training_variables

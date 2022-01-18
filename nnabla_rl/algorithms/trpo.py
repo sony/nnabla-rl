@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.algorithms.common_utils import (_StatePreprocessedPolicy, _StatePreprocessedVFunction,
+from nnabla_rl.algorithms.common_utils import (_StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
                                                compute_v_target_and_advantage)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
@@ -224,7 +224,7 @@ class TRPO(Algorithm):
                 preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
                 assert preprocessor is not None
                 self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
-                self._policy = _StatePreprocessedPolicy(policy=self._policy, preprocessor=preprocessor)  # type: ignore
+                self._policy = _StatePreprocessedStochasticPolicy(policy=self._policy, preprocessor=preprocessor)
                 self._state_preprocessor = preprocessor
             self._v_function_solver = v_solver_builder(self._env_info, self._config)
 
