@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ class EpsilonGreedyExplorerBuilder(ExplorerBuilder):
             max_explore_steps=algorithm_config.max_explore_steps
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
-            greedy_action_selector=algorithm._greedy_action_selector,
+            greedy_action_selector=algorithm._exploration_action_selector,
             random_action_selector=algorithm._random_action_selector,
             env_info=env_info,
             config=explorer_config)

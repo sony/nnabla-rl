@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,11 +18,12 @@ from typing import Sequence, Tuple, Union
 import numpy as np
 
 import nnabla as nn
-from nnabla_rl.models import DeterministicPolicy, Model, Policy, QFunction, RewardFunction, StochasticPolicy, VFunction
+from nnabla_rl.algorithm import eval_api
+from nnabla_rl.models import DeterministicPolicy, Policy, QFunction, RewardFunction, StochasticPolicy, VFunction
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.typing import Experience, State
-from nnabla_rl.utils.data import marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
+from nnabla_rl.utils.misc import create_variable, create_variables
 
 
 def _get_shape(state: State) -> Union[Tuple[int, ...], Tuple[Tuple[int, ...], ...]]:
@@ -157,7 +158,7 @@ class _StatePreprocessedVFunction(VFunction):
         preprocessed_state = self._preprocessor.process(s)
         return self._v_function.v(preprocessed_state)
 
-    def deepcopy(self, new_scope_name: str) -> Model:
+    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedVFunction':
         copied = super().deepcopy(new_scope_name=new_scope_name)
         assert isinstance(copied,  _StatePreprocessedVFunction)
         copied._v_function._scope_name = new_scope_name
@@ -177,7 +178,7 @@ class _StatePreprocessedPolicy(Policy):
         preprocessed_state = self._preprocessor.process(s)
         return self._policy.pi(preprocessed_state)
 
-    def deepcopy(self, new_scope_name: str) -> Model:
+    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedPolicy':
         copied = super().deepcopy(new_scope_name=new_scope_name)
         assert isinstance(copied,  _StatePreprocessedPolicy)
         copied._policy._scope_name = new_scope_name
@@ -198,7 +199,7 @@ class _StatePreprocessedRewardFunction(RewardFunction):
         preprocessed_state_next = self._preprocessor.process(s_next)
         return self._reward_function.r(preprocessed_state_current, a_current, preprocessed_state_next)
 
-    def deepcopy(self, new_scope_name: str) -> Model:
+    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedRewardFunction':
         copied = super().deepcopy(new_scope_name=new_scope_name)
         assert isinstance(copied,  _StatePreprocessedRewardFunction)
         copied._reward_function._scope_name = new_scope_name
@@ -230,8 +231,35 @@ class _StatePreprocessedQFunction(QFunction):
         preprocessed_state = self._preprocessor.process(s)
         return self._q_function.argmax_q(preprocessed_state)
 
-    def deepcopy(self, new_scope_name: str) -> Model:
+    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedQFunction':
         copied = super().deepcopy(new_scope_name=new_scope_name)
         assert isinstance(copied,  _StatePreprocessedQFunction)
         copied._q_function._scope_name = new_scope_name
         return copied
+
+
+class _GreedyActionSelector(object):
+    def __init__(self, env_info, q_function: QFunction):
+        self._env_info = env_info
+        self._q = q_function
+
+    @eval_api
+    def __call__(self, s, *, begin_of_episode=False):
+        s = add_batch_dimension(s)
+        if not hasattr(self, '_eval_state_var'):
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
+            if self._q.is_recurrent():
+                self._rnn_internal_states = create_variables(1, self._q.internal_state_shapes())
+                self._q.set_internal_states(self._rnn_internal_states)
+            self._a_greedy = self._q.argmax_q(self._eval_state_var)
+        if self._q.is_recurrent() and begin_of_episode:
+            self._q.reset_internal_states()
+        set_data_to_variable(self._eval_state_var, s)
+        if self._q.is_recurrent():
+            prev_rnn_states = self._q.get_internal_states()
+            for key in self._rnn_internal_states.keys():
+                # copy internal states of previous iteration
+                self._rnn_internal_states[key].d = prev_rnn_states[key].d
+        self._a_greedy.forward()
+        # No need to save internal states
+        return np.squeeze(self._a_greedy.d, axis=0), {}

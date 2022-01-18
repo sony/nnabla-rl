@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple, Union, cast
+from typing import Any, Dict, Optional, Tuple, Union
 
 import gym
 import numpy as np
@@ -24,6 +24,7 @@ import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import _GreedyActionSelector
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
@@ -32,8 +33,8 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import DQNQFunction, QFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable, create_variables, sync_model
+from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -170,33 +171,6 @@ class DefaultExplorerBuilder(ExplorerBuilder):
         return explorer
 
 
-class _GreedyActionSelector(object):
-    def __init__(self, env_info, q_function: QFunction):
-        self._env_info = env_info
-        self._q = q_function.shallowcopy()
-
-    @eval_api
-    def __call__(self, s, *, begin_of_episode=False):
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            if self._q.is_recurrent():
-                self._rnn_internal_states = create_variables(1, self._q.internal_state_shapes())
-                self._q.set_internal_states(self._rnn_internal_states)
-            self._a_greedy = self._q.argmax_q(self._eval_state_var)
-        if self._q.is_recurrent() and begin_of_episode:
-            self._q.reset_internal_states()
-        set_data_to_variable(self._eval_state_var, s)
-        if self._q.is_recurrent():
-            prev_rnn_states = self._q.get_internal_states()
-            for key in self._rnn_internal_states.keys():
-                # copy internal states of previous iteration
-                self._rnn_internal_states[key].d = prev_rnn_states[key].d
-        self._a_greedy.forward()
-        # No need to save internal states
-        return np.squeeze(self._a_greedy.d, axis=0), {}
-
-
 class DQN(Algorithm):
     '''DQN algorithm.
 
@@ -234,8 +208,6 @@ class DQN(Algorithm):
     _explorer_builder: ExplorerBuilder
     _environment_explorer: EnvironmentExplorer
     _q_function_trainer: ModelTrainer
-    _eval_state_var: nn.Variable
-    _a_greedy: nn.Variable
 
     _q_function_trainer_state: Dict[str, Any]
 
@@ -255,15 +227,15 @@ class DQN(Algorithm):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._q = q_func_builder(scope_name='q', env_info=self._env_info, algorithm_config=self._config)
             self._q_solver = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-            self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
+            self._target_q = self._q.deepcopy('target_' + self._q.scope_name)
 
             self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
             self._environment_explorer = explorer_builder(env_info=self._env_info,
                                                           algorithm_config=self._config,
                                                           algorithm=self)
 
-        self._evaluation_actor = _GreedyActionSelector(self._env_info, self._q)
-        self._exploration_actor = _GreedyActionSelector(self._env_info, self._q)
+        self._evaluation_actor = _GreedyActionSelector(self._env_info, self._q.shallowcopy())
+        self._exploration_actor = _GreedyActionSelector(self._env_info, self._q.shallowcopy())
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):

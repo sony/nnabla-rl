@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -150,6 +150,18 @@ class DiscreteValueDistributionFunction(ValueDistributionFunction):
                 probabilities = self._value_distribution_function.all_probs(s)
                 greedy_action = self._value_distribution_function._argmax_q_from_probabilities(probabilities)
                 return greedy_action
+
+            def is_recurrent(self) -> bool:
+                return self._value_distribution_function.is_recurrent()
+
+            def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+                return self._value_distribution_function.internal_state_shapes()
+
+            def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+                return self._value_distribution_function.set_internal_states(states)
+
+            def get_internal_states(self) -> Dict[str, nn.Variable]:
+                return self._value_distribution_function.get_internal_states()
 
         return Wrapper(self)
 
@@ -304,6 +316,18 @@ class DiscreteQuantileDistributionFunction(QuantileDistributionFunction):
                 greedy_action = self._quantile_distribution_function._argmax_q_from_quantiles(quantiles)
                 return greedy_action
 
+            def is_recurrent(self) -> bool:
+                return self._quantile_distribution_function.is_recurrent()
+
+            def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+                return self._quantile_distribution_function.internal_state_shapes()
+
+            def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+                return self._quantile_distribution_function.set_internal_states(states)
+
+            def get_internal_states(self) -> Dict[str, nn.Variable]:
+                return self._quantile_distribution_function.get_internal_states()
+
         return Wrapper(self)
 
     def _argmax_q_from_quantiles(self, quantiles: nn.Variable) -> nn.Variable:
@@ -451,11 +475,17 @@ class DiscreteStateActionQuantileFunction(StateActionQuantileFunction):
         return self._return_samples_of(return_samples, a)
 
     def max_q_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
+        if self.is_recurrent():
+            raise RuntimeError('max_q_quantile_values should be reimplemented in inherited class to support RNN layers')
+
         batch_size = s.shape[0]
         tau_k = self._sample_risk_measured_tau(shape=(batch_size, self._K))
+        # This implementation does not support RNNs because internal state will be overwritten by
+        # the second call of all_quantile_values()
         _return_samples = self.all_quantile_values(s, tau_k)
         a_star = self._argmax_q_from_return_samples(_return_samples)
 
+        # This will overwrite the internal state. So may not properly trained if this is called during training.
         return_samples = self.all_quantile_values(s, tau)
         return self._return_samples_of(return_samples, a_star)
 
@@ -492,6 +522,18 @@ class DiscreteStateActionQuantileFunction(StateActionQuantileFunction):
                 samples = self._quantile_function.all_quantile_values(s, tau)
                 greedy_action = self._quantile_function._argmax_q_from_return_samples(samples)
                 return greedy_action
+
+            def is_recurrent(self) -> bool:
+                return self._quantile_function.is_recurrent()
+
+            def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+                return self._quantile_function.internal_state_shapes()
+
+            def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+                return self._quantile_function.set_internal_states(states)
+
+            def get_internal_states(self) -> Dict[str, nn.Variable]:
+                return self._quantile_function.get_internal_states()
 
         return Wrapper(self)
 

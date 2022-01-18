@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Dict, Union, cast
+from typing import Any, Dict, Union
 
 import gym
 import numpy as np
@@ -24,6 +24,7 @@ import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import _GreedyActionSelector
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_action_selection
@@ -32,8 +33,8 @@ from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import C51ValueDistributionFunction, ValueDistributionFunction
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable, sync_model
+from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.misc import sync_model
 
 
 @dataclass
@@ -67,6 +68,15 @@ class CategoricalDQNConfig(AlgorithmConfig):
         v_max (float): upper limit of the value used in value distribution function. Defaults to 10.0.
         num_atoms (int): the number of bins used in value distribution function. Defaults to 51.
         loss_reduction_method (str): KL loss reduction method. "sum" or "mean" is supported. Defaults to mean.
+        unroll_steps (int): Number of steps to unroll tranining network.
+            The network will be unrolled even though the provided model doesn't have RNN layers.
+            Defaults to 1.
+        burn_in_steps (int): Number of burn-in steps to initiaze recurrent layer states during training.
+            This flag does not take effect if given model is not an RNN model.
+            Defaults to 0.
+        reset_rnn_on_terminal (bool): Reset recurrent internal states to zero during training if episode ends.
+            This flag does not take effect if given model is not an RNN model.
+            Defaults to True.
     '''
 
     gamma: float = 0.99
@@ -85,6 +95,34 @@ class CategoricalDQNConfig(AlgorithmConfig):
     v_max: float = 10.0
     num_atoms: int = 51
     loss_reduction_method: str = "mean"
+
+    # rnn model support
+    unroll_steps: int = 1
+    burn_in_steps: int = 0
+    reset_rnn_on_terminal: bool = True
+
+    def __post_init__(self):
+        '''__post_init__
+
+        Check set values are in valid range.
+
+        '''
+        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
+        self._assert_positive(self.learning_rate, 'learning_rate')
+        self._assert_positive(self.batch_size, 'batch_size')
+        self._assert_positive(self.num_steps, 'num_steps')
+        self._assert_positive(self.learner_update_frequency, 'learner_update_frequency')
+        self._assert_positive(self.target_update_frequency, 'target_update_frequency')
+        self._assert_positive(self.start_timesteps, 'start_timesteps')
+        self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
+        self._assert_smaller_than(self.start_timesteps, self.replay_buffer_size, 'start_timesteps')
+        self._assert_positive(self.max_explore_steps, 'max_explore_steps')
+        self._assert_between(self.initial_epsilon, 0.0, 1.0, 'initial_epsilon')
+        self._assert_between(self.final_epsilon, 0.0, 1.0, 'final_epsilon')
+        self._assert_between(self.test_epsilon, 0.0, 1.0, 'test_epsilon')
+        self._assert_positive(self.num_atoms, 'num_atoms')
+        self._assert_positive(self.unroll_steps, 'unroll_steps')
+        self._assert_positive_or_zero(self.burn_in_steps, 'burn_in_steps')
 
 
 class DefaultValueDistFunctionBuilder(ModelBuilder[ValueDistributionFunction]):
@@ -130,7 +168,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             max_explore_steps=algorithm_config.max_explore_steps
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
-            greedy_action_selector=algorithm._greedy_action_selector,
+            greedy_action_selector=algorithm._exploration_action_selector,
             random_action_selector=algorithm._random_action_selector,
             env_info=env_info,
             config=explorer_config)
@@ -172,8 +210,8 @@ class CategoricalDQN(Algorithm):
     _environment_explorer: EnvironmentExplorer
     _model_trainer: ModelTrainer
 
-    _eval_state_var: nn.Variable
-    _a_greedy: nn.Variable
+    _evaluation_actor: _GreedyActionSelector
+    _exploration_actor: _GreedyActionSelector
 
     _model_trainer_state: Dict[str, Any]
 
@@ -191,15 +229,18 @@ class CategoricalDQN(Algorithm):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._atom_p = value_distribution_builder('atom_p_train', self._env_info, self._config)
             self._atom_p_solver = value_distribution_solver_builder(self._env_info, self._config)
-            self._target_atom_p = cast(ValueDistributionFunction, self._atom_p.deepcopy('target_atom_p_train'))
+            self._target_atom_p = self._atom_p.deepcopy('target_atom_p_train')
 
             self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
+
+        self._evaluation_actor = _GreedyActionSelector(self._env_info, self._atom_p.shallowcopy().as_q_function())
+        self._exploration_actor = _GreedyActionSelector(self._env_info, self._atom_p.shallowcopy().as_q_function())
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             (action, _), _ = epsilon_greedy_action_selection(state,
-                                                             self._greedy_action_selector,
+                                                             self._evaluation_action_selector,
                                                              self._random_action_selector,
                                                              epsilon=self._config.test_epsilon,
                                                              begin_of_episode=begin_of_episode)
@@ -220,7 +261,10 @@ class CategoricalDQN(Algorithm):
             v_min=self._config.v_min,
             v_max=self._config.v_max,
             num_atoms=self._config.num_atoms,
-            reduction_method=self._config.loss_reduction_method)
+            reduction_method=self._config.loss_reduction_method,
+            unroll_steps=self._config.unroll_steps,
+            burn_in_steps=self._config.burn_in_steps,
+            reset_on_terminal=self._config.reset_rnn_on_terminal)
 
         model_trainer = MT.q_value_trainers.CategoricalDQNQTrainer(
             train_functions=self._atom_p,
@@ -245,14 +289,16 @@ class CategoricalDQN(Algorithm):
         self._categorical_dqn_training(buffer)
 
     def _categorical_dqn_training(self, replay_buffer):
-        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=self._config.num_steps)
-        if self._config.num_steps == 1:
+        num_steps = self._config.num_steps + self._config.burn_in_steps + self._config.unroll_steps - 1
+        experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
+        if num_steps == 1:
             experiences_tuple = (experiences_tuple, )
-        assert len(experiences_tuple) == self._config.num_steps
+        assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
-            (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
+            (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
+            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
             batch = TrainingBatch(batch_size=self._config.batch_size,
                                   s_current=s,
                                   a_current=a,
@@ -261,7 +307,8 @@ class CategoricalDQN(Algorithm):
                                   non_terminal=non_terminal,
                                   s_next=s_next,
                                   weight=info['weights'],
-                                  next_step_batch=batch)
+                                  next_step_batch=batch,
+                                  rnn_states=rnn_states)
 
         self._model_trainer_state = self._model_trainer.train(batch)
         if self.iteration_num % self._config.target_update_frequency == 0:
@@ -269,16 +316,11 @@ class CategoricalDQN(Algorithm):
         td_errors = self._model_trainer_state['td_errors']
         replay_buffer.update_priorities(td_errors)
 
-    @eval_api
-    def _greedy_action_selector(self, s, *, begin_of_episode=False):
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            q_function = self._atom_p.as_q_function()
-            self._a_greedy = q_function.argmax_q(self._eval_state_var)
-        set_data_to_variable(self._eval_state_var, s)
-        self._a_greedy.forward()
-        return np.squeeze(self._a_greedy.d, axis=0), {}
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
+
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _random_action_selector(self, s, *, begin_of_episode=False):
         action = self._env_info.action_space.sample()
@@ -299,6 +341,10 @@ class CategoricalDQN(Algorithm):
         env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
             else env_or_env_info
         return not env_info.is_continuous_action_env()
+
+    @classmethod
+    def is_rnn_supported(self):
+        return True
 
     @property
     def latest_iteration_state(self):

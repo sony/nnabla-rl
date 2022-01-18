@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union
 
 import gym
 import numpy as np
@@ -218,8 +218,7 @@ class SAC(Algorithm):
             self._train_q_functions = [self._q1, self._q2]
             self._train_q_solvers = {q.scope_name: q_solver_builder(self._env_info, self._config)
                                      for q in self._train_q_functions}
-            self._target_q_functions = [cast(QFunction, q.deepcopy('target_' + q.scope_name))
-                                        for q in self._train_q_functions]
+            self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in self._train_q_functions]
 
             self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
             self._pi_solver = policy_solver_builder(self._env_info, self._config)

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Dict, Union, cast
+from typing import Any, Dict, Union
 
 import gym
 import numpy as np
@@ -186,11 +186,11 @@ class DDPG(Algorithm):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._q = critic_builder(scope_name="q", env_info=self._env_info, algorithm_config=self._config)
             self._q_solver = critic_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-            self._target_q = cast(QFunction, self._q.deepcopy('target_' + self._q.scope_name))
+            self._target_q = self._q.deepcopy('target_' + self._q.scope_name)
 
             self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
             self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-            self._target_pi = cast(DeterministicPolicy, self._pi.deepcopy("target_" + self._pi.scope_name))
+            self._target_pi = self._pi.deepcopy("target_" + self._pi.scope_name)
 
             self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
