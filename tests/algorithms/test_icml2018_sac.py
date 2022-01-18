@@ -284,6 +284,7 @@ class TestICML2018SAC(object):
         config.q_burn_in_steps = 2
         config.v_unroll_steps = 2
         config.v_burn_in_steps = 2
+        config.num_steps = 2
         config.start_timesteps = 7
         config.batch_size = 2
         sac = A.ICML2018SAC(dummy_env, config=config,

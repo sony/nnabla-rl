@@ -55,6 +55,7 @@ class ICML2018SACConfig(AlgorithmConfig):
             The algorithm will collect experiences from the environment by acting randomly until this timestep.\
             Defaults to 10000.
         replay_buffer_size (int): capacity of the replay buffer. Defaults to 1000000.
+        num_steps (int): number of steps for N-step Q targets. Defaults to 1.
         target_update_interval (float): the interval of target v function parameter's update. Defaults to 1.
         pi_unroll_steps (int): Number of steps to unroll policy's tranining network.\
             The network will be unrolled even though the provided model doesn't have RNN layers.\
@@ -95,6 +96,7 @@ class ICML2018SACConfig(AlgorithmConfig):
     start_timesteps: int = 10000
     replay_buffer_size: int = 1000000
     target_update_interval: int = 1
+    num_steps: int = 1
 
     # rnn model support
     pi_unroll_steps: int = 1
@@ -121,6 +123,7 @@ class ICML2018SACConfig(AlgorithmConfig):
         self._assert_positive(self.environment_steps, 'environment_steps')
         self._assert_positive(self.start_timesteps, 'start_timesteps')
         self._assert_positive(self.target_update_interval, 'target_update_interval')
+        self._assert_positive(self.num_steps, 'num_steps')
 
         self._assert_positive(self.pi_unroll_steps, 'pi_unroll_steps')
         self._assert_positive_or_zero(self.pi_burn_in_steps, 'pi_burn_in_steps')
@@ -334,6 +337,7 @@ class ICML2018SAC(Algorithm):
         q_function_trainer_param = MT.q_value_trainers.VTargetedQTrainerConfig(
             reduction_method='mean',
             q_loss_scalar=0.5,
+            num_steps=self._config.num_steps,
             unroll_steps=self._config.q_unroll_steps,
             burn_in_steps=self._config.q_burn_in_steps,
             reset_on_terminal=self._config.q_reset_rnn_on_terminal)
@@ -382,7 +386,7 @@ class ICML2018SAC(Algorithm):
 
     def _sac_training(self, replay_buffer):
         pi_steps = self._config.pi_burn_in_steps + self._config.pi_unroll_steps
-        q_steps = self._config.q_burn_in_steps + self._config.q_unroll_steps
+        q_steps = self._config.num_steps + self._config.q_burn_in_steps + self._config.q_unroll_steps - 1
         v_steps = self._config.v_burn_in_steps + self._config.v_unroll_steps
         num_steps = max(pi_steps, max(q_steps, v_steps))
         experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
