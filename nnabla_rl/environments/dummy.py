@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,6 +82,15 @@ class DummyDiscreteImg(AbstractDummyEnv):
         self.observation_space = gym.spaces.Box(
             low=0.0, high=1.0, shape=(4, 84, 84))
         self.action_space = gym.spaces.Discrete(4)
+
+
+class DummyContinuousImg(AbstractDummyEnv):
+    def __init__(self, image_shape=(3, 64, 64), max_episode_steps=None):
+        super(DummyContinuousImg, self).__init__(
+            max_episode_steps=max_episode_steps)
+        self.observation_space = gym.spaces.Box(
+            low=0.0, high=1.0, shape=image_shape)
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))
 
 
 class DummyAtariEnv(AbstractDummyEnv):

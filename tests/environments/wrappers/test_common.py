@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 import nnabla_rl.environments as E
-from nnabla_rl.environments.wrappers.common import NumpyFloat32Env
+from nnabla_rl.environments.wrappers.common import NumpyFloat32Env, TimestepAsStateEnv
 
 
 class TestCommon(object):
@@ -54,6 +54,36 @@ class TestCommon(object):
         assert next_state[0].dtype == np.float32
         assert next_state[1].dtype == np.float32
         assert reward.dtype == np.float32
+
+    def test_timestep_as_state_env_continuous(self):
+        env = E.DummyContinuous()
+        env = TimestepAsStateEnv(env)
+
+        action = env.action_space.sample()
+        next_state, reward, _, _ = env.step(action)
+
+        assert len(next_state) == 2
+        assert next_state[1] == 1
+
+        next_state, reward, _, _ = env.step(action)
+
+        assert len(next_state) == 2
+        assert next_state[1] == 2
+
+    def test_timestep_as_state_env_discrete(self):
+        env = E.DummyDiscrete()
+        env = TimestepAsStateEnv(env)
+
+        action = env.action_space.sample()
+        next_state, reward, _, _ = env.step(action)
+
+        assert len(next_state) == 2
+        assert next_state[1] == 1
+
+        next_state, reward, _, _ = env.step(action)
+
+        assert len(next_state) == 2
+        assert next_state[1] == 2
 
 
 if __name__ == "__main__":

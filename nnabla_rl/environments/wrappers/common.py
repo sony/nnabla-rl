@@ -15,6 +15,7 @@
 
 import gym
 import numpy as np
+from gym import spaces
 
 from nnabla_rl.logger import logger
 
@@ -122,3 +123,43 @@ class PrintEpisodeResultEnv(gym.Wrapper):
     def reset(self):
         self._episode_rewards.clear()
         return self.env.reset()
+
+
+class TimestepAsStateEnv(gym.Wrapper):
+    '''Timestep as state environment wrapper.
+    This wrapper adds the timestep to original state. The concatenated state provides in TupleState type.
+    '''
+
+    def __init__(self, env):
+        super(TimestepAsStateEnv, self).__init__(env)
+        self._timestep = 0
+        obs_space = self.observation_space
+        timestep_obs_space = spaces.Box(low=0., high=np.inf, shape=(1, ), dtype=np.float32)
+        self.observation_space = spaces.Tuple([obs_space, timestep_obs_space])
+
+    def reset(self):
+        observation = self.env.reset()
+        self._timestep = 0
+        return self.observation(observation)
+
+    def step(self, action):
+        observation, reward, done, info = self.env.step(action)
+        self._timestep += 1
+        return self.observation(observation), reward, done, info
+
+    def observation(self, observation):
+        return (observation, np.ones(1, dtype=np.int32) * self._timestep)
+
+
+class HWCToCHWEnv(gym.ObservationWrapper):
+    '''HWC to CHW env wrapper.
+    This wrapper changes the order of the image, from (height, width, channel) to (channel, height, width)
+    '''
+
+    def __init__(self, env):
+        gym.ObservationWrapper.__init__(self, env)
+        height, width, channel = self.observation_space.shape
+        self.observation_space = spaces.Box(low=0, high=255, shape=(channel, height, width), dtype=np.uint8)
+
+    def observation(self, obs):
+        return np.transpose(obs, [2, 0, 1])

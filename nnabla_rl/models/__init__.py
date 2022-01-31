@@ -58,4 +58,6 @@ from nnabla_rl.models.atari.distributional_functions import (C51ValueDistributio
                                                              IQNQuantileFunction)
 from nnabla_rl.models.atari.policies import ICML2015TRPOPolicy as ICML2015TRPOAtariPolicy  # noqa
 
+from nnabla_rl.models.pybullet.q_functions import ICRA2018QtOptQFunction  # noqa
+
 from nnabla_rl.models.classic_control.policies import REINFORCEContinousPolicy, REINFORCEDiscretePolicy  # noqa

@@ -30,6 +30,7 @@ from nnabla_rl.algorithms.gail import GAIL, GAILConfig
 from nnabla_rl.algorithms.her import HER, HERConfig
 from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOConfig
 from nnabla_rl.algorithms.icml2018_sac import ICML2018SAC, ICML2018SACConfig
+from nnabla_rl.algorithms.icra2018_qtopt import ICRA2018QtOpt, ICRA2018QtOptConfig
 from nnabla_rl.algorithms.iqn import IQN, IQNConfig
 from nnabla_rl.algorithms.mme_sac import MMESAC, MMESACConfig
 from nnabla_rl.algorithms.munchausen_dqn import MunchausenDQN, MunchausenDQNConfig
@@ -100,3 +101,4 @@ register_algorithm(TD3, TD3Config)
 register_algorithm(ICML2015TRPO, ICML2015TRPOConfig)
 register_algorithm(TRPO, TRPOConfig)
 register_algorithm(GAIL, GAILConfig)
+register_algorithm(ICRA2018QtOpt, ICRA2018QtOptConfig)
