@@ -4,6 +4,14 @@ This reproduction script trains the DRQN (Deep Recurrent Q-learning Network) alg
 proposed by M. Hausknecht, et al. in the paper: 
 [Deep Recurrent Q-Learning for Partially Observable MDPs](https://arxiv.org/pdf/1507.06527.pdf)
 
+## Prerequisite
+
+Install gym[atari] via pip and install atari ROMS following [here](https://github.com/mgbellemare/Arcade-Learning-Environment/tree/master/examples/python-rom-package).
+
+```
+$ pip install gym[atari]
+```
+
 ## How to run the reproduction script
 
 To run the reproduction script do

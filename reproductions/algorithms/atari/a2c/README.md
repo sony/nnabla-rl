@@ -3,6 +3,15 @@
 This reproduction script trains the A2C (Advantage Actor-Critic) algorithm.
 A2C is a synchronous version of A3C (Asynchronous Advantage Actor-Critic) proposed by V. Mnih, et al. in the paper: [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783).
 
+
+## Prerequisite
+
+Install gym[atari] via pip and install atari ROMS following [here](https://github.com/mgbellemare/Arcade-Learning-Environment/tree/master/examples/python-rom-package).
+
+```
+$ pip install gym[atari]
+```
+
 ## How to run the reproduction script
 
 To run the reproduction script do

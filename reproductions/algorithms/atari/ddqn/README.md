@@ -2,6 +2,14 @@
 
 This reproduction script trains the Deep Q-Network with double q-learning (DDQN) algorithm proposed by H. van Hasselt, et al in the paper: [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461).
 
+## Prerequisite
+
+Install gym[atari] via pip and install atari ROMS following [here](https://github.com/mgbellemare/Arcade-Learning-Environment/tree/master/examples/python-rom-package).
+
+```
+$ pip install gym[atari]
+```
+
 ## How to run the reproduction script
 
 To run the reproduction script do

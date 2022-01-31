@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,20 @@ def set_global_seed(seed: int):
     py_random.seed(seed)
     nn.seed(seed)
     rl.seed(seed)
+
+
+def build_classic_control_env(id_or_env, seed=None, render=False):
+    if isinstance(id_or_env, gym.Env):
+        env = id_or_env
+    else:
+        env = gym.make(id_or_env)
+    env = NumpyFloat32Env(env)
+
+    if render:
+        env = ScreenRenderEnv(env)
+
+    env.seed(seed)
+    return env
 
 
 def build_atari_env(id_or_env,

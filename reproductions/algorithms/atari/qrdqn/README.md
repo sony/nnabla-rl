@@ -2,6 +2,14 @@
 
 This reproduction script trains the PPO (Proximal Policy Optimization) algorithm proposed by W. Dabney et al. in the paper: [Distributional Reinforcement Learning with Quantile Regression](https://arxiv.org/abs/1710.10044).
 
+## Prerequisite
+
+Install gym[atari] via pip and install atari ROMS following [here](https://github.com/mgbellemare/Arcade-Learning-Environment/tree/master/examples/python-rom-package).
+
+```
+$ pip install gym[atari]
+```
+
 ## How to run the reproduction script
 
 To run the reproduction script do

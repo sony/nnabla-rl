@@ -2,6 +2,14 @@
 
 This reproduction script trains the M-IQN (Munchausen Implicit Quantile Networks) algorithm proposed by N. Vieillard et al. in the paper: [Munchausen Reinforcement Learning](https://arxiv.org/pdf/1806.06923.pdf).
 
+## Prerequisite
+
+Install gym[atari] via pip and install atari ROMS following [here](https://github.com/mgbellemare/Arcade-Learning-Environment/tree/master/examples/python-rom-package).
+
+```
+$ pip install gym[atari]
+```
+
 ## How to run the reproduction script
 
 To run the reproduction script do
