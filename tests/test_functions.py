@@ -262,6 +262,58 @@ class TestFunctions(object):
         assert np.allclose(optimal_mean.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-2)
         assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-2)
 
+    def test_random_shooting_method(self):
+        def objective_function(x):
+            return -((x - 3.)**2)
+
+        batch_size = 1
+        var_size = 1
+
+        upper_bound = np.ones((batch_size, var_size)) * 3.5
+        lower_bound = np.ones((batch_size, var_size)) * 2.5
+        optimal_top = RF.random_shooting_method(
+            objective_function, upper_bound, lower_bound)
+
+        nn.forward_all([optimal_top])
+
+        assert np.allclose(optimal_top.d, np.array([[3.]]), atol=1e-1)
+
+    def test_random_shooting_method_with_complicated_objective_function(self):
+        def dummy_q_function(s, a):
+            return -((a - s)**2)
+
+        batch_size = 5
+        sample_size = 500
+        state_size = 1
+        action_size = 1
+
+        s = np.arange(batch_size*state_size).reshape(batch_size, state_size)
+        s = np.tile(s, (sample_size, 1, 1))
+        s = np.transpose(s, (1, 0, 2))
+        s_var = nn.Variable.from_numpy_array(s.reshape(batch_size, sample_size, state_size))
+        def objective_function(x): return dummy_q_function(s_var, x)
+
+        upper_bound = np.ones((batch_size, action_size))*5
+        lower_bound = np.zeros((batch_size, action_size))
+        optimal_top = RF.random_shooting_method(objective_function, upper_bound, lower_bound)
+
+        nn.forward_all([optimal_top])
+
+        assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-1)
+
+    def test_random_shooting_method_with_invalid_bounds(self):
+        def objective_function(x):
+            return -((x - 3.)**2)
+
+        batch_size = 1
+        var_size = 1
+
+        upper_bound = -np.ones((batch_size, var_size)) * 3.5
+        lower_bound = np.ones((batch_size, var_size)) * 2.5
+
+        with pytest.raises(ValueError):
+            RF.random_shooting_method(objective_function, upper_bound, lower_bound)
+
     @pytest.mark.parametrize("batch_size", [i for i in range(1, 3)])
     @pytest.mark.parametrize("diag_size", [i for i in range(1, 5)])
     @pytest.mark.parametrize("upper", [True, False])

@@ -15,5 +15,6 @@ Functions
 .. autofunction:: mean_squared_error
 .. autofunction:: minimum_n
 .. autofunction:: gaussian_cross_entropy_method
+.. autofunction:: random_shooting_method
 .. autofunction:: triangular_matrix
 .. autofunction:: batch_flatten

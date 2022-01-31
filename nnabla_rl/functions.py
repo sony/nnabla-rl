@@ -312,6 +312,97 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
     return mean, top
 
 
+def random_shooting_method(objective_function: Callable[[nn.Variable], nn.Variable],
+                           upper_bound: np.ndarray,
+                           lower_bound: np.ndarray,
+                           sample_size: int = 500) -> nn.Variable:
+    '''
+    Optimize objective function with respect to the variable using random shooting method.
+    Candidates are sampled from a uniform distribution :math:`x \\sim U(lower\\:bound, upper\\:bound)`.
+
+    Examples:
+        >>> import numpy as np
+        >>> import nnabla as nn
+        >>> import nnabla.functions as NF
+        >>> import nnabla_rl.functions as RF
+        >>> def objective_function(x): return -((x - 3.)**2)
+        # this function will be called with x which has (batch_size, sample_size, x_dim)
+        >>> batch_size = 1
+        >>> variable_size = 1
+        >>> upper_bound = np.ones((batch_size, variable_size)) * 3.5
+        >>> lower_bound = np.ones((batch_size, variable_size)) * 2.5
+        >>> optimal_x = RF.random_shooting_method(objective_function, upper_bound, lower_bound)
+        >>> optimal_x.forward()
+        >>> optimal_x.shape
+        (1, 1)  # (batch_size, variable_size)
+        >>> np.allclose(optimal_x.d, np.array([[3.]]), atol=1e-1)
+        True
+
+    Args:
+        objective_function (Callable[[nn.Variable], nn.Variable]): objective function, this function will be called with
+            nn.Variable which has (batch_size, sample_size, dim) during the optimization process,
+            and should return nn.Variable such as costs which has (batch_size, sample_size, 1)
+        upper_bound (np.ndarray): upper bound of an uniform distribution
+            for sampling candidates of the variables.
+        lower_bound (np.ndarray): lower bound of an uniform distribution
+            for sampling candidates of the variables.
+        sample_size (int): number of candidates at the sampling step.
+
+    Returns:
+        nn.Variable: argmax sample, shape is (batch_size, dim)
+
+    Note:
+        If you want to optimize a time sequence action such as (time_steps, action_dim).
+        You can use this optimization function by transforming the action to (time_steps*action_dim).
+        For example,
+
+        .. code-block:: python
+
+            def objective_function(time_seq_action):
+                # time_seq_action.shape = (batch_size, sample_size, time_steps*action_dim)
+                # Implement the way to compute some value such as costs.
+
+            batch_size = 1
+            time_steps = 2
+            action_dim = 1
+            upper_bound = np.ones((batch_size, time_steps*action_dim)) * 3.5)
+            lower_bound = np.ones((batch_size, time_steps*action_dim)) * 2.5)
+            optimal_x = RF.random_shooting_method(objective_function, upper_bound, lower_bound)
+            optimal_x.forward()
+            # (1, 2) == (batch_size, time_steps*action_dim)
+            print(optimal_x.shape)
+    '''
+    batch_size, dim = upper_bound.shape
+    assert lower_bound.shape[0] == batch_size
+    assert lower_bound.shape[1] == dim
+
+    if not np.all(upper_bound >= lower_bound):
+        raise ValueError("Invalid upper_bound and lower_bound.")
+
+    upper_bound = nn.Variable().from_numpy_array(upper_bound)
+    lower_bound = nn.Variable().from_numpy_array(lower_bound)
+
+    upper_bound = expand_dims(upper_bound, 0)
+    lower_bound = expand_dims(lower_bound, 0)
+    samples = NF.rand(shape=(sample_size, batch_size, dim)) * (upper_bound - lower_bound) + lower_bound
+    samples = NF.transpose(samples, (1, 0, 2))
+
+    # values.shape = (batch_size, sample_size, 1)
+    values = objective_function(samples.reshape((batch_size, sample_size, dim)))
+    values = values.reshape((batch_size, sample_size, 1))
+
+    arange_index = np.tile(np.arange(batch_size)[:, np.newaxis], (1, 1))[np.newaxis, :, :]
+    arange_index = nn.Variable.from_numpy_array(arange_index)
+    # argmax_index.shape = (pop_size, 1)
+    argmax_index = argmax(values, axis=1, keepdims=True)
+    argmax_index = argmax_index.reshape((1, batch_size, 1))
+    argmax_index = NF.concatenate(arange_index, argmax_index, axis=0)
+
+    # top.shape = (batch_size, dim)
+    top = NF.gather_nd(samples, argmax_index).reshape((batch_size, dim))
+    return top
+
+
 def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable] = None, upper=False) -> nn.Variable:
     '''
     Compute triangular_matrix from given diagonal and non_diagonal elements.
