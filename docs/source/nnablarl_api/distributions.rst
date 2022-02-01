@@ -26,3 +26,7 @@ List of Distributions
 .. autoclass:: nnabla_rl.distributions.SquashedGaussian
    :members:
    :show-inheritance:
+
+.. autoclass:: nnabla_rl.distributions.OneHotSoftmax
+   :members:
+   :show-inheritance:
