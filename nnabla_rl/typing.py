@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 from typing import Any, Dict, Tuple, Union
 
 import numpy as np
-from typing_extensions import Protocol
 
 State = Union[np.ndarray, Tuple[np.ndarray, ...]]
 # https://github.com/python/mypy/issues/7866
@@ -29,6 +28,14 @@ Info = Dict[str, Any]
 Experience = Tuple[State, Action, Reward, NonTerminal, NextState, Info]
 Shape = Union[int, Tuple[int, ...], Tuple[Tuple[int, ...], ...]]
 TupledData = Tuple
+
+
+try:
+    from typing_extensions import Protocol
+except ModuleNotFoundError:
+    # User have not installed typing_extensions.
+    # However, typing_extension is not necessary for running the library
+    Protocol = object  # type: ignore
 
 
 class ActionSelector(Protocol):
