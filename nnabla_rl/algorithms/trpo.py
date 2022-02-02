@@ -26,7 +26,7 @@ import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
 from nnabla_rl.algorithms.common_utils import (_StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
-                                               compute_v_target_and_advantage)
+                                               _StochasticPolicyActionSelector, compute_v_target_and_advantage)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -36,8 +36,7 @@ from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable
+from nnabla_rl.utils.data import marshal_experiences
 
 
 @dataclass
@@ -152,7 +151,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             initial_step_num=algorithm.iteration_num,
             timelimit_as_terminal=False
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._compute_action,
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
                                         env_info=env_info,
                                         config=explorer_config)
         return explorer
@@ -228,10 +227,15 @@ class TRPO(Algorithm):
                 self._state_preprocessor = preprocessor
             self._v_function_solver = v_solver_builder(self._env_info, self._config)
 
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=False)
+        self._exploration_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=False)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(state, begin_of_episode=begin_of_episode)
+            action, _ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -364,16 +368,11 @@ class TRPO(Algorithm):
 
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
-    @eval_api
-    def _compute_action(self, s, *, begin_of_episode=False):
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            distribution = self._policy.pi(self._eval_state_var)
-            self._eval_action = distribution.sample()
-        set_data_to_variable(self._eval_state_var, s)
-        self._eval_action.forward()
-        return np.squeeze(self._eval_action.d, axis=0), {}
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
+
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _models(self):
         models = {}

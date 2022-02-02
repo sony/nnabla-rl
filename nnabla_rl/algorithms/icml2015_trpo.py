@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import nnabla as nn
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import _StochasticPolicyActionSelector
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -31,8 +32,7 @@ from nnabla_rl.models import ICML2015TRPOAtariPolicy, ICML2015TRPOMujocoPolicy, 
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
-from nnabla_rl.utils.misc import create_variable
+from nnabla_rl.utils.data import marshal_experiences
 
 
 @dataclass
@@ -113,7 +113,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
                        **kwargs) -> EnvironmentExplorer:
         explorer_config = EE.RawPolicyExplorerConfig(initial_step_num=algorithm.iteration_num,
                                                      timelimit_as_terminal=False)
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._compute_action,
+        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
                                         env_info=env_info,
                                         config=explorer_config)
         return explorer
@@ -146,10 +146,11 @@ class ICML2015TRPO(Algorithm):
     _policy_trainer: ModelTrainer
     _explorer_builder: ExplorerBuilder
     _environment_explorer: EnvironmentExplorer
-    _eval_state_var: nn.Variable
-    _eval_action: nn.Variable
 
     _policy_trainer_state: Dict[str, Any]
+
+    _evaluation_actor: _StochasticPolicyActionSelector
+    _exploration_actor: _StochasticPolicyActionSelector
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
@@ -162,10 +163,15 @@ class ICML2015TRPO(Algorithm):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._policy = policy_builder("pi", self._env_info, self._config)
 
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=False)
+        self._exploration_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=False)
+
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._compute_action(state)
+            action, _ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -259,17 +265,11 @@ class ICML2015TRPO(Algorithm):
 
         return np.sum(reward_sequence*gamma_seqs, axis=1, keepdims=True)
 
-    @eval_api
-    def _compute_action(self, s, *, begin_of_episode=False):
-        # evaluation input/action variables
-        s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = create_variable(1, self._env_info.state_shape)
-            distribution = self._policy.pi(self._eval_state_var)
-            self._eval_action = distribution.sample()
-        set_data_to_variable(self._eval_state_var, s)
-        self._eval_action.forward()
-        return np.squeeze(self._eval_action.d, axis=0), {}
+    def _evaluation_action_selector(self, s, *, begin_of_episode=False):
+        return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
+
+    def _exploration_action_selector(self, s, *, begin_of_episode=False):
+        return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
     def _models(self):
         models = {}

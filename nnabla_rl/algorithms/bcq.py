@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import nnabla.solvers as NS
 import nnabla_rl.functions as RF
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
+from nnabla_rl.algorithms.common_utils import has_batch_dimension
 from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
@@ -210,6 +211,8 @@ class BCQ(Algorithm):
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False):
+        if has_batch_dimension(state, self._env_info):
+            raise RuntimeError(f'{self.__name__} does not support batched state!')
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             state = add_batch_dimension(state)
             if not hasattr(self, '_eval_state_var'):
