@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ from nnabla_rl.algorithms.her import HER, HERConfig
 from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOConfig
 from nnabla_rl.algorithms.icml2018_sac import ICML2018SAC, ICML2018SACConfig
 from nnabla_rl.algorithms.iqn import IQN, IQNConfig
+from nnabla_rl.algorithms.mme_sac import MMESAC, MMESACConfig
 from nnabla_rl.algorithms.munchausen_dqn import MunchausenDQN, MunchausenDQNConfig
 from nnabla_rl.algorithms.munchausen_iqn import MunchausenIQN, MunchausenIQNConfig
 from nnabla_rl.algorithms.ppo import PPO, PPOConfig
@@ -81,6 +82,7 @@ register_algorithm(Dummy, DummyConfig)
 register_algorithm(HER, HERConfig)
 register_algorithm(ICML2018SAC, ICML2018SACConfig)
 register_algorithm(IQN, IQNConfig)
+register_algorithm(MMESAC, MMESACConfig)
 register_algorithm(MunchausenDQN, MunchausenDQNConfig)
 register_algorithm(MunchausenIQN, MunchausenIQNConfig)
 register_algorithm(PPO, PPOConfig)

@@ -150,6 +150,16 @@ IQN
    :members:
    :show-inheritance:
 
+MMESAC
+===============
+.. autoclass:: nnabla_rl.algorithms.mme_sac.MMESACConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.mme_sac.MMESAC
+   :members:
+   :show-inheritance:
+
 Munchausen DQN
 ===============
 .. autoclass:: nnabla_rl.algorithms.munchausen_dqn.MunchausenDQNConfig
@@ -159,7 +169,6 @@ Munchausen DQN
 .. autoclass:: nnabla_rl.algorithms.munchausen_dqn.MunchausenDQN
    :members:
    :show-inheritance:
-
 
 Munchausen IQN
 ===============

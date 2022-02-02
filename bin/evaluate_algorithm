@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,11 +91,26 @@ MUJOCO_ENV_LIST=(
     "walker2d-expert-v0"
 )
 
+SPARSE_MUJOCO_ENV_LIST=(
+    "SparseAnt-v1"
+    "SparseHalfCheetah-v1"
+    "SparseHopper-v1"
+    "SparseWalker2d-v1"
+)
+
+DELAYED_MUJOCO_ENV_LIST=(
+    "DelayedAnt-v1"
+    "DelayedHalfCheetah-v1"
+    "DelayedHopper-v1"
+    "DelayedWalker2d-v1"
+)
+
 GPU_ID=0
 ALGO_NAME="dqn"
 BASE_ENV_NAME="atari"
 ENV_START_INDEX=0
 ENV_END_INDEX=-1
+NUM_SEEDS=3
 
 for opt in "$@"
 do
@@ -115,6 +130,8 @@ do
             ENVS="$*";;
         "--save_dir" )
             SAVE_DIR="$1";;
+        "--num_seeds" )
+            NUM_SEEDS="$1";;
         "-h" )
             echo ""
             echo "[Usage] : ./evaluate_algo
@@ -144,7 +161,7 @@ SAVE_DIR=$REPRODUCTION_CODE_DIR
 for ENV_NAME in ${ENVS}
 do
     echo "Start running training for: " ${ENV_NAME}
-    ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR &
+    ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR $NUM_SEEDS &
 done
 
 for INDEX in $(seq ${ENV_START_INDEX} ${ENV_END_INDEX})
@@ -155,6 +172,12 @@ do
     if [ $BASE_ENV_NAME = "mujoco" ]; then
         ENV_NAME=${MUJOCO_ENV_LIST[$INDEX]}
     fi
+    if [ $BASE_ENV_NAME = "sparse_mujoco" ]; then
+        ENV_NAME=${SPARSE_MUJOCO_ENV_LIST[$INDEX]}
+    fi
+    if [ $BASE_ENV_NAME = "delayed_mujoco" ]; then
+        ENV_NAME=${DELAYED_MUJOCO_ENV_LIST[$INDEX]}
+    fi
     echo "Start running training for: " ${ENV_NAME}
-    ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR &
+    ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR $NUM_SEEDS &
 done
