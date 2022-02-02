@@ -46,15 +46,18 @@ dqn = A.DQN(env, config=config)
 ### Friendly API
 
 nnablaRL has friendly Python APIs which enables to start training with only 3 lines of python code.
+(NOTE: Below code will run on CPU. See the above instruction to run on GPU.)
 
 ```py
-import nnabla_rl
 import nnabla_rl.algorithms as A
-from nnabla_rl.utils.reproductions import build_atari_env
+from nnabla_rl.utils.reproductions import build_classic_control_env
 
-env = build_atari_env("BreakoutNoFrameskip-v4") # 1
-dqn = A.DQN(env)  # 2
-dqn.train(env)  # 3
+# Prerequisite: 
+# Run below to enable rendering!
+# $ pip install nnabla-rl[render]
+env = build_classic_control_env("Pendulum-v1", render=True) # 1
+ddpg = A.DDPG(env, config=A.DDPGConfig(start_timesteps=200))  # 2
+ddpg.train(env)  # 3
 ```
 
 To get more details about nnablaRL, see [documentation](https://nnabla-rl.readthedocs.io/) and [examples](./examples).

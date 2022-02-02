@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, Sequence, Union
@@ -85,7 +86,7 @@ class Algorithm(metaclass=ABCMeta):
                 and confirm what kinds of enviroments are supported".format(self.__name__))
 
         if self._config.gpu_id < 0:
-            logger.info('algorithm will run on cpu')
+            logger.info('algorithm will run on cpu.')
         else:
             logger.info('algorithm will run on gpu: {}'.format(self._config.gpu_id))
 
@@ -119,7 +120,7 @@ class Algorithm(metaclass=ABCMeta):
         '''
         return self._iteration_num
 
-    def train(self, env_or_buffer: Union[gym.Env, ReplayBuffer], total_iterations: int):
+    def train(self, env_or_buffer: Union[gym.Env, ReplayBuffer], total_iterations: int = sys.maxsize):
         '''
         Train the policy with reinforcement learning algorithm
 
@@ -139,7 +140,7 @@ class Algorithm(metaclass=ABCMeta):
         else:
             raise UnsupportedTrainingException
 
-    def train_online(self, train_env: gym.Env, total_iterations: int):
+    def train_online(self, train_env: gym.Env, total_iterations: int = sys.maxsize):
         '''
         Train the policy by interacting with given environment.
 
@@ -160,7 +161,7 @@ class Algorithm(metaclass=ABCMeta):
             self._invoke_hooks()
         self._after_training_finish(train_env)
 
-    def train_offline(self, replay_buffer: gym.Env, total_iterations: int):
+    def train_offline(self, replay_buffer: gym.Env, total_iterations: int = sys.maxsize):
         '''
         Train the policy using only the replay buffer.
 
