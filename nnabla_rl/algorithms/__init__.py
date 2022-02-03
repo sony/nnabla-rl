@@ -22,6 +22,7 @@ from nnabla_rl.algorithms.categorical_ddqn import CategoricalDDQN, CategoricalDD
 from nnabla_rl.algorithms.categorical_dqn import CategoricalDQN, CategoricalDQNConfig
 from nnabla_rl.algorithms.ddpg import DDPG, DDPGConfig
 from nnabla_rl.algorithms.ddqn import DDQN, DDQNConfig
+from nnabla_rl.algorithms.demme_sac import DEMMESAC, DEMMESACConfig
 from nnabla_rl.algorithms.dqn import DQN, DQNConfig
 from nnabla_rl.algorithms.drqn import DRQN, DRQNConfig
 from nnabla_rl.algorithms.dummy import Dummy, DummyConfig
@@ -76,6 +77,7 @@ register_algorithm(CategoricalDDQN, CategoricalDDQNConfig)
 register_algorithm(CategoricalDQN, CategoricalDQNConfig)
 register_algorithm(DDPG, DDPGConfig)
 register_algorithm(DDQN, DDQNConfig)
+register_algorithm(DEMMESAC, DEMMESACConfig)
 register_algorithm(DQN, DQNConfig)
 register_algorithm(DRQN, DRQNConfig)
 register_algorithm(Dummy, DummyConfig)

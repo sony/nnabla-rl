@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nnabla_rl.model_trainers.v_value.demme_v_trainer import (  # noqa
+    DEMMEVTrainer, DEMMEVTrainerConfig)
+from nnabla_rl.model_trainers.v_value.mme_v_trainer import (  # noqa
+    MMEVTrainer, MMEVTrainerConfig)
 from nnabla_rl.model_trainers.v_value.monte_carlo_v_trainer import (  # noqa
     MonteCarloVTrainer, MonteCarloVTrainerConfig)
 from nnabla_rl.model_trainers.v_value.soft_v_trainer import (  # noqa
     SoftVTrainer, SoftVTrainerConfig)
-from nnabla_rl.model_trainers.v_value.mme_v_trainer import (  # noqa
-    MMEVTrainer, MMEVTrainerConfig)

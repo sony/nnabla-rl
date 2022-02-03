@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,15 @@ from nnabla_rl.utils.misc import create_variables
 
 @dataclass
 class VTargetedQTrainerConfig(SquaredTDQFunctionTrainerConfig):
-    pass
+    """
+    List of VTargetedQTrainer configuration.
+
+    Args:
+        pure_exploration (bool): If True, compute q-value target without adding reward. \
+            :math:`target=\\gamma\\times V(s_{t+1})`.\
+            Used in Disentangled MME.\
+    """
+    pure_exploration: bool = False
 
 
 class VTargetedQTrainer(SquaredTDQFunctionTrainer):
@@ -37,6 +45,7 @@ class VTargetedQTrainer(SquaredTDQFunctionTrainer):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _target_functions: Sequence[VFunction]
     _target_v_rnn_states: Dict[str, Dict[str, nn.Variable]]
+    _config: VTargetedQTrainerConfig
 
     def __init__(self,
                  train_functions: Union[QFunction, Sequence[QFunction]],
@@ -65,7 +74,10 @@ class VTargetedQTrainer(SquaredTDQFunctionTrainer):
             with rnn_support(v_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
                 target_vs.append(v_function.v(s_next))
         target_v = RNF.minimum_n(target_vs)
-        return reward + gamma * non_terminal * target_v
+        if self._config.pure_exploration:
+            return gamma * non_terminal * target_v
+        else:
+            return reward + gamma * non_terminal * target_v
 
     def _setup_training_variables(self, batch_size: int) -> TrainingVariables:
         training_variables = super()._setup_training_variables(batch_size)

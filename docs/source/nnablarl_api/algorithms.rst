@@ -160,6 +160,16 @@ MMESAC
    :members:
    :show-inheritance:
 
+MMESAC (Disentangled)
+===============
+.. autoclass:: nnabla_rl.algorithms.demme_sac.DEMMESACConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.demme_sac.DEMMESAC
+   :members:
+   :show-inheritance:
+
 Munchausen DQN
 ===============
 .. autoclass:: nnabla_rl.algorithms.munchausen_dqn.MunchausenDQNConfig
