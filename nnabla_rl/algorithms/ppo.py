@@ -15,6 +15,7 @@
 
 import multiprocessing as mp
 import os
+import threading as th
 from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any, Dict, List, NamedTuple, Optional, Union
@@ -226,7 +227,7 @@ class PPO(Algorithm):
     _v_solver_builder: SolverBuilder
 
     _actors: List['_PPOActor']
-    _actor_processes: List[mp.Process]
+    _actor_processes: List[Union[mp.Process, th.Thread]]
 
     _policy_trainer_state: Dict[str, Any]
     _v_function_trainer_state: Dict[str, Any]
@@ -356,13 +357,21 @@ class PPO(Algorithm):
                                         state_preprocessor=self._state_preprocessor)
         processes = []
         for actor in actors:
-            p = mp.Process(target=actor, daemon=True)
+            if self._config.actor_num == 1:
+                # Run on same process when we have only 1 actor
+                p = th.Thread(target=actor, daemon=False)
+            else:
+                p = mp.Process(target=actor, daemon=True)
             p.start()
             processes.append(p)
         return actors, processes
 
     def _kill_actor_processes(self, process):
-        process.terminate()
+        if isinstance(process, mp.Process):
+            process.terminate()
+        else:
+            # This is a thread. do nothing
+            pass
         process.join()
 
     def _run_offline_training_iteration(self, buffer):
@@ -370,11 +379,14 @@ class PPO(Algorithm):
 
     def _collect_experiences(self, actors):
         for actor in self._actors:
-            actor.update_v_params(self._v_function.get_parameters())
-            actor.update_policy_params(self._policy.get_parameters())
-            if self._config.preprocess_state:
-                actor.update_state_preprocessor_params(self._state_preprocessor.get_parameters())
-
+            if self._config.actor_num != 1:
+                actor.update_v_params(self._v_function.get_parameters())
+                actor.update_policy_params(self._policy.get_parameters())
+                if self._config.preprocess_state:
+                    actor.update_state_preprocessor_params(self._state_preprocessor.get_parameters())
+            else:
+                # Its running on same process. No need to synchronize parameters with multiprocessing arrays.
+                pass
             actor.run_data_collection()
 
         results = []
@@ -548,7 +560,7 @@ class _PPOActor(object):
         self._run_actor_loop()
 
     def dispose(self):
-        self._disposed = True
+        self._disposed.value = True
         self._task_start_event.set()
 
     def run_data_collection(self):
@@ -581,12 +593,13 @@ class _PPOActor(object):
             self._task_start_event.wait()
             if self._disposed.get_obj():
                 break
-
-            self._synchronize_v_params(self._v_function.get_parameters())
-            self._synchronize_policy_params(self._policy.get_parameters())
-            if self._config.preprocess_state:
-                self._synchronize_preprocessor_params(self._state_preprocessor.get_parameters())
-
+            if self._config.actor_num != 1:
+                # Running on different process
+                # Sync parameters through multiproccess arrays
+                self._synchronize_v_params(self._v_function.get_parameters())
+                self._synchronize_policy_params(self._policy.get_parameters())
+                if self._config.preprocess_state:
+                    self._synchronize_preprocessor_params(self._state_preprocessor.get_parameters())
             experiences, v_targets, advantages = self._run_data_collection()
             self._fill_result(experiences, v_targets, advantages)
 
