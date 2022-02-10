@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -408,3 +408,7 @@ def batch_flatten(x: nn.Variable) -> nn.Variable:
     original_shape = x.shape
     flatten_shape = (original_shape[0], np.prod(original_shape[1:]))
     return NF.reshape(x, shape=flatten_shape)
+
+
+def stop_gradient(variable: nn.Variable) -> nn.Variable:
+    return variable.get_unlinked_variable(need_grad=False)
