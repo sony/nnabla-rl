@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,16 +36,17 @@ class Softmax(Distribution):
         if not isinstance(z, nn.Variable):
             z = nn.Variable.from_numpy_array(z)
 
-        self._distribution = NF.softmax(x=z, axis=1)
-        self._log_distribution = NF.log_softmax(x=z, axis=1)
+        self._distribution = NF.softmax(x=z, axis=len(z.shape) - 1)
+        self._log_distribution = NF.log_softmax(x=z, axis=len(z.shape) - 1)
         self._batch_size = z.shape[0]
         self._num_class = z.shape[-1]
 
         labels = np.array(
             [label for label in range(self._num_class)], dtype=np.int)
         self._labels = nn.Variable.from_numpy_array(labels)
-        self._actions = NF.stack(
-            *[self._labels for _ in range(self._batch_size)])
+        self._actions = self._labels
+        for size in reversed(z.shape[0:-1]):
+            self._actions = NF.stack(*[self._actions for _ in range(size)])
 
     @property
     def ndim(self):
@@ -63,23 +64,22 @@ class Softmax(Distribution):
         return sample, log_prob
 
     def choose_probable(self):
-        return RF.argmax(self._distribution, axis=1)
+        return RF.argmax(self._distribution, axis=len(self._distribution.shape) - 1)
 
     def mean(self):
         raise NotImplementedError
 
     def log_prob(self, x):
-        log_pi = self._log_distribution
         one_hot_action = NF.one_hot(x, shape=(self._num_class, ))
-        return NF.sum(log_pi * one_hot_action, axis=1, keepdims=True)
+        return NF.sum(self._log_distribution * one_hot_action, axis=len(self._distribution.shape) - 1, keepdims=True)
 
     def entropy(self):
         plogp = self._distribution * self._log_distribution
-        return -NF.sum(plogp, axis=1, keepdims=True)
+        return -NF.sum(plogp, axis=len(plogp.shape) - 1, keepdims=True)
 
     def kl_divergence(self, q):
         if not isinstance(q, Softmax):
             raise ValueError("Invalid q to compute kl divergence")
         return NF.sum(self._distribution * (self._log_distribution - q._log_distribution),
-                      axis=1,
+                      axis=len(self._distribution.shape) - 1,
                       keepdims=True)
