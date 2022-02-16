@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -323,6 +323,49 @@ class TestFunctions(object):
         assert np.prod(x.shape) == np.prod(flattened_x.shape)
         assert batch_size == flattened_x.shape[0]
         assert len(flattened_x.shape) == 2
+
+    def test_stop_gradient(self):
+        import nnabla.functions as NF
+        import nnabla.parametric_functions as NPF
+        import nnabla_rl.distributions as D
+        from nnabla_rl.models import StochasticPolicy
+
+        class TestModel(StochasticPolicy):
+            def pi(self, s: nn.Variable):
+                with nn.parameter_scope(self.scope_name):
+                    z = NPF.affine(s, n_outmaps=5)
+                return D.Gaussian(z, np.zeros(z.shape))
+
+        test_model = TestModel('test')
+        for parameter in test_model.get_parameters().values():
+            parameter.grad.zero()
+
+        batch_size = 3
+        shape = (10, )
+        s = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, *shape)).astype(np.float32))
+        distribution = test_model.pi(s)
+
+        h = distribution.mean()
+        h_sg = RF.stop_gradient(h)
+
+        out = NF.mean(h * 5)
+        out_sg = NF.mean(h_sg * 5)
+
+        nn.forward_all((out, out_sg))
+
+        np.testing.assert_allclose(out.d, out_sg.d)
+        for parameter in test_model.get_parameters().values():
+            assert np.allclose(parameter.g, 0)
+
+        # should not backpropagate
+        out_sg.backward()
+        for parameter in test_model.get_parameters().values():
+            assert np.allclose(parameter.g, 0)
+
+        # this should backpropagate
+        out.backward()
+        for parameter in test_model.get_parameters().values():
+            assert not np.allclose(parameter.g, 0)
 
 
 if __name__ == "__main__":
