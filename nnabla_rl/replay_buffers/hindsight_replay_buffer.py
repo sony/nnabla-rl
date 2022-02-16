@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ class HindsightReplayBuffer(ReplayBuffer):
             raise RuntimeError('Observation is not a tuple of 3 elements: (observation, desired_goal, achieved_goal)')
         # Here, info will be updated.
         if not isinstance(experience[5], dict):
-            ValueError
+            raise ValueError
         non_terminal = experience[3]
         done = non_terminal == 0
         self._episode_end_index[0] = self._index_in_episode  # end index is shared among episode
