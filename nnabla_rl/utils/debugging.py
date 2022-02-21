@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
+from typing import Optional, Union
+
+import nnabla as nn
 import nnabla.experimental.viewers as V
+import nnabla.solvers as S
+from nnabla.utils.profiler import GraphProfiler, GraphProfilerCsvWriter
 from nnabla_rl.hook import Hook
 from nnabla_rl.logger import logger
 
@@ -49,6 +55,43 @@ def count_parameter_number(parameters):
     for parameter in parameters.values():
         parameter_number += parameter.size
     return parameter_number
+
+
+def profile_graph(
+    output_variable: nn.Variable,
+    csv_file_path: Union[str, pathlib.Path],
+    solver: Optional[S.Solver] = None,
+    ext_name: str = 'cudnn',
+    device_id: int = 0,
+    n_run: int = 1000,
+) -> None:
+    '''Profile computational graph. Print the profile result to console and save it to the csv_file_path.
+
+    Args:
+        output_variable (nn.Variable): output variable of the graph.
+        csv_file_path (Union[str, pathlib.Path]): csv file path of the profile results.
+        solver (Optional[S.Solver]): nnabla solver, if this parameter is not None,
+            nnabla Profiler also measures updating the parameter, defaults to None.
+        ext_name (str): extention name, defaults to cudnn.
+        device_id (int): device id, defaults to 0.
+        n_run: (int): number of runs, defaults to 1000.
+
+    Examples:
+        >>> import nnabla as nn
+        >>> import nnabla.functions as NF
+        >>> from nnabla_rl.utils.debugging import profile_graph
+        >>> x = nn.Variable([1, 1])
+        >>> y = NF.relu(x)
+        >>> output_file_path = "sample.csv"
+        >>> profile_graph(y, output_file_path)
+        # The profile result is shown in the console and the result is saved as sample.csv.
+    '''
+    B = GraphProfiler(output_variable, solver=solver, device_id=device_id, ext_name=ext_name, n_run=n_run)
+    B.run()
+    B.print_result()
+    with open(csv_file_path, "w") as f:
+        writer = GraphProfilerCsvWriter(B, file=f)
+        writer.write()
 
 
 try:
