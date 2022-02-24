@@ -1,6 +1,6 @@
 nnabla>=1.17.0,!=1.18.0
 numpy>=1.17
-gym
+gym<0.22.0
 dataclasses;python_version=="3.6"
 types-dataclasses
 opencv-python
