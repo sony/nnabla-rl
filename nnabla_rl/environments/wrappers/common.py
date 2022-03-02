@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 
 import gym
 import numpy as np
+
+from nnabla_rl.logger import logger
 
 
 class Float32ObservationEnv(gym.ObservationWrapper):
@@ -97,3 +99,26 @@ class ScreenRenderEnv(gym.Wrapper):
             state = self.env.reset()
             self.env.render()
         return state
+
+
+class PrintEpisodeResultEnv(gym.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self._episode_rewards = []
+        self._episode_num = 0
+
+    def step(self, action):
+        s_next, reward, done, info = self.env.step(action)
+        self._episode_rewards.append(reward)
+        if done:
+            self._episode_num += 1
+            episode_steps = len(self._episode_rewards)
+            episode_return = np.sum(self._episode_rewards)
+            logger.info(f'Episode #{self._episode_num} finished.')
+            logger.info(f'Episode steps: {episode_steps}. Total return: {episode_return}.')
+            self._episode_rewards.clear()
+        return s_next, reward, done, info
+
+    def reset(self):
+        self._episode_rewards.clear()
+        return self.env.reset()
