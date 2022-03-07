@@ -19,7 +19,7 @@ import pathlib
 import re
 import subprocess
 
-_exclude_dirs = ['.git', '.egg', 'cache', '.vscode', 'external', '.venv']
+_exclude_dirs = ['external', '.git']
 _insert_file_regex = re.compile('.*.(py|cfg|ini|sh)')
 _header_extract_regex = re.compile('# Copyright \\d{4}.*? limitations under the License.', re.DOTALL)
 _shebang_extract_regex = re.compile('#!.+')
@@ -43,17 +43,101 @@ APACHE2_LICENSE_TEMPLATE = '''#
 # limitations under the License.'''
 
 
-def listup_files(rootdir):
+def find_dot_git(rootdir):
+    path = pathlib.Path(rootdir)
+    for f in path.iterdir():
+        if f.name == '.git':
+            return f
+    parent = path.parent
+    return None if parent == path else find_dot_git(parent)
+
+
+def find_gitignore(rootdir):
+    if rootdir.name == '.git':
+        return []
+    path = pathlib.Path(rootdir)
+    gitignore_files = []
+    for f in path.iterdir():
+        if f.is_dir():
+            gitignores = find_gitignore(f)
+            gitignore_files.extend(gitignores)
+        if f.name == '.gitignore':
+            gitignore_files.append(f)
+    return gitignore_files
+
+
+def read_gitignore(gitignore_file):
+    exclude_dirs = []
+    with open(gitignore_file) as f:
+        lines = f.readlines()
+    for l in lines:
+        l = l.replace('\n', '')
+        if '#' in l:
+            continue
+        if '*' in l:
+            l = l.replace('*', '')
+        if len(l) == 0:
+            continue
+        f = gitignore_file.parent / l
+        if f.is_dir():
+            exclude_dirs.append(f)
+    return exclude_dirs
+
+
+def read_exclude(exclude_file):
+    exclude_dirs = []
+    with open(exclude_file) as f:
+        lines = f.readlines()
+    for l in lines:
+        l = l.replace('\n', '')
+        if '#' in l:
+            continue
+        if '*' in l:
+            l = l.replace('*', '')
+        if len(l) == 0:
+            continue
+        exclude_dirs.append(l)
+    return exclude_dirs
+
+
+def list_exclude_dirs(rootdir):
+    dot_git_file = find_dot_git(rootdir)
+    if dot_git_file is None:
+        return []
+    exclude_file = dot_git_file / 'info/exclude'
+    git_rootdir = dot_git_file.parent
+
+    excludes = []
+    additional_excludes = read_exclude(exclude_file)
+    for additional in additional_excludes:
+        additional_exclude = git_rootdir / additional
+        if additional_exclude.exists() and additional_exclude.is_dir():
+            excludes.append(additional_exclude)
+
+    gitignore_files = find_gitignore(git_rootdir)
+    for f in gitignore_files:
+        excludes.extend(read_gitignore(f))
+        for additional in additional_excludes:
+            additional_exclude = f.parent / additional
+            if additional_exclude.exists() and additional_exclude.is_dir():
+                excludes.append(additional_exclude)
+    return excludes
+
+
+def listup_files(rootdir, exclude_dirs):
     files = []
     path = pathlib.Path(rootdir)
     dirname = str(path)
+    for exclude in exclude_dirs:
+        if path == exclude:
+            return files
     for exclude in _exclude_dirs:
         if exclude in dirname:
             return files
 
     for f in path.iterdir():
         if f.is_dir():
-            files.extend(listup_files(f))
+            files.extend(listup_files(f, exclude_dirs))
         else:
             # empty suffix means binary file
             matched = _insert_file_regex.fullmatch(str(f)) is not None or (f.suffix == '' and has_shebang(f))
@@ -194,7 +278,8 @@ def insert_copyright_header(filepath):
 
 
 def main(args):
-    files = listup_files(args.rootdir)
+    exclude_dirs = list_exclude_dirs(args.rootdir)
+    files = listup_files(args.rootdir, exclude_dirs=exclude_dirs)
     for f in files:
         if args.diff:
             check_diff(f)
