@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -237,11 +237,12 @@ def minimum_n(variables: Sequence[nn.Variable]) -> nn.Variable:
 
 
 def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn.Variable],
-                                  init_mean: nn.Variable, init_var: nn.Variable,
-                                  pop_size: int = 500, num_elites: int = 10,
+                                  init_mean: Union[nn.Variable, np.ndarray], init_var: Union[nn.Variable, np.ndarray],
+                                  sample_size: int = 500, num_elites: int = 10,
                                   num_iterations: int = 5, alpha: float = 0.25) -> Tuple[nn.Variable, nn.Variable]:
     '''
-    Optimize objective function with respect to input using cross entropy method using gaussian distribution
+    Optimize objective function with respect to input using cross entropy method using gaussian distribution.
+    Candidates are sampled from a gaussian distribution :math:`\\mathcal{N}(mean,\\,variance)`
 
     Examples:
         >>> import numpy as np
@@ -249,10 +250,11 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
         >>> import nnabla.functions as NF
         >>> import nnabla_rl.functions as RF
         >>> def objective_function(x): return -((x - 3.)**2)
+        # this function will be called with x which has (batch_size, sample_size, x_dim)
         >>> batch_size = 1
         >>> variable_size = 1
-        >>> init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, state_size)))
-        >>> init_var = nn.Variable.from_numpy_array(np.ones((batch_size, state_size)))
+        >>> init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, variable_size)))
+        >>> init_var = nn.Variable.from_numpy_array(np.ones((batch_size, variable_size)))
         >>> optimal_x, _ = RF.gaussian_cross_entropy_method(objective_function, init_mean, init_var, alpha=0)
         >>> optimal_x.forward()
         >>> optimal_x.shape
@@ -261,19 +263,50 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
         array([[3.]], dtype=float32)
 
     Args:
-        objective_function (Callable[[nn.Variable], nn.Variable]): objective function
-        init_mean (nn.Variable): initial mean
-        init_var (nn.Variable): initial variance
-        pop_size (int): pop size
-        num_elites (int): number of elites
-        num_iterations (int): number of iterations
-        alpha (float): parameter of soft update
+        objective_function (Callable[[nn.Variable], nn.Variable]): objective function, this function will be called with
+            nn.Variable which has (batch_size, sample_size, dim) during the optimization process,
+            and should return nn.Variable such as costs which has (batch_size, sample_size, 1)
+        init_mean (Union[nn.Variable, np.ndarray]): initial mean for the gaussian distribution
+        init_var (Union[nn.Variable, np.ndarray]): initial variance for the gaussian distribution
+        sample_size (int): number of candidates at the sampling step.
+        num_elites (int): number of elites for computing the new gaussian distribution.
+        num_iterations (int): number of optimization iterations.
+        alpha (float): parameter for soft updating the gaussian distribution.
 
     Returns:
-        Tuple[nn.Variable, nn.Variable]: mean of elites samples and top of elites samples
+        Tuple[nn.Variable, nn.Variable]: mean of elites samples and top of elites samples, Both have (batch_size, dim)
+
+    Note:
+        If you want to optimize a time sequence action such as (time_steps, action_dim).
+        You can use this optimization function by transforming the action to (time_steps*action_dim).
+        For example,
+
+        .. code-block:: python
+
+            def objective_function(time_seq_action):
+                # time_seq_action.shape = (batch_size, sample_size, time_steps*action_dim)
+                # Implement the way to compute some value such as costs.
+
+            batch_size = 1
+            time_steps = 2
+            action_dim = 1
+            init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, time_steps*action_dim)))
+            init_var = nn.Variable.from_numpy_array(np.ones((batch_size, time_steps*action_dim)))
+            optimal_x, _ = RF.gaussian_cross_entropy_method(objective_function, init_mean, init_var, alpha=0)
+            optimal_x.forward()
+            # (1, 2) == (batch_size, time_steps*action_dim)
+            print(optimal_x.shape)
     '''
-    mean = init_mean
-    var = init_var
+    if isinstance(init_mean, np.ndarray):
+        mean = nn.Variable.from_numpy_array(init_mean)
+    else:
+        mean = init_mean
+
+    if isinstance(init_var, np.ndarray):
+        var = nn.Variable.from_numpy_array(init_var)
+    else:
+        var = init_var
+
     batch_size, gaussian_dimension = mean.shape
 
     elite_arange_index = np.tile(np.arange(batch_size)[:, np.newaxis], (1, num_elites))[np.newaxis, :, :]
@@ -283,10 +316,10 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
 
     for _ in range(num_iterations):
         # samples.shape = (batch_size, pop_size, gaussian_dimension)
-        samples = sample_gaussian_multiple(mean, NF.log(var), pop_size)
+        samples = sample_gaussian_multiple(mean, NF.log(var), sample_size)
         # values.shape = (batch_size*pop_size, 1)
-        values = objective_function(samples.reshape((-1, gaussian_dimension)))
-        values = values.reshape((batch_size, pop_size, 1))
+        values = objective_function(samples.reshape((batch_size, sample_size, gaussian_dimension)))
+        values = values.reshape((batch_size, sample_size, 1))
 
         elites_index = NF.sort(values, axis=1, reverse=True, with_index=True, only_index=True)[:, :num_elites, :]
         elites_index = elites_index.reshape((1, batch_size, num_elites))
