@@ -94,8 +94,8 @@ class TestOneHotSoftmax(object):
         distribution = model.pi(s)
 
         for sample_method in (distribution.sample, distribution.choose_probable):
-            probable = sample_method()
-            loss = NF.mean(probable)
+            value = sample_method()
+            loss = NF.mean(NF.pow_scalar(value, 2.0))
 
             for parameter in model.get_parameters().values():
                 parameter.grad.zero()
@@ -106,7 +106,6 @@ class TestOneHotSoftmax(object):
                 assert np.all(parameter.g == 0)
 
             loss.backward()
-
             for parameter in model.get_parameters().values():
                 assert not np.all(parameter.g == 0)
 

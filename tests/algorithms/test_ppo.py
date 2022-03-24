@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,6 +51,32 @@ class TestPPO(object):
         dummy_env = E.DummyContinuous()
         actor_timesteps = 10
         actor_num = 2
+        config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
+        ppo = A.PPO(dummy_env, config=config)
+
+        ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
+
+    def test_run_online_discrete_single_actor(self):
+        '''
+        Check that no error occurs when calling online training (discrete env)
+        '''
+
+        dummy_env = E.DummyDiscreteImg()
+        actor_timesteps = 10
+        actor_num = 1
+        config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
+        ppo = A.PPO(dummy_env, config=config)
+
+        ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
+
+    def test_run_online_continuous_single_actor(self):
+        '''
+        Check that no error occurs when calling online training (continuous env)
+        '''
+
+        dummy_env = E.DummyContinuous()
+        actor_timesteps = 10
+        actor_num = 1
         config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
         ppo = A.PPO(dummy_env, config=config)
 
