@@ -169,6 +169,21 @@ def argmax(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -
     return NF.max(x=x, axis=axis, keepdims=keepdims, with_index=True, only_index=True)
 
 
+def argmin(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -> nn.Variable:
+    '''
+    Compute the index which given variable has minimum value along the axis.
+
+    Args:
+        x (nn.Variable): Variable to compute the argmin
+        axis (Optional[int]): Axis to compare the values. Defaults to None. None will reduce all dimensions.
+        keepdims (bool): Flag whether the reduced axis are kept as a dimension with 1 element.
+
+    Returns:
+        nn.Variable: Index of the variable which its value is minimum along the axis
+    '''
+    return NF.min(x=x, axis=axis, keepdims=keepdims, with_index=True, only_index=True)
+
+
 def quantile_huber_loss(x0: nn.Variable, x1: nn.Variable, kappa: float, tau: nn.Variable) -> nn.Variable:
     '''
     Compute the quantile huber loss. See the following papers for details.

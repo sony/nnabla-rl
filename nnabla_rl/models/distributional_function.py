@@ -217,20 +217,17 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
 
     Args:
         scope_name (str): scope name of the model
-        n_action (int): Number of actions which used in target environment.
         n_quantile (int): Number of bins.
     '''
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
-    _n_action: int
     _n_quantile: int
     _qj: float
 
-    def __init__(self, scope_name: str, n_action: int, n_quantile: int):
+    def __init__(self, scope_name: str, n_quantile: int):
         super(QuantileDistributionFunction, self).__init__(scope_name)
-        self._n_action = n_action
         self._n_quantile = n_quantile
         self._qj = 1 / n_quantile
 
@@ -279,6 +276,15 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
 
 
 class DiscreteQuantileDistributionFunction(QuantileDistributionFunction):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _n_action: int
+
+    def __init__(self, scope_name: str, n_action: int, n_quantile: int):
+        super().__init__(scope_name, n_quantile)
+        self._n_action = n_action
+
     @abstractmethod
     def all_quantiles(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError
@@ -362,7 +368,38 @@ class DiscreteQuantileDistributionFunction(QuantileDistributionFunction):
 
 
 class ContinuousQuantileDistributionFunction(QuantileDistributionFunction):
-    pass
+    def as_q_function(self) -> QFunction:
+        class Wrapper(QFunction):
+
+            _quantile_distribution_function: 'ContinuousQuantileDistributionFunction'
+
+            def __init__(self, quantile_distribution_function: 'ContinuousQuantileDistributionFunction'):
+                super(Wrapper, self).__init__(quantile_distribution_function.scope_name)
+                self._quantile_distribution_function = quantile_distribution_function
+
+            def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+                quantiles = self._quantile_distribution_function.quantiles(s, a)
+                return NF.mean(quantiles, axis=len(quantiles.shape) - 1, keepdims=True)
+
+            def max_q(self, s: nn.Variable) -> nn.Variable:
+                raise NotImplementedError
+
+            def argmax_q(self, s: nn.Variable) -> nn.Variable:
+                raise NotImplementedError
+
+            def is_recurrent(self) -> bool:
+                return self._quantile_distribution_function.is_recurrent()
+
+            def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
+                return self._quantile_distribution_function.internal_state_shapes()
+
+            def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
+                return self._quantile_distribution_function.set_internal_states(states)
+
+            def get_internal_states(self) -> Dict[str, nn.Variable]:
+                return self._quantile_distribution_function.get_internal_states()
+
+        return Wrapper(self)
 
 
 def risk_neutral_measure(tau: nn.Variable) -> nn.Variable:

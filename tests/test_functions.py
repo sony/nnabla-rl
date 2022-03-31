@@ -168,6 +168,25 @@ class TestFunctions(object):
             assert actual.shape == expected.shape
             assert np.all(actual.data.data == expected)
 
+    def test_argmin(self):
+        num_samples = 100
+        batch_num = 100
+        data = np.random.normal(size=(num_samples,  batch_num, 1))
+        data = np.float32(data)
+        data_var = nn.Variable(data.shape)
+        data_var.d = data
+
+        for axis in [None, *range(len(data.shape))]:
+            actual = RF.argmin(data_var, axis=axis)
+            actual.forward(clear_buffer=True)
+            expected1 = np.argmin(data, axis=axis)
+            expected2 = RF.argmax(-data_var, axis=axis)
+            expected2.forward()
+            assert actual.shape == expected1.shape
+            assert actual.shape == expected2.shape
+            assert np.all(actual.data.data == expected1)
+            assert np.all(actual.data.data == expected2.data.data)
+
     def test_quantile_huber_loss(self):
         def huber_loss(x0, x1, kappa):
             diff = x0 - x1
