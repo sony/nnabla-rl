@@ -38,6 +38,7 @@ from nnabla_rl.algorithms.ppo import PPO, PPOConfig
 from nnabla_rl.algorithms.qrdqn import QRDQN, QRDQNConfig
 from nnabla_rl.algorithms.qrsac import QRSAC, QRSACConfig
 from nnabla_rl.algorithms.rainbow import Rainbow, RainbowConfig
+from nnabla_rl.algorithms.redq import REDQ, REDQConfig
 from nnabla_rl.algorithms.reinforce import REINFORCE, REINFORCEConfig
 from nnabla_rl.algorithms.sac import SAC, SACConfig
 from nnabla_rl.algorithms.td3 import TD3, TD3Config
@@ -92,6 +93,7 @@ register_algorithm(PPO, PPOConfig)
 register_algorithm(QRSAC, QRSACConfig)
 register_algorithm(QRDQN, QRDQNConfig)
 register_algorithm(Rainbow, RainbowConfig)
+register_algorithm(REDQ, REDQConfig)
 register_algorithm(REINFORCE, REINFORCEConfig)
 register_algorithm(SAC, SACConfig)
 register_algorithm(TD3, TD3Config)
