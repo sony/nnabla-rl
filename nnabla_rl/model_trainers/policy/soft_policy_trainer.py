@@ -178,13 +178,13 @@ class SoftPolicyTrainer(ModelTrainer):
             # Actor optimization graph
             prev_rnn_states = self._prev_policy_rnn_states
             with rnn_support(policy, prev_rnn_states, train_rnn_states, training_variables, self._config):
-                policy_distribution = policy.pi(self._training_variables.s_current)
+                policy_distribution = policy.pi(training_variables.s_current)
             action_var, log_pi = policy_distribution.sample_and_compute_log_prob()
             q_values = []
             prev_rnn_states = self._prev_q_rnn_states[policy.scope_name]
             for q_function in self._q_functions:
                 with rnn_support(q_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
-                    q_values.append(q_function.q(self._training_variables.s_current, action_var))
+                    q_values.append(q_function.q(training_variables.s_current, action_var))
             self._prev_q_rnn_states[policy.scope_name] = prev_rnn_states
             min_q = RNF.minimum_n(q_values)
             self._pi_loss += NF.mean(self.get_temperature() * log_pi - min_q)
