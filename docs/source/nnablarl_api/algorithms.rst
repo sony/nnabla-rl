@@ -210,6 +210,16 @@ QRDQN
    :members:
    :show-inheritance:
 
+QRSAC
+===============
+.. autoclass:: nnabla_rl.algorithms.qrsac.QRSACConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.qrsac.QRSAC
+   :members:
+   :show-inheritance:
+
 Rainbow
 ==========
 .. autoclass:: nnabla_rl.algorithms.rainbow.RainbowConfig

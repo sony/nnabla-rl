@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ from nnabla_rl.models.encoder import Encoder, VariationalAutoEncoder  # noqa
 
 from nnabla_rl.models.mujoco.policies import TD3Policy, SACPolicy, BEARPolicy, TRPOPolicy  # noqa
 from nnabla_rl.models.mujoco.q_functions import TD3QFunction, SACQFunction, HERQFunction  # noqa
+from nnabla_rl.models.mujoco.distributional_functions import QRSACQuantileDistributionFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import SACVFunction, TRPOVFunction, ATRPOVFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import PPOVFunction as PPOMujocoVFunction  # noqa
 from nnabla_rl.models.mujoco.encoders import UnsquashedVariationalAutoEncoder, BCQVariationalAutoEncoder  # noqa

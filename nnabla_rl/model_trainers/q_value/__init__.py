@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@ from nnabla_rl.model_trainers.q_value.munchausen_rl_q_trainer import (  # noqa
     MunchausenIQNQTrainer, MunchausenIQNQTrainerConfig, MunchausenDQNQTrainer, MunchausenDQNQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.qrdqn_q_trainer import (  # noqa
     QRDQNQTrainer, QRDQNQTrainerConfig)
+from nnabla_rl.model_trainers.q_value.qrsac_q_trainer import (  # noqa
+    QRSACQTrainer, QRSACQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.soft_q_trainer import (  # noqa
     SoftQTrainer, SoftQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.td3_q_trainer import (  # noqa
