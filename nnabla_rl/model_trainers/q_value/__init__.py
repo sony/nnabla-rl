@@ -36,6 +36,8 @@ from nnabla_rl.model_trainers.q_value.qrdqn_q_trainer import (  # noqa
     QRDQNQTrainer, QRDQNQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.qrsac_q_trainer import (  # noqa
     QRSACQTrainer, QRSACQTrainerConfig)
+from nnabla_rl.model_trainers.q_value.redq_q_trainer import (  # noqa
+    REDQQTrainer, REDQQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.soft_q_trainer import (  # noqa
     SoftQTrainer, SoftQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.td3_q_trainer import (  # noqa

@@ -208,8 +208,6 @@ class SAC(Algorithm):
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: SACConfig
-    _q1: QFunction
-    _q2: QFunction
     _train_q_functions: List[QFunction]
     _train_q_solvers: Dict[str, nn.solver.Solver]
     _target_q_functions: List[QFunction]
@@ -241,9 +239,7 @@ class SAC(Algorithm):
         self._explorer_builder = explorer_builder
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
-            self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
-            self._train_q_functions = [self._q1, self._q2]
+            self._train_q_functions = self._build_q_functions(q_function_builder)
             self._train_q_solvers = {q.scope_name: q_solver_builder(self._env_info, self._config)
                                      for q in self._train_q_functions}
             self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in self._train_q_functions]
@@ -295,7 +291,7 @@ class SAC(Algorithm):
             solvers={self._pi.scope_name: self._pi_solver},
             temperature=self._temperature,
             temperature_solver=self._temperature_solver,
-            q_functions=[self._q1, self._q2],
+            q_functions=self._train_q_functions,
             env_info=self._env_info,
             config=policy_trainer_config)
         return policy_trainer
@@ -377,8 +373,15 @@ class SAC(Algorithm):
     def _exploration_action_selector(self, s, *, begin_of_episode=False):
         return self._exploration_actor(s, begin_of_episode=begin_of_episode)
 
+    def _build_q_functions(self, q_function_builder):
+        q_functions = []
+        for i in range(2):
+            q = q_function_builder(scope_name=f"q{i+1}", env_info=self._env_info, algorithm_config=self._config)
+            q_functions.append(q)
+        return q_functions
+
     def _models(self):
-        models = [self._q1, self._q2, self._pi, self._temperature]
+        models = [*self._train_q_functions, self._pi, self._temperature]
         return {model.scope_name: model for model in models}
 
     def _solvers(self):
