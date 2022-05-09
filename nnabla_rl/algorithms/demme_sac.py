@@ -648,3 +648,14 @@ class DEMMESAC(Algorithm):
             latest_iteration_state['histogram'].update(
                 {'q_re_td_errors': self._q_re_trainer_state['td_errors'].flatten()})
         return latest_iteration_state
+
+    @property
+    def trainers(self):
+        return {
+            "v_rr": self._v_rr_trainer,
+            "v_re": self._v_re_trainer,
+            "q_rr": self._q_rr_trainer,
+            "q_re": self._q_re_trainer,
+            "pi_t": self._pi_t_trainer,
+            "pi_e": self._pi_e_trainer,
+        }

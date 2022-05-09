@@ -81,6 +81,7 @@ def retrieve_internal_states(scope_name: str,
             prev_state = prev_states[state_name]
             train_state = train_states[state_name]
             if reset_on_terminal:
+                assert training_variables.prev_step_variables
                 prev_non_terminal = training_variables.prev_step_variables.non_terminal
                 internal_states[state_name] = prev_non_terminal * prev_state + (1.0 - prev_non_terminal) * train_state
             else:

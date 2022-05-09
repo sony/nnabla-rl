@@ -360,6 +360,14 @@ class BCQ(Algorithm):
                 {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state
 
+    @property
+    def trainers(self):
+        return {
+            "encoder": self._encoder_trainer,
+            "q_function": self._q_function_trainer,
+            "perturbator": self._perturbator_trainer,
+        }
+
 
 if __name__ == "__main__":
     import nnabla_rl.environments as E

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -116,6 +116,10 @@ class TestAlgorithm(object):
             @classmethod
             def is_supported_env(cls, env_or_env_info):
                 return True
+
+            @property
+            def trainers(self):
+                return {}
 
         eval_scope_check = EvalScopeCheck()
         eval_scope_check.compute_eval_action(x=np.empty(shape=(1, 5)))

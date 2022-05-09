@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -123,3 +123,7 @@ class GAILRewardFunctionTrainer(ModelTrainer):
                      's_next_agent': s_next_agent_var}
 
         return TrainingVariables(batch_size, extra=variables)
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"binary_classification_loss": self._binary_classification_loss}

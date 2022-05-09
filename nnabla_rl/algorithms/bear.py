@@ -417,3 +417,11 @@ class BEAR(Algorithm):
             latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
             latest_iteration_state['histogram'].update({'td_errors': self._q_function_trainer_state['td_errors']})
         return latest_iteration_state
+
+    @property
+    def trainers(self):
+        return {
+            "encoder": self._encoder_trainer,
+            "q_function": self._q_function_trainer,
+            "policy": self._policy_trainer,
+        }

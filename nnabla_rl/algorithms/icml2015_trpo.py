@@ -287,3 +287,7 @@ class ICML2015TRPO(Algorithm):
     def latest_iteration_state(self):
         latest_iteration_state = super(ICML2015TRPO, self).latest_iteration_state
         return latest_iteration_state
+
+    @property
+    def trainers(self):
+        return {"policy": self._policy_trainer}

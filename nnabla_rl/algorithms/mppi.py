@@ -379,3 +379,7 @@ class MPPI(Algorithm):
     @classmethod
     def is_rnn_supported(self):
         return True
+
+    @property
+    def trainers(self):
+        return {"dynamics_trainer": self._dynamics_trainer}

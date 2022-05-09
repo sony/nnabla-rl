@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -228,6 +228,10 @@ class BEARPolicyTrainer(ModelTrainer):
         super()._setup_solver()
         if not self._config.fix_lagrange_multiplier:
             self._lagrange_solver.set_parameters(self._lagrange.get_parameters(), reset=False, retain_state=True)
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"pi_loss": self._pi_loss, "lagrange_loss": self._lagrange_loss}
 
 
 def _compute_gaussian_mmd(samples1, samples2, sigma):

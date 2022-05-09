@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -110,6 +110,10 @@ class MultiStepTrainerForTest(MT.q_value_trainers.multi_step_trainer.MultiStepTr
 
     def _setup_training_variables(self, batch_size):
         return TrainingVariables(batch_size)
+
+    @property
+    def loss_variables(self):
+        return {}
 
 
 class TestMultiStepTrainer(object):

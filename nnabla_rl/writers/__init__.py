@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,3 +14,4 @@
 # limitations under the License.
 
 from nnabla_rl.writers.file_writer import FileWriter  # noqa
+from nnabla_rl.writers.monitor_writer import MonitorWriter  # noqa

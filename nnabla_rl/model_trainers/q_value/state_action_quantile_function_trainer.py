@@ -170,3 +170,7 @@ class StateActionQuantileFunctionTrainer(MultiStepTrainer):
                                                rnn_states=rnn_states)
 
         return training_variables
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"quantile_huber_loss": self._quantile_huber_loss}

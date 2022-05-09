@@ -354,3 +354,7 @@ class CategoricalDQN(Algorithm):
                 {'cross_entropy_loss': float(self._model_trainer_state['cross_entropy_loss'])})
             latest_iteration_state['histogram'].update({'td_errors': self._model_trainer_state['td_errors'].flatten()})
         return latest_iteration_state
+
+    @property
+    def trainers(self):
+        return {"q_function": self._model_trainer}

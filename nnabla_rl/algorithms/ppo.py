@@ -475,6 +475,10 @@ class PPO(Algorithm):
             latest_iteration_state['scalar'].update({'v_loss': float(self._v_function_trainer_state['v_loss'])})
         return latest_iteration_state
 
+    @property
+    def trainers(self):
+        return {"v_function": self._v_function_trainer, "policy": self._policy_trainer}
+
 
 class _PPOActor(object):
     # type declarations to type check with mypy

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -186,7 +186,7 @@ class TrainingVariables():
                  s_next: Optional[Union[nn.Variable, Tuple[nn.Variable, ...]]] = None,
                  weight: Optional[nn.Variable] = None,
                  extra: Dict[str, nn.Variable] = {},
-                 next_step_variables: Optional[nn.Variable] = None,
+                 next_step_variables: Optional["TrainingVariables"] = None,
                  rnn_states: Dict[str, Dict[str, nn.Variable]] = {}):
         assert 0 < batch_size
         self.batch_size = batch_size
@@ -206,15 +206,15 @@ class TrainingVariables():
             self.weight = weight
         self.extra: Dict[str, nn.Variable] = extra
         self.next_step_variables = next_step_variables
-        self.prev_step_variables = None
+        self._prev_step_variables = None
         self.rnn_states = rnn_states
 
     @property
-    def next_step_variables(self):
+    def next_step_variables(self) -> Optional["TrainingVariables"]:
         return self._next_step_variables
 
     @next_step_variables.setter
-    def next_step_variables(self, value):
+    def next_step_variables(self, value: Optional["TrainingVariables"]) -> None:
         self._next_step_variables = value
         if self._next_step_variables is None:
             return
@@ -222,25 +222,27 @@ class TrainingVariables():
             self._next_step_variables.prev_step_variables = self
 
     @property
-    def prev_step_variables(self):
+    def prev_step_variables(self) -> Optional["TrainingVariables"]:
         return self._prev_step_variables
 
     @prev_step_variables.setter
-    def prev_step_variables(self, value):
+    def prev_step_variables(self, value: Optional["TrainingVariables"]) -> None:
         self._prev_step_variables = value
         if self._prev_step_variables is None:
             return
         if self._prev_step_variables.next_step_variables is not self:
             self._prev_step_variables.next_step_variables = self
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int) -> "TrainingVariables":
         num_steps = len(self)
         if num_steps <= item:
             raise IndexError
 
         variable = self
         for _ in range(item):
+            assert variable.next_step_variables
             variable = variable.next_step_variables
+        assert variable
         return variable
 
     def __iter__(self):
@@ -265,6 +267,54 @@ class TrainingVariables():
             return 0
         else:
             return 1 + self._prev_step_variables.step_index()
+
+    def get_variables(self, depth: int = 0) -> Dict[str, nn.Variable]:
+        variables = {}
+
+        prefix = f"step_{depth}_" if depth > 0 else ""
+
+        def _append_variable(name: str, variable: nn.Variable) -> None:
+            if variable is None:
+                return
+            if isinstance(variable, nn.Variable):
+                variables[f"{prefix}{name}"] = variable
+            elif isinstance(variable, (list, tuple)):
+                for i, v in enumerate(variable):
+                    _append_variable(f"{prefix}{name}_{i}", v)
+            else:
+                raise ValueError(f"invalid variable type: {type(variable)}")
+
+        # add standard variables
+        if hasattr(self, "s_current"):
+            _append_variable("s_current", self.s_current)
+        if hasattr(self, "a_current"):
+            _append_variable("a_current", self.a_current)
+        if hasattr(self, "reward"):
+            _append_variable("reward", self.reward)
+        if hasattr(self, "gamma"):
+            _append_variable("gamma", self.gamma)
+        if hasattr(self, "non_terminal"):
+            _append_variable("non_terminal", self.non_terminal)
+        if hasattr(self, "s_next"):
+            _append_variable("s_next", self.s_next)
+        if hasattr(self, "weight"):
+            _append_variable("weight", self.weight)
+
+        # recursively append next step variables
+        if self.next_step_variables:
+            next_step_variables = self.next_step_variables.get_variables(depth + 1)
+            variables.update(next_step_variables)
+
+        # add extra variables
+        for name, variable in self.extra.items():
+            _append_variable(name, variable)
+
+        # add rnn state variables
+        for state_name, state in self.rnn_states.items():
+            for variable_name, variable in state.items():
+                _append_variable(f"{state_name}_{variable_name}", variable)
+
+        return variables
 
 
 class ModelTrainer(metaclass=ABCMeta):
@@ -338,6 +388,15 @@ class ModelTrainer(metaclass=ABCMeta):
         trainer_state = self._update_model(self._models, self._solvers, batch, self._training_variables, **kwargs)
 
         return trainer_state
+
+    @property
+    @abstractmethod
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        raise NotImplementedError
+
+    @property
+    def training_variables(self) -> TrainingVariables:
+        return self._training_variables
 
     def set_learning_rate(self, new_learning_rate):
         for solver in self._solvers.values():

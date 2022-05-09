@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -108,3 +108,7 @@ class BCQPerturbatorTrainer(ModelTrainer):
         # Training input variables
         s_current_var = create_variable(batch_size, self._env_info.state_shape)
         return TrainingVariables(batch_size, s_current_var)
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"perturbator_loss": self._perturbator_loss}
