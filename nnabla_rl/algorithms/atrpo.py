@@ -36,6 +36,7 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import marshal_experiences
+from nnabla_rl.utils.solver_wrappers import AutoWeightDecay
 
 
 @dataclass
@@ -230,8 +231,9 @@ class ATRPO(Algorithm):
                 self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
                 self._policy = _StatePreprocessedStochasticPolicy(policy=self._policy, preprocessor=preprocessor)
                 self._state_preprocessor = preprocessor
-            self._v_function_solver = v_solver_builder(self._env_info, self._config)
-            self._v_function_solver.weight_decay(self._config.vf_l2_reg_coefficient)
+            solver = v_solver_builder(self._env_info, self._config)
+            solver = AutoWeightDecay(solver, self._config.vf_l2_reg_coefficient)
+            self._v_function_solver = solver
 
         self._evaluation_actor = _StochasticPolicyActionSelector(
             self._env_info, self._policy.shallowcopy(), deterministic=True)

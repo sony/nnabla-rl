@@ -25,6 +25,7 @@ from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilde
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import DRQNQFunction, QFunction
 from nnabla_rl.utils.misc import sync_model
+from nnabla_rl.utils.solver_wrappers import AutoClipGradByNorm
 
 
 @dataclass
@@ -59,7 +60,7 @@ class DefaultSolverBuilder(SolverBuilder):
                      **kwargs) -> nn.solver.Solver:
         decay: float = 0.95
         solver = NS.Adadelta(lr=algorithm_config.learning_rate, decay=decay)
-        solver.clip_grad_by_norm(algorithm_config.clip_grad_norm)
+        solver = AutoClipGradByNorm(solver, algorithm_config.clip_grad_norm)
         return solver
 
 
