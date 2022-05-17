@@ -187,7 +187,7 @@ class SAC(Algorithm):
         env_or_env_info \
         (gym.Env or :py:class:`EnvironmentInfo <nnabla_rl.environments.environment_info.EnvironmentInfo>`):
             the environment to train or environment info
-        config (:py:class:`SACConfig <nnabla_rl.algorithms.sac.ICML2018SACConfig>`): configuration of the SAC algorithm
+        config (:py:class:`SACConfig <nnabla_rl.algorithms.sac.SACConfig>`): configuration of the SAC algorithm
         q_function_builder (:py:class:`ModelBuilder[QFunction] <nnabla_rl.builders.ModelBuilder>`):
             builder of q function models
         q_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
