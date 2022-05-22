@@ -16,7 +16,7 @@
 import sys
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, Sequence, Union, cast
+from typing import Any, Dict, Optional, Sequence, Tuple, Union, cast
 
 import gym
 import numpy as np
@@ -210,6 +210,25 @@ class Algorithm(metaclass=ABCMeta):
 
         Returns:
             np.ndarray: Action for given state using current trained policy.
+        '''
+        raise NotImplementedError
+
+    def compute_trajectory(self,
+                           initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]) \
+            -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
+        '''
+        Compute trajectory (sequence of state and action tuples) from given initial trajectory using current policy.
+        Most of the reinforcement learning algorithms does not implement this method.
+        Only the optimal control algorithms implements this method.
+
+        Args:
+            initial_trajectory (Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]): initial trajectory.
+
+        Returns:
+            Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
+                Sequence of state and action tuples and extra information (if exist) at each timestep,
+                computed with current best policy. Extra information depends on the algorithm.
+                The sequence length is same as the length of initial trajectory.
         '''
         raise NotImplementedError
 

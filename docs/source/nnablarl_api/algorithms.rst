@@ -140,6 +140,16 @@ HER
    :members:
    :show-inheritance:
 
+iLQR
+====
+.. autoclass:: nnabla_rl.algorithms.ilqr.iLQRConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.ilqr.iLQR
+   :members:
+   :show-inheritance:
+
 IQN
 ====
 .. autoclass:: nnabla_rl.algorithms.iqn.IQNConfig
@@ -147,6 +157,16 @@ IQN
    :show-inheritance:
 
 .. autoclass:: nnabla_rl.algorithms.iqn.IQN
+   :members:
+   :show-inheritance:
+
+LQR
+====
+.. autoclass:: nnabla_rl.algorithms.lqr.LQRConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.lqr.LQR
    :members:
    :show-inheritance:
 

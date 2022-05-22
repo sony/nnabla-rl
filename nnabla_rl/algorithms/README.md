@@ -1,5 +1,9 @@
 # Algorithm catalog
 
+nnabla-rl offers various (deep) reinforcement learning and optimal control algorithms. See the list below for the implemented algorithms! </br>
+
+## Reinforcement learning algorithms
+
 - Online training: Training which is performed by interacting with the environment. You'll need to prepare an environment which is compatible with the [OpenAI gym's environment interface](https://gym.openai.com/docs/#environments).
 - Offline(Batch) training: Training which is performed sorely from provided data. You'll need to prepare a dataset capsuled with the [ReplayBuffer](../replay_buffer.py).
 - Continuous/Discrete action: If you are familiar with the training of deep neural nets, the action type's difference is similar to the difference of regression and classification. Continuous action is an action which consists of real value(s) (e.g. robot's motor torque). In contrast, discrete action is an action which can be labeled (e.g. UP, DOWN, RIGHT, LEFT). The choice of action type depends on the environment (problem) and applicable algorithm changes depending on the its action type.
@@ -38,3 +42,13 @@
 |[TRPO (ICML 2015 version)](https://arxiv.org/abs/1502.05477)|:heavy_check_mark:|:x:|:heavy_check_mark:|:heavy_check_mark:|:x:|
 
 <sup>*</sup>May require special treatment to train with RNN layers.
+
+## Optimal control algorithms
+
+- Need training: Most of the optimal control algorithm does NOT require training to run the controller. Instead, you will need the dynamics model of the system and cost function of the task in prior to the execution of the algorithm. See the documentation of each algorithm for the detail.
+- Continuous/Discrete action: Same as reinfocement learning. However, most of the optimal control algorithm does not support discrete action.
+
+|Algorithm|Need training|Continuous action|Discrete action|
+|:---|:---:|:---:|:---:|
+|[iLQR](https://homes.cs.washington.edu/~todorov/papers/TassaIROS12.pdf)|not required|:heavy_check_mark:|:x:|
+|[LQR](https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator)|not required|:heavy_check_mark:|:x:|
