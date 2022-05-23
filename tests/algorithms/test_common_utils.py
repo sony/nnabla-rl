@@ -22,7 +22,8 @@ from nnabla_rl.algorithms.common_utils import (_DeterministicPolicyActionSelecto
                                                _StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
                                                compute_average_v_target_and_advantage, compute_v_target_and_advantage,
                                                has_batch_dimension)
-from nnabla_rl.environments.dummy import DummyContinuous, DummyContinuousActionGoalEnv, DummyTupleContinuous
+from nnabla_rl.environments.dummy import (DummyContinuous, DummyContinuousActionGoalEnv, DummyDiscrete,
+                                          DummyTupleContinuous, DummyTupleDiscrete)
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import VFunction
 
@@ -58,7 +59,7 @@ class TestCommonUtils():
                 experience.append((s_current, a, r, non_terminal, s_next))
         return experience
 
-    def test_has_batch_dimension_tupled_state(self):
+    def test_has_batch_dimension_tupled_continuous_state(self):
         env = DummyTupleContinuous()
         env_info = EnvironmentInfo.from_env(env)
 
@@ -70,8 +71,32 @@ class TestCommonUtils():
         assert has_batch_dimension(batched_state, env_info)
         assert not has_batch_dimension(non_batched_state, env_info)
 
-    def test_has_batch_dimension_non_tupled_state(self):
+    def test_has_batch_dimension_tupled_discrete_state(self):
+        env = DummyTupleDiscrete()
+        env_info = EnvironmentInfo.from_env(env)
+
+        batch_size = 5
+        state_shapes = env_info.state_shape
+        batched_state = tuple(np.empty(shape=(batch_size, *state_shape)) for state_shape in state_shapes)
+        non_batched_state = tuple(np.empty(shape=state_shape) for state_shape in state_shapes)
+
+        assert has_batch_dimension(batched_state, env_info)
+        assert not has_batch_dimension(non_batched_state, env_info)
+
+    def test_has_batch_dimension_non_tupled_continuous_state(self):
         env = DummyContinuous()
+        env_info = EnvironmentInfo.from_env(env)
+
+        batch_size = 5
+        state_shape = env_info.state_shape
+        batched_state = np.empty(shape=(batch_size, *state_shape))
+        non_batched_state = np.empty(shape=state_shape)
+
+        assert has_batch_dimension(batched_state, env_info)
+        assert not has_batch_dimension(non_batched_state, env_info)
+
+    def test_has_batch_dimension_non_tupled_discrete_state(self):
+        env = DummyDiscrete()
         env_info = EnvironmentInfo.from_env(env)
 
         batch_size = 5
