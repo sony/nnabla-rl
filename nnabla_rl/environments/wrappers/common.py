@@ -25,7 +25,26 @@ class Float32ObservationEnv(gym.ObservationWrapper):
     def __init__(self, env):
         super(Float32ObservationEnv, self).__init__(env)
         self.dtype = np.float32
-        self.observation_space.dtype = np.dtype(np.float32)
+        if isinstance(env.observation_space, spaces.Tuple):
+            self.observation_space = spaces.Tuple(
+                [self._create_observation_space(observation_space)
+                 for observation_space in env.observation_space]
+            )
+        else:
+            self.observation_space = self._create_observation_space(env.observation_space)
+
+    def _create_observation_space(self, observation_space):
+        if isinstance(observation_space, spaces.Box):
+            return spaces.Box(
+                low=observation_space.low,
+                high=observation_space.high,
+                shape=observation_space.shape,
+                dtype=self.dtype
+            )
+        elif isinstance(observation_space, spaces.Discrete):
+            return spaces.Discrete(n=observation_space.n)
+        else:
+            raise NotImplementedError
 
     def observation(self, observation):
         if isinstance(observation, tuple):

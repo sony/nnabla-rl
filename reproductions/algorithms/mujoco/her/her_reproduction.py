@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv
-from nnabla_rl.environments.wrappers.goal_conditioned import GoalConditionedTupleObservationEnv
+from nnabla_rl.environments.wrappers.goal_conditioned import GoalConditionedTupleObservationEnv, GoalEnvWrapper
 from nnabla_rl.typing import Experience
 from nnabla_rl.utils import serializers
 from nnabla_rl.utils.evaluator import EpisodicSuccessEvaluator
@@ -71,7 +71,10 @@ def build_mujoco_goal_conditioned_env(id_or_env, test=False, seed=None, render=F
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
     else:
-        env = gym.make(id_or_env)
+        # Currently, env-checker of OpenAI gym cannot handle dict observation.
+        # So, avoid to use env-checker.
+        env = gym.make(id_or_env, disable_env_checker=True)
+    env = GoalEnvWrapper(env)
     env = GoalConditionedTupleObservationEnv(env)
     print_env_info(env)
 

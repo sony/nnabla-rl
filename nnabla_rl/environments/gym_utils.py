@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 from typing import Tuple, Union
 
 import gym
+import gym.spaces
 import numpy as np
 
 
@@ -77,7 +78,15 @@ def is_same_space_type(query_space: gym.spaces.Space,
     Returns:
         bool: True if the query_space is the same as key_space. Otherwise False.
     '''
+    def _check_each_space_type(space, key_space) -> bool:
+        if key_space == gym.spaces.Discrete:
+            return isinstance(space, gym.spaces.Discrete)
+        elif key_space == gym.spaces.Box:
+            return isinstance(space, gym.spaces.Box)
+        else:
+            raise NotImplementedError
+
     if isinstance(query_space, gym.spaces.Tuple):
-        return all(isinstance(s, key_space) for s in query_space)
+        return all(_check_each_space_type(s, key_space) for s in query_space)
     else:
-        return isinstance(query_space, key_space)
+        return _check_each_space_type(query_space, key_space)

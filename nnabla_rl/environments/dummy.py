@@ -13,9 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import TYPE_CHECKING, cast
+
 import gym
 import numpy as np
 from gym.envs.registration import EnvSpec
+
+if TYPE_CHECKING:
+    from gym.utils.seeding import RandomNumberGenerator
+
+import nnabla_rl
+from nnabla_rl.external.goal_env import GoalEnv
 
 
 class AbstractDummyEnv(gym.Env):
@@ -104,7 +112,8 @@ class DummyAtariEnv(AbstractDummyEnv):
                 self._lives = 100
             return self._lives
 
-    np_random = np.random
+    # seeding.np_random outputs np_random and seed
+    np_random = cast("RandomNumberGenerator", nnabla_rl.random.drng)
 
     def __init__(self, done_at_random=True, max_episode_length=None):
         super(DummyAtariEnv, self).__init__(
@@ -122,7 +131,7 @@ class DummyAtariEnv(AbstractDummyEnv):
         observation = self.observation_space.sample()
         self._episode_length += 1
         if self._done_at_random:
-            done = (np.random.randint(10) == 0)
+            done = bool(self.np_random.integers(10) == 0)
         else:
             done = False
         if self._max_episode_length is not None:
@@ -153,7 +162,7 @@ class DummyMujocoEnv(AbstractDummyEnv):
         return dataset
 
 
-class DummyContinuousActionGoalEnv(gym.GoalEnv):
+class DummyContinuousActionGoalEnv(GoalEnv):
     def __init__(self, max_episode_steps=10):
         self.spec = EnvSpec(id='dummy-continuou-action-goal-v0', max_episode_steps=max_episode_steps)
         self.observation_space = gym.spaces.Dict({'observation': gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
@@ -190,7 +199,7 @@ class DummyContinuousActionGoalEnv(gym.GoalEnv):
             return 0
 
 
-class DummyDiscreteActionGoalEnv(gym.GoalEnv):
+class DummyDiscreteActionGoalEnv(GoalEnv):
     def __init__(self, max_episode_steps=10):
         self.spec = EnvSpec(id='dummy-discrete-action-goal-v0', max_episode_steps=max_episode_steps)
         self.observation_space = gym.spaces.Dict({'observation': gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),

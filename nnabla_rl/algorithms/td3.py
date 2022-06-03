@@ -137,7 +137,7 @@ class DefaultActorBuilder(ModelBuilder[DeterministicPolicy]):
                     env_info: EnvironmentInfo,
                     algorithm_config: TD3Config,
                     **kwargs) -> DeterministicPolicy:
-        max_action_value = float(env_info.action_space.high[0])
+        max_action_value = float(env_info.action_high[0])
         return TD3Policy(scope_name, env_info.action_dim, max_action_value=max_action_value)
 
 
@@ -167,8 +167,8 @@ class DefaultExplorerBuilder(ExplorerBuilder):
             warmup_random_steps=algorithm_config.start_timesteps,
             initial_step_num=algorithm.iteration_num,
             timelimit_as_terminal=False,
-            action_clip_low=env_info.action_space.low,
-            action_clip_high=env_info.action_space.high,
+            action_clip_low=env_info.action_low,
+            action_clip_high=env_info.action_high,
             sigma=algorithm_config.exploration_noise_sigma
         )
         explorer = EE.GaussianExplorer(policy_action_selector=algorithm._exploration_action_selector,

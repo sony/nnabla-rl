@@ -91,7 +91,7 @@ class HERActorBuilder(ModelBuilder[DeterministicPolicy]):
                     env_info: EnvironmentInfo,
                     algorithm_config: HERConfig,
                     **kwargs) -> DeterministicPolicy:
-        max_action_value = float(env_info.action_space.high[0])
+        max_action_value = float(env_info.action_high[0])
         return HERPolicy(scope_name, env_info.action_dim, max_action_value=max_action_value)
 
 
