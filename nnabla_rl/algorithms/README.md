@@ -52,3 +52,4 @@ nnabla-rl offers various (deep) reinforcement learning and optimal control algor
 |:---|:---:|:---:|:---:|
 |[iLQR](https://homes.cs.washington.edu/~todorov/papers/TassaIROS12.pdf)|not required|:heavy_check_mark:|:x:|
 |[LQR](https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator)|not required|:heavy_check_mark:|:x:|
+|[MPPI](https://ieeexplore.ieee.org/document/7989202)|may train a dynamics model|:heavy_check_mark:|:x:|

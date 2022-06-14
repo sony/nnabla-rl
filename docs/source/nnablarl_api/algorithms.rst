@@ -190,6 +190,16 @@ MMESAC (Disentangled)
    :members:
    :show-inheritance:
 
+MPPI
+===============
+.. autoclass:: nnabla_rl.algorithms.mppi.MPPIConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.mppi.MPPI
+   :members:
+   :show-inheritance:
+
 Munchausen DQN
 ===============
 .. autoclass:: nnabla_rl.algorithms.munchausen_dqn.MunchausenDQNConfig

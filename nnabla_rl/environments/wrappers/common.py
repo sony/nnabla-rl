@@ -105,7 +105,7 @@ class NumpyFloat32Env(gym.Wrapper):
 class ScreenRenderEnv(gym.Wrapper):
     def __init__(self, env):
         super(ScreenRenderEnv, self).__init__(env)
-        self._env_name = env.unwrapped.spec.id
+        self._env_name = "Unknown" if env.unwrapped.spec is None else env.unwrapped.spec.id
 
     def step(self, action):
         self.env.render()

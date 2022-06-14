@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ def set_data_to_variable(variable: Union[nn.Variable, Tuple[nn.Variable, ...]],
     if isinstance(data, tuple) and isinstance(variable, tuple):
         assert len(variable) == len(data)
         for v, d in zip(variable, data):
-            v.d = d
+            set_data_to_variable(v, d)
     elif isinstance(data, np.ndarray) and isinstance(variable, nn.Variable):
         variable.d = data
     elif isinstance(data, float) and isinstance(variable, nn.Variable):

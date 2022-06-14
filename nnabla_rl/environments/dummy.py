@@ -29,15 +29,18 @@ from nnabla_rl.external.goal_env import GoalEnv
 class AbstractDummyEnv(gym.Env):
     def __init__(self, max_episode_steps):
         self.spec = EnvSpec(id='dummy-v0', max_episode_steps=max_episode_steps)
+        self._episode_steps = 0
 
     def reset(self):
+        self._episode_steps = 0
         return self.observation_space.sample()
 
     def step(self, a):
         next_state = self.observation_space.sample()
         reward = np.random.randn()
-        done = False
+        done = False if self.spec.max_episode_steps is None else bool(self._episode_steps < self.spec.max_episode_steps)
         info = {'rnn_states': {'dummy_scope': {'dummy_state1': 1, 'dummy_state2': 2}}}
+        self._episode_steps += 1
         return next_state, reward, done, info
 
 
@@ -46,7 +49,7 @@ class DummyContinuous(AbstractDummyEnv):
         super(DummyContinuous, self).__init__(
             max_episode_steps=max_episode_steps)
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=observation_shape)
-        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=action_shape)
+        self.action_space = gym.spaces.Box(low=-1.0, high=5.0, shape=action_shape)
 
 
 class DummyDiscrete(AbstractDummyEnv):

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Generic, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Dict, Generic, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 
@@ -22,7 +22,8 @@ import nnabla as nn
 from nnabla_rl.algorithm import eval_api
 from nnabla_rl.distributions.distribution import Distribution
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.models import DeterministicPolicy, Model, QFunction, RewardFunction, StochasticPolicy, VFunction
+from nnabla_rl.models import (DeterministicDynamics, DeterministicPolicy, Model, QFunction, RewardFunction,
+                              StochasticPolicy, VFunction)
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.typing import Experience, State
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
@@ -407,3 +408,66 @@ class _DeterministicPolicyActionSelector(_ActionSelector[DeterministicPolicy]):
 
     def _compute_action(self, state_var: nn.Variable) -> nn.Variable:
         return self._model.pi(self._eval_state_var)
+
+
+class _StatePredictor(Generic[M], metaclass=ABCMeta):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _env_info: EnvironmentInfo
+    _model: M
+
+    def __init__(self, env_info: EnvironmentInfo, model: M):
+        self._env_info = env_info
+        self._model = model
+        self._batch_size = 1
+
+    @eval_api
+    def __call__(self,
+                 s: Union[np.ndarray, Tuple[np.ndarray, ...]],
+                 a: np.ndarray,
+                 *,
+                 begin_of_episode: bool = False):
+        if not has_batch_dimension(s, self._env_info):
+            s = add_batch_dimension(s)
+        if not has_batch_dimension(a, self._env_info):
+            a = cast(np.ndarray, add_batch_dimension(a))
+        batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
+        if not hasattr(self, '_eval_state_var') or batch_size != self._batch_size:
+            # Variable creation
+            self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)
+            self._eval_action_var = create_variable(batch_size, self._env_info.action_shape)
+            if self._model.is_recurrent():
+                self._rnn_internal_states = create_variables(batch_size, self._model.internal_state_shapes())
+                self._model.set_internal_states(self._rnn_internal_states)
+            self._next_state = self._compute_next_state(self._eval_state_var, self._eval_action_var)
+            if self._model.is_recurrent():
+                self._model.reset_internal_states()
+            self._batch_size = batch_size
+        # Forward network
+        if self._model.is_recurrent() and begin_of_episode:
+            self._model.reset_internal_states()
+        set_data_to_variable(self._eval_state_var, s)
+        set_data_to_variable(self._eval_action_var, a)
+        if self._model.is_recurrent():
+            prev_rnn_states = self._model.get_internal_states()
+            for key in self._rnn_internal_states.keys():
+                # copy internal states of previous iteration
+                self._rnn_internal_states[key].d = prev_rnn_states[key].d
+        self._next_state.forward(clear_no_need_grad=True)
+        # No need to save internal states
+        next_state = np.squeeze(self._next_state.d, axis=0) if batch_size == 1 else self._next_state.d
+        return next_state, {}
+
+    @abstractmethod
+    def _compute_next_state(self, state_var: nn.Variable, action_var: nn.Variable) -> nn.Variable:
+        raise NotImplementedError
+
+
+class _DeterministicStatePredictor(_StatePredictor[DeterministicDynamics]):
+    def __init__(self, env_info: EnvironmentInfo, dynamics: DeterministicDynamics):
+        super().__init__(env_info, dynamics)
+        self._dynamics = dynamics
+
+    def _compute_next_state(self, state_var: nn.Variable, action_var: nn.Variable) -> nn.Variable:
+        return self._dynamics.next_state(state_var, action_var)

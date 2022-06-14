@@ -32,3 +32,12 @@ class NumpyModel(object):
             filepath (str or pathlib.Path): paramter file path
         '''
         raise NotImplementedError
+
+    def support_batch(self) -> bool:
+        '''support_batch
+        Check whether the model supports batched inputs or not.
+
+        Returns:
+            bool: True if supports batched input otherwise False.
+        '''
+        return False
