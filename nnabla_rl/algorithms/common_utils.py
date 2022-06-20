@@ -32,9 +32,9 @@ from nnabla_rl.utils.misc import create_variable, create_variables
 def _get_shape(state: State) -> Union[Tuple[int, ...], Tuple[Tuple[int, ...], ...]]:
     shape: Union[Tuple[int, ...], Tuple[Tuple[int, ...], ...]]
     if isinstance(state, tuple):
-        shape = tuple(s.shape for s in state)
+        shape = tuple(np.atleast_1d(s).shape for s in state)
     else:
-        shape = state.shape
+        shape = np.atleast_1d(state).shape
     return shape
 
 
