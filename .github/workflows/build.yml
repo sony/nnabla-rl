@@ -135,6 +135,10 @@ jobs:
         run: |
           pip install -e reproductions/algorithms/delayed_mujoco/environment
           ./bin/test_reproductions --gpu_id -1 --base_env delayed_mujoco --env FakeMujocoNNablaRL-v1
+      - name: Pybullet reproductions test
+        run: |
+          pip install pybullet
+          ./bin/test_reproductions --gpu_id -1 --base_env pybullet
   copyright:
     runs-on: ubuntu-latest
     timeout-minutes: 3

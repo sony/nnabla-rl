@@ -73,6 +73,15 @@ do
         echo "Test run of showcase for ${ALGORITHM}"
         python ${SCRIPT} --gpu ${GPU_ID} --env ${TMP_ENV} --snapshot-dir ${SNAPSHOT_DIR} --showcase \
             --showcase_runs ${SHOWCASE_RUNS}
+    elif [ ${BASE_ENV} = "pybullet" ] && [ ${ALGORITHM} = "icra2018qtopt" ]; then
+        TMP_ENV="KukaGraspingProceduralEnv"
+        echo "Test run of training for ${ALGORITHM}"
+        python ${SCRIPT} --gpu ${GPU_ID} --save-dir "${RESULT_BASE_DIR}/${ALGORITHM}" --seed ${SEED} --total_iterations ${TOTAL_ITERATIONS} --save_timing ${TOTAL_ITERATIONS} --num_collection_episodes 1 \
+        --batch_size 1 
+        SNAPSHOT_DIR="${RESULT_BASE_DIR}/${ALGORITHM}/${TMP_ENV}_1_results/seed-${SEED}/iteration-${TOTAL_ITERATIONS}"
+        echo "Test run of showcase for ${ALGORITHM}"
+        python ${SCRIPT} --gpu ${GPU_ID} --snapshot-dir ${SNAPSHOT_DIR} --showcase \
+            --showcase_runs ${SHOWCASE_RUNS}
     else
         echo "Test run of training for ${ALGORITHM}"
         python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --save-dir "${RESULT_BASE_DIR}/${ALGORITHM}" --seed ${SEED} \

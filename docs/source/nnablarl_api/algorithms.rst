@@ -217,6 +217,14 @@ QRSAC
    :show-inheritance:
 
 .. autoclass:: nnabla_rl.algorithms.qrsac.QRSAC
+   
+QtOpt (ICRA 2018 version)
+=========================
+.. autoclass:: nnabla_rl.algorithms.icra2018_qtopt.ICRA2018QtOpt
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.icra2018_qtopt.ICRA2018QtOpt
    :members:
    :show-inheritance:
 
