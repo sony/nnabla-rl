@@ -13,11 +13,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
 import nnabla as nn
+import nnabla.functions as NF
 import nnabla_rl.algorithms as A
 import nnabla_rl.environments as E
+from nnabla_rl.builders import ModelBuilder
+from nnabla_rl.distributions import Gaussian
+from nnabla_rl.models import StochasticPolicy, VFunction
+
+
+class TupleStateActor(StochasticPolicy):
+    _action_dim: int
+
+    def __init__(self, scope_name: str, action_dim: int):
+        super(TupleStateActor, self).__init__(scope_name)
+        self._action_dim = action_dim
+
+    def pi(self, s: nn.Variable):
+        s, *_ = s
+        return Gaussian(mean=np.zeros(shape=(s.shape[0], self._action_dim)),
+                        ln_var=np.zeros(shape=(s.shape[0], self._action_dim)))
+
+
+class TupleStateActorBuilder(ModelBuilder[VFunction]):
+    def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
+        return TupleStateActor(scope_name, env_info.action_dim)
+
+
+class TupleStateVFunction(VFunction):
+    def __init__(self, scope_name: str):
+        super(TupleStateVFunction, self).__init__(scope_name)
+
+    def v(self, s: nn.Variable):
+        s, *_ = s
+        v = nn.Variable.from_numpy_array(np.ones(shape=(s.shape[0], 1)))
+        return NF.relu(v)
+
+
+class TupleStateVFunctionBuilder(ModelBuilder[VFunction]):
+    def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
+        return TupleStateVFunction(scope_name)
 
 
 class TestPPO(object):
@@ -55,6 +93,21 @@ class TestPPO(object):
         ppo = A.PPO(dummy_env, config=config)
 
         ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
+
+    def test_run_online_tuple_state_env_training(self):
+        '''
+        Check that no error occurs when calling online training (tuple state env)
+        '''
+
+        dummy_env = E.DummyTupleContinuous()
+        actor_timesteps = 10
+        actor_num = 2
+        config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num, preprocess_state=False)
+        ppo = A.PPO(dummy_env, config=config,
+                    v_function_builder=TupleStateVFunctionBuilder(),
+                    policy_builder=TupleStateActorBuilder())
+
+        ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
 
     def test_run_online_discrete_single_actor(self):
         '''

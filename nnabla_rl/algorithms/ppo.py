@@ -41,7 +41,8 @@ from nnabla_rl.models import (Model, PPOAtariPolicy, PPOAtariVFunction, PPOMujoc
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
-from nnabla_rl.utils.data import marshal_experiences, unzip
+from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable, unzip
+from nnabla_rl.utils.misc import create_variable
 from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
                                           mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
@@ -378,6 +379,17 @@ class PPO(Algorithm):
         raise NotImplementedError
 
     def _collect_experiences(self, actors):
+        def concat_result(result):
+            if isinstance(result[0], tuple):
+                num_items = len(result[0])
+                items = []
+                for i in range(num_items):
+                    concatenated = np.concatenate(tuple(item[i] for item in result), axis=0)
+                    items.append(concatenated)
+                return tuple(zip(*items))
+            else:
+                return np.concatenate(result, axis=0)
+
         for actor in self._actors:
             if self._config.actor_num != 1:
                 actor.update_v_params(self._v_function.get_parameters())
@@ -393,7 +405,8 @@ class PPO(Algorithm):
         for actor in actors:
             result = actor.wait_data_collection()
             results.append(result)
-        return (np.concatenate(item, axis=0) for item in unzip(results))
+
+        return (concat_result(result) for result in unzip(results))
 
     def _ppo_training(self, experiences):
         if self._config.decrease_alpha:
@@ -403,7 +416,6 @@ class PPO(Algorithm):
             alpha = 1.0
 
         (s, a, _, _, _, log_prob, v_target, advantage) = marshal_experiences(experiences)
-
         extra = {}
         extra['log_prob'] = log_prob
         extra['advantage'] = advantage
@@ -519,41 +531,31 @@ class _PPOActor(object):
                                            ['state', 'action', 'reward', 'non_terminal',
                                             'next_state', 'log_prob', 'v_target', 'advantage'])
 
-        state_mp_array_shape = (self._timesteps, *obs_space.shape)
-        state_mp_array = mp_array_from_np_array(
-            np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
-        if env_info.is_discrete_action_env():
-            action_mp_array_shape = (self._timesteps, 1)
-            action_mp_array = mp_array_from_np_array(
-                np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
-        else:
-            action_mp_array_shape = (self._timesteps, action_space.shape[0])
-            action_mp_array = mp_array_from_np_array(
-                np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
+        state_mp_array = self._prepare_state_mp_array(obs_space, env_info)
+        action_mp_array = self._prepare_action_mp_array(action_space, env_info)
 
         scalar_mp_array_shape = (self._timesteps, 1)
-        reward_mp_array = mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32))
-        non_terminal_mp_array = mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32))
-        next_state_mp_array = mp_array_from_np_array(
-            np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
-        log_prob_mp_array = mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32))
-        v_target_mp_array = mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32))
-        advantage_mp_array = mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32))
+        reward_mp_array = (mp_array_from_np_array(
+            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
+        non_terminal_mp_array = (mp_array_from_np_array(
+            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
+        next_state_mp_array = self._prepare_state_mp_array(obs_space, env_info)
+        log_prob_mp_array = (mp_array_from_np_array(
+            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
+        v_target_mp_array = (mp_array_from_np_array(
+            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
+        advantage_mp_array = (mp_array_from_np_array(
+            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
 
         self._mp_arrays = MultiProcessingArrays(
-            (state_mp_array, state_mp_array_shape, obs_space.dtype),
-            (action_mp_array, action_mp_array_shape, action_space.dtype),
-            (reward_mp_array, scalar_mp_array_shape, np.float32),
-            (non_terminal_mp_array, scalar_mp_array_shape, np.float32),
-            (next_state_mp_array, state_mp_array_shape, obs_space.dtype),
-            (log_prob_mp_array, scalar_mp_array_shape, np.float32),
-            (v_target_mp_array, scalar_mp_array_shape, np.float32),
-            (advantage_mp_array, scalar_mp_array_shape, np.float32)
+            state_mp_array,
+            action_mp_array,
+            reward_mp_array,
+            non_terminal_mp_array,
+            next_state_mp_array,
+            log_prob_mp_array,
+            v_target_mp_array,
+            advantage_mp_array
         )
 
     def __call__(self):
@@ -568,8 +570,14 @@ class _PPOActor(object):
         self._task_start_event.set()
 
     def wait_data_collection(self):
+        def _mp_to_np_array(mp_array):
+            if isinstance(mp_array[0], tuple):
+                # tupled state
+                return tuple(mp_to_np_array(*array) for array in mp_array)
+            else:
+                return mp_to_np_array(*mp_array)
         self._task_finish_event.wait()
-        return (mp_to_np_array(mp_array, shape, dtype) for (mp_array, shape, dtype) in self._mp_arrays)
+        return tuple(_mp_to_np_array(mp_array) for mp_array in self._mp_arrays)
 
     def update_v_params(self, params):
         self._update_params(src=params, dest=self._v_mp_arrays)
@@ -616,12 +624,12 @@ class _PPOActor(object):
 
     @eval_api
     def _compute_action(self, s, *, begin_of_episode=False):
-        s = np.expand_dims(s, axis=0)
+        s = add_batch_dimension(s)
         if not hasattr(self, '_eval_state_var'):
-            self._eval_state_var = nn.Variable(s.shape)
+            self._eval_state_var = create_variable(1, self._env_info.state_shape)
             distribution = self._policy.pi(self._eval_state_var)
             self._eval_action, self._eval_log_prob = distribution.sample_and_compute_log_prob()
-        self._eval_state_var.d = s
+        set_data_to_variable(self._eval_state_var, s)
         nn.forward_all([self._eval_action, self._eval_log_prob])
         action = np.squeeze(self._eval_action.d, axis=0)
         log_prob = np.squeeze(self._eval_log_prob.d, axis=0)
@@ -635,15 +643,21 @@ class _PPOActor(object):
     def _fill_result(self, experiences, v_targets, advantages):
         def array_and_dtype(mp_arrays_item):
             return mp_arrays_item[0], mp_arrays_item[2]
+
+        def _np_to_mp_array(np_array, mp_array):
+            if isinstance(np_array, tuple) and isinstance(mp_array, tuple):
+                (np_to_mp_array(np_ary, *array_and_dtype(mp_ary)) for np_ary, mp_ary in zip(np_array, mp_array))
+            else:
+                np_to_mp_array(np_array, *array_and_dtype(mp_array))
         (s, a, r, non_terminal, s_next, log_prob) = marshal_experiences(experiences)
-        np_to_mp_array(s, *array_and_dtype(self._mp_arrays.state))
-        np_to_mp_array(a, *array_and_dtype(self._mp_arrays.action))
-        np_to_mp_array(r, *array_and_dtype(self._mp_arrays.reward))
-        np_to_mp_array(non_terminal, *array_and_dtype(self._mp_arrays.non_terminal))
-        np_to_mp_array(s_next, *array_and_dtype(self._mp_arrays.next_state))
-        np_to_mp_array(log_prob, *array_and_dtype(self._mp_arrays.log_prob))
-        np_to_mp_array(v_targets, *array_and_dtype(self._mp_arrays.v_target))
-        np_to_mp_array(advantages, *array_and_dtype(self._mp_arrays.advantage))
+        _np_to_mp_array(s, self._mp_arrays.state)
+        _np_to_mp_array(a, self._mp_arrays.action)
+        _np_to_mp_array(r, self._mp_arrays.reward)
+        _np_to_mp_array(non_terminal, self._mp_arrays.non_terminal)
+        _np_to_mp_array(s_next, self._mp_arrays.next_state)
+        _np_to_mp_array(log_prob, self._mp_arrays.log_prob)
+        _np_to_mp_array(v_targets, self._mp_arrays.v_target)
+        _np_to_mp_array(advantages, self._mp_arrays.advantage)
 
     def _update_params(self, src, dest):
         copy_params_to_mp_arrays(src, dest)
@@ -659,3 +673,33 @@ class _PPOActor(object):
 
     def _synchronize_params(self, src, dest):
         copy_mp_arrays_to_params(src, dest)
+
+    def _prepare_state_mp_array(self, obs_space, env_info):
+        if env_info.is_tuple_state_env():
+            state_mp_arrays = []
+            state_mp_array_shapes = []
+            state_mp_array_dtypes = []
+            for space in obs_space:
+                state_mp_array_shape = (self._timesteps, *space.shape)
+                state_mp_array = mp_array_from_np_array(
+                    np.empty(shape=state_mp_array_shape, dtype=space.dtype))
+                state_mp_array_shapes.append(state_mp_array_shape)
+                state_mp_array_dtypes.append(space.dtype)
+                state_mp_arrays.append(state_mp_array)
+            return tuple(x for x in zip(state_mp_arrays, state_mp_array_shapes, state_mp_array_dtypes))
+        else:
+            state_mp_array_shape = (self._timesteps, *obs_space.shape)
+            state_mp_array = mp_array_from_np_array(
+                np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
+            return (state_mp_array, state_mp_array_shape, obs_space.dtype)
+
+    def _prepare_action_mp_array(self, action_space, env_info):
+        if env_info.is_discrete_action_env():
+            action_mp_array_shape = (self._timesteps, 1)
+            action_mp_array = mp_array_from_np_array(
+                np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
+        else:
+            action_mp_array_shape = (self._timesteps, action_space.shape[0])
+            action_mp_array = mp_array_from_np_array(
+                np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
+        return (action_mp_array, action_mp_array_shape, action_space.dtype)
