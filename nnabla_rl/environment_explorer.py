@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import numpy as np
 
 from nnabla_rl.configuration import Configuration
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.typing import Experience
+from nnabla_rl.typing import Action, Experience, State
 
 
 @dataclass
@@ -43,9 +43,9 @@ class EnvironmentExplorer(metaclass=ABCMeta):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _env_info: EnvironmentInfo
     _config: EnvironmentExplorerConfig
-    _state: Union[np.ndarray, None]
-    _action: Union[np.ndarray, None]
-    _next_state: Union[np.ndarray, None]
+    _state: Union[State, None]
+    _action: Union[Action, None]
+    _next_state: Union[State, None]
     _steps: int
 
     def __init__(self,
@@ -91,7 +91,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         assert 0 < n
         experiences = []
         if self._state is None:
-            self._state = env.reset()
+            self._state = cast(State, env.reset())
 
         for _ in range(n):
             experience, done = self._step_once(env, begin_of_episode=self._begin_of_episode)
@@ -113,7 +113,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             List[Experience]: List of experience.
                 Experience consists of (state, action, reward, terminal flag, next state and extra info).
         '''
-        self._state = env.reset()
+        self._state = cast(State, env.reset())
 
         done = False
 

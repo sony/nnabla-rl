@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 from typing import Tuple
 
 import gym
-import numpy as np
 
 from nnabla_rl.environments.gym_utils import extract_max_episode_steps
 from nnabla_rl.typing import Action, Info, Reward, State
@@ -36,7 +35,7 @@ class EndlessEnv(gym.Wrapper):
         self._num_steps = 0
         self._reset_reward = reset_reward
 
-    def step(self, action: np.ndarray) -> Tuple[State, Action, Reward, Info]:
+    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:
         self._num_steps += 1
         next_state, reward, done, info = super().step(action)
 

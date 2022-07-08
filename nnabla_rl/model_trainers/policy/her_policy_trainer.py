@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
 
 from dataclasses import dataclass
 from typing import Dict, Sequence, Union, cast
+
+import gym
 
 import nnabla as nn
 import nnabla.functions as NF
@@ -39,7 +41,8 @@ class HERPolicyTrainer(DPGPolicyTrainer):
                  q_function: QFunction,
                  env_info: EnvironmentInfo,
                  config: HERPolicyTrainerConfig = HERPolicyTrainerConfig()):
-        self._max_action_value = float(env_info.action_space.high[0])
+        action_space = cast(gym.spaces.Box, env_info.action_space)
+        self._max_action_value = float(action_space.high[0])
         super(HERPolicyTrainer, self).__init__(models, solvers, q_function, env_info, config)
 
     def _build_one_step_graph(self,

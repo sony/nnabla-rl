@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import gym
 
 from nnabla_rl.environments.gym_utils import (extract_max_episode_steps, get_space_dim, get_space_high, get_space_low,
                                               get_space_shape, is_same_space_type)
+from nnabla_rl.external.goal_env import GoalEnv
 
 
 @dataclass
@@ -131,9 +132,9 @@ class EnvironmentInfo(object):
         Check whether the environment is gym.GoalEnv or not
 
         Returns:
-            bool: True if the environment is gym.GoalEnv. Otherwise False.
+            bool: True if the environment is GoalEnv. Otherwise False.
         '''
-        return issubclass(self.unwrapped_env.__class__, gym.GoalEnv)
+        return issubclass(self.unwrapped_env.__class__, GoalEnv)
 
     @property
     def state_shape(self):

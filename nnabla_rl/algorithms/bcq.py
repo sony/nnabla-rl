@@ -93,7 +93,7 @@ class DefaultVAEBuilder(ModelBuilder[VariationalAutoEncoder]):
                     env_info: EnvironmentInfo,
                     algorithm_config: BCQConfig,
                     **kwargs) -> VariationalAutoEncoder:
-        max_action_value = float(env_info.action_space.high[0])
+        max_action_value = float(env_info.action_high[0])
         return BCQVariationalAutoEncoder(scope_name,
                                          env_info.state_dim,
                                          env_info.action_dim,
@@ -107,7 +107,7 @@ class DefaultPerturbatorBuilder(ModelBuilder[Perturbator]):
                     env_info: EnvironmentInfo,
                     algorithm_config: BCQConfig,
                     **kwargs) -> Perturbator:
-        max_action_value = float(env_info.action_space.high[0])
+        max_action_value = float(env_info.action_high[0])
         return BCQPerturbator(scope_name,
                               env_info.state_dim,
                               env_info.action_dim,

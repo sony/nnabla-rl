@@ -2,6 +2,15 @@
 
 This reproduction script trains the HER (Hindsight Experience Replay) algorithm proposed by M. Andrychowicz, et al. in the paper: [Hindsight Experience Replay](https://arxiv.org/abs/1707.01495).
 
+## Prerequisites
+
+Install [gym-robotics](https://github.com/Farama-Foundation/Gym-Robotics) before starting the training.
+
+```sh
+$ pip install gym-robotics
+```
+
+
 ## How to run the reproduction script
 
 To run the reproduction script do

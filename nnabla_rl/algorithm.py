@@ -16,7 +16,7 @@
 import sys
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, Sequence, Union
+from typing import Any, Dict, Sequence, Union, cast
 
 import gym
 import numpy as np
@@ -134,8 +134,10 @@ class Algorithm(metaclass=ABCMeta):
                 support the training method for given parameter.
         '''
         if self._is_env(env_or_buffer):
+            env_or_buffer = cast(gym.Env, env_or_buffer)
             self.train_online(env_or_buffer, total_iterations)
         elif self._is_buffer(env_or_buffer):
+            env_or_buffer = cast(ReplayBuffer, env_or_buffer)
             self.train_offline(env_or_buffer, total_iterations)
         else:
             raise UnsupportedTrainingException
@@ -161,7 +163,7 @@ class Algorithm(metaclass=ABCMeta):
             self._invoke_hooks()
         self._after_training_finish(train_env)
 
-    def train_offline(self, replay_buffer: gym.Env, total_iterations: int = sys.maxsize):
+    def train_offline(self, replay_buffer: ReplayBuffer, total_iterations: int = sys.maxsize):
         '''
         Train the policy using only the replay buffer.
 
