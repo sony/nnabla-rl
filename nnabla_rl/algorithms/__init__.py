@@ -31,7 +31,9 @@ from nnabla_rl.algorithms.her import HER, HERConfig
 from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOConfig
 from nnabla_rl.algorithms.icml2018_sac import ICML2018SAC, ICML2018SACConfig
 from nnabla_rl.algorithms.icra2018_qtopt import ICRA2018QtOpt, ICRA2018QtOptConfig
+from nnabla_rl.algorithms.ilqr import iLQR, iLQRConfig
 from nnabla_rl.algorithms.iqn import IQN, IQNConfig
+from nnabla_rl.algorithms.lqr import LQR, LQRConfig
 from nnabla_rl.algorithms.mme_sac import MMESAC, MMESACConfig
 from nnabla_rl.algorithms.munchausen_dqn import MunchausenDQN, MunchausenDQNConfig
 from nnabla_rl.algorithms.munchausen_iqn import MunchausenIQN, MunchausenIQNConfig
@@ -86,7 +88,9 @@ register_algorithm(DRQN, DRQNConfig)
 register_algorithm(Dummy, DummyConfig)
 register_algorithm(HER, HERConfig)
 register_algorithm(ICML2018SAC, ICML2018SACConfig)
+register_algorithm(iLQR, iLQRConfig)
 register_algorithm(IQN, IQNConfig)
+register_algorithm(LQR, LQRConfig)
 register_algorithm(MMESAC, MMESACConfig)
 register_algorithm(MunchausenDQN, MunchausenDQNConfig)
 register_algorithm(MunchausenIQN, MunchausenIQNConfig)
