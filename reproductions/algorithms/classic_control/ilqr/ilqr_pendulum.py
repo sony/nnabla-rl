@@ -28,7 +28,7 @@ class AnglePendulum(PendulumEnv):
     '''
 
     def __init__(self, g=10):
-        super().__init__(g)
+        super().__init__(g=g)
 
     def _get_obs(self):
         theta, thetadot = self.state
@@ -174,7 +174,8 @@ def run_control(args):
             end = time.time()
             print(f'optimization time: {end - start} [s]')
 
-            next_state, reward, done, info = env.step(improved_trajectory[0][1])
+            u = improved_trajectory[0][1].reshape((1, ))
+            next_state, reward, done, *_ = env.step(u)
             total_reward += reward
 
             if args.render:
