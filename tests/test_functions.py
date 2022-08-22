@@ -405,7 +405,7 @@ class TestFunctions(object):
             def pi(self, s: nn.Variable):
                 with nn.parameter_scope(self.scope_name):
                     z = NPF.affine(s, n_outmaps=5)
-                return D.Gaussian(z, np.zeros(z.shape))
+                return D.Gaussian(z, nn.Variable.from_numpy_array(np.zeros(z.shape)))
 
         test_model = TestModel('test')
         for parameter in test_model.get_parameters().values():

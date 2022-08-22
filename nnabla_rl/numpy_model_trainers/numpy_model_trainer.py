@@ -1,5 +1,4 @@
-# Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.distributions.distribution import Distribution  # noqa
-from nnabla_rl.distributions.bernoulli import Bernoulli  # noqa
-from nnabla_rl.distributions.squashed_gaussian import SquashedGaussian  # noqa
-from nnabla_rl.distributions.gaussian import Gaussian  # noqa
-from nnabla_rl.distributions.one_hot_softmax import OneHotSoftmax  # noqa
-from nnabla_rl.distributions.softmax import Softmax  # noqa
-from nnabla_rl.distributions.gmm import GMM  # noqa
+from dataclasses import dataclass
+
+from nnabla_rl.configuration import Configuration
+
+
+@dataclass
+class NumpyModelTrainerConfig(Configuration):
+    '''Configuration class for ModelTrainer
+    '''
+
+    def __post_init__(self):
+        super(NumpyModelTrainerConfig, self).__post_init__()
+
+
+class NumpyModelTrainer(object):
+    def __init__(self, config: NumpyModelTrainerConfig):
+        self._config = config

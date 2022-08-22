@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,9 +20,49 @@ import pytest
 
 import nnabla as nn
 import nnabla_rl.distributions as D
+from nnabla_rl.distributions.gaussian import NnablaGaussian, NumpyGaussian
 
 
-class TestGaussian(object):
+class TestGaussian():
+    def _generate_dummy_mean_var(self):
+        batch_size = 10
+        output_dim = 10
+        input_shape = (batch_size, output_dim)
+        mean = np.zeros(shape=input_shape)
+        sigma = np.ones(shape=input_shape) * 5.
+        ln_var = np.log(sigma) * 2.
+        return mean, ln_var
+
+    def test_nnabla_constructor(self):
+        mean, ln_var = self._generate_dummy_mean_var()
+        distribution = D.Gaussian(nn.Variable.from_numpy_array(mean), nn.Variable.from_numpy_array(ln_var))
+        assert isinstance(distribution._delegate, NnablaGaussian)
+
+    def test_nnabla_constructor_with_wrong_shape(self):
+        mean, ln_var = self._generate_dummy_mean_var()
+        with pytest.raises(AssertionError):
+            D.Gaussian(nn.Variable.from_numpy_array(mean[0]), nn.Variable.from_numpy_array(np.diag(ln_var[0])))
+
+    def test_numpy_constructor(self):
+        mean, ln_var = self._generate_dummy_mean_var()
+        distribution = D.Gaussian(mean[0], np.diag(ln_var[0]))  # without batch
+        assert isinstance(distribution._delegate, NumpyGaussian)
+
+    def test_numpy_constructor_with_wrong_shape(self):
+        mean, ln_var = self._generate_dummy_mean_var()
+        with pytest.raises(AssertionError):
+            D.Gaussian(mean, ln_var)
+
+    def test_mix_constructor(self):
+        mean, ln_var = self._generate_dummy_mean_var()
+        with pytest.raises(ValueError):
+            D.Gaussian(nn.Variable.from_numpy_array(mean), ln_var)
+
+        with pytest.raises(ValueError):
+            D.Gaussian(mean, nn.Variable.from_numpy_array(ln_var))
+
+
+class TestNnablaGaussian(object):
     def setup_method(self, method):
         nn.clear_parameters()
         np.random.seed(0)
@@ -37,7 +77,8 @@ class TestGaussian(object):
         ln_var = np.log(sigma) * 2.
 
         with mock.patch('nnabla_rl.functions.sample_gaussian') as mock_sample_gaussian:
-            distribution = D.Gaussian(mean=mean, ln_var=ln_var)
+            distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mean),
+                                          ln_var=nn.Variable.from_numpy_array(ln_var))
             noise_clip = None
             sampled = distribution.sample(noise_clip=noise_clip)
             sampled.forward()
@@ -60,7 +101,8 @@ class TestGaussian(object):
         ln_var = np.ones(shape=input_shape) * np.log(var)
         var = np.exp(ln_var)
 
-        distribution = D.Gaussian(mean=mu, ln_var=ln_var)
+        distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mu),
+                                      ln_var=nn.Variable.from_numpy_array(ln_var))
 
         sample, log_prob = distribution.sample_and_compute_log_prob()
 
@@ -89,7 +131,8 @@ class TestGaussian(object):
         ln_var = np.log(sigma) * 2.
 
         with mock.patch('nnabla_rl.functions.sample_gaussian_multiple') as mock_sample_multiple_gaussian:
-            distribution = D.Gaussian(mean=mean, ln_var=ln_var)
+            distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mean),
+                                          ln_var=nn.Variable.from_numpy_array(ln_var))
             noise_clip = None
             num_samples = 10
             sampled = distribution.sample_multiple(
@@ -114,7 +157,8 @@ class TestGaussian(object):
         mu = np.ones(shape=input_shape) * mean
         ln_var = np.ones(shape=input_shape) * np.log(var)
 
-        distribution = D.Gaussian(mean=mu, ln_var=ln_var)
+        distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mu),
+                                      ln_var=nn.Variable.from_numpy_array(ln_var))
         num_samples = 10
         samples, log_probs = distribution.sample_multiple_and_compute_log_prob(
             num_samples=num_samples)
@@ -155,7 +199,8 @@ class TestGaussian(object):
         sigma = np.ones(shape=input_shape) * 5.
         ln_var = np.log(sigma) * 2.
 
-        distribution = D.Gaussian(mean=mean, ln_var=ln_var)
+        distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mean),
+                                      ln_var=nn.Variable.from_numpy_array(ln_var))
         num_samples = 10
         samples, log_probs = distribution.sample_multiple_and_compute_log_prob(
             num_samples=num_samples)
@@ -178,7 +223,8 @@ class TestGaussian(object):
         with mock.patch('nnabla_rl.distributions.common_utils.gaussian_log_prob',
                         return_value=nn.Variable.from_numpy_array(np.empty(shape=input_shape))) \
                 as mock_gaussian_log_prob:
-            distribution = D.Gaussian(mean=mean, ln_var=ln_var)
+            distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mean),
+                                          ln_var=nn.Variable.from_numpy_array(ln_var))
             distribution.log_prob(dummy_input)
 
             assert mock_gaussian_log_prob.call_count == 1
@@ -197,7 +243,7 @@ class TestGaussian(object):
         mean = np.zeros(shape=input_shape)
         sigma = np.ones(shape=input_shape)
         ln_var = np.log(sigma) * 2.
-        distribution = D.Gaussian(mean, ln_var)
+        distribution = NnablaGaussian(nn.Variable.from_numpy_array(mean), nn.Variable.from_numpy_array(ln_var))
 
         actual = distribution.entropy()
         actual.forward()
@@ -217,8 +263,8 @@ class TestGaussian(object):
         mean = np.zeros(shape=input_shape)
         sigma = np.ones(shape=input_shape) * 5.
         ln_var = np.log(sigma) * 2.
-        distribution_p = D.Gaussian(mean, ln_var)
-        distribution_q = D.Gaussian(mean, ln_var)
+        distribution_p = NnablaGaussian(nn.Variable.from_numpy_array(mean), nn.Variable.from_numpy_array(ln_var))
+        distribution_q = NnablaGaussian(nn.Variable.from_numpy_array(mean), nn.Variable.from_numpy_array(ln_var))
 
         actual = distribution_p.kl_divergence(distribution_q)
         actual.forward()
@@ -237,5 +283,64 @@ class TestGaussian(object):
         return 0.5 * np.log(np.power(2.0 * np.pi * np.e, covariance_matrix.shape[0]) * determinant)
 
 
-if __name__ == "__main__":
+class TestNumpyGaussian():
+    def _generate_dummy_mean_var(self, scale=5.):
+        gaussian_dim = 10
+        mean_shape = (gaussian_dim, )
+        mean = np.random.normal(size=mean_shape)
+        sigma = np.diag(np.ones(shape=mean_shape) * scale)
+        sigma_inv = np.diag(1.0 / np.diag(sigma))
+        return mean, sigma, sigma_inv
+
+    def test_sample(self):
+        mean, sigma, _ = self._generate_dummy_mean_var()
+        distribution = NumpyGaussian(mean, np.log(sigma))
+        sample = distribution.sample()
+        assert sample.shape == mean.shape
+
+        with pytest.raises(NotImplementedError):
+            distribution.sample(noise_clip=np.ones(mean.shape))
+
+    def test_numpy_log_prob(self):
+        mean, sigma, sigma_inv = self._generate_dummy_mean_var()
+        distribution = NumpyGaussian(mean, np.log(sigma))
+
+        query = np.random.normal(size=mean.shape)
+        actual = distribution.log_prob(query)
+
+        log_det_term = np.log(np.prod(2.0 * np.pi * np.diag(sigma)))
+        quadratic_term = (mean - query).T.dot(sigma_inv).dot(mean - query)
+        expected = -0.5 * (log_det_term + quadratic_term)
+
+        assert expected == pytest.approx(actual, abs=1e-5)
+
+    def test_numpy_kl_divergence_different_distribution(self):
+        p_mean, p_sigma, _ = self._generate_dummy_mean_var()
+        distribution_p = NumpyGaussian(p_mean, np.log(p_sigma))
+
+        q_mean, q_sigma, _ = self._generate_dummy_mean_var(scale=3)
+        distribution_q = NumpyGaussian(q_mean, np.log(q_sigma))
+
+        actual = distribution_p.kl_divergence(distribution_q)
+
+        q_sigma_inv = np.diag(1.0 / np.diag(q_sigma))
+        trace_term = np.sum(np.diag(q_sigma_inv.dot(p_sigma)))
+        quadratic_term = (q_mean - p_mean).T.dot(q_sigma_inv).dot(q_mean - p_mean)
+        log_det_term = np.log(np.prod(np.diag(q_sigma)) / np.prod(np.diag(p_sigma)))
+        expected = 0.5 * (trace_term + quadratic_term - p_mean.shape[0] + log_det_term)
+
+        assert expected == pytest.approx(actual, abs=1e-5)
+
+    def test_numpy_kl_divergence_identical_distribution(self):
+        mean, sigma, _ = self._generate_dummy_mean_var()
+        distribution_p = NumpyGaussian(mean, np.log(sigma))
+        distribution_q = NumpyGaussian(mean, np.log(sigma))
+
+        actual = distribution_p.kl_divergence(distribution_q)
+        expected = np.zeros((1, ))
+
+        assert expected == pytest.approx(actual, abs=1e-5)
+
+
+if __name__ == '__main__':
     pytest.main()
