@@ -164,7 +164,7 @@ class GoalConditionedTupleObservationEnv(gym.ObservationWrapper):
         for key in self._observation_keys:
             observation_space = raw_observation_spaces[key]
             observation_spaces.append(observation_space)
-        return gym.spaces.Tuple(observation_spaces)
+        return gym.spaces.Tuple(observation_spaces)  # type: ignore
 
     def observation(self, observation):
         self._check_observation(observation)

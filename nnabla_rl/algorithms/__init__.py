@@ -35,6 +35,7 @@ from nnabla_rl.algorithms.ilqr import iLQR, iLQRConfig
 from nnabla_rl.algorithms.iqn import IQN, IQNConfig
 from nnabla_rl.algorithms.lqr import LQR, LQRConfig
 from nnabla_rl.algorithms.mme_sac import MMESAC, MMESACConfig
+from nnabla_rl.algorithms.mppi import MPPI, MPPIConfig
 from nnabla_rl.algorithms.munchausen_dqn import MunchausenDQN, MunchausenDQNConfig
 from nnabla_rl.algorithms.munchausen_iqn import MunchausenIQN, MunchausenIQNConfig
 from nnabla_rl.algorithms.ppo import PPO, PPOConfig
@@ -92,6 +93,7 @@ register_algorithm(iLQR, iLQRConfig)
 register_algorithm(IQN, IQNConfig)
 register_algorithm(LQR, LQRConfig)
 register_algorithm(MMESAC, MMESACConfig)
+register_algorithm(MPPI, MPPIConfig)
 register_algorithm(MunchausenDQN, MunchausenDQNConfig)
 register_algorithm(MunchausenIQN, MunchausenIQNConfig)
 register_algorithm(PPO, PPOConfig)

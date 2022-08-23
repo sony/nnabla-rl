@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
+from typing import Dict, Tuple, cast
 
 import gym
 
@@ -37,7 +37,7 @@ class EndlessEnv(gym.Wrapper):
 
     def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:
         self._num_steps += 1
-        next_state, reward, done, info = super().step(action)
+        next_state, reward, done, info = cast(Tuple[State, float, bool, Dict], super().step(action))
 
         timelimit = info.pop('TimeLimit.truncated', False) or (self._num_steps == self._max_episode_steps)
 
@@ -46,6 +46,6 @@ class EndlessEnv(gym.Wrapper):
 
         if (not timelimit) and done:
             reward = self._reset_reward
-            next_state = self.reset()
+            next_state = cast(State, self.reset())
 
         return next_state, reward, timelimit, info

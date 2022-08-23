@@ -86,7 +86,7 @@ def is_same_space_type(query_space: gym.spaces.Space,
         else:
             raise NotImplementedError
 
-    if isinstance(query_space, gym.spaces.Tuple):
-        return all(_check_each_space_type(s, key_space) for s in query_space)
+    if isinstance(query_space, gym.spaces.Tuple):  # type: ignore
+        return all(_check_each_space_type(s, key_space) for s in query_space)  # type: ignore
     else:
         return _check_each_space_type(query_space, key_space)
