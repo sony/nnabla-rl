@@ -80,6 +80,16 @@ Categorical DQN
    :members:
    :show-inheritance:
 
+DDP
+=====
+.. autoclass:: nnabla_rl.algorithms.ddp.DDPConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.ddp.DDP
+   :members:
+   :show-inheritance:
+
 DDPG
 =====
 .. autoclass:: nnabla_rl.algorithms.ddpg.DDPGConfig

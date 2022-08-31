@@ -20,6 +20,7 @@ from nnabla_rl.algorithms.bcq import BCQ, BCQConfig
 from nnabla_rl.algorithms.bear import BEAR, BEARConfig
 from nnabla_rl.algorithms.categorical_ddqn import CategoricalDDQN, CategoricalDDQNConfig
 from nnabla_rl.algorithms.categorical_dqn import CategoricalDQN, CategoricalDQNConfig
+from nnabla_rl.algorithms.ddp import DDP, DDPConfig
 from nnabla_rl.algorithms.ddpg import DDPG, DDPGConfig
 from nnabla_rl.algorithms.ddqn import DDQN, DDQNConfig
 from nnabla_rl.algorithms.demme_sac import DEMMESAC, DEMMESACConfig
@@ -81,6 +82,7 @@ register_algorithm(BCQ, BCQConfig)
 register_algorithm(BEAR, BEARConfig)
 register_algorithm(CategoricalDDQN, CategoricalDDQNConfig)
 register_algorithm(CategoricalDQN, CategoricalDQNConfig)
+register_algorithm(DDP, DDPConfig)
 register_algorithm(DDPG, DDPGConfig)
 register_algorithm(DDQN, DDQNConfig)
 register_algorithm(DEMMESAC, DEMMESACConfig)
