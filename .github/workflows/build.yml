@@ -75,7 +75,7 @@ jobs:
           isort --check-only .
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     if: github.event.pull_request.draft == false
     strategy:
       matrix:
@@ -109,7 +109,7 @@ jobs:
           pip install -e .
   test_reproductions:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
