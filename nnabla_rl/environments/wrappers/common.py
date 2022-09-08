@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import cv2
 import gym
 import numpy as np
 from gym import spaces
+from packaging.version import parse
 
 from nnabla_rl.logger import logger
 
@@ -105,20 +107,33 @@ class NumpyFloat32Env(gym.Wrapper):
 class ScreenRenderEnv(gym.Wrapper):
     def __init__(self, env):
         super(ScreenRenderEnv, self).__init__(env)
+        self._installed_gym_version = parse(gym.__version__)
+        self._gym_version25 = parse('0.25.0')
         self._env_name = "Unknown" if env.unwrapped.spec is None else env.unwrapped.spec.id
 
     def step(self, action):
-        self.env.render()
-        return self.env.step(action)
+        results = self.env.step(action)
+        self._render_env()
+        return results
 
     def reset(self):
         if 'Bullet' in self._env_name:
-            self.env.render()
+            self._render_env()
             state = self.env.reset()
         else:
             state = self.env.reset()
-            self.env.render()
+            self._render_env()
         return state
+
+    def _render_env(self):
+        if self._gym_version25 <= self._installed_gym_version:
+            # 0.25.0 <= gym version
+            rgb_array = self.env.render(mode='rgb_array')
+            cv2.imshow(f'{self._env_name}', cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR))
+            cv2.waitKey(1)
+        else:
+            # old gym version
+            self.env.render()
 
 
 class PrintEpisodeResultEnv(gym.Wrapper):
