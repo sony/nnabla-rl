@@ -296,3 +296,7 @@ class TRPOPolicyTrainer(ModelTrainer):
         extra = {}
         extra['advantage'] = advantage_var
         return TrainingVariables(gpu_batch_size, s_current_var, a_current_var, extra=extra)
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"kl_divergence_flat_grads": self._kl_divergence_flat_grads}

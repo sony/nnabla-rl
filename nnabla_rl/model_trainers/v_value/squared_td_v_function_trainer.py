@@ -152,3 +152,7 @@ class SquaredTDVFunctionTrainer(ModelTrainer):
                                                non_terminal=non_terminal_var,
                                                rnn_states=rnn_states)
         return training_variables
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"v_loss": self._v_loss}

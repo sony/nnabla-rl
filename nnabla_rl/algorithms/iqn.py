@@ -366,3 +366,7 @@ class IQN(Algorithm):
         if hasattr(self, '_quantile_function_trainer_state'):
             latest_iteration_state['scalar'].update({'q_loss': float(self._quantile_function_trainer_state['q_loss'])})
         return latest_iteration_state
+
+    @property
+    def trainers(self):
+        return {"q_function": self._quantile_function_trainer}

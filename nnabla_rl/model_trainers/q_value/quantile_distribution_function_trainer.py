@@ -184,3 +184,7 @@ class QuantileDistributionFunctionTrainer(MultiStepTrainer):
         tau_hat = [(tau_prev + tau_i) / num_quantiles / 2.0
                    for tau_prev, tau_i in zip(range(0, num_quantiles), range(1, num_quantiles+1))]
         return np.array(tau_hat, dtype=np.float32)
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"quantile_huber_loss": self._quantile_huber_loss}

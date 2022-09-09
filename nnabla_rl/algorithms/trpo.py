@@ -399,3 +399,6 @@ class TRPO(Algorithm):
         if hasattr(self, '_v_function_trainer_state'):
             latest_iteration_state['scalar'].update({'v_loss': float(self._v_function_trainer_state['v_loss'])})
         return latest_iteration_state
+
+    def trainers(self):
+        return {"v_function": self._v_function_trainer, "policy": self._policy_trainer}

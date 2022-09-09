@@ -184,3 +184,7 @@ class ValueDistributionFunctionTrainer(MultiStepTrainer):
                                                weight=weight_var,
                                                rnn_states=rnn_states)
         return training_variables
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"cross_entropy_loss": self._cross_entropy_loss}

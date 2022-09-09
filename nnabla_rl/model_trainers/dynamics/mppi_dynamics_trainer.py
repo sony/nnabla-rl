@@ -139,3 +139,7 @@ class MPPIDynamicsTrainer(ModelTrainer):
         return TrainingVariables(batch_size, s_current_var, a_current_var, s_next=s_next_var,
                                  non_terminal=non_terminal_var,
                                  rnn_states=rnn_states)
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"loss": self._loss}

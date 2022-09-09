@@ -276,3 +276,7 @@ class REINFORCE(Algorithm):
         if hasattr(self, '_policy_trainer_state'):
             latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
         return latest_iteration_state
+
+    @property
+    def trainers(self):
+        return {"policy": self._policy_trainer}

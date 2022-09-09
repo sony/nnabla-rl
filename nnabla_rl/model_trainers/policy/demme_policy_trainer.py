@@ -202,3 +202,7 @@ class DEMMEPolicyTrainer(ModelTrainer):
                 rnn_states[q_function.scope_name] = rnn_state_variables
 
         return TrainingVariables(batch_size, s_current_var, non_terminal=non_terminal_var, rnn_states=rnn_states)
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"pi_loss": self._pi_loss}

@@ -28,6 +28,7 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.exceptions import UnsupportedEnvironmentException, UnsupportedTrainingException
 from nnabla_rl.hook import Hook
 from nnabla_rl.logger import logger
+from nnabla_rl.model_trainers.model_trainer import ModelTrainer
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
@@ -307,3 +308,8 @@ class Algorithm(metaclass=ABCMeta):
             bool: True if the algorithm supports rnn models. Otherwise False.
         '''
         return False
+
+    @property
+    @abstractmethod
+    def trainers(self) -> Dict[str, ModelTrainer]:
+        raise NotImplementedError

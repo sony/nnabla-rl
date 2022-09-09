@@ -217,3 +217,7 @@ class SoftPolicyTrainer(ModelTrainer):
         super()._setup_solver()
         if not self._config.fixed_temperature:
             self._temperature_solver.set_parameters(self._temperature.get_parameters(), reset=False, retain_state=True)
+
+    @property
+    def loss_variables(self) -> Dict[str, nn.Variable]:
+        return {"pi_loss": self._pi_loss, "temperature_loss": self._temperature_loss}

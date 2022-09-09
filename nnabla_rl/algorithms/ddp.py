@@ -308,3 +308,7 @@ class DDP(Algorithm):
         env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
             else env_or_env_info
         return not env_info.is_discrete_action_env()
+
+    @property
+    def trainers(self):
+        return {}

@@ -373,3 +373,7 @@ class DDPG(Algorithm):
             latest_iteration_state['histogram'].update(
                 {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
         return latest_iteration_state
+
+    @property
+    def trainers(self):
+        return {"q_function": self._q_function_trainer, "policy": self._policy_trainer}
