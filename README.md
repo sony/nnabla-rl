@@ -90,6 +90,42 @@ real_data = get_real_robot_data() # This is also an example. Assuming that you h
 dqn.train_offline(real_data, total_iterations=10000)
 ```
 
+### Visualization of training graph and training progress
+
+nnablaRL supports visualization of training graphs and training progresses with [nnabla-browser](https://github.com/sony/nnabla-browser)!
+
+```py
+import gym
+
+import nnabla_rl.algorithms as A
+import nnabla_rl.hooks as H
+import nnabla_rl.writers as W
+from nnabla_rl.utils.evaluator import EpisodicEvaluator
+
+# save training computational graph
+training_graph_hook = H.TrainingGraphHook(outdir="test")
+
+# evaluation hook with nnabla's Monitor
+eval_env = gym.make("Pendulum-v0")
+evaluator = EpisodicEvaluator(run_per_evaluation=10)
+evaluation_hook = H.EvaluationHook(
+    eval_env,
+    evaluator,
+    timing=10,
+    writer=W.MonitorWriter(outdir="test", file_prefix='evaluation_result'),
+)
+
+env = gym.make("Pendulum-v0")
+sac = A.SAC(env)
+sac.set_hooks([training_graph_hook, evaluation_hook])
+
+sac.train_online(env, total_iterations=100)
+```
+
+![training-graph-visualization](./docs/source/images/training-graph-visualization.png)
+
+![training-status-visualization](./docs/source/images/training-status-visualization.png)
+
 ## Getting started
 
 Try below interactive demos to get started. </br>
