@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.policy import DeterministicPolicy
-from nnabla_rl.models.q_function import ContinuousQFunction
+from nnabla_rl.models.q_function import ContinuousQFunction, FactoredContinuousQFunction
 
 
 class TD3QFunction(ContinuousQFunction):
@@ -92,6 +92,46 @@ class SACQFunction(ContinuousQFunction):
         assert self._optimal_policy, 'Optimal policy is not set!'
         optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)
+
+
+class SACDQFunction(FactoredContinuousQFunction):
+    '''
+    Factored QFunciton model proposed by J. MacGlashan in SAC-D paper for mujoco environment.
+    See: https://arxiv.org/abs/2206.13901
+    '''
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _num_factors: int
+    _optimal_policy: Optional[DeterministicPolicy]
+
+    def __init__(self, scope_name, num_factors: int, optimal_policy: Optional[DeterministicPolicy] = None):
+        super(SACDQFunction, self).__init__(scope_name)
+        self._num_factors = num_factors
+        self._optimal_policy = optimal_policy
+
+    def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        return NF.sum(self.factored_q(s, a), axis=1, keepdims=True)
+
+    def factored_q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        with nn.parameter_scope(self.scope_name):
+            h = NF.concatenate(s, a)
+            h = NPF.affine(h, n_outmaps=256, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=256, name="linear2")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=self._num_factors, name="linear3")
+        return h
+
+    def max_q(self, s: nn.Variable) -> nn.Variable:
+        assert self._optimal_policy, 'Optimal policy is not set!'
+        optimal_action = self._optimal_policy.pi(s)
+        return self.q(s, optimal_action)
+
+    @property
+    def num_factors(self) -> int:
+        return self._num_factors
 
 
 class HERQFunction(ContinuousQFunction):

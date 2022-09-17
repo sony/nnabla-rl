@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -99,3 +99,30 @@ class ContinuousQFunction(QFunction):
     """Base QFunction Class for continuous action environment
     """
     pass
+
+
+class FactoredContinuousQFunction(ContinuousQFunction):
+    """Base FactoredContinuousQFunction Class for continuous action environment
+    """
+    @abstractmethod
+    def factored_q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        """Compute factored Q-value for given state
+
+        Args:
+            s (nn.Variable): state variable
+            a (nn.Variable): action variable
+
+        Returns:
+            nn.Variable: factored Q-value value for given state
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def num_factors(self) -> int:
+        """Return the number of output dimensions
+
+        Returns:
+            nn.Variable: output dimensions
+        """
+        raise NotImplementedError

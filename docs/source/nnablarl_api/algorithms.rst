@@ -309,6 +309,16 @@ SAC (ICML 2018 version)
    :members:
    :show-inheritance:
 
+SAC-D
+====
+.. autoclass:: nnabla_rl.algorithms.sac.SACDConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.sacd.SACD
+   :members:
+   :show-inheritance:
+
 TD3
 ====
 .. autoclass:: nnabla_rl.algorithms.td3.TD3Config

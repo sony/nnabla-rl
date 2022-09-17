@@ -46,6 +46,7 @@ from nnabla_rl.algorithms.rainbow import Rainbow, RainbowConfig
 from nnabla_rl.algorithms.redq import REDQ, REDQConfig
 from nnabla_rl.algorithms.reinforce import REINFORCE, REINFORCEConfig
 from nnabla_rl.algorithms.sac import SAC, SACConfig
+from nnabla_rl.algorithms.sacd import SACD, SACDConfig
 from nnabla_rl.algorithms.td3 import TD3, TD3Config
 from nnabla_rl.algorithms.trpo import TRPO, TRPOConfig
 
@@ -105,6 +106,7 @@ register_algorithm(Rainbow, RainbowConfig)
 register_algorithm(REDQ, REDQConfig)
 register_algorithm(REINFORCE, REINFORCEConfig)
 register_algorithm(SAC, SACConfig)
+register_algorithm(SACD, SACDConfig)
 register_algorithm(TD3, TD3Config)
 register_algorithm(ICML2015TRPO, ICML2015TRPOConfig)
 register_algorithm(TRPO, TRPOConfig)

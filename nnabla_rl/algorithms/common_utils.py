@@ -19,11 +19,13 @@ from typing import Dict, Generic, Optional, Sequence, Tuple, TypeVar, Union, cas
 import numpy as np
 
 import nnabla as nn
+import nnabla.functions as NF
+import nnabla_rl.functions as RF
 from nnabla_rl.algorithm import eval_api
 from nnabla_rl.distributions.distribution import Distribution
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.models import (DeterministicDynamics, DeterministicPolicy, Model, QFunction, RewardFunction,
-                              StochasticPolicy, VFunction)
+from nnabla_rl.models import (DeterministicDynamics, DeterministicPolicy, FactoredContinuousQFunction, Model, QFunction,
+                              RewardFunction, StochasticPolicy, VFunction)
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.typing import Experience, State
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
@@ -471,3 +473,106 @@ class _DeterministicStatePredictor(_StatePredictor[DeterministicDynamics]):
 
     def _compute_next_state(self, state_var: nn.Variable, action_var: nn.Variable) -> nn.Variable:
         return self._dynamics.next_state(state_var, action_var)
+
+
+class _InfluenceMetricsEvaluator:
+    '''Influence metrics evaluator.
+
+    See details at https://arxiv.org/abs/2206.13901
+
+    Args:
+        env_info (EnvironmentInfo): Environment infomation.
+        q_function (FactoredContinuousQFunction): Factored Q-function for continuous action.
+
+    '''
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _env_info: EnvironmentInfo
+    _q_function: FactoredContinuousQFunction
+
+    def __init__(self, env_info: EnvironmentInfo, q_function: FactoredContinuousQFunction):
+        self._env_info = env_info
+        self._q_function = q_function
+        self._batch_size = 1
+
+    @eval_api
+    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], a: np.ndarray, *, begin_of_episode: bool = False):
+        if not has_batch_dimension(s, self._env_info):
+            s = add_batch_dimension(s)
+            a = cast(np.ndarray, add_batch_dimension(a))
+        batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
+        if not hasattr(self, '_eval_state_var') or batch_size != self._batch_size:
+            # Variable creation
+            self._batch_size = batch_size
+            self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)
+            self._eval_action_var = create_variable(batch_size, self._env_info.action_shape)
+            if self._q_function.is_recurrent():
+                self._rnn_internal_states = create_variables(batch_size, self._q_function.internal_state_shapes())
+                self._q_function.set_internal_states(self._rnn_internal_states)
+            self._metrics = self._compute_influence_metrics(self._eval_state_var, self._eval_action_var)
+            if self._q_function.is_recurrent():
+                self._q_function.reset_internal_states()
+        # Forward network
+        if self._q_function.is_recurrent() and begin_of_episode:
+            self._q_function.reset_internal_states()
+        set_data_to_variable(self._eval_state_var, s)
+        if self._q_function.is_recurrent():
+            prev_rnn_states = self._q_function.get_internal_states()
+            for key in self._rnn_internal_states.keys():
+                # copy internal states of previous iteration
+                self._rnn_internal_states[key].d = prev_rnn_states[key].d
+        self._metrics.forward(clear_no_need_grad=True)
+        # No need to save internal states
+        metrics = np.squeeze(self._metrics.d, axis=0) if batch_size == 1 else self._metrics.d
+        return metrics, {}
+
+    def _compute_influence_metrics(self, state_var: nn.Variable, action_var: nn.Variable) -> nn.Variable:
+        # TODO: support tuple state
+        assert isinstance(state_var, nn.Variable), "Tuple states are not supported yet."
+
+        num_factors = self._q_function.num_factors
+
+        # compute base gradient
+        # (B, A)
+        action_var.need_grad = True
+        base_factored_q = self._q_function.factored_q(state_var, action_var)
+        base_grads = RF.expand_dims(nn.grad([-NF.sum(base_factored_q)], [action_var])[0], axis=1)
+
+        # expand batch to factors
+        # (B, S) -> (B, N, S)
+        expand_state = RF.repeat(RF.expand_dims(state_var, axis=1), num_factors, axis=1)
+        # (B, A) -> (B, N, A)
+        expand_action = RF.repeat(RF.expand_dims(action_var, axis=1), num_factors, axis=1)
+
+        # flatten shapes
+        # (B, N, S) -> (B * N, S)
+        flat_state = NF.reshape(expand_state, [-1, *state_var.shape[1:]])
+        # (B, N, A) -> (B * N, A)
+        flat_action = NF.reshape(expand_action, [-1, *action_var.shape[1:]])
+        flat_action.need_grad = True
+
+        # create mask
+        # (N, N)
+        mask = 1.0 - NF.one_hot(RF.expand_dims(NF.arange(0, num_factors), axis=1), shape=(num_factors,))
+        # (N, N) -> (B, N, N)
+        expand_mask = RF.repeat(RF.expand_dims(mask, axis=0), self._batch_size, axis=0)
+        # (B * N, N)
+        flat_mask = NF.reshape(expand_mask, [-1, num_factors])
+
+        # compute Q-values
+        # (B * N, N)
+        factored_q = self._q_function.factored_q(flat_state, flat_action)
+
+        # compute action gradients
+        # (B * N, A)
+        grads = nn.grad([-NF.sum(flat_mask * factored_q)], [flat_action])[0]
+
+        # compute relative influence
+        # (B * N, A) -> (B, N, A)
+        squared_diff = (base_grads - NF.reshape(grads, [self._batch_size, num_factors, -1])) ** 2
+        # (B, N, A) -> (B, N)
+        influence = NF.sum(squared_diff, axis=2) ** 0.5
+
+        # normalize
+        return influence / (NF.sum(influence, axis=1, keepdims=True) + 1e-5)

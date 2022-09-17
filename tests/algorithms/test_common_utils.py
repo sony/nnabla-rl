@@ -17,13 +17,13 @@ import numpy as np
 import pytest
 
 import nnabla as nn
-from nnabla_rl.algorithms.common_utils import (_DeterministicPolicyActionSelector,
+from nnabla_rl.algorithms.common_utils import (_DeterministicPolicyActionSelector, _InfluenceMetricsEvaluator,
                                                _StatePreprocessedDeterministicPolicy,
                                                _StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
                                                compute_average_v_target_and_advantage, compute_v_target_and_advantage,
                                                has_batch_dimension)
 from nnabla_rl.environments.dummy import (DummyContinuous, DummyContinuousActionGoalEnv, DummyDiscrete,
-                                          DummyTupleContinuous, DummyTupleDiscrete)
+                                          DummyFactoredContinuous, DummyTupleContinuous, DummyTupleDiscrete)
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import VFunction
 
@@ -262,6 +262,31 @@ class TestCommonUtils():
         action, *_ = selector(non_batched_state)
 
         assert action.shape == env_info.action_shape
+
+    def test_influence_metrics_evaluator(self):
+        num_factors = 2
+
+        env = DummyFactoredContinuous(reward_dimension=num_factors)
+        env_info = EnvironmentInfo.from_env(env)
+
+        from nnabla_rl.models import SACDQFunction
+        q_scope_name = "q"
+        q_function = SACDQFunction(q_scope_name, num_factors=num_factors)
+
+        evaluator = _InfluenceMetricsEvaluator(env_info, q_function)
+
+        batch_size = 5
+        state_shape = env_info.state_shape
+        action_shape = env_info.action_shape
+        batched_state = np.empty(shape=(batch_size, *state_shape))
+        batched_action = np.empty(shape=(batch_size, *action_shape))
+        influence, _ = evaluator(batched_state, batched_action)
+        assert influence.shape == (batch_size, num_factors)
+
+        non_batched_state = np.empty(shape=state_shape)
+        non_batched_action = np.empty(shape=action_shape)
+        influence, _ = evaluator(non_batched_state, non_batched_action)
+        assert influence.shape == (num_factors,)
 
 
 if __name__ == "__main__":

@@ -52,6 +52,19 @@ class DummyContinuous(AbstractDummyEnv):
         self.action_space = gym.spaces.Box(low=-1.0, high=5.0, shape=action_shape)
 
 
+class DummyFactoredContinuous(DummyContinuous):
+    def __init__(self, max_episode_steps=None, observation_shape=(5, ), action_shape=(5, ), reward_dimension=1):
+        super(DummyFactoredContinuous, self).__init__(
+            max_episode_steps=max_episode_steps,
+            observation_shape=observation_shape,
+            action_shape=action_shape)
+        self.reward_dimension = reward_dimension
+
+    def step(self, a):
+        s, _, d, i = super().step(a)
+        return s, np.random.normal(size=self.reward_dimension), d, i
+
+
 class DummyDiscrete(AbstractDummyEnv):
     def __init__(self, max_episode_steps=None):
         super(DummyDiscrete, self).__init__(

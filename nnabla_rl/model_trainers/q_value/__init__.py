@@ -40,6 +40,8 @@ from nnabla_rl.model_trainers.q_value.redq_q_trainer import (  # noqa
     REDQQTrainer, REDQQTrainerConfig)
 from nnabla_rl.model_trainers.q_value.soft_q_trainer import (  # noqa
     SoftQTrainer, SoftQTrainerConfig)
+from nnabla_rl.model_trainers.q_value.soft_q_decomposition_trainer import (  # noqa
+    SoftQDTrainer, SoftQDTrainerConfig)
 from nnabla_rl.model_trainers.q_value.td3_q_trainer import (  # noqa
     TD3QTrainer, TD3QTrainerConfig)
 from nnabla_rl.model_trainers.q_value.v_targeted_q_trainer import (  # noqa
