@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -88,4 +88,5 @@ class REINFORCEContinousPolicy(StochasticPolicy):
             z = NPF.affine(h, n_outmaps=self._action_dim,
                            name="linear3", w_init=RI.HeNormal(s.shape[1], 200))
 
-        return D.Gaussian(z, np.tile(self._fixed_ln_var, (batch_size, 1)))
+        ln_var = nn.Variable.from_numpy_array(np.tile(self._fixed_ln_var, (batch_size, 1)))
+        return D.Gaussian(z, ln_var)

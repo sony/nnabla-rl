@@ -92,8 +92,10 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
                                                                               action=training_variables.a_current)
 
             latent_shape = (batch_size, latent_distribution.ndim)
-            target_latent_distribution = Gaussian(mean=np.zeros(shape=latent_shape, dtype=np.float32),
-                                                  ln_var=np.zeros(shape=latent_shape, dtype=np.float32))
+            target_latent_distribution = Gaussian(
+                mean=nn.Variable.from_numpy_array(np.zeros(shape=latent_shape, dtype=np.float32)),
+                ln_var=nn.Variable.from_numpy_array(np.zeros(shape=latent_shape, dtype=np.float32))
+            )
 
             reconstruction_loss = RNF.mean_squared_error(training_variables.a_current, reconstructed_action)
             kl_divergence = latent_distribution.kl_divergence(target_latent_distribution)

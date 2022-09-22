@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,16 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
+
+import numpy as np
 
 import nnabla as nn
 
 
 class Distribution(metaclass=ABCMeta):
     @abstractmethod
-    def sample(self, noise_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+    def sample(self, noise_clip: Optional[Tuple[float, float]] = None) -> Union[nn.Variable, np.ndarray]:
         '''
         Sample a value from the distribution.
         If noise_clip is specified, the sampled value will be clipped in the given range.
@@ -32,7 +34,7 @@ class Distribution(metaclass=ABCMeta):
                 float tuple of size 2 which contains the min and max value of the noise.
 
         Returns:
-             nn.Variable: Sampled value
+            Union[nn.Variable, np.ndarray]: Sampled value
         '''
         raise NotImplementedError
 
@@ -43,7 +45,8 @@ class Distribution(metaclass=ABCMeta):
         '''
         raise NotImplementedError
 
-    def sample_multiple(self, num_samples: int, noise_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+    def sample_multiple(self, num_samples: int, noise_clip: Optional[Tuple[float, float]] = None
+                        ) -> Union[nn.Variable, np.ndarray]:
         '''
         Sample mutiple value from the distribution
         New axis will be added between the first and second axis.
@@ -59,45 +62,45 @@ class Distribution(metaclass=ABCMeta):
                 float tuple of size 2 which contains the min and max value of the noise.
 
         Returns:
-             nn.Variable: Sampled value.
+            Union[nn.Variable, np.ndarray]: Sampled value.
         '''
         raise NotImplementedError
 
-    def choose_probable(self) -> nn.Variable:
+    def choose_probable(self) -> Union[nn.Variable, np.ndarray]:
         '''
         Compute the most probable action of the distribution
 
         Returns:
-             nnabla.Variable: Probable action of the distribution
+            Union[nn.Variable, np.ndarray]: Probable action of the distribution
         '''
         raise NotImplementedError
 
-    def mean(self) -> nn.Variable:
+    def mean(self) -> Union[nn.Variable, np.ndarray]:
         '''
         Compute the mean of the distribution (if exist)
 
         Returns:
-             nn.Variable: mean of the distribution
+            Union[nn.Variable, np.ndarray]: mean of the distribution
 
         Raises:
              NotImplementedError: The distribution does not have mean
         '''
         raise NotImplementedError
 
-    def log_prob(self, x: nn.Variable) -> nn.Variable:
+    def log_prob(self, x: Union[nn.Variable, np.ndarray]) -> Union[nn.Variable, np.ndarray]:
         '''
         Compute the log probability of given input
 
         Args:
-            x (nn.Variable): Target value to compute the log probability
+            x (Union[nn.Variable, np.ndarray]): Target value to compute the log probability
 
         Returns:
-            nn.Variable: Log probability of given input
+            Union[nn.Variable, np.ndarray]: Log probability of given input
         '''
         raise NotImplementedError
 
     def sample_and_compute_log_prob(self, noise_clip: Optional[Tuple[float, float]] = None) \
-            -> Tuple[nn.Variable, nn.Variable]:
+            -> Union[Tuple[nn.Variable, nn.Variable], Tuple[np.ndarray, np.ndarray]]:
         '''
         Sample a value from the distribution and compute its log probability.
 
@@ -106,20 +109,20 @@ class Distribution(metaclass=ABCMeta):
                 float tuple of size 2 which contains the min and max value of the noise.
 
         Returns:
-            Tuple[nn.Variable, nn.Variable]: Sampled value and its log probabilty
+            Union[Tuple[nn.Variable, nn.Variable], Tuple[np.ndarray, np.ndarray]]: Sampled value and its log probabilty
         '''
         raise NotImplementedError
 
-    def entropy(self) -> nn.Variable:
+    def entropy(self) -> Union[nn.Variable, np.ndarray]:
         '''
         Compute the entropy of the distribution
 
         Returns:
-            nn.Variable: Entropy of the distribution
+            Union[nn.Variable, np.ndarray]: Entropy of the distribution
         '''
         raise NotImplementedError
 
-    def kl_divergence(self, q: 'Distribution') -> nn.Variable:
+    def kl_divergence(self, q: 'Distribution') -> Union[nn.Variable, np.ndarray]:
         '''
         Compute the kullback leibler divergence between given distribution.
         This function will compute KL(self||q)
@@ -128,7 +131,7 @@ class Distribution(metaclass=ABCMeta):
             q(nnabla_rl.distributions.Distribution): target distribution to compute the kl_divergence
 
         Returns:
-            nn.Variable: Kullback leibler divergence
+            Union[nn.Variable, np.ndarray]: Kullback leibler divergence
 
         Raises:
             ValueError: target distribution's type does not match with current distribution type.

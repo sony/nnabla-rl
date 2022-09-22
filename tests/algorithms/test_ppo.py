@@ -34,8 +34,8 @@ class TupleStateActor(StochasticPolicy):
 
     def pi(self, s: nn.Variable):
         s, *_ = s
-        return Gaussian(mean=np.zeros(shape=(s.shape[0], self._action_dim)),
-                        ln_var=np.zeros(shape=(s.shape[0], self._action_dim)))
+        return Gaussian(mean=nn.Variable.from_numpy_array(np.zeros(shape=(s.shape[0], self._action_dim))),
+                        ln_var=nn.Variable.from_numpy_array(np.zeros(shape=(s.shape[0], self._action_dim))))
 
 
 class TupleStateActorBuilder(ModelBuilder[VFunction]):

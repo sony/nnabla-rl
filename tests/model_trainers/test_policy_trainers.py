@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -83,7 +83,8 @@ class StochasticRnnPolicy(StochasticPolicy):
 
     def pi(self, s):
         self._fake_internal_state = self._fake_internal_state * 2
-        return Gaussian(mean=np.zeros(s.shape), ln_var=np.ones(s.shape))
+        return Gaussian(mean=nn.Variable.from_numpy_array(np.zeros(s.shape)),
+                        ln_var=nn.Variable.from_numpy_array(np.ones(s.shape)))
 
 
 class TrainerTest(metaclass=ABCMeta):
