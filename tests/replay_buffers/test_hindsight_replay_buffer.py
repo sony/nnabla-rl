@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,8 +82,8 @@ class TestHindsightReplayBuffer(object):
         future_experience = buffer.__getitem__(future_index)
         new_experience = buffer._replace_goal(experience, future_experience)
 
-        assert(np.allclose(new_experience[0][1], future_experience[4][2]))
-        assert(np.allclose(new_experience[4][1], future_experience[4][2]))
+        assert np.allclose(new_experience[0][1], future_experience[4][2])
+        assert np.allclose(new_experience[4][1], future_experience[4][2])
 
     @pytest.mark.parametrize('index', [np.random.randint(num_experiences) for _ in range(10)])
     def test_replace_goal_with_same_index(self, index):
@@ -99,9 +99,9 @@ class TestHindsightReplayBuffer(object):
         future_experience = buffer.__getitem__(index)
         new_experience = buffer._replace_goal(experience, future_experience)
 
-        assert(np.allclose(new_experience[0][1], future_experience[4][2]))
-        assert(np.allclose(new_experience[4][1], future_experience[4][2]))
-        assert(new_experience[2] == 1.0)
+        assert np.allclose(new_experience[0][1], future_experience[4][2])
+        assert np.allclose(new_experience[4][1], future_experience[4][2])
+        assert new_experience[2] == 1.0
 
     def _generate_experiences(self, env):
         experiences = []
