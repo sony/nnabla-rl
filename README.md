@@ -15,7 +15,7 @@ Installing nnablaRL is easy!
 $ pip install nnabla-rl
 ```
 
-nnablaRL only supports Python version >= 3.6 and [nnabla](https://github.com/sony/nnabla) version >= 1.17.
+nnablaRL only supports Python version >= 3.7 and [nnabla](https://github.com/sony/nnabla) version >= 1.17.
 
 ### Enabling GPU accelaration (Optional)
 

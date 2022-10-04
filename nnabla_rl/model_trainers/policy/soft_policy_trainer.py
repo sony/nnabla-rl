@@ -190,6 +190,7 @@ class SoftPolicyTrainer(ModelTrainer):
             self._pi_loss += NF.mean(self.get_temperature() * log_pi - min_q)
 
         if not self._config.fixed_temperature:
+            assert isinstance(log_pi, nn.Variable)
             log_pi_unlinked = log_pi.get_unlinked_variable()
             self._temperature_loss = -NF.mean(self.get_temperature() *
                                               (log_pi_unlinked + self._config.target_entropy))

@@ -49,7 +49,7 @@ class GoalEnvWrapper(GoalEnv):
         return cls.__name__
 
     @property  # type: ignore
-    def action_space(self) -> spaces.Space:  # type: ignore
+    def action_space(self) -> spaces.Space:
         """Returns the action space of the environment."""
         if self._action_space is None:
             return self._gym_env.action_space
@@ -60,7 +60,7 @@ class GoalEnvWrapper(GoalEnv):
         self._action_space = space
 
     @property  # type: ignore
-    def observation_space(self) -> spaces.Space:  # type: ignore
+    def observation_space(self) -> spaces.Space:
         """Returns the observation space of the environment."""
         if self._observation_space is None:
             return self._gym_env.observation_space
@@ -71,7 +71,7 @@ class GoalEnvWrapper(GoalEnv):
         self._observation_space = space
 
     @property  # type: ignore
-    def reward_range(self) -> Tuple[SupportsFloat, SupportsFloat]:  # type: ignore
+    def reward_range(self) -> Tuple[SupportsFloat, SupportsFloat]:
         """Return the reward range of the environment."""
         if self._reward_range is None:
             reward_range: Tuple[SupportsFloat, SupportsFloat] = self._gym_env.reward_range
@@ -83,7 +83,7 @@ class GoalEnvWrapper(GoalEnv):
         self._reward_range = value
 
     @property  # type: ignore
-    def metadata(self) -> dict:  # type: ignore
+    def metadata(self) -> dict:
         """Returns the environment metadata."""
         if self._metadata is None:
             metadata: dict = self._gym_env.metadata
