@@ -35,7 +35,7 @@ class EndlessEnv(gym.Wrapper):
         self._num_steps = 0
         self._reset_reward = reset_reward
 
-    def step(self, action: Action) -> Union[Tuple[State, Reward, bool, Info],
+    def step(self, action: Action) -> Union[Tuple[State, Reward, bool, Info],  # type: ignore
                                             Tuple[State, Reward, bool, bool, Info]]:
         self._num_steps += 1
         next_state, reward, done, info = cast(Tuple[State, float, bool, Dict], super().step(action))

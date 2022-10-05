@@ -58,10 +58,10 @@ class FactoredLunarLanderV2(LunarLander):
     ) -> State:
         state = super().reset(seed=seed, return_info=return_info, options=options)
         self.prev_state = np.array(state)
-        return state
+        return state  # type: ignore
 
     # https://github.com/openai/gym/blob/a8d4dd7b147fc5a3cec995293bb656967d0ab60f/gym/envs/box2d/lunar_lander.py#L443
-    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:
+    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:  # type: ignore
         assert self.lander is not None
 
         # Update wind
@@ -227,14 +227,14 @@ class FactoredLunarLanderV2(LunarLander):
 
 
 class FactoredAntV4(AntEnv):
-    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:
+    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:  # type: ignore
         observation, _, terminated, _, info = super().step(action)
         reward = [info["reward_forward"], info["reward_ctrl"], info["reward_survive"]]
         return observation, np.array(reward), terminated, info
 
 
 class FactoredHopperV4(HopperEnv):
-    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:
+    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:  # type: ignore
         observation, _, terminated, _, info = super().step(action)
 
         forward_reward = self._forward_reward_weight * info["x_velocity"]
@@ -246,14 +246,14 @@ class FactoredHopperV4(HopperEnv):
 
 
 class FactoredHalfCheetahV4(HalfCheetahEnv):
-    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:
+    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:  # type: ignore
         observation, _, terminated, _, info = super().step(action)
         reward = [info["reward_run"], info["reward_ctrl"]]
         return observation, np.array(reward), terminated, info
 
 
 class FactoredWalker2dV4(Walker2dEnv):
-    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:
+    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:  # type: ignore
         observation, _, terminated, _, info = super().step(action)
 
         forward_reward = self._forward_reward_weight * info["x_velocity"]
@@ -265,7 +265,7 @@ class FactoredWalker2dV4(Walker2dEnv):
 
 
 class FactoredHumanoidV4(HumanoidEnv):
-    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:
+    def step(self, action: Action) -> Tuple[State, Reward, bool, Info]:  # type: ignore
         observation, _, terminated, _, info = super().step(action)
         reward = [info["reward_linvel"], info["reward_quadctrl"], info["reward_alive"]]
         return observation, np.array(reward), terminated, info

@@ -497,7 +497,8 @@ class _InfluenceMetricsEvaluator:
         self._batch_size = 1
 
     @eval_api
-    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], a: np.ndarray, *, begin_of_episode: bool = False):
+    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], a: np.ndarray, *, begin_of_episode: bool = False) \
+            -> Tuple[np.ndarray, Dict]:
         if not has_batch_dimension(s, self._env_info):
             s = add_batch_dimension(s)
             a = cast(np.ndarray, add_batch_dimension(a))
