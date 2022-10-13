@@ -25,8 +25,10 @@ from nnabla_rl.hooks import TrainingGraphHook
 
 
 class TestComputationalGraphHook():
-    def test_call(self):
+    def setup_method(self, method):
         nn.clear_parameters()
+
+    def test_call(self):
         with tempfile.TemporaryDirectory() as dname:
             env = DummyContinuous()
 
@@ -45,7 +47,6 @@ class TestComputationalGraphHook():
             assert nnp.get_network_names() == trainer_names
 
     def test_rnn_support(self):
-        nn.clear_parameters()
         with tempfile.TemporaryDirectory() as dname:
             env = DummyContinuous()
 
