@@ -112,9 +112,9 @@ class TrainingBatch():
                  non_terminal: Optional[np.ndarray] = None,
                  s_next: Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]] = None,
                  weight: Optional[np.ndarray] = None,
-                 extra: Dict[str, np.ndarray] = {},
+                 extra: Optional[Dict[str, np.ndarray]] = None,
                  next_step_batch: Optional['TrainingBatch'] = None,
-                 rnn_states: Dict[str, Dict[str, np.ndarray]] = {}):
+                 rnn_states: Optional[Dict[str, Dict[str, np.ndarray]]] = None):
         assert 0 < batch_size
         self.batch_size = batch_size
         if s_current is not None:
@@ -131,9 +131,9 @@ class TrainingBatch():
             self.s_next = s_next
         if weight is not None:
             self.weight = weight
-        self.extra: Dict[str, np.ndarray] = extra
+        self.extra: Dict[str, np.ndarray] = {} if extra is None else extra
         self.next_step_batch = next_step_batch
-        self.rnn_states = rnn_states
+        self.rnn_states = {} if rnn_states is None else rnn_states
 
     def __getitem__(self, index):
         num_steps = len(self)
@@ -185,9 +185,9 @@ class TrainingVariables():
                  non_terminal: Optional[nn.Variable] = None,
                  s_next: Optional[Union[nn.Variable, Tuple[nn.Variable, ...]]] = None,
                  weight: Optional[nn.Variable] = None,
-                 extra: Dict[str, nn.Variable] = {},
+                 extra: Optional[Dict[str, nn.Variable]] = None,
                  next_step_variables: Optional["TrainingVariables"] = None,
-                 rnn_states: Dict[str, Dict[str, nn.Variable]] = {}):
+                 rnn_states: Optional[Dict[str, Dict[str, nn.Variable]]] = None):
         assert 0 < batch_size
         self.batch_size = batch_size
         if s_current is not None:
@@ -204,10 +204,10 @@ class TrainingVariables():
             self.s_next = s_next
         if weight is not None:
             self.weight = weight
-        self.extra: Dict[str, nn.Variable] = extra
+        self.extra: Dict[str, nn.Variable] = {} if extra is None else extra
         self.next_step_variables = next_step_variables
         self._prev_step_variables = None
-        self.rnn_states = rnn_states
+        self.rnn_states = {} if rnn_states is None else rnn_states
 
     @property
     def next_step_variables(self) -> Optional["TrainingVariables"]:

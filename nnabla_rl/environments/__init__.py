@@ -17,7 +17,8 @@ from gym.envs.registration import register
 
 from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyContinuousActionGoalEnv, DummyDiscrete,  # noqa
                                           DummyDiscreteActionGoalEnv, DummyDiscreteImg, DummyContinuousImg,
-                                          DummyMujocoEnv, DummyTupleContinuous, DummyTupleDiscrete, DummyTupleMixed)
+                                          DummyFactoredContinuous, DummyMujocoEnv, DummyTupleContinuous,
+                                          DummyTupleDiscrete, DummyTupleMixed)
 
 register(
     id='FakeMujocoNNablaRL-v1',
@@ -35,4 +36,45 @@ register(
     id='FakeGoalConditionedNNablaRL-v1',
     entry_point='nnabla_rl.environments.dummy:DummyContinuousActionGoalEnv',
     max_episode_steps=10
+)
+
+register(
+    id='FactoredLunarLanderContinuousV2NNablaRL-v1',
+    entry_point='nnabla_rl.environments.factored_envs:FactoredLunarLanderV2',
+    kwargs={"continuous": True},
+    max_episode_steps=1000,
+    reward_threshold=200.0,
+)
+
+register(
+    id='FactoredAntV4NNablaRL-v1',
+    entry_point='nnabla_rl.environments.factored_envs:FactoredAntV4',
+    max_episode_steps=1000,
+    reward_threshold=6000.0,
+)
+
+register(
+    id='FactoredHopperV4NNablaRL-v1',
+    entry_point='nnabla_rl.environments.factored_envs:FactoredHopperV4',
+    max_episode_steps=1000,
+    reward_threshold=3800.0,
+)
+
+register(
+    id='FactoredHalfCheetahV4NNablaRL-v1',
+    entry_point='nnabla_rl.environments.factored_envs:FactoredHalfCheetahV4',
+    max_episode_steps=1000,
+    reward_threshold=4800.0,
+)
+
+register(
+    id='FactoredWalker2dV4NNablaRL-v1',
+    entry_point='nnabla_rl.environments.factored_envs:FactoredWalker2dV4',
+    max_episode_steps=1000,
+)
+
+register(
+    id='FactoredHumanoidV4NNablaRL-v1',
+    entry_point='nnabla_rl.environments.factored_envs:FactoredHumanoidV4',
+    max_episode_steps=1000,
 )

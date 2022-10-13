@@ -21,7 +21,7 @@ State = Union[np.ndarray, Tuple[np.ndarray, ...]]
 # https://github.com/python/mypy/issues/7866
 # FIXME: This is a workaround for avoiding mypy error about creating a type alias.
 Action = Union[np.ndarray]
-Reward = float
+Reward = Union[float, np.ndarray]
 NonTerminal = float
 NextState = Union[np.ndarray, Tuple[np.ndarray, ...]]
 Info = Dict[str, Any]

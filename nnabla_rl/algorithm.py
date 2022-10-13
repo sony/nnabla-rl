@@ -16,7 +16,7 @@
 import sys
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import gym
 import numpy as np
@@ -31,12 +31,14 @@ from nnabla_rl.logger import logger
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer
 from nnabla_rl.replay_buffer import ReplayBuffer
 
+F = TypeVar('F', bound=Callable[..., Any])
 
-def eval_api(f):
+
+def eval_api(f: F) -> F:
     def wrapped_with_eval_scope(*args, **kwargs):
         with rl.eval_scope():
             return f(*args, **kwargs)
-    return wrapped_with_eval_scope
+    return cast(F, wrapped_with_eval_scope)
 
 
 @dataclass

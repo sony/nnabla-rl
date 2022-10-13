@@ -26,13 +26,13 @@ from nnabla_rl.models.dynamics import Dynamics, DeterministicDynamics, Stochasti
 from nnabla_rl.models.model import Model  # noqa
 from nnabla_rl.models.perturbator import Perturbator  # noqa
 from nnabla_rl.models.policy import Policy, DeterministicPolicy, StochasticPolicy  # noqa
-from nnabla_rl.models.q_function import QFunction, DiscreteQFunction, ContinuousQFunction  # noqa
+from nnabla_rl.models.q_function import QFunction, DiscreteQFunction, ContinuousQFunction, FactoredContinuousQFunction  # noqa
 from nnabla_rl.models.v_function import VFunction  # noqa
 from nnabla_rl.models.reward_function import RewardFunction  # noqa
 from nnabla_rl.models.encoder import Encoder, VariationalAutoEncoder  # noqa
 
 from nnabla_rl.models.mujoco.policies import TD3Policy, SACPolicy, BEARPolicy, TRPOPolicy  # noqa
-from nnabla_rl.models.mujoco.q_functions import TD3QFunction, SACQFunction, HERQFunction  # noqa
+from nnabla_rl.models.mujoco.q_functions import TD3QFunction, SACQFunction, SACDQFunction, HERQFunction  # noqa
 from nnabla_rl.models.mujoco.distributional_functions import QRSACQuantileDistributionFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import SACVFunction, TRPOVFunction, ATRPOVFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import PPOVFunction as PPOMujocoVFunction  # noqa

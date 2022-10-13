@@ -32,6 +32,7 @@ class SquaredTDQFunctionTrainerConfig(MultiStepTrainerConfig):
     reduction_method: str = 'mean'
     grad_clip: Optional[tuple] = None
     q_loss_scalar: float = 1.0
+    reward_dimension: int = 1
 
     def __post_init__(self):
         self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
@@ -164,7 +165,7 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
         s_current_var = create_variable(batch_size, self._env_info.state_shape)
         a_current_var = create_variable(batch_size, self._env_info.action_shape)
         s_next_var = create_variable(batch_size, self._env_info.state_shape)
-        reward_var = create_variable(batch_size, 1)
+        reward_var = create_variable(batch_size, self._config.reward_dimension)
         gamma_var = create_variable(batch_size, 1)
         non_terminal_var = create_variable(batch_size, 1)
         weight_var = create_variable(batch_size, 1)
