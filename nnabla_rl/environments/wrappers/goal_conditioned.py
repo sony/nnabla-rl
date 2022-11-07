@@ -48,7 +48,7 @@ class GoalEnvWrapper(GoalEnv):
         """Returns the class name of the wrapper."""
         return cls.__name__
 
-    @property  # type: ignore
+    @property
     def action_space(self) -> spaces.Space:
         """Returns the action space of the environment."""
         if self._action_space is None:
@@ -59,7 +59,7 @@ class GoalEnvWrapper(GoalEnv):
     def action_space(self, space: spaces.Space):
         self._action_space = space
 
-    @property  # type: ignore
+    @property
     def observation_space(self) -> spaces.Space:
         """Returns the observation space of the environment."""
         if self._observation_space is None:
@@ -82,7 +82,7 @@ class GoalEnvWrapper(GoalEnv):
     def reward_range(self, value: Tuple[SupportsFloat, SupportsFloat]):
         self._reward_range = value
 
-    @property  # type: ignore
+    @property
     def metadata(self) -> dict:
         """Returns the environment metadata."""
         if self._metadata is None:

@@ -23,3 +23,6 @@ pip install nnabla-ext-cuda114
 
 # virtualdisplay
 pip install pyvirtualdisplay
+
+# pygame
+pip install pygame
