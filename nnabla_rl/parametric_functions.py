@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
 
 import nnabla as nn
 import nnabla.functions as NF
+import nnabla.initializer as NI
 import nnabla.parametric_functions as NPF
 import nnabla_rl.functions as RF
 from nnabla.initializer import ConstantInitializer
@@ -236,3 +237,69 @@ def lstm_cell(x, h, c, state_size, w_init=None, b_init=None, fix_parameters=Fals
     c_t = NF.sigmoid(f_t) * c + NF.sigmoid(i_t) * NF.tanh(gate)
     h_t = NF.sigmoid(o_t) * NF.tanh(c_t)
     return h_t, c_t
+
+
+def causal_self_attention(x: nn.Variable, embed_dim: int, num_heads: int,
+                          mask: Optional[nn.Variable] = None,
+                          attention_dropout: Optional[float] = None,
+                          output_dropout: Optional[float] = None,
+                          w_init_key: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
+                          w_init_query: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
+                          w_init_value: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
+                          w_init_proj: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02)) -> nn.Variable:
+    ''' Causal self attention used in https://arxiv.org/abs/2106.01345.
+
+    Args:
+        x (nn.Variable): Input of the layer. Shape should be (batch_size, T, C)
+        embed_dim (int): Embedding dimention of encoded vector.
+        num_heads (int): Number of attention heads.
+        mask (Optional[nn.Variable]): Additive attention mask. Defaults to None.
+        attention_dropout (Optional[float]): Dropout ratio of attention output right after the softmax.
+            Defaults to None.
+        output_dropout (Optional[float]): Dropout ratio of final output of this layer. Defaults to None.
+        w_init_key (Optional[Callbale[[Any], Any]]): Weight initializer of attention key weights.
+        w_init_query (Optional[Callbale[[Any], Any]]): Weight initializer of attention query weights.
+        w_init_value (Optional[Callbale[[Any], Any]]): Weight initializer of attention value weights.
+        w_init_proj (Optional[Callbale[[Any], Any]]): Weight initializer of output projection weights.
+
+    Returns:
+        nn.Variables: Encoded vector
+    '''
+    batch_size, timesteps, _ = x.shape
+    with nn.parameter_scope('key'):
+        k = NPF.affine(x, n_outmaps=embed_dim, base_axis=2, w_init=w_init_key)
+        k = NF.reshape(k, shape=(batch_size, timesteps, num_heads, embed_dim // num_heads))
+        k = NF.transpose(k, axes=(0, 2, 1, 3))
+    with nn.parameter_scope('query'):
+        q = NPF.affine(x, n_outmaps=embed_dim, base_axis=2, w_init=w_init_query)
+        q = NF.reshape(q, shape=(batch_size, timesteps, num_heads, embed_dim // num_heads))
+        q = NF.transpose(q, axes=(0, 2, 1, 3))
+    with nn.parameter_scope('value'):
+        v = NPF.affine(x, n_outmaps=embed_dim, base_axis=2, w_init=w_init_value)
+        v = NF.reshape(v, shape=(batch_size, timesteps, num_heads, embed_dim // num_heads))
+        v = NF.transpose(v, axes=(0, 2, 1, 3))
+    qkT = NF.batch_matmul(q, k, transpose_b=True)
+    dk = np.sqrt(k.shape[-1])
+    attention = qkT / dk
+    if mask is not None:
+        assert len(attention.shape) == len(mask.shape)
+        assert attention.shape[-2:] == mask.shape[-2:]
+        attention += mask
+    attention = NF.softmax(attention)
+    if attention_dropout is not None:
+        attention = NF.dropout(attention, p=attention_dropout)
+    assert attention.shape == (batch_size, num_heads, timesteps, timesteps)
+
+    output = NF.batch_matmul(attention, v)
+    assert output.shape == (batch_size, num_heads, timesteps, embed_dim // num_heads)
+
+    output = NF.transpose(output, axes=(0, 2, 1, 3))
+    output = NF.reshape(output, shape=(batch_size, timesteps, -1))
+    assert output.shape == (batch_size, timesteps, embed_dim)
+
+    with nn.parameter_scope('proj'):
+        output = NPF.affine(output, n_outmaps=embed_dim, base_axis=2, w_init=w_init_proj)
+    if output_dropout is not None:
+        output = NF.dropout(output, p=output_dropout)
+
+    return output

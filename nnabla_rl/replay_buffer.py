@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ class ReplayBuffer(object):
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
-    _buffer: Union[MutableSequence[Experience], DataHolder]
+    _buffer: Union[MutableSequence[Any], DataHolder]
 
     def __init__(self, capacity: Optional[int] = None):
         assert capacity is None or capacity >= 0
@@ -39,7 +39,7 @@ class ReplayBuffer(object):
             self._buffer = RingBuffer(maxlen=capacity)
 
     def __getitem__(self, item: int) -> Experience:
-        return self._buffer[item]
+        return cast(Experience, self._buffer[item])
 
     @property
     def capacity(self) -> Union[int, None]:

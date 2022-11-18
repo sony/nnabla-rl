@@ -18,3 +18,6 @@ Functions
 .. autofunction:: random_shooting_method
 .. autofunction:: triangular_matrix
 .. autofunction:: batch_flatten
+.. autofunction:: pytorch_equivalent_gather
+.. autofunction:: concat_interleave
+.. autofunction:: swapaxes

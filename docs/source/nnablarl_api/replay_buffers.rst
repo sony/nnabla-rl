@@ -23,6 +23,14 @@ List of ReplayBuffer
     :members:
     :show-inheritance:
 
+.. autoclass:: nnabla_rl.replay_buffers.MemoryEfficientAtariTrajectoryBuffer
+    :members:
+    :show-inheritance:
+
 .. autoclass:: nnabla_rl.replay_buffers.PrioritizedReplayBuffer
+    :members:
+    :show-inheritance:
+
+.. autoclass:: nnabla_rl.replay_buffers.TrajectoryReplayBuffer
     :members:
     :show-inheritance:

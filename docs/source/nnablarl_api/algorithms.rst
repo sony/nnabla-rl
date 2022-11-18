@@ -110,6 +110,16 @@ DDQN
    :members:
    :show-inheritance:
 
+DecisionTransformer
+=====
+.. autoclass:: nnabla_rl.algorithms.decision_transformer.DecisionTransformerConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.decision_transformer.DecisionTransformer
+   :members:
+   :show-inheritance:
+
 DQN
 ====
 .. autoclass:: nnabla_rl.algorithms.dqn.DQNConfig

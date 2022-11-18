@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ import numpy as np
 from scipy import linalg
 
 import nnabla as nn
-from nnabla_rl.distributions.distribution import Distribution
+from nnabla_rl.distributions.distribution import ContinuosDistribution
 
 if TYPE_CHECKING:
     from nnabla_rl.numpy_models.distribution_parameters.gmm_parameter import GMMParameter
 
 
-class GMM(Distribution):
+class GMM(ContinuosDistribution):
     '''
     Gaussian Mixture Model distribution
 
@@ -78,7 +78,7 @@ class GMM(Distribution):
         return self._delegate.covariance()
 
 
-class NumpyGMM(Distribution):
+class NumpyGMM(ContinuosDistribution):
     _means: np.ndarray
     _covariances: np.ndarray
     _mixing_coefficients: np.ndarray

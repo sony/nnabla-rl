@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nnabla_rl.models.decision_transformer import (DecisionTransformer,  # noqa
+                                                   DeterministicDecisionTransformer,
+                                                   StochasticDecisionTransformer)
 from nnabla_rl.models.distributional_function import (ValueDistributionFunction,  # noqa
                                                       DiscreteValueDistributionFunction,
                                                       ContinuousValueDistributionFunction)
@@ -33,6 +36,7 @@ from nnabla_rl.models.encoder import Encoder, VariationalAutoEncoder  # noqa
 
 from nnabla_rl.models.mujoco.policies import TD3Policy, SACPolicy, BEARPolicy, TRPOPolicy  # noqa
 from nnabla_rl.models.mujoco.q_functions import TD3QFunction, SACQFunction, SACDQFunction, HERQFunction  # noqa
+from nnabla_rl.models.mujoco.decision_transformers import MujocoDecisionTransformer  # noqa
 from nnabla_rl.models.mujoco.distributional_functions import QRSACQuantileDistributionFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import SACVFunction, TRPOVFunction, ATRPOVFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import PPOVFunction as PPOMujocoVFunction  # noqa
@@ -45,6 +49,7 @@ from nnabla_rl.models.mujoco.policies import HERPolicy  # noqa
 from nnabla_rl.models.mujoco.policies import ATRPOPolicy  # noqa
 from nnabla_rl.models.mujoco.v_functions import GAILVFunction  # noqa
 from nnabla_rl.models.mujoco.reward_functions import GAILDiscriminator  # noqa
+from nnabla_rl.models.atari.decision_transformers import AtariDecisionTransformer  # noqa
 from nnabla_rl.models.atari.policies import PPOPolicy as PPOAtariPolicy  # noqa
 from nnabla_rl.models.atari.policies import A3CPolicy  # noqa
 from nnabla_rl.models.atari.q_functions import DQNQFunction, DRQNQFunction  # noqa

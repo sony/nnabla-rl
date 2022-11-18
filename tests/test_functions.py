@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import pytest
 
 import nnabla as nn
 import nnabla_rl.functions as RF
+import nnabla_rl.random as rl_random
 
 
 class TestFunctions(object):
@@ -437,6 +438,82 @@ class TestFunctions(object):
         out.backward()
         for parameter in test_model.get_parameters().values():
             assert not np.allclose(parameter.g, 0)
+
+    @pytest.mark.parametrize("batch_size", [1, 2, 3])
+    @pytest.mark.parametrize("middle_size", [1, 2, 3])
+    @pytest.mark.parametrize("data_size", [1, 2, 3])
+    @pytest.mark.parametrize("axis", [0, 1, 2])
+    def test_pytorch_equivalent_gather(self, batch_size, middle_size, data_size, axis):
+        indices_shape = [batch_size, middle_size, data_size]
+        data_shape = np.copy(indices_shape)
+        data_shape[axis] *= 2
+
+        data = np.random.normal(size=data_shape)
+        low = 0
+        high = data_shape[axis]
+        indices = rl_random.drng.integers(low, high, size=indices_shape)
+
+        data_var = nn.Variable.from_numpy_array(data)
+        indices_var = nn.Variable.from_numpy_array(indices)
+        actual = RF.pytorch_equivalent_gather(data_var, indices_var, axis=axis)
+        actual.forward()
+        expected = np.take_along_axis(data, indices, axis=axis)
+
+        assert actual.shape == expected.shape
+        assert np.allclose(actual.d, expected)
+
+    @pytest.mark.parametrize("batch_size", [1, 2, 3])
+    @pytest.mark.parametrize("middle_size", [1, 2, 3])
+    @pytest.mark.parametrize("data_size", [1, 2, 3])
+    @pytest.mark.parametrize("axis", [0, 1, 2])
+    def test_concat_interleave(self, batch_size, middle_size, data_size, axis):
+        data1 = np.random.normal(size=(batch_size, middle_size, data_size))
+        data2 = np.random.normal(size=(batch_size, middle_size, data_size))
+        data3 = np.random.normal(size=(batch_size, middle_size, data_size))
+
+        var1 = nn.Variable.from_numpy_array(data1)
+        var2 = nn.Variable.from_numpy_array(data2)
+        var3 = nn.Variable.from_numpy_array(data3)
+
+        interleaved = RF.concat_interleave((var1, var2, var3), axis=axis)
+        interleaved.forward()
+
+        interleaved = np.asarray(interleaved.d)
+
+        assert interleaved.shape[axis] == data1.shape[axis] * 3
+
+        if axis == 0:
+            assert np.allclose(interleaved[0::3, ...], data1)
+            assert np.allclose(interleaved[1::3, ...], data2)
+            assert np.allclose(interleaved[2::3, ...], data3)
+        if axis == 1:
+            assert np.allclose(interleaved[..., 0::3, :], data1)
+            assert np.allclose(interleaved[..., 1::3, :], data2)
+            assert np.allclose(interleaved[..., 2::3, :], data3)
+        if axis == 2:
+            assert np.allclose(interleaved[..., 0::3], data1)
+            assert np.allclose(interleaved[..., 1::3], data2)
+            assert np.allclose(interleaved[..., 2::3], data3)
+
+    @pytest.mark.parametrize("axis1", [0, 1, 2])
+    @pytest.mark.parametrize("axis2", [0, 1, 2])
+    def test_swapaxes(self, axis1, axis2):
+        original = nn.Variable.from_numpy_array(np.empty(shape=(3, 4, 5)))
+        swapped = RF.swapaxes(original, axis1, axis2)
+        swapped.forward()
+
+        for i in range(len(original.shape)):
+            if i == axis1:
+                assert swapped.shape[axis2] == original.shape[i]
+            elif i == axis2:
+                assert swapped.shape[axis1] == original.shape[i]
+            else:
+                assert swapped.shape[i] == original.shape[i]
+
+        reswapped = RF.swapaxes(swapped, axis1, axis2)
+        reswapped.forward()
+
+        assert np.allclose(original.d, reswapped.d)
 
 
 if __name__ == "__main__":

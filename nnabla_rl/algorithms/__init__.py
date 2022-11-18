@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ from nnabla_rl.algorithms.categorical_dqn import CategoricalDQN, CategoricalDQNC
 from nnabla_rl.algorithms.ddp import DDP, DDPConfig
 from nnabla_rl.algorithms.ddpg import DDPG, DDPGConfig
 from nnabla_rl.algorithms.ddqn import DDQN, DDQNConfig
+from nnabla_rl.algorithms.decision_transformer import DecisionTransformer, DecisionTransformerConfig
 from nnabla_rl.algorithms.demme_sac import DEMMESAC, DEMMESACConfig
 from nnabla_rl.algorithms.dqn import DQN, DQNConfig
 from nnabla_rl.algorithms.drqn import DRQN, DRQNConfig
@@ -86,6 +87,7 @@ register_algorithm(CategoricalDQN, CategoricalDQNConfig)
 register_algorithm(DDP, DDPConfig)
 register_algorithm(DDPG, DDPGConfig)
 register_algorithm(DDQN, DDQNConfig)
+register_algorithm(DecisionTransformer, DecisionTransformerConfig)
 register_algorithm(DEMMESAC, DEMMESACConfig)
 register_algorithm(DQN, DQNConfig)
 register_algorithm(DRQN, DRQNConfig)

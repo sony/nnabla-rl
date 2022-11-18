@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,10 +21,11 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 import nnabla_rl.functions as RF
-from nnabla_rl.distributions import Distribution, common_utils
+from nnabla_rl.distributions import common_utils
+from nnabla_rl.distributions.distribution import ContinuosDistribution, Distribution
 
 
-class Gaussian(Distribution):
+class Gaussian(ContinuosDistribution):
     '''
     Gaussian distribution
 

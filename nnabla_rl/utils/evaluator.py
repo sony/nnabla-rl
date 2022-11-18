@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,7 +90,8 @@ def run_one_episode(algorithm, env, timestep_limit=lambda t: False):
     rewards = []
     timesteps = 0
     state = env.reset()
-    action = algorithm.compute_eval_action(state, begin_of_episode=True)
+    extra_info = {'reward': 0}
+    action = algorithm.compute_eval_action(state, begin_of_episode=True, extra_info=extra_info)
     while True:
         next_state, reward, done, info = env.step(action)
         non_terminal = 0.0 if done else 1.0
@@ -103,5 +104,6 @@ def run_one_episode(algorithm, env, timestep_limit=lambda t: False):
             break
         else:
             state = next_state
-            action = algorithm.compute_eval_action(state, begin_of_episode=False)
+            extra_info['reward'] = reward
+            action = algorithm.compute_eval_action(state, begin_of_episode=False, extra_info=extra_info)
     return np.sum(rewards), timesteps, experiences

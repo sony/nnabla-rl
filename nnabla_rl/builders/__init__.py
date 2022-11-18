@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from nnabla_rl.builders.explorer_builder import ExplorerBuilder  # noqa
+from nnabla_rl.builders.lr_scheduler_builder import LearningRateSchedulerBuilder  # noqa
 from nnabla_rl.builders.model_builder import ModelBuilder  # noqa
 from nnabla_rl.builders.preprocessor_builder import PreprocessorBuilder  # noqa
 from nnabla_rl.builders.replay_buffer_builder import ReplayBufferBuilder  # noqa

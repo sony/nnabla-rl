@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ class Dummy(Algorithm):
         self._action_space = self._env_info.action_space
 
     @eval_api
-    def compute_eval_action(self, state, *, begin_of_episode=False):
+    def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
         return self._action_space.sample()
 
     def _build_evaluation_graph(self):

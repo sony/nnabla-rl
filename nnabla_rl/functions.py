@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -551,3 +551,88 @@ def batch_flatten(x: nn.Variable) -> nn.Variable:
 
 def stop_gradient(variable: nn.Variable) -> nn.Variable:
     return variable.get_unlinked_variable(need_grad=False)
+
+
+def pytorch_equivalent_gather(x: nn.Variable, indices: nn.Variable, axis: int) -> nn.Variable:
+    '''
+    pytorch equivalent gather function.
+    Gather according to given indices from x.
+
+    See https://pytorch.org/docs/stable/generated/torch.gather.html for details.
+
+    The shape of x and indices should be the same except for the given axis' dimension.
+
+    Args:
+        x (nn.Variable): N-D array. The data to gather from.
+        indices (nn.Variable): N-D array. The index of elements to gather.
+        axis (int): indexing axis.
+
+    Returns:
+        nn.Variable: gathered (in pytorch's style) variable.
+    '''
+    assert x.shape[:axis] == indices.shape[:axis]
+    assert x.shape[axis+1:] == indices.shape[axis+1:]
+    if axis != len(x.shape) - 1:
+        x = swapaxes(x, axis, len(x.shape) - 1)
+        indices = swapaxes(indices, axis, len(indices.shape) - 1)
+    result = NF.gather(x, indices, axis=len(x.shape) - 1, batch_dims=len(indices.shape) - 1)
+    if axis != len(x.shape) - 1:
+        result = swapaxes(result, axis, len(result.shape) - 1)
+    return result
+
+
+def concat_interleave(variables: Sequence[nn.Variable], axis: int) -> nn.Variable:
+    '''
+    concat given variables along given axis.
+    For example if we have a sequence which consists of 3 variables A, B, C with same size.
+    This function will concat A, B, and C along given axis but interleaving its elements.
+    For example, if you concat 3 variables along axis = 0 this function should return:
+
+        >>> interleaved[0::3, ...] == A
+        >>> interleaved[1::3, ...] == B
+        >>> interleaved[2::3, ...] == C
+
+    Args:
+        x (Sequence[nn.Variable]): sequence of N-D array. The data to concatenate.
+        axis (int): concatenating axis.
+
+    Returns:
+        nn.Variable: concatenated variable which elements are interleaved in given axis.
+    '''
+    assert all([variable.shape == variables[0].shape for variable in variables])
+    variable_num = len(variables)
+    if variable_num == 1:
+        return variables[0]
+    concatenated = NF.concatenate(*variables, axis=axis)
+    indices_shape = concatenated.shape
+    indices = np.zeros(indices_shape, dtype=int)
+    # Move target axis dimenstion to the end
+    axis_size = indices.shape[axis]
+    indices = np.swapaxes(indices, axis, len(indices.shape) - 1)
+    original_size = axis_size // variable_num
+    for i in range(axis_size):
+        item_index = (i // variable_num)
+        var_index = i % variable_num
+        data_index = var_index * original_size + item_index
+        indices[..., i] = data_index
+    # Transpose again to original dimension
+    indices = nn.Variable.from_numpy_array(np.swapaxes(indices, axis, len(indices.shape) - 1))
+    return pytorch_equivalent_gather(concatenated, indices, axis=axis)
+
+
+def swapaxes(x: nn.Variable, axis1: int, axis2: int) -> nn.Variable:
+    '''
+    Interchange two axis of given variable.
+
+    Args:
+        x (Sequence[nn.Variable]): Target variable to interchange its axis.
+        axis1 (int): first axis.
+        axis2 (int): second axis.
+
+    Returns:
+        nn.Variable: Interchanged variable.
+    '''
+    axes = [i for i in range(len(x.shape))]
+    axes[axis1] = axis2
+    axes[axis2] = axis1
+    return NF.transpose(x, axes=axes)

@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -28,6 +28,7 @@ Info = Dict[str, Any]
 Experience = Tuple[State, Action, Reward, NonTerminal, NextState, Info]
 Shape = Union[int, Tuple[int, ...], Tuple[Tuple[int, ...], ...]]
 TupledData = Tuple
+Trajectory = Sequence[Experience]
 
 
 try:

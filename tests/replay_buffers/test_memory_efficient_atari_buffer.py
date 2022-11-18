@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import pytest
 from nnabla_rl.environments.dummy import DummyAtariEnv
 from nnabla_rl.environments.wrappers.atari import MaxAndSkipEnv, NoopResetEnv
 from nnabla_rl.replay_buffers.memory_efficient_atari_buffer import (MemoryEfficientAtariBuffer,
+                                                                    MemoryEfficientAtariTrajectoryBuffer,
                                                                     ProportionalPrioritizedAtariBuffer,
                                                                     RankBasedPrioritizedAtariBuffer)
 from nnabla_rl.utils.reproductions import build_atari_env
@@ -113,6 +114,104 @@ class TestMemoryEfficientAtariBuffer(object):
             buffer.append(experience)
 
         assert len(buffer) == 10
+
+
+class TestMemoryEfficientAtariTrajectoryBuffer(object):
+    def test_sample_trajectory(self):
+        trajectory1 = _generate_atari_experience_mock(num_mocks=5)
+        trajectory2 = _generate_atari_experience_mock(num_mocks=5)
+        trajectory3 = _generate_atari_experience_mock(num_mocks=10)
+
+        capacity = 10
+        buffer = MemoryEfficientAtariTrajectoryBuffer(num_trajectories=capacity)
+        buffer.append_trajectory(trajectory1)
+        buffer.append_trajectory(trajectory2)
+        buffer.append_trajectory(trajectory3)
+
+        trajectories, *_ = buffer.sample_trajectories(num_samples=2)
+        assert len(trajectories) == 2
+
+    def test_sample_trajectories_portion(self):
+        trajectory1 = _generate_atari_experience_mock(num_mocks=5)
+        trajectory2 = _generate_atari_experience_mock(num_mocks=5)
+        trajectory3 = _generate_atari_experience_mock(num_mocks=10)
+
+        capacity = 10
+        buffer = MemoryEfficientAtariTrajectoryBuffer(num_trajectories=capacity)
+        buffer.append_trajectory(trajectory1)
+        buffer.append_trajectory(trajectory2)
+        buffer.append_trajectory(trajectory3)
+
+        num_samples = 2
+        portion_length = 5
+        trajectories, *_ = buffer.sample_trajectories_portion(num_samples=num_samples, portion_length=portion_length)
+        assert len(trajectories) == num_samples
+        assert all([len(trajectory) == portion_length for trajectory in trajectories])
+
+    def test_append_trajectory(self):
+        trajectory1 = _generate_atari_experience_mock(num_mocks=5)
+        trajectory2 = _generate_atari_experience_mock(num_mocks=5)
+
+        capacity = 10
+        buffer = MemoryEfficientAtariTrajectoryBuffer(num_trajectories=capacity)
+        buffer.append_trajectory(trajectory1)
+        buffer.append_trajectory(trajectory2)
+
+        saved_trajectory1 = buffer.get_trajectory(0)
+        saved_trajectory2 = buffer.get_trajectory(1)
+
+        self._assert_same_trajectory(trajectory1, saved_trajectory1)
+        self._assert_same_trajectory(trajectory2, saved_trajectory2)
+
+    def test_append_compressed_trajectory(self):
+        trajectory1 = _generate_atari_experience_mock(num_mocks=5)
+        trajectory2 = _generate_atari_experience_mock(num_mocks=5)
+
+        capacity = 10
+        buffer = MemoryEfficientAtariTrajectoryBuffer(num_trajectories=capacity)
+        buffer.append_trajectory(self._compress_trajectory(trajectory1))
+        buffer.append_trajectory(self._compress_trajectory(trajectory2))
+
+        saved_trajectory1 = buffer.get_trajectory(0)
+        saved_trajectory2 = buffer.get_trajectory(1)
+
+        self._assert_same_trajectory(trajectory1, saved_trajectory1)
+        self._assert_same_trajectory(trajectory2, saved_trajectory2)
+
+    def test_append_compressed_uint8_trajectory(self):
+        trajectory1 = _generate_atari_experience_mock(num_mocks=5)
+        trajectory2 = _generate_atari_experience_mock(num_mocks=5)
+
+        capacity = 10
+        buffer = MemoryEfficientAtariTrajectoryBuffer(num_trajectories=capacity)
+        buffer.append_trajectory(self._compress_trajectory(trajectory1, to_uint8=True))
+        buffer.append_trajectory(self._compress_trajectory(trajectory2, to_uint8=True))
+
+        saved_trajectory1 = buffer.get_trajectory(0)
+        saved_trajectory2 = buffer.get_trajectory(1)
+
+        self._assert_same_trajectory(trajectory1, saved_trajectory1)
+        self._assert_same_trajectory(trajectory2, saved_trajectory2)
+
+    def _compress_trajectory(self, trajectory, to_uint8=False):
+        def uint8fy(state):
+            return np.asarray(state * 255.0, dtype=np.uint8)
+
+        if to_uint8:
+            return [(uint8fy(s[-1]), a, r, t, uint8fy(s_next[-1]), *_) for (s, a, r, t, s_next, *_) in trajectory]
+        else:
+            return [(s[-1], a, r, t, s_next[-1], *_) for (s, a, r, t, s_next, *_) in trajectory]
+
+    def _assert_same_trajectory(self, expected, actual):
+        for expected_experience, actual_experience in zip(expected, actual):
+            (e_s, e_a, e_r, e_t, e_s_next, *_) = expected_experience
+            (a_s, a_a, a_r, a_t, a_s_next, *_) = actual_experience
+
+            assert np.allclose(e_s, a_s)
+            assert np.allclose(e_a, a_a)
+            assert np.allclose(e_r, a_r)
+            assert np.allclose(e_t, a_t)
+            assert np.allclose(e_s_next, a_s_next)
 
 
 class TestProportionalPrioritizedAtariBuffer(object):

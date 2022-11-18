@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -188,7 +188,7 @@ class MPPI(Algorithm):
         self._evaluation_dynamics = _DeterministicStatePredictor(self._env_info, self._dynamics.shallowcopy())
 
     @eval_api
-    def compute_eval_action(self, state, *, begin_of_episode=False):
+    def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
         x = state
         u = np.asarray([np.zeros((self._env_info.action_dim, 1)) for _ in range(self._config.T)])
         _, control_inputs = self._compute_control_inputs(x, u)

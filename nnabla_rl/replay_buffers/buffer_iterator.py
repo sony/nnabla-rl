@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ class BufferIterator(object):
         else:
             self._index += self._batch_size
             self._new_epoch = (len(self._replay_buffer) <= self._index)
-        return self._replay_buffer.sample_indices(indices)
+        return self._sample(indices)
 
     __next__ = next
 
@@ -68,3 +68,6 @@ class BufferIterator(object):
         if self._shuffle:
             np.random.shuffle(self._indices)
         self._index = 0
+
+    def _sample(self, indices):
+        return self._replay_buffer.sample_indices(indices)
