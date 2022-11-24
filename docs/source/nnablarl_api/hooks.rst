@@ -30,6 +30,10 @@ List of Hooks
     :members:
     :show-inheritance:
 
+.. autoclass:: nnabla_rl.hooks.ProgressBarHook
+    :members:
+    :show-inheritance:
+
 .. autoclass:: nnabla_rl.hooks.TimeMeasuringHook
     :members:
     :show-inheritance:

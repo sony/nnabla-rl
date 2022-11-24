@@ -20,3 +20,4 @@ from nnabla_rl.hooks.iteration_num_hook import IterationNumHook  # noqa
 from nnabla_rl.hooks.iteration_state_hook import IterationStateHook  # noqa
 from nnabla_rl.hooks.time_measuring_hook import TimeMeasuringHook  # noqa
 from nnabla_rl.hooks.computational_graph_hook import TrainingGraphHook  # noqa
+from nnabla_rl.hooks.progress_bar_hook import ProgressBarHook  # noqa

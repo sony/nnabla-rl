@@ -3,6 +3,7 @@ numpy>=1.17
 gym<0.26.0
 types-dataclasses
 opencv-python
+tqdm
 flake8
 pylint
 pytest

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,28 @@
 import logging
 from contextlib import contextmanager
 
-logger = logging.getLogger('nnabla_rl')
+from tqdm.contrib.logging import logging_redirect_tqdm
+
+
+class TqdmAdapter(logging.LoggerAdapter):
+    def log(self, level, msg, *args, **kwargs):
+        with logging_redirect_tqdm():
+            super().log(level, msg, *args, **kwargs)
+
+    @property
+    def disabled(self):
+        return self.logger.disabled
+
+    @disabled.setter
+    def disabled(self, flag):
+        self.logger.disabled = flag
+
+    @property
+    def level(self):
+        return self.logger.level
+
+
+logger = TqdmAdapter(logging.getLogger('nnabla_rl'), {})
 logger.disabled = False
 
 
