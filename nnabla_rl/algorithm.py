@@ -160,10 +160,12 @@ class Algorithm(metaclass=ABCMeta):
         if self._has_rnn_models():
             self._assert_rnn_is_supported()
         self._before_training_start(train_env)
+        self._setup_hooks(total_iterations)
         for _ in range(total_iterations):
             self._iteration_num += 1
             self._run_online_training_iteration(train_env)
             self._invoke_hooks()
+        self._teardown_hooks(total_iterations)
         self._after_training_finish(train_env)
 
     def train_offline(self, replay_buffer: ReplayBuffer, total_iterations: int = sys.maxsize):
@@ -181,10 +183,12 @@ class Algorithm(metaclass=ABCMeta):
         if self._has_rnn_models():
             self._assert_rnn_is_supported()
         self._before_training_start(replay_buffer)
+        self._setup_hooks(total_iterations)
         for _ in range(total_iterations):
             self._iteration_num += 1
             self._run_offline_training_iteration(replay_buffer)
             self._invoke_hooks()
+        self._teardown_hooks(total_iterations)
         self._after_training_finish(replay_buffer)
 
     def set_hooks(self, hooks: Sequence[Hook]):
@@ -200,6 +204,14 @@ class Algorithm(metaclass=ABCMeta):
     def _invoke_hooks(self):
         for hook in self._hooks:
             hook(self)
+
+    def _setup_hooks(self, total_iterations: int):
+        for hook in self._hooks:
+            hook.setup(self, total_iterations)
+
+    def _teardown_hooks(self, total_iterations: int):
+        for hook in self._hooks:
+            hook.teardown(self, total_iterations)
 
     @abstractmethod
     def compute_eval_action(self, state, *, begin_of_episode=False) -> np.ndarray:
