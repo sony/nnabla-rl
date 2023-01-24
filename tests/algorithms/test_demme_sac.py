@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -241,18 +241,14 @@ class TestDEMMESAC(object):
         assert sac.__name__ == 'DEMMESAC'
 
     def test_discrete_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on discrete action env
-        '''
+        """Check that error occurs when training on discrete action env."""
 
         dummy_env = E.DummyDiscrete()
         with pytest.raises(Exception):
             A.DEMMESAC(dummy_env)
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
 
         dummy_env = E.DummyContinuous()
         sac = A.DEMMESAC(dummy_env)
@@ -260,9 +256,8 @@ class TestDEMMESAC(object):
         sac.train_online(dummy_env, total_iterations=10)
 
     def test_run_online_rnn_training(self):
-        '''
-        Check that no error occurs when calling online training with RNN model
-        '''
+        """Check that no error occurs when calling online training with RNN
+        model."""
         class RNNPolicyBuilder(ModelBuilder[StochasticPolicy]):
             def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
                 return RNNPolicyFunction(scope_name, action_dim=env_info.action_dim)
@@ -304,9 +299,7 @@ class TestDEMMESAC(object):
         sac.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
 
         batch_size = 5
         dummy_env = E.DummyContinuous()
@@ -363,9 +356,8 @@ class TestDEMMESAC(object):
         return True
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyContinuous()
         sac = A.DEMMESAC(dummy_env)

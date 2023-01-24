@@ -41,8 +41,7 @@ from nnabla_rl.utils.solver_wrappers import AutoWeightDecay
 
 @dataclass
 class ATRPOConfig(AlgorithmConfig):
-    '''
-    List of configurations for Average Reward TRPO algorithm
+    """List of configurations for Average Reward TRPO algorithm.
 
     Args:
         lmb (float): Scalar of lambda return's computation in GAE. Defaults to 0.95.\
@@ -74,7 +73,7 @@ class ATRPOConfig(AlgorithmConfig):
             gpu_batch_size is the same as pi_batch_size. Defaults to None.
         learning_rate_decay_iterations (int): learning rate will be decreased lineary to 0 till this iteration number.
             If 0 or negative, learning rate will be kept fixed. Defaults to 10000000.
-    '''
+    """
     lmb: float = 0.95
     num_steps_per_iteration: int = 5000
     pi_batch_size: int = 5000
@@ -92,11 +91,10 @@ class ATRPOConfig(AlgorithmConfig):
     learning_rate_decay_iterations: int = 10000000
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the values are in valid range.
-
-        '''
+        """
         self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, 'pi_batch_size')
         self._assert_between(self.lmb, 0.0, 1.0, 'lmb')
         self._assert_positive(self.num_steps_per_iteration, 'num_steps_per_iteration')
@@ -164,7 +162,8 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class ATRPO(Algorithm):
-    '''On-Policy Deep Reinforcement Learning for the Average-Reward Criterion implementation.
+    """On-Policy Deep Reinforcement Learning for the Average-Reward Criterion
+    implementation.
 
     This class implements the Average Reward Trust Region Policy Optimiation (ATRPO)
     with Generalized Advantage Estimation (GAE) algorithm proposed by Yiming Zhang, et al. and J. Schulman, et al.
@@ -188,7 +187,7 @@ class ATRPO(Algorithm):
             state preprocessor builder to preprocess the states
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

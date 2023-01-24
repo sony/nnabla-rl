@@ -239,7 +239,6 @@ class TestFunctions(object):
         assert np.all(np.isclose(actual.d, expected))
 
     def test_gaussian_cross_entropy_method(self):
-
         def objective_function(x):
             return -((x - 3.)**2)
 
@@ -257,7 +256,6 @@ class TestFunctions(object):
         assert np.allclose(optimal_top.d, np.array([[3.]]), atol=1e-2)
 
     def test_gaussian_cross_entropy_method_with_complicated_objective_function(self):
-
         def dummy_q_function(s, a):
             return -((a - s)**2)
 

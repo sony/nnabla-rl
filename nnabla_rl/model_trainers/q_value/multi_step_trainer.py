@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,8 +25,7 @@ from nnabla_rl.models import Model
 
 @dataclass
 class MultiStepTrainerConfig(TrainerConfig):
-    """Configuration class for ModelTrainer
-    """
+    """Configuration class for ModelTrainer."""
     num_steps: int = 1
 
     def __post_init__(self):

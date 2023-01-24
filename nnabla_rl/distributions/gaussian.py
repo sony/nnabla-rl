@@ -26,15 +26,14 @@ from nnabla_rl.distributions.distribution import ContinuosDistribution, Distribu
 
 
 class Gaussian(ContinuosDistribution):
-    '''
-    Gaussian distribution
+    """Gaussian distribution.
 
     :math:`\\mathcal{N}(\\mu,\\,\\sigma^{2})`
 
     Args:
         mean (nn.Variable): mean :math:`\\mu` of gaussian distribution.
         ln_var (nn.Variable): logarithm of the variance :math:`\\sigma^{2}`. (i.e. ln_var is :math:`\\log{\\sigma^{2}}`)
-    '''
+    """
 
     _delegate: Union["NumpyGaussian", "NnablaGaussian"]
 

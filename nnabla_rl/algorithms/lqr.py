@@ -26,12 +26,11 @@ from nnabla_rl.numpy_models.dynamics import Dynamics
 
 @dataclass
 class LQRConfig(AlgorithmConfig):
-    '''
-    List of configurations for LQR (Linear Quadratic Regulator) algorithm
+    """List of configurations for LQR (Linear Quadratic Regulator) algorithm.
 
     Args:
         T_max (int): Planning time step length. Defaults to 50.
-    '''
+    """
     T_max: int = 50
 
     def __post_init__(self):
@@ -41,7 +40,7 @@ class LQRConfig(AlgorithmConfig):
 
 
 class LQR(Algorithm):
-    '''LQR (Linear Quadratic Regulator) algorithm.
+    """LQR (Linear Quadratic Regulator) algorithm.
 
     Args:
         env_or_env_info\
@@ -53,7 +52,7 @@ class LQR(Algorithm):
             cost function to optimize the trajectory
         config (:py:class:`LQRConfig <nnabla_rl.algorithmss.lqr.LQRConfig>`):
             the parameter for LQR controller
-    '''
+    """
     _config: LQRConfig
 
     def __init__(self,

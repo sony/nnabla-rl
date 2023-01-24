@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,25 +30,23 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class MMESACConfig(ICML2018SACConfig):
-    '''MMESACConfig
-    List of configurations for MMESAC algorithm.
+    """MMESACConfig List of configurations for MMESAC algorithm.
 
     Args:
         alpha_pi (Optional[float]): If None, will use reward_scalar to scale the reward.
             Otherwise 1/alpha_pi will be used to scale the reward. Defaults to None.
         alpha_q (float): Temperature value for negative entropy term. Defaults to 1.0.
-    '''
+    """
     # override configurations
     reward_scalar: float = 5.0
     alpha_pi: Optional[float] = None
     alpha_q: float = 1.0
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the values are in valid range.
-
-        '''
+        """
         super().__post_init__()
         if self.alpha_pi is not None:
             # Recompute with alpha_pi
@@ -56,7 +54,7 @@ class MMESACConfig(ICML2018SACConfig):
 
 
 class MMESAC(ICML2018SAC):
-    '''Max-Min Entropy Soft Actor-Critic (MME-SAC) algorithm.
+    """Max-Min Entropy Soft Actor-Critic (MME-SAC) algorithm.
 
     This class implements the Max-Min Entropy Soft Actor Critic (MME-SAC) algorithm proposed by S. Han, et al.
     in the paper: "A Max-Min Entropy Framework for Reinforcement Learning"
@@ -84,7 +82,7 @@ class MMESAC(ICML2018SAC):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

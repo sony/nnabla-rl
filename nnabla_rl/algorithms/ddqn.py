@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,8 +29,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class DDQNConfig(DQNConfig):
-    """
-    List of configurations for Double DQN (DDQN) algorithm
+    """List of configurations for Double DQN (DDQN) algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -60,7 +59,7 @@ class DDQNConfig(DQNConfig):
 
 
 class DDQN(DQN):
-    '''Double DQN algorithm.
+    """Double DQN algorithm.
 
     This class implements the Deep Q-Network with double q-learning (DDQN) algorithm
     proposed by H. van Hasselt, et al. in the paper: "Deep Reinforcement Learning with Double Q-learning"
@@ -81,7 +80,7 @@ class DDQN(DQN):
         q_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder of q function solver
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

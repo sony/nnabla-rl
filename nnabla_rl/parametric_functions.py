@@ -43,9 +43,9 @@ def noisy_net(inp: nn.Variable,
               apply_noisy_w: Optional[Callable[[nn.Variable], nn.Variable]] = None,
               apply_noisy_b: Optional[Callable[[nn.Variable], nn.Variable]] = None,
               seed: int = -1) -> nn.Variable:
-    '''
-    Noisy linear layer with factorized gaussian noise  proposed by Fortunato et al. in the paper
-    "Noisy networks for exploration". See: https://arxiv.org/abs/1706.10295 for details.
+    """Noisy linear layer with factorized gaussian noise  proposed by Fortunato
+    et al. in the paper "Noisy networks for exploration". See:
+    https://arxiv.org/abs/1706.10295 for details.
 
     Args:
         inp (nn.Variable): Input of the layer n_outmaps (int): output dimension of the layer.
@@ -79,7 +79,7 @@ def noisy_net(inp: nn.Variable,
 
     Returns:
         nn.Variable: Linearly transformed input with noisy weights
-    '''
+    """
 
     inmaps = int(np.prod(inp.shape[base_axis:]))
     if w_init is None:
@@ -143,7 +143,8 @@ def noisy_net(inp: nn.Variable,
 
 
 def spatial_softmax(inp: nn.Variable, alpha_init: float = 1., fix_alpha: bool = False) -> nn.Variable:
-    r''' Spatial softmax layer proposed in https://arxiv.org/abs/1509.06113. Computes
+    r"""Spatial softmax layer proposed in https://arxiv.org/abs/1509.06113.
+    Computes.
 
     .. math::
         s_{cij} &= \frac{\exp(x_{cij} / \alpha)}{\sum_{i'j'} \exp(x_{ci'j'} / \alpha)}
@@ -164,7 +165,7 @@ def spatial_softmax(inp: nn.Variable, alpha_init: float = 1., fix_alpha: bool = 
 
     Returns:
         nn.Variables: Feature points, Shape is (batch_size, C*2)
-    '''
+    """
     assert len(inp.shape) == 4
     (batch_size, channel, height, width) = inp.shape
     alpha = get_parameter_or_create("alpha", shape=(1, 1), initializer=ConstantInitializer(alpha_init),
@@ -227,7 +228,6 @@ def lstm_cell(x, h, c, state_size, w_init=None, b_init=None, fix_parameters=Fals
 
     Returns:
         :class:`~nnabla.Variable`
-
     """
 
     xh = NF.concatenate(*(x, h), axis=base_axis)
@@ -247,7 +247,7 @@ def causal_self_attention(x: nn.Variable, embed_dim: int, num_heads: int,
                           w_init_query: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
                           w_init_value: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
                           w_init_proj: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02)) -> nn.Variable:
-    ''' Causal self attention used in https://arxiv.org/abs/2106.01345.
+    """Causal self attention used in https://arxiv.org/abs/2106.01345.
 
     Args:
         x (nn.Variable): Input of the layer. Shape should be (batch_size, T, C)
@@ -264,7 +264,7 @@ def causal_self_attention(x: nn.Variable, embed_dim: int, num_heads: int,
 
     Returns:
         nn.Variables: Encoded vector
-    '''
+    """
     batch_size, timesteps, _ = x.shape
     with nn.parameter_scope('key'):
         k = NPF.affine(x, n_outmaps=embed_dim, base_axis=2, w_init=w_init_key)

@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,22 +20,21 @@ from nnabla_rl.models.model import Model
 
 
 class Dynamics(Model, metaclass=ABCMeta):
-    '''Base reward function class
-    '''
+    """Base reward function class."""
 
     def __init__(self, scope_name: str):
         super(Dynamics, self).__init__(scope_name)
 
 
 class DeterministicDynamics(Dynamics, metaclass=ABCMeta):
-    ''' DeterministicDynamics
-    Abstract class for deterministic dynamics
+    """DeterministicDynamics Abstract class for deterministic dynamics.
 
-    This dynamics returns next state for given state and control input (action).
-    '''
+    This dynamics returns next state for given state and control input
+    (action).
+    """
     @abstractmethod
     def next_state(self, x: nn.Variable, u: nn.Variable) -> nn.Variable:
-        '''next_state
+        """Next_state.
 
         Args:
             x (nnabla.Variable): State variable
@@ -43,11 +42,11 @@ class DeterministicDynamics(Dynamics, metaclass=ABCMeta):
 
         Returns:
             nnabla.Variable : next state for the given state and control input
-        '''
+        """
         raise NotImplementedError
 
     def acceleration(self, x: nn.Variable, u: nn.Variable) -> nn.Variable:
-        '''acceleration
+        """Acceleration.
 
         Args:
             x (nnabla.Variable): State variable
@@ -55,19 +54,19 @@ class DeterministicDynamics(Dynamics, metaclass=ABCMeta):
 
         Returns:
             nnabla.Variable: acceleration for the given state and control input
-        '''
+        """
         raise NotImplementedError
 
 
 class StochasticDynamics(Dynamics, metaclass=ABCMeta):
-    ''' StochasticDynamics
-    Abstract class for stochastic dynamics
+    """StochasticDynamics Abstract class for stochastic dynamics.
 
-    This dynamics returns the probability distribution of next state for given state and control input (action).
-    '''
+    This dynamics returns the probability distribution of next state for
+    given state and control input (action).
+    """
     @abstractmethod
     def next_state(self, x: nn.Variable, u: nn.Variable) -> Distribution:
-        '''next_state
+        """Next_state.
 
         Args:
             x (nnabla.Variable): State variable
@@ -75,5 +74,5 @@ class StochasticDynamics(Dynamics, metaclass=ABCMeta):
 
         Returns:
             nnabla_rl.distributions.Distribution: next state for the given state and control input
-        '''
+        """
         raise NotImplementedError

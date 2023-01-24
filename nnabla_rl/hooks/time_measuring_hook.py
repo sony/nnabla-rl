@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,12 +20,11 @@ from nnabla_rl.logger import logger
 
 
 class TimeMeasuringHook(Hook):
-    '''
-    Hook to measure and print the actual time spent to run the iteration(s).
+    """Hook to measure and print the actual time spent to run the iteration(s).
 
     Args:
         timing (int): Measuring interval. Defaults to 1 iteration.
-    '''
+    """
 
     def __init__(self, timing=1):
         super(TimeMeasuringHook, self).__init__(timing=timing)

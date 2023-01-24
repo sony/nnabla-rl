@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -179,9 +179,8 @@ class TestHER(object):
         assert her.__name__ == 'HER'
 
     def test_not_goal_conditioned_env_unsupported(self):
-        '''
-        Check that error occurs when training on not goal-conditioned env
-        '''
+        """Check that error occurs when training on not goal-conditioned
+        env."""
 
         dummy_env = DummyContinuous(max_episode_steps=max_episode_steps)
         config = A.HERConfig()
@@ -189,9 +188,8 @@ class TestHER(object):
             A.HER(dummy_env, config=config)
 
     def test_discrete_action_goal_conditioned_env_unsupported(self):
-        '''
-        Check that error occurs when training on discrete action goal-conditioned env
-        '''
+        """Check that error occurs when training on discrete action goal-
+        conditioned env."""
 
         dummy_env = DummyDiscreteActionGoalEnv(max_episode_steps=max_episode_steps)
         dummy_env = GoalConditionedTupleObservationEnv(dummy_env)
@@ -200,9 +198,7 @@ class TestHER(object):
             A.HER(dummy_env, config=config)
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
         dummy_env = GoalConditionedTupleObservationEnv(dummy_env)
         batch_size = 5
@@ -212,9 +208,8 @@ class TestHER(object):
         her.train_online(dummy_env, total_iterations=10)
 
     def test_run_online_rnn_training(self):
-        '''
-        Check that no error occurs when calling online training with RNN model
-        '''
+        """Check that no error occurs when calling online training with RNN
+        model."""
         class RNNActorBuilder(ModelBuilder[DeterministicPolicy]):
             def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
                 return RNNActorFunction(scope_name, action_dim=env_info.action_dim)
@@ -237,9 +232,7 @@ class TestHER(object):
         her.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
 
         batch_size = 5
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
@@ -263,9 +256,8 @@ class TestHER(object):
         assert action.shape == dummy_env.action_space.shape
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
         dummy_env = GoalConditionedTupleObservationEnv(dummy_env)

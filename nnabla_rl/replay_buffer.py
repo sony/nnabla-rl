@@ -43,14 +43,11 @@ class ReplayBuffer(object):
 
     @property
     def capacity(self) -> Union[int, None]:
-        '''
-        Capacity (max length) of this replay buffer otherwise None
-        '''
+        """Capacity (max length) of this replay buffer otherwise None."""
         return self._capacity
 
     def append(self, experience: Experience):
-        '''
-        Add new experience to the replay buffer.
+        """Add new experience to the replay buffer.
 
         Args:
             experience (array-like): Experience includes trainsitions,
@@ -60,12 +57,11 @@ class ReplayBuffer(object):
         Notes:
             If the replay buffer size is full, the oldest (head of the buffer) experience will be dropped off
             and the given experince will be added to the tail of the buffer.
-        '''
+        """
         self._buffer.append(experience)
 
     def append_all(self, experiences: Sequence[Experience]):
-        '''
-        Add list of experiences to the replay buffer.
+        """Add list of experiences to the replay buffer.
 
         Args:
             experiences (Sequence[Experience]): Sequence of experiences to insert to the buffer
@@ -73,14 +69,13 @@ class ReplayBuffer(object):
         Notes:
             If the replay buffer size is full, the oldest (head of the buffer) experience will be dropped off
             and the given experince will be added to the tail of the buffer.
-        '''
+        """
         for experience in experiences:
             self.append(experience)
 
     def sample(self, num_samples: int = 1, num_steps: int = 1) \
             -> Tuple[Union[Sequence[Experience], Tuple[Sequence[Experience], ...]], Dict[str, Any]]:
-        '''
-        Randomly sample num_samples experiences from the replay buffer.
+        """Randomly sample num_samples experiences from the replay buffer.
 
         Args:
             num_samples (int): Number of samples to sample from the replay buffer. Defaults to 1.
@@ -98,7 +93,7 @@ class ReplayBuffer(object):
         Notes
         ----
         Sampling strategy depends on undelying implementation.
-        '''
+        """
         max_index = len(self) - num_steps + 1
         if num_samples > max_index:
             raise ValueError(f'num_samples: {num_samples} is greater than the size of buffer: {max_index}')
@@ -107,8 +102,7 @@ class ReplayBuffer(object):
 
     def sample_indices(self, indices: Sequence[int], num_steps: int = 1) \
             -> Tuple[Union[Sequence[Experience], Tuple[Sequence[Experience], ...]], Dict[str, Any]]:
-        '''
-        Sample experiences for given indices from the replay buffer.
+        """Sample experiences for given indices from the replay buffer.
 
         Args:
             indices (array-like): list of array index to sample the data
@@ -122,8 +116,7 @@ class ReplayBuffer(object):
 
         Raises:
             ValueError: If indices are empty or num_steps is 0 or negative.
-
-        '''
+        """
         if len(indices) == 0:
             raise ValueError('Indices are empty')
         if num_steps < 1:

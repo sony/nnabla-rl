@@ -36,8 +36,7 @@ from nnabla_rl.utils.misc import create_variable, sync_model
 
 @dataclass
 class BCQConfig(AlgorithmConfig):
-    '''BCQConfig
-    List of configurations for BCQ algorithm
+    """BCQConfig List of configurations for BCQ algorithm.
 
     Args:
         gamma (float): discount factor of reward. Defaults to 0.99.
@@ -53,7 +52,7 @@ class BCQConfig(AlgorithmConfig):
         phi (float): action perturbator noise coefficient. Defaults to 0.05.
         num_q_ensembles (int): number of q function ensembles . Defaults to 2.
         num_action_samples (int): number of actions to sample for computing target q values. Defaults to 10.
-    '''
+    """
     gamma: float = 0.99
     learning_rate: float = 1.0*1e-3
     batch_size: int = 100
@@ -64,11 +63,10 @@ class BCQConfig(AlgorithmConfig):
     num_action_samples: int = 10
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.tau, 0.0, 1.0, 'tau')
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.lmb, 'lmb')
@@ -123,7 +121,7 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class BCQ(Algorithm):
-    '''Batch-Constrained Q-learning (BCQ) algorithm
+    """Batch-Constrained Q-learning (BCQ) algorithm.
 
     This class implements the Batch-Constrained Q-learning (BCQ) algorithm
     proposed by S. Fujimoto, et al. in the paper: "Off-Policy Deep Reinforcement Learning without Exploration"
@@ -149,7 +147,7 @@ class BCQ(Algorithm):
             builder of perturbator models
         perturbator_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
             builder for perturbator solvers
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

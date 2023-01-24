@@ -70,15 +70,15 @@ def generate_dummy_trajectory(env, trajectory_length):
 
 
 def is_same_parameter_id_and_key(param1, param2):
-    ''' Compare two parameters have same ids and keys.
-        Note this function does not check order of items.
+    """Compare two parameters have same ids and keys. Note this function does
+    not check order of items.
 
     Args:
         param1 (Dict): parameters
         param2 (Dict): parameters
     Returns:
         bool: Have same parameters or not
-    '''
+    """
     assert len(param1) == len(param2)
 
     for key1, value1 in param1.items():

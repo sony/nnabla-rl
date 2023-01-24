@@ -112,8 +112,7 @@ class AtariDecisionTransformer(StochasticDecisionTransformer):
                 return NF.tanh(NPF.affine(rtg, n_outmaps=self._embedding_dim, base_axis=2))
 
     def _embed_t(self, timesteps: nn.Variable, block_size, context_length: int, T: int) -> nn.Variable:
-        '''T stands for max timestep among trajectories in the dataset
-        '''
+        """T stands for max timestep among trajectories in the dataset."""
         with nn.parameter_scope("t_embedding"):
             batch_size = timesteps.shape[0]
             # (batch_size, 1, 1) -> (batch_size, 1, embedding_dim)

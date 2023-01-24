@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,10 +20,11 @@ from nnabla_rl.models.perturbator import Perturbator
 
 
 class BCQPerturbator(Perturbator):
-    '''
-    Perturbator model proposed by S. Fujimoto in BCQ paper for mujoco environment.
+    """Perturbator model proposed by S.
+
+    Fujimoto in BCQ paper for mujoco environment.
     See: https://arxiv.org/abs/1812.02900
-    '''
+    """
 
     def __init__(self, scope_name, state_dim, action_dim, max_action_value):
         super(BCQPerturbator, self).__init__(scope_name)

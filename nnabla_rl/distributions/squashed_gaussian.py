@@ -23,8 +23,7 @@ from nnabla_rl.distributions.distribution import ContinuosDistribution
 
 
 class SquashedGaussian(ContinuosDistribution):
-    '''
-    Gaussian distribution which its output is squashed with tanh.
+    """Gaussian distribution which its output is squashed with tanh.
 
     :math:`z \\sim \\mathcal{N}(\\mu,\\,\\sigma^{2})`. :math:`out = \\tanh{z}`.
 
@@ -35,7 +34,7 @@ class SquashedGaussian(ContinuosDistribution):
     Note:
         The log probability and kl_divergence of this distribution is different from
         :py:class:`Gaussian distribution <nnabla_rl.distributions.Gaussian>` because the output is squashed.
-    '''
+    """
 
     def __init__(self, mean, ln_var):
         super(SquashedGaussian, self).__init__()

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,9 +36,7 @@ class TestDQN(object):
         assert dqn.__name__ == 'DQN'
 
     def test_continuous_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on continuous action env
-        '''
+        """Check that error occurs when training on continuous action env."""
 
         dummy_env = E.DummyContinuous()
         config = A.DQNConfig()
@@ -46,9 +44,7 @@ class TestDQN(object):
             A.DQN(dummy_env, config=config)
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyDiscreteImg()
         config = A.DQNConfig()
         config.start_timesteps = 5
@@ -60,9 +56,7 @@ class TestDQN(object):
         dqn.train_online(dummy_env, total_iterations=10)
 
     def test_run_online_training_multistep(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyDiscreteImg()
         config = A.DQNConfig()
         config.num_steps = 2
@@ -75,9 +69,8 @@ class TestDQN(object):
         dqn.train_online(dummy_env, total_iterations=10)
 
     def test_run_online_rnn_training(self):
-        '''
-        Check that no error occurs when calling online training with RNN model
-        '''
+        """Check that no error occurs when calling online training with RNN
+        model."""
         class RNNModelBuilder(ModelBuilder[QFunction]):
             def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
                 return DRQNQFunction(scope_name, env_info.action_dim)
@@ -95,9 +88,7 @@ class TestDQN(object):
         dqn.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
         config = A.DQNConfig()
@@ -147,9 +138,8 @@ class TestDQN(object):
             A.DQNConfig(max_explore_steps=-100)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyDiscreteImg()
         dqn = A.DQN(dummy_env)

@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,11 +25,12 @@ from nnabla_rl.models.encoder import VariationalAutoEncoder
 
 
 class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
-    '''
-    Almost identical to BCQ style variational auto encoder proposed by S. Fujimoto in BCQ paper for mujoco environment.
+    """Almost identical to BCQ style variational auto encoder proposed by S.
+
+    Fujimoto in BCQ paper for mujoco environment.
     See: https://arxiv.org/pdf/1812.02900.pdf
     The main difference is that the output action is not squashed with tanh for computational convenience.
-    '''
+    """
 
     def __init__(self, scope_name, state_dim, action_dim, latent_dim):
         super(UnsquashedVariationalAutoEncoder, self).__init__(scope_name)
@@ -108,10 +109,11 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
 
 
 class BCQVariationalAutoEncoder(UnsquashedVariationalAutoEncoder):
-    '''
-    BCQ style variational auto encoder proposed by S. Fujimoto in BCQ paper for mujoco environment.
+    """BCQ style variational auto encoder proposed by S.
+
+    Fujimoto in BCQ paper for mujoco environment.
     See: https://arxiv.org/pdf/1812.02900.pdf
-    '''
+    """
 
     def __init__(self, scope_name, state_dim, action_dim, latent_dim, max_action_value):
         super(BCQVariationalAutoEncoder, self).__init__(scope_name, state_dim, action_dim, latent_dim)

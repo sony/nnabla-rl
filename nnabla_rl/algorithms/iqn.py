@@ -39,8 +39,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class IQNConfig(AlgorithmConfig):
-    '''
-    List of configurations for IQN algorithm
+    """List of configurations for IQN algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -78,7 +77,7 @@ class IQNConfig(AlgorithmConfig):
         reset_rnn_on_terminal (bool): Reset recurrent internal states to zero during training if episode ends.
             This flag does not take effect if given model is not an RNN model.
             Defaults to True.
-    '''
+    """
     gamma: float = 0.99
     learning_rate: float = 0.00005
     batch_size: int = 32
@@ -103,11 +102,10 @@ class IQNConfig(AlgorithmConfig):
     reset_rnn_on_terminal: bool = True
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check that set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.batch_size, 'batch_size')
         self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
@@ -187,7 +185,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class IQN(Algorithm):
-    '''Implicit Quantile Network algorithm.
+    """Implicit Quantile Network algorithm.
 
     This class implements the Implicit Quantile Network (IQN) algorithm
     proposed by W. Dabney, et al. in the paper: "Implicit Quantile Networks for Distributional Reinforcement Learning"
@@ -206,7 +204,7 @@ class IQN(Algorithm):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

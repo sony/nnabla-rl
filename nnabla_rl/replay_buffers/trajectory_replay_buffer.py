@@ -22,10 +22,12 @@ from nnabla_rl.typing import Experience, Trajectory
 
 
 class TrajectoryReplayBuffer(ReplayBuffer):
-    '''TrajectoryReplayBuffer.
-    Enables appending/sampling not just an experience from the buffer but also a trajectory.
-    In order to append/sample trajectory, the environment must be finite horizon setting.
-    '''
+    """TrajectoryReplayBuffer.
+
+    Enables appending/sampling not just an experience from the buffer
+    but also a trajectory. In order to append/sample trajectory, the
+    environment must be finite horizon setting.
+    """
 
     def __init__(self, num_trajectories=None):
         super(TrajectoryReplayBuffer, self).__init__(num_trajectories)
@@ -80,8 +82,8 @@ class TrajectoryReplayBuffer(ReplayBuffer):
 
     def sample_trajectories(self, num_samples: int = 1) -> Tuple[Union[Trajectory, Tuple[Trajectory, ...]],
                                                                  Dict[str, Any]]:
-        '''
-        Randomly sample num_samples trajectories from the replay buffer.
+        """Randomly sample num_samples trajectories from the replay buffer.
+
         Args:
             num_samples (int): Number of samples to sample from the replay buffer. Defaults to 1.
         Returns:
@@ -89,7 +91,7 @@ class TrajectoryReplayBuffer(ReplayBuffer):
             info (Dict[str, Any]): dictionary of information about trajectories.
         Raises:
             ValueError: num_samples exceeds the maximum possible trajectories or num_steps is 0 or negative.
-        '''
+        """
         max_index = self.trajectory_num
         if num_samples > max_index:
             raise ValueError(
@@ -112,11 +114,11 @@ class TrajectoryReplayBuffer(ReplayBuffer):
     def sample_trajectories_portion(self,
                                     num_samples: int = 1,
                                     portion_length: int = 1) -> Tuple[Tuple[Trajectory, ...], Dict[str, Any]]:
-        '''
-        Randomly sample num_samples trajectories with length portion_length from the replay buffer.
-        (i.e. Each trajectory length will be portion_length)
-        Trajectory will be sampled as follows.
-        First, a trajectory will be sampled with probablity proportional to its length.
+        """Randomly sample num_samples trajectories with length portion_length
+        from the replay buffer. (i.e. Each trajectory length will be
+        portion_length) Trajectory will be sampled as follows. First, a
+        trajectory will be sampled with probablity proportional to its length.
+
         Then, a random initial index between 0 to len(sampled_trajectory) - portion_length will be sampled.
         Finally, a portion_length size trajectory starting from sampled intial index will be returned.
 
@@ -131,7 +133,7 @@ class TrajectoryReplayBuffer(ReplayBuffer):
         Raises:
             ValueError: num_samples exceeds the maximum possible trajectories or num_steps is 0 or negative.
             RuntimeError: Trajectory's length is below portion_length.
-        '''
+        """
         max_index = self.trajectory_num
         p = np.asarray(self._samples_per_trajectory)
         p = p / np.sum(p)
@@ -150,17 +152,17 @@ class TrajectoryReplayBuffer(ReplayBuffer):
 
     def sample_indices_portion(self, indices: Sequence[int], portion_length: int = 1) ->  \
             Tuple[Tuple[Trajectory, ...], Dict[str, Any]]:
-        '''
-        Sample trajectory portions from the buffer.
-        (i.e. Each trajectory length will be portion_length)
-        Trajectory from given index to index+portion_length-1 will be sampled.
-        Index should be the index of a experience in the buffer and not trajectory's index.
-        For example, if this buffer has 10 trajectories which consist of 5 experiences each, then:
-        index 0: first experience of the first trajectory.
-        index 1: second experience of the first trajectory.
-        index 5: first experience of the second trajectory.
-        index 6: second experience of the second trajectory.
-        If index + portion_length exceeds the length of a trajectory, this will sample
+        """Sample trajectory portions from the buffer. (i.e. Each trajectory
+        length will be portion_length) Trajectory from given index to
+        index+portion_length-1 will be sampled. Index should be the index of a
+        experience in the buffer and not trajectory's index. For example, if
+        this buffer has 10 trajectories which consist of 5 experiences each,
+        then: index 0: first experience of the first trajectory. index 1:
+        second experience of the first trajectory. index 5: first experience of
+        the second trajectory. index 6: second experience of the second
+        trajectory. If index + portion_length exceeds the length of a
+        trajectory, this will sample.
+
         from len(trajectory) - portion_length to len(trajectory) - 1
 
         Args:
@@ -173,7 +175,7 @@ class TrajectoryReplayBuffer(ReplayBuffer):
             info (Dict[str, Any]): dictionary of information about trajectories.
         Raises:
             RuntimeError: Trajectory's length is below portion_length.
-        '''
+        """
         if len(indices) == 0:
             raise ValueError('Indices are empty')
         if portion_length < 1:

@@ -27,17 +27,21 @@ from nnabla_rl.utils.data import RingBuffer
 
 
 class MemoryEfficientAtariBuffer(ReplayBuffer):
-    '''Buffer designed to compactly save experiences of Atari environments used in DQN.
-    DQN (and other training algorithms) requires large replay buffer when training on Atari games.
-    If you naively save the experiences, you'll need more than 100GB to save them (assuming 1M experiences).
-    Which usually does not fit in the machine's memory (unless you have money:).
-    This replay buffer reduces the size of experience by casting the images to uint8 and
-    removing old frames concatenated to the observation.
-    By using this buffer, you can hold 1M experiences using only 20GB(approx.) of memory.
-    Note that this class is designed only for DQN style training on atari environment.
-    (i.e. State consists of "stacked_frames" number of concatenated grayscaled frames
-    and its values are normalized between 0 and 1)
-    '''
+    """Buffer designed to compactly save experiences of Atari environments used
+    in DQN.
+
+    DQN (and other training algorithms) requires large replay buffer
+    when training on Atari games. If you naively save the experiences,
+    you'll need more than 100GB to save them (assuming 1M experiences).
+    Which usually does not fit in the machine's memory (unless you have
+    money:). This replay buffer reduces the size of experience by
+    casting the images to uint8 and removing old frames concatenated to
+    the observation. By using this buffer, you can hold 1M experiences
+    using only 20GB(approx.) of memory. Note that this class is designed
+    only for DQN style training on atari environment. (i.e. State
+    consists of "stacked_frames" number of concatenated grayscaled
+    frames and its values are normalized between 0 and 1)
+    """
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -112,12 +116,15 @@ class MemoryEfficientAtariTrajectoryBuffer(TrajectoryReplayBuffer):
 
 
 class ProportionalPrioritizedAtariBuffer(ProportionalPrioritizedReplayBuffer):
-    '''Prioritized buffer designed to compactly save experiences of Atari environments used in DQN.
-    Proportional Prioritized version of efficient Atari buffer.
-    Note that this class is designed only for DQN style training on atari environment.
-    (i.e. State consists of "stacked_frames" number of concatenated grayscaled frames
-    and its values are normalized between 0 and 1)
-    '''
+    """Prioritized buffer designed to compactly save experiences of Atari
+    environments used in DQN.
+
+    Proportional Prioritized version of efficient Atari buffer. Note
+    that this class is designed only for DQN style training on atari
+    environment. (i.e. State consists of "stacked_frames" number of
+    concatenated grayscaled frames and its values are normalized between
+    0 and 1)
+    """
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -151,12 +158,15 @@ class ProportionalPrioritizedAtariBuffer(ProportionalPrioritizedReplayBuffer):
 
 
 class RankBasedPrioritizedAtariBuffer(RankBasedPrioritizedReplayBuffer):
-    '''Prioritized buffer designed to compactly save experiences of Atari environments used in DQN.
-    RankBased Prioritized version of efficient Atari buffer.
-    Note that this class is designed only for DQN style training on atari environment.
-    (i.e. State consists of "stacked_frames" number of concatenated grayscaled frames
-    and its values are normalized between 0 and 1)
-    '''
+    """Prioritized buffer designed to compactly save experiences of Atari
+    environments used in DQN.
+
+    RankBased Prioritized version of efficient Atari buffer. Note that
+    this class is designed only for DQN style training on atari
+    environment. (i.e. State consists of "stacked_frames" number of
+    concatenated grayscaled frames and its values are normalized between
+    0 and 1)
+    """
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details

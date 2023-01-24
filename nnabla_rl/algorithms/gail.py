@@ -46,8 +46,7 @@ from nnabla_rl.utils.misc import create_variable
 
 @dataclass
 class GAILConfig(AlgorithmConfig):
-    '''
-    List of configurations for GAIL algorithm
+    """List of configurations for GAIL algorithm.
 
     Args:
         act_deterministic_in_eval (bool): Enable act deterministically at evalution. Defaults to True.
@@ -85,7 +84,7 @@ class GAILConfig(AlgorithmConfig):
             Defaults to 0.001.
         preprocess_state (bool): Enable preprocessing the states in the collected experiences \
             before feeding as training batch. Defaults to True.
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -110,11 +109,10 @@ class GAILConfig(AlgorithmConfig):
     vf_learning_rate: float = 1e-3
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the values are in valid range.
-
-        '''
+        """
         self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, 'pi_batch_size')
         self._assert_positive(self.discriminator_learning_rate, "discriminator_learning_rate")
         self._assert_positive(self.discriminator_batch_size, "discriminator_batch_size")
@@ -203,7 +201,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class GAIL(Algorithm):
-    '''Generative Adversarial Imitation Learning implementation.
+    """Generative Adversarial Imitation Learning implementation.
 
     This class implements the Generative Adversarial Imitation Learning (GAIL) algorithm
     proposed by Jonathan Ho, et al. in the paper: "Generative Adversarial Imitation Learning"
@@ -231,7 +229,7 @@ class GAIL(Algorithm):
             state preprocessor builder to preprocess the states
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     _config: GAILConfig
     _v_function: VFunction

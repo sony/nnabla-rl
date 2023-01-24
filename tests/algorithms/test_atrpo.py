@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,18 +31,14 @@ class TestTRPO():
         assert atrpo.__name__ == 'ATRPO'
 
     def test_discrete_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on discrete action env
-        '''
+        """Check that error occurs when training on discrete action env."""
 
         dummy_env = E.DummyDiscrete()
         with pytest.raises(Exception):
             A.ATRPO(dummy_env)
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyContinuous()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
 
@@ -57,9 +53,7 @@ class TestTRPO():
         atrpo.train_online(dummy_env, total_iterations=5)
 
     def test_run_offline_training(self):
-        '''
-        Check that raising error when calling offline training
-        '''
+        """Check that raising error when calling offline training."""
         dummy_env = E.DummyContinuous()
         atrpo = A.ATRPO(dummy_env)
 
@@ -103,9 +97,8 @@ class TestTRPO():
             A.ATRPOConfig(vf_l2_reg_coefficient=-0.5)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyContinuous()
         atrpo = A.ATRPO(dummy_env)

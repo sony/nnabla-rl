@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,9 +31,7 @@ class TestREINFORCE(object):
         assert reinforce.__name__ == 'REINFORCE'
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
 
         dummy_env = E.DummyContinuous()
         dummy_env = EpisodicEnv(dummy_env)
@@ -41,9 +39,7 @@ class TestREINFORCE(object):
         reinforce.train_online(dummy_env, total_iterations=1)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
 
         dummy_env = E.DummyDiscrete()
         reinforce = A.REINFORCE(dummy_env)
@@ -62,9 +58,8 @@ class TestREINFORCE(object):
             A.REINFORCEConfig(clip_grad_norm=-0.1)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyContinuous()
         reinforce = A.REINFORCE(dummy_env)

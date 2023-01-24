@@ -32,12 +32,16 @@ from gym import error
 
 
 class GoalEnv(gym.Env):
-    """A goal-based environment. It functions just as any regular OpenAI Gym environment but it
-    imposes a required structure on the observation_space. More concretely, the observation
-    space is required to contain at least three elements, namely `observation`, `desired_goal`, and
-    `achieved_goal`. Here, `desired_goal` specifies the goal that the agent should attempt to achieve.
-    `achieved_goal` is the goal that it currently achieved instead. `observation` contains the
-    actual observations of the environment as per usual.
+    """A goal-based environment.
+
+    It functions just as any regular OpenAI Gym environment but it
+    imposes a required structure on the observation_space. More
+    concretely, the observation space is required to contain at least
+    three elements, namely `observation`, `desired_goal`, and
+    `achieved_goal`. Here, `desired_goal` specifies the goal that the
+    agent should attempt to achieve. `achieved_goal` is the goal that it
+    currently achieved instead. `observation` contains the actual
+    observations of the environment as per usual.
     """
 
     def reset(self):
@@ -56,7 +60,9 @@ class GoalEnv(gym.Env):
 
     @abstractmethod
     def compute_reward(self, achieved_goal, desired_goal, info):
-        """Compute the step reward. This externalizes the reward function and makes
+        """Compute the step reward.
+
+        This externalizes the reward function and makes
         it dependent on a desired goal and the one that was achieved. If you wish to include
         additional rewards that are independent of the goal, you can include the necessary values
         to derive it in 'info' and compute it accordingly.

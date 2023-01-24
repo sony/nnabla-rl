@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,11 +26,10 @@ class Policy(Model, metaclass=ABCMeta):
 
 
 class DeterministicPolicy(Policy, metaclass=ABCMeta):
-    ''' DeterministicPolicy
-    Abstract class for deterministic policy
+    """DeterministicPolicy Abstract class for deterministic policy.
 
     This policy returns an action for the given state.
-    '''
+    """
     @abstractmethod
     def pi(self, s: nn.Variable) -> nn.Variable:
         '''pi
@@ -45,11 +44,11 @@ class DeterministicPolicy(Policy, metaclass=ABCMeta):
 
 
 class StochasticPolicy(Policy, metaclass=ABCMeta):
-    ''' StochasticPolicy
-    Abstract class for stochastic policy
+    """StochasticPolicy Abstract class for stochastic policy.
 
-    This policy returns a probability distribution of action for the given state.
-    '''
+    This policy returns a probability distribution of action for the
+    given state.
+    """
     @abstractmethod
     def pi(self, s: nn.Variable) -> Distribution:
         '''pi

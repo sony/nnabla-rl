@@ -39,8 +39,8 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class CategoricalDQNConfig(AlgorithmConfig):
-    '''CategoricalDQNConfig
-    List of configurations for CategoricalDQN algorithm.
+    """CategoricalDQNConfig List of configurations for CategoricalDQN
+    algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -77,7 +77,7 @@ class CategoricalDQNConfig(AlgorithmConfig):
         reset_rnn_on_terminal (bool): Reset recurrent internal states to zero during training if episode ends.
             This flag does not take effect if given model is not an RNN model.
             Defaults to True.
-    '''
+    """
 
     gamma: float = 0.99
     learning_rate: float = 0.00025
@@ -102,11 +102,10 @@ class CategoricalDQNConfig(AlgorithmConfig):
     reset_rnn_on_terminal: bool = True
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.learning_rate, 'learning_rate')
         self._assert_positive(self.batch_size, 'batch_size')
@@ -176,7 +175,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class CategoricalDQN(Algorithm):
-    '''Categorical DQN algorithm.
+    """Categorical DQN algorithm.
 
     This class implements the Categorical DQN algorithm
     proposed by M. Bellemare, et al. in the paper: "A Distributional Perspective on Reinfocement Learning"
@@ -196,7 +195,7 @@ class CategoricalDQN(Algorithm):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

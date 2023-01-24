@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,9 +32,7 @@ class TestDRQN(object):
         assert drqn.__name__ == 'DRQN'
 
     def test_continuous_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on continuous action env
-        '''
+        """Check that error occurs when training on continuous action env."""
 
         dummy_env = E.DummyContinuous()
         config = A.DRQNConfig()
@@ -42,9 +40,7 @@ class TestDRQN(object):
             A.DRQN(dummy_env, config=config)
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyDiscreteImg()
         config = A.DRQNConfig()
         config.unroll_steps = 2
@@ -57,9 +53,7 @@ class TestDRQN(object):
         drqn.train_online(dummy_env, total_iterations=10)
 
     def test_run_online_training_multistep(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyDiscreteImg()
         config = A.DRQNConfig()
         config.num_steps = 2
@@ -73,9 +67,7 @@ class TestDRQN(object):
         drqn.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5
         unroll_steps = 2
@@ -112,9 +104,8 @@ class TestDRQN(object):
             A.DRQNConfig(unroll_steps=-1)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyDiscreteImg()
         drqn = A.DRQN(dummy_env)

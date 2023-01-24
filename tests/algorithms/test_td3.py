@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -171,18 +171,14 @@ class TestTD3(object):
         assert td3.__name__ == 'TD3'
 
     def test_discrete_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on discrete action env
-        '''
+        """Check that error occurs when training on discrete action env."""
 
         dummy_env = E.DummyDiscrete()
         with pytest.raises(Exception):
             A.TD3(dummy_env)
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
 
         dummy_env = E.DummyContinuous()
         batch_size = 5
@@ -192,9 +188,8 @@ class TestTD3(object):
         td3.train_online(dummy_env, total_iterations=10)
 
     def test_run_online_rnn_training(self):
-        '''
-        Check that no error occurs when calling online training with RNN model
-        '''
+        """Check that no error occurs when calling online training with RNN
+        model."""
         class RNNActorBuilder(ModelBuilder[DeterministicPolicy]):
             def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
                 return RNNActorFunction(scope_name, action_dim=env_info.action_dim)
@@ -216,9 +211,7 @@ class TestTD3(object):
         td3.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
 
         dummy_env = E.DummyContinuous()
         batch_size = 5
@@ -267,9 +260,8 @@ class TestTD3(object):
             A.TD3Config(replay_buffer_size=-1)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyContinuous()
         td3 = A.TD3(dummy_env)

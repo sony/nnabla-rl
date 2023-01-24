@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ from nnabla_rl.distributions.softmax import Softmax
 
 
 class OneHotSoftmax(Softmax):
-    '''
-    Softmax distribution which samples a one-hot vector of class index :math:`i` as 1.
-    Class index is sampled according to the following distribution.
+    """Softmax distribution which samples a one-hot vector of class index
+    :math:`i` as 1. Class index is sampled according to the following
+    distribution.
 
     :math:`i \\sim \\frac{\\exp{z_{i}}}{\\sum_{j}\\exp{z_{j}}}`.
 
     Args:
         z (nn.Variable): logits :math:`z`. Logits' dimension should be same as the number of class to sample.
-    '''
+    """
 
     def __init__(self, z):
         super(OneHotSoftmax, self).__init__(z)

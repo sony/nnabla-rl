@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,18 +81,15 @@ class TestMPPI(object):
         assert mppi.__name__ == 'MPPI'
 
     def test_continuous_action_env_supported(self):
-        '''
-        Check that no error occurs when training on continuous action env
-        '''
+        """Check that no error occurs when training on continuous action
+        env."""
         env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
         cost_function = QuadraticCostFunction()
 
         A.MPPI(env, cost_function=cost_function)
 
     def test_discrete_action_env_not_supported(self):
-        '''
-        Check that error occurs when training on discrete action env
-        '''
+        """Check that error occurs when training on discrete action env."""
         env = E.DummyDiscrete()
         cost_function = QuadraticCostFunction()
 
@@ -151,9 +148,7 @@ class TestMPPI(object):
         mppi.train_online(env, total_iterations=10)
 
     def test_run_offline_training(self):
-        '''
-        Check that error occurs when calling offline training
-        '''
+        """Check that error occurs when calling offline training."""
         env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ), max_episode_steps=5)
         cost_function = QuadraticCostFunction()
 

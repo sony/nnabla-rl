@@ -32,9 +32,7 @@ class TestDecisionTransformer(object):
         assert decision_transformer.__name__ == 'DecisionTransformer'
 
     def test_run_online_training(self):
-        '''
-        Check that error occurs when calling online training
-        '''
+        """Check that error occurs when calling online training."""
 
         dummy_env = E.DummyDiscreteImg(max_episode_steps=10)
 
@@ -47,9 +45,7 @@ class TestDecisionTransformer(object):
             decision_transformer.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
 
         dummy_env = E.DummyDiscreteImg(max_episode_steps=3)
 
@@ -112,9 +108,8 @@ class TestDecisionTransformer(object):
         A.DecisionTransformer(dummy_env)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyDiscreteImg()
         batch_size = 5

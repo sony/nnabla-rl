@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,8 +26,7 @@ from nnabla_rl.typing import ActionSelector
 
 @dataclass
 class GaussianExplorerConfig(EnvironmentExplorerConfig):
-    """
-    List of configurations for gaussian explorer.
+    """List of configurations for gaussian explorer.
 
     Args:
         action_clip_low (float): Minimum noise value. Noise below this value will be clipped.
@@ -46,7 +45,7 @@ class GaussianExplorerConfig(EnvironmentExplorerConfig):
 
 
 class GaussianExplorer(EnvironmentExplorer):
-    '''Gaussian explorer
+    """Gaussian explorer.
 
     Explore using policy's action without gaussian noise appended to it. Policy's action must be continuous action.
 
@@ -57,7 +56,7 @@ class GaussianExplorer(EnvironmentExplorer):
             environment info
         config (:py:class:`LinearDecayEpsilonGreedyExplorerConfig\
             <nnabla_rl.environment_explorers.LinearDecayEpsilonGreedyExplorerConfig>`): the config of this class.
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

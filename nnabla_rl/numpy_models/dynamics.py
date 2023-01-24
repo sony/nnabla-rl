@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,7 @@ from nnabla_rl.numpy_models.numpy_model import NumpyModel
 
 
 class Dynamics(NumpyModel, metaclass=ABCMeta):
-    '''Base dynamics
-    '''
+    """Base dynamics."""
 
     def __init__(self):
         pass
@@ -36,7 +35,8 @@ class Dynamics(NumpyModel, metaclass=ABCMeta):
     @abstractmethod
     def next_state(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
             -> Tuple[np.ndarray, Dict[str, Any]]:
-        '''predict next state. if the dynamics is probabilistic, will return the mean of the next_state
+        """Predict next state. if the dynamics is probabilistic, will return
+        the mean of the next_state.
 
         .. math::
             x_{t+1} = D(x_{t}, u_{t})
@@ -53,12 +53,12 @@ class Dynamics(NumpyModel, metaclass=ABCMeta):
         Returns:
             Tuple[np.ndarray, Dict[str, Any]] : Predicted next (mean) state and info
                 Returned arrays has (batch_size, state_shape) if batched is True.
-        '''
+        """
         raise NotImplementedError
 
     def gradient(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
             -> Tuple[np.ndarray, np.ndarray]:
-        ''' gradient of the dynamics with respect to the state and action
+        """Gradient of the dynamics with respect to the state and action.
 
         .. math::
             D_{x} &= {\nabla}_{x}D(x_{t}, u_{t})
@@ -79,12 +79,12 @@ class Dynamics(NumpyModel, metaclass=ABCMeta):
                 Tuple is in the order of Dx, Du.
                 Returned arrays has (batch_size, gradient_shape) if batched is True.
                 (NOTE: This will NOT compute the gradeint of probability density)
-        '''
+        """
         raise NotImplementedError
 
     def hessian(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
             -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        ''' hessian of the dynamics with respect to the state and action
+        """Hessian of the dynamics with respect to the state and action.
 
         .. math::
             D_{xx} &= {\nabla}^{2}_{x}D(x_{t}, u_{t})
@@ -107,5 +107,5 @@ class Dynamics(NumpyModel, metaclass=ABCMeta):
                 Tuple is in the order of Dxx, Dxu, Dux, Duu.
                 Returned arrays has (batch_size, hessian_shape) if batched is True.
                 (NOTE: This will NOT compute the hessian of probability density)
-        '''
+        """
         raise NotImplementedError

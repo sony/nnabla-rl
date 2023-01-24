@@ -138,3 +138,12 @@ flake8
 cd <nnabla-rl root directory>
 mypy
 ```
+
+#### Docstring formatting
+
+Use docformatter to properly format the pydoc written in each python files.
+Run docformatter as follows:
+
+```sh
+docformatter --exclude build --i --config setup.cfg .
+```

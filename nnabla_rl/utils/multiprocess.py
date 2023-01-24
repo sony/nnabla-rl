@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,14 +40,14 @@ def mp_to_np_array(mp_array, np_shape, dtype):
 
 
 def new_mp_arrays_from_params(params):
-    '''Converts nnabla's parameters to dictionary of multiprocessable arrays
+    """Converts nnabla's parameters to dictionary of multiprocessable arrays.
 
     Args:
       params(OrderedDict): dictionary of parameters to convert to multiprocess arrays
 
     Returns: dict
       dictionary of multiprocess arrays with size same as corresponding parameter's size
-    '''
+    """
     arrays = {}
     for key in params.keys():
         param_np_array = params[key].d
@@ -59,12 +59,12 @@ def new_mp_arrays_from_params(params):
 
 
 def copy_params_to_mp_arrays(params, mp_arrays):
-    '''Copy nnabla's parameters to multiprocessable arrays
+    """Copy nnabla's parameters to multiprocessable arrays.
 
     Args:
       params(OrderedDict): dictionary of parameters to convert to multiprocess arrays
       mp_arrays(dict): dictionary of multiprocess arrays with keys same as corresponding parameter's key
-    '''
+    """
     for key in params.keys():
         np_array = params[key].d
         # FIXME: cast to float32.
@@ -75,12 +75,12 @@ def copy_params_to_mp_arrays(params, mp_arrays):
 
 
 def copy_mp_arrays_to_params(mp_arrays, params):
-    '''Copy nnabla's parameters from multiprocessable arrays
+    """Copy nnabla's parameters from multiprocessable arrays.
 
     Args:
       mp_arrays(dict): dictionary of multiprocess arrays with keys same as corresponding parameter's key
       params(OrderedDict): dictionary of parameters to convert to multiprocess arrays
-    '''
+    """
     for key, mp_array in mp_arrays.items():
         param_shape = params[key].shape
         # FIXME: force using float32.

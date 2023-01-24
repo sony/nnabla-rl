@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,8 +34,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class ICRA2018QtOptConfig(DDQNConfig):
-    '''
-    List of configurations for DQN algorithm
+    """List of configurations for DQN algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.9.
@@ -84,7 +83,7 @@ class ICRA2018QtOptConfig(DDQNConfig):
             Defaults to 3.
         random_sample_size (int): number of candidates at the sampling step of random shooting method.
             Defaults to 16.
-    '''
+    """
     gamma: float = 0.9
     learning_rate: float = 0.001
     batch_size: int = 64
@@ -104,11 +103,10 @@ class ICRA2018QtOptConfig(DDQNConfig):
     random_sample_size: int = 16
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.learning_rate, 'learning_rate')
         self._assert_positive(self.batch_size, 'batch_size')
@@ -189,7 +187,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class ICRA2018QtOpt(DDQN):
-    '''DQN algorithm for a continuous action environment.
+    """DQN algorithm for a continuous action environment.
 
     This class implements the Deep Q-Network (DQN) algorithm for a continuous action environment.
     proposed by D Quillen, et al. in the paper: 'Deep Reinforcement Learning for Vision-Based Robotic Grasping:
@@ -210,7 +208,7 @@ class ICRA2018QtOpt(DDQN):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

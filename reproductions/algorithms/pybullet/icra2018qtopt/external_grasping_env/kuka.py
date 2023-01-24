@@ -30,10 +30,10 @@ import pybullet
 
 
 class Kuka:
-
     def __init__(self, urdfRootPath='', timeStep=0.01, clientId=0, ikFix=False,
                  returnPos=True):
         """Creates a Kuka robot.
+
         Args:
           urdfRootPath: The path to the root URDF directory.
           timeStep: The Pybullet timestep to use for simulation.
@@ -82,6 +82,7 @@ class Kuka:
               base_pos=None,
               endeffector_pos=None):
         """Resets the kuka base and joint positions.
+
         Args:
           base_pos:  The [x, y, z] position of Kuka base.
           endeffector_pos: The [x, y, z] position of the initial endeffector

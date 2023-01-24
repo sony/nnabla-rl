@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,9 +34,7 @@ class EnvironmentExplorerConfig(Configuration):
 
 
 class EnvironmentExplorer(metaclass=ABCMeta):
-    '''
-    Base class for environment exploration methods.
-    '''
+    """Base class for environment exploration methods."""
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -63,8 +61,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
 
     @abstractmethod
     def action(self, steps: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
-        '''
-        Compute the action for given state at given timestep
+        """Compute the action for given state at given timestep.
 
         Args:
             steps(int): timesteps since the beginning of exploration
@@ -73,12 +70,11 @@ class EnvironmentExplorer(metaclass=ABCMeta):
 
         Returns:
             np.ndarray: action for current state at given timestep
-        '''
+        """
         raise NotImplementedError
 
     def step(self, env: gym.Env, n: int = 1, break_if_done: bool = False) -> List[Experience]:
-        '''
-        Step n timesteps in given env
+        """Step n timesteps in given env.
 
         Args:
             env(gym.Env): Environment
@@ -87,7 +83,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         Returns:
             List[Experience]: List of experience.
                 Experience consists of (state, action, reward, terminal flag, next state and extra info).
-        '''
+        """
         assert 0 < n
         experiences = []
         if self._state is None:
@@ -103,8 +99,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         return experiences
 
     def rollout(self, env: gym.Env) -> List[Experience]:
-        '''
-        Rollout the episode in current env
+        """Rollout the episode in current env.
 
         Args:
             env(gym.Env): Environment
@@ -112,7 +107,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         Returns:
             List[Experience]: List of experience.
                 Experience consists of (state, action, reward, terminal flag, next state and extra info).
-        '''
+        """
         self._state = cast(State, env.reset())
 
         done = False

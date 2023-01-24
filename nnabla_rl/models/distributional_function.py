@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ from nnabla_rl.models.q_function import QFunction
 
 
 class ValueDistributionFunction(Model, metaclass=ABCMeta):
-    '''Base value distribution class.
+    """Base value distribution class.
 
     Computes the probabilities of q-value for each action.
     Value distribution function models the probabilities of q value for each action by dividing
@@ -37,7 +37,7 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
         n_atom (int): Number of bins.
         v_min (int): Minimum value of the distribution.
         v_max (int): Maximum value of the distribution.
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -64,7 +64,7 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
 
     @abstractmethod
     def probs(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
-        """Compute probabilities of atoms for given state and action
+        """Compute probabilities of atoms for given state and action.
 
         Args:
             s (nn.Variable): state variable
@@ -76,7 +76,8 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
         raise NotImplementedError
 
     def all_probs(self, s: nn.Variable) -> nn.Variable:
-        """Compute probabilities of atoms for all posible actions for given state
+        """Compute probabilities of atoms for all posible actions for given
+        state.
 
         Args:
             s (nn.Variable): state variable
@@ -87,7 +88,8 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
         raise NotImplementedError
 
     def max_q_probs(self, s: nn.Variable) -> nn.Variable:
-        """Compute probabilities of atoms for given state that maximizes the q_value
+        """Compute probabilities of atoms for given state that maximizes the
+        q_value.
 
         Args:
             s (nn.Variable): state variable
@@ -98,12 +100,12 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
         raise NotImplementedError
 
     def as_q_function(self) -> QFunction:
-        '''Convert the value distribution function to QFunction.
+        """Convert the value distribution function to QFunction.
 
         Returns:
             nnabla_rl.models.q_function.QFunction:
                 QFunction instance which computes the q-values based on the probabilities.
-        '''
+        """
         raise NotImplementedError
 
     def _compute_z(self, n_atom: int, v_min: float, v_max: float) -> nn.Variable:
@@ -112,8 +114,7 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
 
 
 class DiscreteValueDistributionFunction(ValueDistributionFunction):
-    '''Base value distribution class for discrete action envs.
-    '''
+    """Base value distribution class for discrete action envs."""
     @abstractmethod
     def all_probs(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError
@@ -129,7 +130,6 @@ class DiscreteValueDistributionFunction(ValueDistributionFunction):
 
     def as_q_function(self) -> QFunction:
         class Wrapper(QFunction):
-
             _value_distribution_function: 'DiscreteValueDistributionFunction'
 
             def __init__(self, value_distribution_function: 'DiscreteValueDistributionFunction'):
@@ -202,13 +202,12 @@ class DiscreteValueDistributionFunction(ValueDistributionFunction):
 
 
 class ContinuousValueDistributionFunction(ValueDistributionFunction):
-    '''Base value distribution class for continuous action envs.
-    '''
+    """Base value distribution class for continuous action envs."""
     pass
 
 
 class QuantileDistributionFunction(Model, metaclass=ABCMeta):
-    '''Base quantile distribution class.
+    """Base quantile distribution class.
 
     Computes the quantiles of q-value for each action.
     Quantile distribution function models the quantiles of q value for each action by dividing
@@ -218,7 +217,7 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
     Args:
         scope_name (str): scope name of the model
         n_quantile (int): Number of bins.
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -232,18 +231,19 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
         self._qj = 1 / n_quantile
 
     def all_quantiles(self, s: nn.Variable) -> nn.Variable:
-        '''Computes the quantiles of q-value for each action for the given state.
+        """Computes the quantiles of q-value for each action for the given
+        state.
 
         Args:
             s (nn.Variable): state variable
 
         Returns:
             nn.Variable: quantiles of q-value for each action for the given state
-        '''
+        """
         raise NotImplementedError
 
     def quantiles(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
-        '''Computes the quantiles of q-value for given state and action.
+        """Computes the quantiles of q-value for given state and action.
 
         Args:
             s (nn.Variable): state variable
@@ -251,11 +251,12 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
 
         Returns:
             nn.Variable: quantiles of q-value for given state and action.
-        '''
+        """
         raise NotImplementedError
 
     def max_q_quantiles(self, s: nn.Variable) -> nn.Variable:
-        """Compute the quantiles of q-value for given state that maximizes the q_value
+        """Compute the quantiles of q-value for given state that maximizes the
+        q_value.
 
         Args:
             s (nn.Variable): state variable
@@ -266,12 +267,12 @@ class QuantileDistributionFunction(Model, metaclass=ABCMeta):
         raise NotImplementedError
 
     def as_q_function(self) -> QFunction:
-        '''Convert the quantile distribution function to QFunction.
+        """Convert the quantile distribution function to QFunction.
 
         Returns:
             nnabla_rl.models.q_function.QFunction:
                 QFunction instance which computes the q-values based on the quantiles.
-        '''
+        """
         raise NotImplementedError
 
 
@@ -300,7 +301,6 @@ class DiscreteQuantileDistributionFunction(QuantileDistributionFunction):
 
     def as_q_function(self) -> QFunction:
         class Wrapper(QFunction):
-
             _quantile_distribution_function: 'DiscreteQuantileDistributionFunction'
 
             def __init__(self, quantile_distribution_function: 'DiscreteQuantileDistributionFunction'):
@@ -370,7 +370,6 @@ class DiscreteQuantileDistributionFunction(QuantileDistributionFunction):
 class ContinuousQuantileDistributionFunction(QuantileDistributionFunction):
     def as_q_function(self) -> QFunction:
         class Wrapper(QFunction):
-
             _quantile_distribution_function: 'ContinuousQuantileDistributionFunction'
 
             def __init__(self, quantile_distribution_function: 'ContinuousQuantileDistributionFunction'):
@@ -407,7 +406,7 @@ def risk_neutral_measure(tau: nn.Variable) -> nn.Variable:
 
 
 class StateActionQuantileFunction(Model, metaclass=ABCMeta):
-    '''state-action quantile function class.
+    """state-action quantile function class.
 
     Computes the return samples of q-value for each action.
     State-action quantile function computes the return samples of q value for each action
@@ -419,7 +418,7 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
         K (int): Number of samples for quantile threshold :math:`\\tau`.
         risk_measure_function (Callable[[nn.Variable], nn.Variable]): Risk measure funciton which
             modifies the weightings of tau. Defaults to risk neutral measure which does not do any change to the taus.
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -439,7 +438,8 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
         self._risk_measure_function = risk_measure_function
 
     def all_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
-        '''Compute the return samples for all action for given state and quantile threshold.
+        """Compute the return samples for all action for given state and
+        quantile threshold.
 
         Args:
             s (nn.Variable): state variable.
@@ -447,11 +447,11 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
 
         Returns:
             nn.Variable: return samples from implicit return distribution for given state using tau.
-        '''
+        """
         pass
 
     def quantile_values(self, s: nn.Variable, a: nn.Variable, tau: nn.Variable) -> nn.Variable:
-        '''Compute the return samples for given state and action.
+        """Compute the return samples for given state and action.
 
         Args:
             s (nn.Variable): state variable.
@@ -460,11 +460,12 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
 
         Returns:
             nn.Variable: return samples from implicit return distribution for given state and action using tau.
-        '''
+        """
         pass
 
     def max_q_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
-        '''Compute the return samples from distribution that maximizes q value for given state using quantile threshold.
+        """Compute the return samples from distribution that maximizes q value
+        for given state using quantile threshold.
 
         Args:
             s (nn.Variable): state variable.
@@ -472,29 +473,29 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
 
         Returns:
             nn.Variable: return samples from implicit return distribution that maximizes q for given state using tau.
-        '''
+        """
         pass
 
     def sample_tau(self, shape: Optional[Iterable] = None) -> nn.Variable:
-        '''Sample quantile thresholds from uniform distribution
+        """Sample quantile thresholds from uniform distribution.
 
         Args:
             shape (Tuple[int] or None): shape of the quantile threshold to sample. If None the shape will be (1, K).
 
         Returns:
             nn.Variable: quantile thresholds
-        '''
+        """
         if shape is None:
             shape = (1, self._K)
         return NF.rand(low=0.0, high=1.0, shape=shape)
 
     def as_q_function(self) -> QFunction:
-        '''Convert the state action quantile function to QFunction.
+        """Convert the state action quantile function to QFunction.
 
         Returns:
             nnabla_rl.models.q_function.QFunction:
                 QFunction instance which computes the q-values based on return samples.
-        '''
+        """
         raise NotImplementedError
 
     def _sample_risk_measured_tau(self, shape: Optional[Iterable]) -> nn.Variable:
@@ -527,12 +528,12 @@ class DiscreteStateActionQuantileFunction(StateActionQuantileFunction):
         return self._return_samples_of(return_samples, a_star)
 
     def as_q_function(self) -> QFunction:
-        '''Convert the state action quantile function to QFunction.
+        """Convert the state action quantile function to QFunction.
 
         Returns:
             nnabla_rl.models.q_function.QFunction:
                 QFunction instance which computes the q-values based on the return_samples.
-        '''
+        """
         class Wrapper(QFunction):
             _quantile_function: 'DiscreteStateActionQuantileFunction'
 
@@ -575,27 +576,28 @@ class DiscreteStateActionQuantileFunction(StateActionQuantileFunction):
         return Wrapper(self)
 
     def _return_samples_to_q_values(self, return_samples: nn.Variable) -> nn.Variable:
-        '''Compute the q values for each action for given return samples.
+        """Compute the q values for each action for given return samples.
 
         Args:
             return_samples (nn.Variable): return samples.
 
         Returns:
             nn.Variable: q values for each action for given return samples.
-        '''
+        """
         samples = NF.transpose(return_samples, axes=(0, 2, 1))
         q_values = NF.mean(samples, axis=2)
         return q_values
 
     def _argmax_q_from_return_samples(self, return_samples: nn.Variable) -> nn.Variable:
-        '''Compute the action which maximizes the q value computed from given return samples.
+        """Compute the action which maximizes the q value computed from given
+        return samples.
 
         Args:
             return_samples (nn.Variable): return samples.
 
         Returns:
             nn.Variable: action which maximizes the q value for given return samples.
-        '''
+        """
         q_values = self._return_samples_to_q_values(return_samples)
         return RF.argmax(q_values, axis=1, keepdims=True)
 

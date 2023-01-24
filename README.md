@@ -1,6 +1,7 @@
 [![License](https://img.shields.io/github/license/sony/nnabla-rl)](LICENSE)
 [![Build status](https://github.com/sony/nnabla-rl/workflows/Build%20nnabla-rl/badge.svg)](https://github.com/sony/nnabla-rl/actions)
 [![Documentation Status](https://readthedocs.org/projects/nnabla-rl/badge/?version=latest)](https://nnabla-rl.readthedocs.io/en/latest/?badge=latest)
+[![Doc style](https://img.shields.io/badge/%20style-google-3666d6.svg)](https://google.github.io/styleguide/pyguide.html#s3.8-comments-and-docstrings)
 
 # Deep Reinforcement Learning Library built on top of Neural Network Libraries
 

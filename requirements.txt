@@ -13,3 +13,4 @@ typing-extensions
 isort
 autopep8
 packaging
+docformatter

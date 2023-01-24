@@ -37,8 +37,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class SACConfig(AlgorithmConfig):
-    '''SACConfig
-    List of configurations for SAC algorithm
+    """SACConfig List of configurations for SAC algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -76,7 +75,7 @@ class SACConfig(AlgorithmConfig):
         critic_reset_rnn_on_terminal (bool): Reset critic's recurrent internal states to zero during training\
             if episode ends. This flag does not take effect if given model is not an RNN model.\
             Defaults to False.
-    '''
+    """
 
     gamma: float = 0.99
     learning_rate: float = 3.0*1e-4
@@ -101,9 +100,7 @@ class SACConfig(AlgorithmConfig):
     critic_reset_rnn_on_terminal: bool = True
 
     def __post_init__(self):
-        '''__post_init__
-        Check set values are in valid range.
-        '''
+        """__post_init__ Check set values are in valid range."""
         self._assert_between(self.tau, 0.0, 1.0, 'tau')
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.gradient_steps, 'gradient_steps')
@@ -171,7 +168,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class SAC(Algorithm):
-    '''Soft Actor-Critic (SAC) algorithm implementation.
+    """Soft Actor-Critic (SAC) algorithm implementation.
 
     This class implements the extended version of Soft Actor Critic (SAC) algorithm
     proposed by T. Haarnoja, et al. in the paper: "Soft Actor-Critic Algorithms and Applications"
@@ -202,7 +199,7 @@ class SAC(Algorithm):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

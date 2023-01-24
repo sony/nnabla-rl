@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from nnabla_rl.numpy_models.distribution_parameter import DistributionParameter
 
 
 class GMMParameter(DistributionParameter):
-    '''Gaussian Mixture Model Parameter'''
+    """Gaussian Mixture Model Parameter."""
 
     _means: np.ndarray
     _covarinces: np.ndarray
@@ -37,7 +37,7 @@ class GMMParameter(DistributionParameter):
 
     @staticmethod
     def from_data(data: np.ndarray, num_classes: int) -> 'GMMParameter':
-        '''create GMM from data by random class assignnment
+        """Create GMM from data by random class assignnment.
 
         Args:
             data (np.ndarray): data, shape (num_data, dim)
@@ -45,7 +45,7 @@ class GMMParameter(DistributionParameter):
 
         Returns:
             GMMParameter: gaussian mixture model parameter
-        '''
+        """
         num_data, dim = data.shape
 
         mixing_coefficients = 1.0 / num_classes * np.ones(num_classes)

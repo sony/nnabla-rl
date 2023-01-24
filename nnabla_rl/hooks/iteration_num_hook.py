@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,13 +18,12 @@ from nnabla_rl.logger import logger
 
 
 class IterationNumHook(Hook):
-    '''
-    Hook to print the iteration number periodically.
-    This hook just prints the iteration number of training.
+    """Hook to print the iteration number periodically. This hook just prints
+    the iteration number of training.
 
     Args:
         timing (int): Printing interval. Defaults to 1 iteration.
-    '''
+    """
 
     def __init__(self, timing=1):
         super(IterationNumHook, self).__init__(timing=timing)

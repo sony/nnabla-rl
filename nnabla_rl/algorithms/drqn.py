@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ from nnabla_rl.utils.solver_wrappers import AutoClipGradByNorm
 
 @dataclass
 class DRQNConfig(DQNConfig):
-    """
-    List of configurations for DRQN algorithm. Most of the configs are inherited from DQNConfig
+    """List of configurations for DRQN algorithm. Most of the configs are
+    inherited from DQNConfig.
 
     Args:
         clip_grad_norm (float): Limit the model parameter's gradient on parameter updates up to this value.
@@ -74,7 +74,7 @@ class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
 
 
 class DRQN(DQN):
-    '''DRQN algorithm.
+    """DRQN algorithm.
 
     This class implements the Bootstrapped random update version of Deep Recurrent Q-Network (DRQN) algorithm.
     proposed by M. Hausknecht, et al. in the paper: "Deep Recurrent Q-Learning for Partially Observable MDPs"
@@ -92,7 +92,7 @@ class DRQN(DQN):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

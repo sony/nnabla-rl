@@ -55,7 +55,8 @@ def compute_v_target_and_advantage(v_function: VFunction,
                                    experiences: Sequence[Experience],
                                    gamma: float = 0.99,
                                    lmb: float = 0.97) -> Tuple[np.ndarray, np.ndarray]:
-    ''' Compute value target and advantage by using Generalized Advantage Estimation (GAE)
+    """Compute value target and advantage by using Generalized Advantage
+    Estimation (GAE)
 
     Args:
         v_function (M.VFunction): value function
@@ -68,7 +69,7 @@ def compute_v_target_and_advantage(v_function: VFunction,
         Tuple[np.ndarray, np.ndarray]: target of value and advantage
     Ref:
         https://arxiv.org/pdf/1506.02438.pdf
-    '''
+    """
     assert isinstance(v_function, VFunction), "Invalid v_function"
 
     T = len(experiences)
@@ -549,15 +550,14 @@ class _DeterministicStatePredictor(_StatePredictor[DeterministicDynamics]):
 
 
 class _InfluenceMetricsEvaluator:
-    '''Influence metrics evaluator.
+    """Influence metrics evaluator.
 
     See details at https://arxiv.org/abs/2206.13901
 
     Args:
         env_info (EnvironmentInfo): Environment infomation.
         q_function (FactoredContinuousQFunction): Factored Q-function for continuous action.
-
-    '''
+    """
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details

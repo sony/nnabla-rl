@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ from nnabla_rl.numpy_models.distribution_parameters.gmm_parameter import GMMPara
 
 @dataclass
 class GMMParameterTrainerConfig(NumpyModelTrainerConfig):
-    '''GMM Trainer Configuration'''
+    """GMM Trainer Configuration."""
 
     num_iterations_per_update: int = 1000
     threshold: float = 1e-12
@@ -35,7 +35,7 @@ class GMMParameterTrainerConfig(NumpyModelTrainerConfig):
 
 
 class GMMParameterTrainer(NumpyModelTrainer):
-    '''Gaussian Mixture Model Trainer with EM algorithm'''
+    """Gaussian Mixture Model Trainer with EM algorithm."""
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -50,11 +50,11 @@ class GMMParameterTrainer(NumpyModelTrainer):
         self._parameter = parameter
 
     def update(self, data: np.ndarray) -> None:
-        '''update the parameters of gmm
+        """Update the parameters of gmm.
 
         Args:
             data (np.ndarray): data, shape(num_data, dim)
-        '''
+        """
         prev_log_likelihood = -float('inf')
         for _ in range(self._config.num_iterations_per_update):
             probs, responsibility = self._e_step(data)

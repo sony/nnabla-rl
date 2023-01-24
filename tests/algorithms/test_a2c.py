@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,9 +31,7 @@ class TestA2C(object):
         assert a2c.__name__ == 'A2C'
 
     def test_continuous_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on continuous action env
-        '''
+        """Check that error occurs when training on continuous action env."""
 
         dummy_env = E.DummyContinuous()
         config = A.A2CConfig()
@@ -41,9 +39,8 @@ class TestA2C(object):
             A.A2C(dummy_env, config=config)
 
     def test_run_online_discrete_env_training(self):
-        '''
-        Check that no error occurs when calling online training (discrete env)
-        '''
+        """Check that no error occurs when calling online training (discrete
+        env)"""
 
         dummy_env = E.DummyDiscreteImg()
         n_steps = 4
@@ -54,9 +51,7 @@ class TestA2C(object):
         a2c.train_online(dummy_env, total_iterations=n_steps*actor_num)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
 
         dummy_env = E.DummyDiscreteImg()
         a2c = A.A2C(dummy_env)
@@ -81,9 +76,8 @@ class TestA2C(object):
             A.A2CConfig(learning_rate=-1)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyDiscreteImg()
         a2c = A.A2C(dummy_env)

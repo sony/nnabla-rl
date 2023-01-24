@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,8 +29,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class MunchausenIQNConfig(IQNConfig):
-    """
-    List of configurations for Munchausen IQN algorithm
+    """List of configurations for Munchausen IQN algorithm.
 
     Args:
         entropy_temperature (float): temperature parameter of softmax policy distribution. Defaults to 0.03.
@@ -44,18 +43,17 @@ class MunchausenIQNConfig(IQNConfig):
     clipping_value: float = -1
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check that set values are in valid range.
-
-        '''
+        """
         super().__post_init__()
         self._assert_positive(self.embedding_dim, 'embedding_dim')
         self._assert_negative(self.clipping_value, 'clipping_value')
 
 
 class MunchausenIQN(IQN):
-    '''Munchausen-IQN algorithm implementation.
+    """Munchausen-IQN algorithm implementation.
 
     This class implements the Munchausen-IQN (Munchausen Implicit Quantile Network) algorithm
     proposed by N. Vieillard, et al. in the paper: "Munchausen Reinforcement Learning"
@@ -76,7 +74,7 @@ class MunchausenIQN(IQN):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,9 +82,7 @@ class SolverWrapper(Solver):
 
     @property
     def name(self):
-        """
-        Get the name of the solver.
-        """
+        """Get the name of the solver."""
         return self._solver.name
 
     def learning_rate(self):

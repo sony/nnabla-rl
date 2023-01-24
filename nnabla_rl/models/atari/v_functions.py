@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,11 +21,12 @@ from nnabla_rl.models.v_function import VFunction
 
 
 class PPOVFunction(VFunction):
-    '''
-    Shared parameter function proposed used in PPO paper for atari environment.
+    """Shared parameter function proposed used in PPO paper for atari
+    environment.
+
     This network outputs the value
     See: https://arxiv.org/pdf/1707.06347.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -49,10 +50,11 @@ class PPOVFunction(VFunction):
 
 
 class A3CVFunction(VFunction):
-    '''
-    Shared parameter function proposed and used in A3C paper for atari environment.
+    """Shared parameter function proposed and used in A3C paper for atari
+    environment.
+
     See: https://arxiv.org/pdf/1602.01783.pdf
-    '''
+    """
 
     def __init__(self, head, scope_name, state_shape):
         super(A3CVFunction, self).__init__(scope_name=scope_name)

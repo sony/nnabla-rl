@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,9 +25,10 @@ from nnabla_rl.external.goal_env import GoalEnv
 
 @dataclass
 class EnvironmentInfo(object):
-    """Environment Information class
+    """Environment Information class.
 
-    This class contains the basic information of the target training environment.
+    This class contains the basic information of the target training
+    environment.
     """
     observation_space: gym.spaces.Space
     action_space: gym.spaces.Space
@@ -53,7 +54,7 @@ class EnvironmentInfo(object):
 
     @staticmethod
     def from_env(env):
-        """Create env_info from environment
+        """Create env_info from environment.
 
         Args:
             env (gym.Env): the environment
@@ -79,68 +80,62 @@ class EnvironmentInfo(object):
                                reward_function=reward_function)
 
     def is_discrete_action_env(self):
-        '''
-        Check whether the action to execute in the environment is discrete or not
+        """Check whether the action to execute in the environment is discrete
+        or not.
 
         Returns:
             bool: True if the action to execute in the environment is discrete. Otherwise False.
                 Note that if the action is gym.spaces.Tuple and all of the element are discrete, it returns True.
-        '''
+        """
         return is_same_space_type(self.action_space, gym.spaces.Discrete)
 
     def is_continuous_action_env(self):
-        '''
-        Check whether the action to execute in the environment is continuous or not
+        """Check whether the action to execute in the environment is continuous
+        or not.
 
         Returns:
             bool: True if the action to execute in the environment is continuous. Otherwise False.
                 Note that if the action is gym.spaces.Tuple and all of the element are continuous, it returns True.
-        '''
+        """
         return is_same_space_type(self.action_space, gym.spaces.Box)
 
     def is_discrete_state_env(self):
-        '''
-        Check whether the state of the environment is discrete or not
+        """Check whether the state of the environment is discrete or not.
 
         Returns:
             bool: True if the state of the environment is discrete. Otherwise False.
                 Note that if the state is gym.spaces.Tuple and all of the element are discrete, it returns True.
-        '''
+        """
         return is_same_space_type(self.observation_space, gym.spaces.Discrete)
 
     def is_continuous_state_env(self):
-        '''
-        Check whether the state of the environment is continuous or not
+        """Check whether the state of the environment is continuous or not.
 
         Returns:
             bool: True if the state of the environment is continuous. Otherwise False.
                 Note that if the state is gym.spaces.Tuple and all of the element are continuous, it returns True.
-        '''
+        """
         return is_same_space_type(self.observation_space, gym.spaces.Box)
 
     def is_tuple_state_env(self):
-        '''
-        Check whether the state of the environment is tuple or not
+        """Check whether the state of the environment is tuple or not.
 
         Returns:
             bool: True if the state of the environment is tuple. Otherwise False.
-        '''
+        """
         return isinstance(self.observation_space, gym.spaces.Tuple)
 
     def is_goal_conditioned_env(self):
-        '''
-        Check whether the environment is gym.GoalEnv or not
+        """Check whether the environment is gym.GoalEnv or not.
 
         Returns:
             bool: True if the environment is GoalEnv. Otherwise False.
-        '''
+        """
         return issubclass(self.unwrapped_env.__class__, GoalEnv)
 
     @property
     def state_shape(self):
-        '''
-        The shape of observation space
-        '''
+        """The shape of observation space."""
         if self.is_tuple_state_env():
             return tuple(map(get_space_shape, self.observation_space))
         else:
@@ -148,9 +143,7 @@ class EnvironmentInfo(object):
 
     @property
     def state_dim(self):
-        '''
-        The dimension of state assuming that the state is flatten.
-        '''
+        """The dimension of state assuming that the state is flatten."""
         if self.is_tuple_state_env():
             return tuple(map(get_space_dim, self.observation_space))
         else:
@@ -158,9 +151,7 @@ class EnvironmentInfo(object):
 
     @property
     def state_high(self):
-        '''
-        The upper limit of observation space
-        '''
+        """The upper limit of observation space."""
         if self.is_tuple_state_env():
             return tuple(map(get_space_high, self.observation_space))
         else:
@@ -168,9 +159,7 @@ class EnvironmentInfo(object):
 
     @property
     def state_low(self):
-        '''
-        The lower limit of observation space
-        '''
+        """The lower limit of observation space."""
         if self.is_tuple_state_env():
             return tuple(map(get_space_low, self.observation_space))
         else:
@@ -178,28 +167,20 @@ class EnvironmentInfo(object):
 
     @property
     def action_high(self):
-        '''
-        The upper limit of action space
-        '''
+        """The upper limit of action space."""
         return get_space_high(self.action_space)
 
     @property
     def action_low(self):
-        '''
-        The lower limit of action space
-        '''
+        """The lower limit of action space."""
         return get_space_low(self.action_space)
 
     @property
     def action_shape(self):
-        '''
-        The shape of action space
-        '''
+        """The shape of action space."""
         return get_space_shape(self.action_space)
 
     @property
     def action_dim(self):
-        '''
-        The dimension of action assuming that the action is flatten.
-        '''
+        """The dimension of action assuming that the action is flatten."""
         return get_space_dim(self.action_space)

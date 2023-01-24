@@ -37,8 +37,7 @@ from nnabla_rl.utils.data import marshal_experiences
 
 @dataclass
 class REINFORCEConfig(AlgorithmConfig):
-    '''
-    List of configurations for REINFORCE algorithm
+    """List of configurations for REINFORCE algorithm.
 
     Args:
         reward_scale (float): Scale of reward. Defaults to 0.01.
@@ -51,7 +50,7 @@ class REINFORCEConfig(AlgorithmConfig):
         clip_grad_norm (float): Clip to the norm of gradient to this value. Defaults to 1.0.
         fixed_ln_var (float): Fixed log variance of the policy.\
             This configuration is only valid when the enviroment is continuous. Defaults to 1.0.
-    '''
+    """
     reward_scale: float = 0.01
     num_rollouts_per_train_iteration: int = 10
     learning_rate: float = 1e-3
@@ -60,11 +59,10 @@ class REINFORCEConfig(AlgorithmConfig):
     fixed_ln_var: float = np.log(0.1)
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the set values are in valid range.
-
-        '''
+        """
         self._assert_positive(self.reward_scale, 'reward_scale')
         self._assert_positive(self.num_rollouts_per_train_iteration, 'num_rollouts_per_train_iteration')
         self._assert_positive(self.learning_rate, 'learning_rate')
@@ -123,7 +121,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class REINFORCE(Algorithm):
-    '''episodic REINFORCE implementation.
+    """episodic REINFORCE implementation.
 
     This class implements the episodic REINFORCE algorithm proposed by Ronald J. Williams.
     in the paper: "Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning"
@@ -143,7 +141,7 @@ class REINFORCE(Algorithm):
             builder of policy models
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
     _config: REINFORCEConfig
     _policy: StochasticPolicy
     _policy_solver: nn.solver.Solver

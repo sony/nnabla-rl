@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,12 +21,11 @@ if TYPE_CHECKING:
 
 
 class Hook(metaclass=ABCMeta):
-    '''
-    Base class of hooks for Algorithm classes.
+    """Base class of hooks for Algorithm classes.
 
     Hook is called at every 'timing' iterations during the training.
     'timing' is specified at the beginning of the class instantiation.
-    '''
+    """
 
     _timing: int = 1
 
@@ -40,34 +39,32 @@ class Hook(metaclass=ABCMeta):
 
     @abstractmethod
     def on_hook_called(self, algorithm: 'Algorithm'):
-        '''
-        Called every "timing" iteration which is set on Hook's instance creation.
-        Will run additional periodical operation (see each class' documentation) during the training.
+        """Called every "timing" iteration which is set on Hook's instance
+        creation. Will run additional periodical operation (see each class'
+        documentation) during the training.
 
         Args:
             algorithm (:py:class:`Algorithm <nnabla_rl.algorithm.Algorithm>`):
                 Algorithm instance to perform additional operation.
-        '''
+        """
         raise NotImplementedError
 
     def setup(self, algorithm: 'Algorithm', total_iterations: int):
-        '''
-        Called before the training starts
+        """Called before the training starts.
 
         Args:
             algorithm (:py:class:`Algorithm <nnabla_rl.algorithm.Algorithm>`):
                 Algorithm instance to perform additional operation.
             total_iteration (int): the number of total iterations.
-        '''
+        """
         pass
 
     def teardown(self, algorithm: 'Algorithm', total_iterations: int):
-        '''
-        Called after the training ends
+        """Called after the training ends.
 
         Args:
             algorithm (:py:class:`Algorithm <nnabla_rl.algorithm.Algorithm>`):
                 Algorithm instance to perform additional operation.
             total_iteration (int): the number of total iterations.
-        '''
+        """
         pass

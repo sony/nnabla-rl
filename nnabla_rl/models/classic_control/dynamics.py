@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@ from nnabla_rl.models.dynamics import DeterministicDynamics
 
 
 class MPPIDeterministicDynamics(DeterministicDynamics):
-    '''
-    MPPI dynamics or classic control discrete environment.
-    This network outputs the next state for given state and control input.
-    '''
+    """MPPI dynamics or classic control discrete environment.
+
+    This network outputs the next state for given state and control
+    input.
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
