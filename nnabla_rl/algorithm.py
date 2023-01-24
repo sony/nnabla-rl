@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -214,7 +214,7 @@ class Algorithm(metaclass=ABCMeta):
             hook.teardown(self, total_iterations)
 
     @abstractmethod
-    def compute_eval_action(self, state, *, begin_of_episode=False) -> np.ndarray:
+    def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}) -> np.ndarray:
         '''
         Compute action for given state using current best policy.
         This is usually used for evaluation.
@@ -222,6 +222,8 @@ class Algorithm(metaclass=ABCMeta):
         Args:
             state (np.ndarray): state to compute the action.
             begin_of_episode (bool): Used for rnn state resetting. This flag informs the beginning of episode.
+            extra_info (Dict[str, Any]): Dictionary to provide extra information to compute the action.
+                Most of the algorithm does not use this field.
 
         Returns:
             np.ndarray: Action for given state using current trained policy.

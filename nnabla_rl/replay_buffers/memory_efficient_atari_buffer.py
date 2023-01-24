@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,15 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Optional, Tuple
+from typing import Optional, Sequence, Tuple, cast
 
 import numpy as np
 
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.prioritized_replay_buffer import (ProportionalPrioritizedReplayBuffer,
                                                                 RankBasedPrioritizedReplayBuffer)
+from nnabla_rl.replay_buffers.trajectory_replay_buffer import TrajectoryReplayBuffer
+from nnabla_rl.typing import Trajectory
 from nnabla_rl.utils.data import RingBuffer
 
 
@@ -56,6 +58,59 @@ class MemoryEfficientAtariBuffer(ReplayBuffer):
         return _getitem_from_buffer(index, self._buffer, self._sub_buffer, self._stacked_frames)
 
 
+class _LazyAtariTrajectory(object):
+    def __init__(self, buffer: MemoryEfficientAtariBuffer):
+        self._buffer = buffer
+
+    def __len__(self):
+        return len(self._buffer)
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            return [self._buffer[i] for i in range(key.stop)[key]]
+        elif isinstance(key, int):
+            return self._buffer[key]
+        else:
+            raise TypeError('Invalid key type')
+
+
+class MemoryEfficientAtariTrajectoryBuffer(TrajectoryReplayBuffer):
+    def __init__(self, num_trajectories=None):
+        super(MemoryEfficientAtariTrajectoryBuffer, self).__init__(num_trajectories)
+
+    def append_trajectory(self, trajectory: Trajectory):
+        # Use memory efficient atari buffer to save the trajectory efficiently
+        atari_buffer = MemoryEfficientAtariBuffer(capacity=len(trajectory))
+        atari_buffer.append_all(trajectory)
+
+        self._buffer.append(atari_buffer)
+
+        # Below is the same as super class' code
+        self._samples_per_trajectory.append(len(trajectory))
+        num_experiences = 0
+        cumsum_experiences = []
+        for i in range(self.trajectory_num):
+            num_experiences += self._samples_per_trajectory[i]
+            cumsum_experiences.append(num_experiences)
+        self._num_experiences = num_experiences
+        self._cumsum_experiences = cumsum_experiences
+
+    def get_trajectory(self, trajectory_index: int) -> Trajectory:
+        return self._buffer_to_trajectory(self._get_atari_buffer(trajectory_index))
+
+    def sample(self, num_samples: int = 1, num_steps: int = 1):
+        raise NotImplementedError
+
+    def sample_indices(self, indices: Sequence[int], num_steps: int = 1):
+        raise NotImplementedError
+
+    def _buffer_to_trajectory(self, buffer: MemoryEfficientAtariBuffer) -> Trajectory:
+        return cast(Trajectory, _LazyAtariTrajectory(buffer))
+
+    def _get_atari_buffer(self, trajectory_index: int) -> MemoryEfficientAtariBuffer:
+        return cast(MemoryEfficientAtariBuffer, self._buffer[trajectory_index])
+
+
 class ProportionalPrioritizedAtariBuffer(ProportionalPrioritizedReplayBuffer):
     '''Prioritized buffer designed to compactly save experiences of Atari environments used in DQN.
     Proportional Prioritized version of efficient Atari buffer.
@@ -85,7 +140,7 @@ class ProportionalPrioritizedAtariBuffer(ProportionalPrioritizedReplayBuffer):
                                                                  epsilon=epsilon,
                                                                  normalization_method=normalization_method)
         self._reset = True
-        self._sub_buffer = deque(maxlen=3)
+        self._sub_buffer = deque(maxlen=stacked_frames-1)
         self._stacked_frames = stacked_frames
 
     def append(self, experience):
@@ -124,7 +179,7 @@ class RankBasedPrioritizedAtariBuffer(RankBasedPrioritizedReplayBuffer):
                                                               reset_segment_interval=reset_segment_interval,
                                                               sort_interval=sort_interval)
         self._reset = True
-        self._sub_buffer = deque(maxlen=3)
+        self._sub_buffer = deque(maxlen=stacked_frames-1)
         self._stacked_frames = stacked_frames
 
     def append(self, experience):
@@ -148,22 +203,18 @@ def _is_float(state):
 
 def _append_to_buffer(experience, buffer, sub_buffer, reset_flag):
     s, a, r, non_terminal, s_next, info, *_ = experience
-    if not _is_float(s):
-        raise ValueError('dtype {} is not supported'.format(s.dtype))
-    if not _is_float(s_next):
-        raise ValueError('dtype {} is not supported'.format(s_next.dtype))
-
-    # cast to uint8 and use only the last image to reduce memory
-    s = _denormalize_state(s[-1])
-    s_next = _denormalize_state(s_next[-1])
-    s = np.array(s, copy=True, dtype=np.uint8)
-    s_next = np.array(s_next, copy=True, dtype=np.uint8)
+    if s.shape != (84, 84):
+        # Use only the last image to reduce memory
+        s = s[-1]
+        s_next = s_next[-1]
+    if _is_float(s):
+        s = _denormalize_state(s)
+    if _is_float(s_next):
+        s_next = _denormalize_state(s_next)
     assert s.shape == (84, 84)
     assert s.shape == s_next.shape
-    rnn_states = None
-    if 'rnn_states' in info:
-        rnn_states = info['rnn_states']
-    experience = (s, a, r, non_terminal, s_next, rnn_states, reset_flag)
+
+    experience = (s, a, r, non_terminal, s_next, info, reset_flag)
     removed = buffer.append_with_removed_item_check(experience)
     if removed is not None:
         sub_buffer.append(removed)
@@ -171,8 +222,8 @@ def _append_to_buffer(experience, buffer, sub_buffer, reset_flag):
 
 
 def _getitem_from_buffer(index, buffer, sub_buffer, stacked_frames):
-    (_, a, r, non_terminal, s_next, rnn_states, _) = buffer[index]
-    states = np.empty(shape=(stacked_frames, 84, 84), dtype=np.uint8)
+    (_, a, r, non_terminal, s_next, info, _) = buffer[index]
+    states = np.zeros(shape=(stacked_frames, 84, 84), dtype=np.uint8)
     for i in range(0, stacked_frames):
         buffer_index = index - i
         if 0 <= buffer_index:
@@ -194,7 +245,4 @@ def _getitem_from_buffer(index, buffer, sub_buffer, stacked_frames):
     if 1 < stacked_frames:
         s_next = np.concatenate((s[1:], s_next), axis=0)
     assert s.shape == s_next.shape
-    if rnn_states is not None:
-        return (s, a, r, non_terminal, s_next, {'rnn_states': rnn_states})
-    else:
-        return (s, a, r, non_terminal, s_next, {})
+    return (s, a, r, non_terminal, s_next, info)

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import json
 import pathlib
 import warnings
@@ -89,9 +90,12 @@ def _instantiate_algorithm_from_training_info(training_info, env_info, **kwargs)
     algorithm_name = training_info[_KEY_ALGORITHM_CLASS_NAME]
     (algorithm_klass, config_klass) = A.get_class_of(algorithm_name)
 
-    if kwargs.get('config', None) is None:
+    config = kwargs.get('config', None)
+    if not isinstance(config, config_klass):
         saved_config = training_info[_KEY_ALGORITHM_CONFIG]
-        kwargs['config'] = config_klass(**saved_config)
+        saved_config = config_klass(**saved_config)
+        config = dataclasses.replace(saved_config, **config) if isinstance(config, dict) else saved_config
+    kwargs['config'] = config
     algorithm = algorithm_klass(env_info, **kwargs)
     algorithm._iteration_num = training_info[_KEY_ITERATION_NUM]
     return algorithm

@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ class DDP(Algorithm):
         self._cost_function = cost_function
 
     @eval_api
-    def compute_eval_action(self, state, *, begin_of_episode=False):
+    def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
         dynamics = self._dynamics
         cost_function = self._cost_function
         x0 = state

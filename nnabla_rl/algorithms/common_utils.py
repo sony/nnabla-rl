@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,12 +24,15 @@ import nnabla_rl.functions as RF
 from nnabla_rl.algorithm import eval_api
 from nnabla_rl.distributions.distribution import Distribution
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.models import (DeterministicDynamics, DeterministicPolicy, FactoredContinuousQFunction, Model, QFunction,
-                              RewardFunction, StochasticPolicy, VFunction)
+from nnabla_rl.models import (DeterministicDecisionTransformer, DeterministicDynamics, DeterministicPolicy,
+                              FactoredContinuousQFunction, Model, QFunction, RewardFunction,
+                              StochasticDecisionTransformer, StochasticPolicy, VFunction)
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.typing import Experience, State
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable, create_variables
+
+DecisionTransformerModel = Union[StochasticDecisionTransformer, DeterministicDecisionTransformer]
 
 
 def _get_shape(state: State) -> Union[Tuple[int, ...], Tuple[Tuple[int, ...], ...]]:
@@ -347,7 +350,7 @@ class _ActionSelector(Generic[M], metaclass=ABCMeta):
         self._batch_size = 1
 
     @eval_api
-    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], *, begin_of_episode: bool = False):
+    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], *, begin_of_episode: bool = False, extra_info={}):
         if not has_batch_dimension(s, self._env_info):
             s = add_batch_dimension(s)
         batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
@@ -376,6 +379,76 @@ class _ActionSelector(Generic[M], metaclass=ABCMeta):
         return action, {}
 
     @abstractmethod
+    def _compute_action(self, state_var: nn.Variable) -> nn.Variable:
+        raise NotImplementedError
+
+
+class _DecisionTransformerActionSelector(_ActionSelector[DecisionTransformerModel]):
+    def __init__(self, env_info: EnvironmentInfo, decision_transformer: DecisionTransformerModel,
+                 max_timesteps: int, context_length: int, target_return: float, reward_scale: float):
+        super().__init__(env_info, decision_transformer)
+        self._max_timesteps = max_timesteps
+        self._context_length = context_length
+        self._target_return = target_return
+        self._reward_scale = reward_scale
+
+    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], *, begin_of_episode: bool = False, extra_info={}):
+        if self._env_info.is_tuple_state_env():
+            raise NotImplementedError('Tuple env not supported')
+
+        if not has_batch_dimension(s, self._env_info):
+            s = add_batch_dimension(s)
+        batch_size = len(s)
+
+        if not hasattr(self, '_eval_states') or batch_size != self._batch_size:
+            self._eval_states = np.empty(shape=(batch_size, self._context_length, *self._env_info.state_shape))
+            self._eval_actions = np.empty(shape=(batch_size, self._context_length, *self._env_info.action_shape))
+            self._eval_rtgs = np.empty(shape=(batch_size, self._context_length, 1))
+            self._eval_timesteps = np.zeros(shape=(batch_size, 1, 1))
+
+        if begin_of_episode:
+            self._eval_timesteps[...] = 0
+
+        t = int(self._eval_timesteps)
+        T = min(t, self._context_length - 1)
+        self._eval_states[:, T, ...] = s
+        if t == 0:
+            self._eval_rtgs[:, T, ...] = self._target_return * self._reward_scale
+        else:
+            reward = extra_info['reward'] * self._reward_scale
+            self._eval_rtgs[:, T, ...] = self._eval_rtgs[:, T-1, ...] - reward
+
+        with nn.auto_forward():
+            states_var = nn.Variable.from_numpy_array(self._eval_states[:, 0:T+1, ...])
+            if begin_of_episode:
+                actions_var = None
+            else:
+                if self._context_length <= t:
+                    actions_var = nn.Variable.from_numpy_array(self._eval_actions[:, 0:T+1, ...])
+                else:
+                    actions_var = nn.Variable.from_numpy_array(self._eval_actions[:, 0:T, ...])
+            rtgs_var = nn.Variable.from_numpy_array(self._eval_rtgs[:, 0:T+1, ...])
+            timesteps_var = nn.Variable.from_numpy_array(self._eval_timesteps)
+
+            if isinstance(self._model, DeterministicDecisionTransformer):
+                actions = self._model.pi(states_var, actions_var, rtgs_var, timesteps_var)
+                action = np.squeeze(actions.d[:, T, :], axis=0)
+            else:
+                pi = self._model.pi(states_var, actions_var, rtgs_var, timesteps_var)
+                actions = cast(nn.Variable, pi.sample())
+                action = np.squeeze(actions.d[:, T, :], axis=0)
+
+        if T == self._context_length - 1:
+            self._eval_states = np.roll(self._eval_states, shift=-1, axis=1)
+            self._eval_rtgs = np.roll(self._eval_rtgs, shift=-1, axis=1)
+        if self._context_length <= t:
+            self._eval_actions = np.roll(self._eval_actions, shift=-1, axis=1)
+
+        self._eval_actions[:, T, ...] = action
+        self._eval_timesteps[...] = min(cast(int, self._eval_timesteps + 1), self._max_timesteps)
+
+        return action
+
     def _compute_action(self, state_var: nn.Variable) -> nn.Variable:
         raise NotImplementedError
 

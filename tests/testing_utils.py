@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,6 +48,23 @@ def generate_dummy_experiences(env, experience_num):
         if not isinstance(reward, np.ndarray):
             reward = [reward]
         experience = (state, action, reward, [1.0 - done], next_state, info)
+        experiences.append(experience)
+    return experiences
+
+
+def generate_dummy_trajectory(env, trajectory_length):
+    experiences = []
+    for i in range(trajectory_length):
+        state = env.reset()
+        if isinstance(env.action_space, gym.spaces.Discrete):
+            action = env.action_space.sample()
+            action = np.reshape(action, newshape=(1, ))
+        else:
+            action = env.action_space.sample()
+        next_state, reward, done, info = env.step(action)
+        if not isinstance(reward, np.ndarray):
+            reward = [reward]
+        experience = (state, action, reward, [float(i < trajectory_length - 1)], next_state, info)
         experiences.append(experience)
     return experiences
 

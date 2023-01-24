@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -241,7 +241,7 @@ class ATRPO(Algorithm):
             self._env_info, self._policy.shallowcopy(), deterministic=False)
 
     @eval_api
-    def compute_eval_action(self, state, *, begin_of_episode=False):
+    def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             action, _ = self._evaluation_action_selector(state,  begin_of_episode=begin_of_episode)
             return action

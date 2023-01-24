@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator  # noqa
 from nnabla_rl.replay_buffers.hindsight_replay_buffer import HindsightReplayBuffer  # noqa
 from nnabla_rl.replay_buffers.memory_efficient_atari_buffer import (MemoryEfficientAtariBuffer,  # noqa
+                                                                    MemoryEfficientAtariTrajectoryBuffer,
                                                                     ProportionalPrioritizedAtariBuffer,
                                                                     RankBasedPrioritizedAtariBuffer)
 from nnabla_rl.replay_buffers.decorable_replay_buffer import DecorableReplayBuffer  # noqa
@@ -23,3 +24,4 @@ from nnabla_rl.replay_buffers.replacement_sampling_replay_buffer import Replacem
 from nnabla_rl.replay_buffers.prioritized_replay_buffer import (PrioritizedReplayBuffer,  # noqa
                                                                 ProportionalPrioritizedReplayBuffer,
                                                                 RankBasedPrioritizedReplayBuffer)
+from nnabla_rl.replay_buffers.trajectory_replay_buffer import TrajectoryReplayBuffer  # noqa
