@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,10 +24,11 @@ from nnabla_rl.models.q_function import ContinuousQFunction, FactoredContinuousQ
 
 
 class TD3QFunction(ContinuousQFunction):
-    '''
-    Critic model proposed by S. Fujimoto in TD3 paper for mujoco environment.
+    """Critic model proposed by S.
+
+    Fujimoto in TD3 paper for mujoco environment.
     See: https://arxiv.org/abs/1802.09477
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -64,10 +65,11 @@ class TD3QFunction(ContinuousQFunction):
 
 
 class SACQFunction(ContinuousQFunction):
-    '''
-    QFunciton model proposed by T. Haarnoja in SAC paper for mujoco environment.
+    """QFunciton model proposed by T.
+
+    Haarnoja in SAC paper for mujoco environment.
     See: https://arxiv.org/pdf/1801.01290.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -95,10 +97,11 @@ class SACQFunction(ContinuousQFunction):
 
 
 class SACDQFunction(FactoredContinuousQFunction):
-    '''
-    Factored QFunciton model proposed by J. MacGlashan in SAC-D paper for mujoco environment.
+    """Factored QFunciton model proposed by J.
+
+    MacGlashan in SAC-D paper for mujoco environment.
     See: https://arxiv.org/abs/2206.13901
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

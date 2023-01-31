@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,9 +69,8 @@ class TestPPO(object):
         assert ppo.__name__ == 'PPO'
 
     def test_run_online_discrete_env_training(self):
-        '''
-        Check that no error occurs when calling online training (discrete env)
-        '''
+        """Check that no error occurs when calling online training (discrete
+        env)"""
 
         dummy_env = E.DummyDiscreteImg()
         actor_timesteps = 10
@@ -82,9 +81,8 @@ class TestPPO(object):
         ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
 
     def test_run_online_continuous_env_training(self):
-        '''
-        Check that no error occurs when calling online training (continuous env)
-        '''
+        """Check that no error occurs when calling online training (continuous
+        env)"""
 
         dummy_env = E.DummyContinuous()
         actor_timesteps = 10
@@ -95,9 +93,8 @@ class TestPPO(object):
         ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
     def test_run_online_tuple_state_env_training(self):
-        '''
-        Check that no error occurs when calling online training (tuple state env)
-        '''
+        """Check that no error occurs when calling online training (tuple state
+        env)"""
 
         dummy_env = E.DummyTupleContinuous()
         actor_timesteps = 10
@@ -110,9 +107,8 @@ class TestPPO(object):
         ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
 
     def test_run_online_discrete_single_actor(self):
-        '''
-        Check that no error occurs when calling online training (discrete env)
-        '''
+        """Check that no error occurs when calling online training (discrete
+        env)"""
 
         dummy_env = E.DummyDiscreteImg()
         actor_timesteps = 10
@@ -123,9 +119,8 @@ class TestPPO(object):
         ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
 
     def test_run_online_continuous_single_actor(self):
-        '''
-        Check that no error occurs when calling online training (continuous env)
-        '''
+        """Check that no error occurs when calling online training (continuous
+        env)"""
 
         dummy_env = E.DummyContinuous()
         actor_timesteps = 10
@@ -136,9 +131,7 @@ class TestPPO(object):
         ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
 
         dummy_env = E.DummyDiscreteImg()
         ppo = A.PPO(dummy_env)
@@ -161,9 +154,8 @@ class TestPPO(object):
             A.PPOConfig(total_timesteps=-1)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyContinuous()
         ppo = A.PPO(dummy_env)

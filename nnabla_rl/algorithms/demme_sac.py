@@ -36,8 +36,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class DEMMESACConfig(AlgorithmConfig):
-    '''DEMMESACConfig
-    List of configurations for DEMMESAC algorithm.
+    """DEMMESACConfig List of configurations for DEMMESAC algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -116,7 +115,7 @@ class DEMMESACConfig(AlgorithmConfig):
         alpha_pi (Optional[float]): If None, will use reward_scalar to scale the reward.
             Otherwise 1/alpha_pi will be used to scale the reward. Defaults to None.
         alpha_q (float): Temperature value for negative entropy term. Defaults to 1.0.
-    '''
+    """
 
     gamma: float = 0.99
     learning_rate: float = 3.0*1e-4
@@ -161,11 +160,10 @@ class DEMMESACConfig(AlgorithmConfig):
     v_re_reset_rnn_on_terminal: bool = True
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the values are in valid range.
-
-        '''
+        """
         self._assert_between(self.tau, 0.0, 1.0, 'tau')
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.gradient_steps, 'gradient_steps')
@@ -257,7 +255,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class DEMMESAC(Algorithm):
-    '''DisEntangled Max-Min Entropy Soft Actor-Critic (DEMME-SAC) algorithm.
+    """DisEntangled Max-Min Entropy Soft Actor-Critic (DEMME-SAC) algorithm.
 
     This class implements the disentangled version of max-min Soft Actor Critic (SAC) algorithm proposed
     by S. Han, et al. in the paper: "A Max-Min Entropy Framework for Reinforcement Learning"
@@ -297,7 +295,7 @@ class DEMMESAC(Algorithm):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

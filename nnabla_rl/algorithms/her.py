@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,8 +39,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class HERConfig(DDPGConfig):
-    '''HERConfig
-    List of configurations for HER algorithm
+    """HERConfig List of configurations for HER algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -69,7 +68,7 @@ class HERConfig(DDPGConfig):
         normalize_epsilon (float): the minimum value of standard deviation of preprocessed state.
         normalize_clip_range (Optional[Tuple[float, float]]): the range of clipping state.
         observation_clip_range (Optional[Tuple[float, float]]): the range of clipping observation.
-    '''
+    """
 
     n_cycles: int = 50
     n_rollout: int = 16
@@ -132,7 +131,7 @@ class HindsightReplayBufferBuilder(ReplayBufferBuilder):
 
 
 class HER(DDPG):
-    '''Hindsight Experience Replay (HER) algorithm implementation.
+    """Hindsight Experience Replay (HER) algorithm implementation.
 
     This class implements the Hindsight Experience Replay (HER) algorithm
     proposed by M. Andrychowicz, et al. in the paper: "Hindsight Experience Replay"
@@ -157,7 +156,7 @@ class HER(DDPG):
             state preprocessor builder to preprocess the states
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer
-    '''
+    """
     _config: HERConfig
     _q: QFunction
     _q_solver: nn.solver.Solver

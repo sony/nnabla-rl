@@ -90,15 +90,15 @@ def retrieve_internal_states(scope_name: str,
 
 
 def create_attention_mask(num_query: int, num_key: int) -> nn.Variable:
-    ''' Return attention mask for transformers
+    """Return attention mask for transformers.
 
-        Args:
-            num_query (int): number of query vectors
-            num_key (int): number of key vectors
+    Args:
+        num_query (int): number of query vectors
+        num_key (int): number of key vectors
 
-        Return:
-            mask (nn.Variable): additive mask to be used before softmax operation
-    '''
+    Return:
+        mask (nn.Variable): additive mask to be used before softmax operation
+    """
     mask = np.ones(shape=(num_query, num_key))
     mask = np.triu(mask, k=1) * np.finfo(np.float32).min
     mask = np.reshape(mask, newshape=(1, 1, num_query, num_key))

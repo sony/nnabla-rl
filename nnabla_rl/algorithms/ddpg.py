@@ -37,8 +37,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class DDPGConfig(AlgorithmConfig):
-    '''DDPGConfig
-    List of configurations for DDPG algorithm
+    """DDPGConfig List of configurations for DDPG algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -72,7 +71,7 @@ class DDPGConfig(AlgorithmConfig):
         critic_reset_rnn_on_terminal (bool): Reset critic's recurrent internal states to zero during training\
             if episode ends. This flag does not take effect if given model is not an RNN model.\
             Defaults to False.
-    '''
+    """
 
     gamma: float = 0.99
     learning_rate: float = 1.0*1e-3
@@ -93,11 +92,10 @@ class DDPGConfig(AlgorithmConfig):
     critic_reset_rnn_on_terminal: bool = True
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.learning_rate, 'learning_rate')
         self._assert_positive(self.batch_size, 'batch_size')
@@ -168,7 +166,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class DDPG(Algorithm):
-    '''Deep Deterministic Policy Gradient (DDPG) algorithm.
+    """Deep Deterministic Policy Gradient (DDPG) algorithm.
 
     This class implements the modified version of the Deep Deterministic Policy Gradient (DDPG) algorithm
     proposed by T. P.  Lillicrap, et al. in the paper: "Continuous control with deep reinforcement learning"
@@ -195,7 +193,7 @@ class DDPG(Algorithm):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

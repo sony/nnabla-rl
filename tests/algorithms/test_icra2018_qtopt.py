@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -114,9 +114,7 @@ class TestICRA2018QtOpt(object):
         assert qtopt.__name__ == 'ICRA2018QtOpt'
 
     def test_discrete_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on discrete action env
-        '''
+        """Check that error occurs when training on discrete action env."""
 
         dummy_env = E.DummyDiscreteImg()
         config = A.ICRA2018QtOptConfig()
@@ -124,9 +122,7 @@ class TestICRA2018QtOpt(object):
             A.ICRA2018QtOpt(dummy_env, config=config, q_func_builder=DummyQFunctionBuilder())
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyContinuousImg()
         config = A.ICRA2018QtOptConfig()
         config.start_timesteps = 5
@@ -138,9 +134,7 @@ class TestICRA2018QtOpt(object):
         qtopt.train_online(dummy_env, total_iterations=10)
 
     def test_run_online_training_multistep(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyContinuousImg()
         config = A.ICRA2018QtOptConfig()
         config.num_steps = 2
@@ -153,9 +147,7 @@ class TestICRA2018QtOpt(object):
         qtopt.train_online(dummy_env, total_iterations=10)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
         dummy_env = E.DummyContinuousImg()
         batch_size = 5
         config = A.ICRA2018QtOptConfig()
@@ -217,9 +209,8 @@ class TestICRA2018QtOpt(object):
             A.ICRA2018QtOptConfig(random_sample_size=-1)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyContinuousImg()
         dqn = A.ICRA2018QtOpt(dummy_env, q_func_builder=DummyQFunctionBuilder())

@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,8 +34,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class SACDConfig(SACConfig):
-    '''SACDConfig
-    List of configurations for SACD algorithm
+    """SACDConfig List of configurations for SACD algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -74,7 +73,7 @@ class SACDConfig(SACConfig):
             if episode ends. This flag does not take effect if given model is not an RNN model.\
             Defaults to False.
         reward_dimension (int): Number of reward components to learn.
-    '''
+    """
 
     reward_dimension: int = 1
 
@@ -94,7 +93,7 @@ class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
 
 
 class SACD(SAC):
-    '''Soft Actor-Critic Decomposition (SAC-D) algorithm implementation.
+    """Soft Actor-Critic Decomposition (SAC-D) algorithm implementation.
 
     This class implements the factored version of Soft Actor Critic (SAC) algorithm
     proposed by J. MacGlashan, et al. in the paper: "Value Function Decomposition for Iterative
@@ -122,7 +121,7 @@ class SACD(SAC):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -183,7 +182,7 @@ class SACD(SAC):
                                   action: np.ndarray,
                                   *,
                                   begin_of_episode: bool = False) -> np.ndarray:
-        '''Compute relative influence metrics.
+        """Compute relative influence metrics.
 
         The influence metrics represent how much each reward component contributes to an agent's decisions.
         For detail see: https://arxiv.org/abs/2206.13901
@@ -195,8 +194,7 @@ class SACD(SAC):
 
         Returns:
             np.ndarray: Relative influence metrics for each given state and action.
-
-        '''
+        """
         # TODO: standardize API
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             influence, _ = self._influence_metrics_evaluator(state, action, begin_of_episode=begin_of_episode)

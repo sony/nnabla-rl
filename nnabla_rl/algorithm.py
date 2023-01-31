@@ -43,8 +43,7 @@ def eval_api(f: F) -> F:
 
 @dataclass
 class AlgorithmConfig(Configuration):
-    """
-    List of algorithm common configuration
+    """List of algorithm common configuration.
 
     Args:
         gpu_id (int): id of the gpu to use. If negative, the training will run on cpu. Defaults to -1.
@@ -53,7 +52,7 @@ class AlgorithmConfig(Configuration):
 
 
 class Algorithm(metaclass=ABCMeta):
-    """Base Algorithm class
+    """Base Algorithm class.
 
     Args:
         env_or_env_info\
@@ -99,14 +98,14 @@ class Algorithm(metaclass=ABCMeta):
 
     @property
     def latest_iteration_state(self) -> Dict[str, Any]:
-        '''
-        Return latest iteration state that is composed of items of training process state.
-        You can use this state for debugging (e.g. plot loss curve).
-        See [IterationStateHook](./hooks/iteration_state_hook.py) for getting more details.
+        """Return latest iteration state that is composed of items of training
+        process state. You can use this state for debugging (e.g. plot loss
+        curve). See [IterationStateHook](./hooks/iteration_state_hook.py) for
+        getting more details.
 
         Returns:
             Dict[str, Any]: Dictionary with items of training process state.
-        '''
+        """
         latest_iteration_state: Dict[str, Any] = {}
         latest_iteration_state['scalar'] = {}
         latest_iteration_state['histogram'] = {}
@@ -115,17 +114,15 @@ class Algorithm(metaclass=ABCMeta):
 
     @property
     def iteration_num(self) -> int:
-        '''
-        Current iteration number.
+        """Current iteration number.
 
         Returns:
             int: Current iteration number of running training.
-        '''
+        """
         return self._iteration_num
 
     def train(self, env_or_buffer: Union[gym.Env, ReplayBuffer], total_iterations: int = sys.maxsize):
-        '''
-        Train the policy with reinforcement learning algorithm
+        """Train the policy with reinforcement learning algorithm.
 
         Args:
             env_or_buffer (Union[gym.Env, ReplayBuffer]): Target environment to
@@ -135,7 +132,7 @@ class Algorithm(metaclass=ABCMeta):
         Raises:
             UnsupportedTrainingException: Raises if this algorithm does not
                 support the training method for given parameter.
-        '''
+        """
         if self._is_env(env_or_buffer):
             env_or_buffer = cast(gym.Env, env_or_buffer)
             self.train_online(env_or_buffer, total_iterations)
@@ -146,8 +143,7 @@ class Algorithm(metaclass=ABCMeta):
             raise UnsupportedTrainingException
 
     def train_online(self, train_env: gym.Env, total_iterations: int = sys.maxsize):
-        '''
-        Train the policy by interacting with given environment.
+        """Train the policy by interacting with given environment.
 
         Args:
             train_env (gym.Env): Target environment to train the policy.
@@ -156,7 +152,7 @@ class Algorithm(metaclass=ABCMeta):
         Raises:
             UnsupportedTrainingException:
                 Raises if the algorithm does not support online training
-        '''
+        """
         if self._has_rnn_models():
             self._assert_rnn_is_supported()
         self._before_training_start(train_env)
@@ -169,8 +165,7 @@ class Algorithm(metaclass=ABCMeta):
         self._after_training_finish(train_env)
 
     def train_offline(self, replay_buffer: ReplayBuffer, total_iterations: int = sys.maxsize):
-        '''
-        Train the policy using only the replay buffer.
+        """Train the policy using only the replay buffer.
 
         Args:
             replay_buffer (ReplayBuffer): Replay buffer to sample experiences to train the policy.
@@ -179,7 +174,7 @@ class Algorithm(metaclass=ABCMeta):
         Raises:
             UnsupportedTrainingException:
                 Raises if the algorithm does not support offline training
-        '''
+        """
         if self._has_rnn_models():
             self._assert_rnn_is_supported()
         self._before_training_start(replay_buffer)
@@ -192,13 +187,12 @@ class Algorithm(metaclass=ABCMeta):
         self._after_training_finish(replay_buffer)
 
     def set_hooks(self, hooks: Sequence[Hook]):
-        '''
-        Set hooks for running additional operation during training.
+        """Set hooks for running additional operation during training.
         Previously set hooks will be removed and replaced with new hooks.
 
         Args:
             hooks (list of nnabla_rl.hook.Hook): Hooks to invoke during training
-        '''
+        """
         self._hooks = hooks
 
     def _invoke_hooks(self):
@@ -215,9 +209,8 @@ class Algorithm(metaclass=ABCMeta):
 
     @abstractmethod
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}) -> np.ndarray:
-        '''
-        Compute action for given state using current best policy.
-        This is usually used for evaluation.
+        """Compute action for given state using current best policy. This is
+        usually used for evaluation.
 
         Args:
             state (np.ndarray): state to compute the action.
@@ -227,16 +220,16 @@ class Algorithm(metaclass=ABCMeta):
 
         Returns:
             np.ndarray: Action for given state using current trained policy.
-        '''
+        """
         raise NotImplementedError
 
     def compute_trajectory(self,
                            initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]) \
             -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
-        '''
-        Compute trajectory (sequence of state and action tuples) from given initial trajectory using current policy.
-        Most of the reinforcement learning algorithms does not implement this method.
-        Only the optimal control algorithms implements this method.
+        """Compute trajectory (sequence of state and action tuples) from given
+        initial trajectory using current policy. Most of the reinforcement
+        learning algorithms does not implement this method. Only the optimal
+        control algorithms implements this method.
 
         Args:
             initial_trajectory (Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]): initial trajectory.
@@ -246,7 +239,7 @@ class Algorithm(metaclass=ABCMeta):
                 Sequence of state and action tuples and extra information (if exist) at each timestep,
                 computed with current best policy. Extra information depends on the algorithm.
                 The sequence length is same as the length of initial trajectory.
-        '''
+        """
         raise NotImplementedError
 
     def _before_training_start(self, env_or_buffer):
@@ -265,22 +258,21 @@ class Algorithm(metaclass=ABCMeta):
 
     @abstractmethod
     def _models(self):
-        '''
-        Model objects which are trained by the algorithm.
+        """Model objects which are trained by the algorithm.
 
         Returns:
             Dict[str, nnabla_rl.model.Model]: Dictionary with items of model name as key and object as value.
-        '''
+        """
         raise NotImplementedError
 
     @abstractmethod
     def _solvers(self) -> Dict[str, nn.solver.Solver]:
-        '''
-        Solver objects which are used for training the models by the algorithm.
+        """Solver objects which are used for training the models by the
+        algorithm.
 
         Returns:
             Dict[str, nn.solver.Solver]: Dictionary with items of solver name as key and object as value.
-        '''
+        """
         raise NotImplementedError
 
     def _is_env(self, env):
@@ -302,8 +294,7 @@ class Algorithm(metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     def is_supported_env(cls, env_or_env_info: Union[gym.Env, EnvironmentInfo]) -> bool:
-        '''
-        Check whether the algorithm supports the enviroment or not.
+        """Check whether the algorithm supports the enviroment or not.
 
         Args:
             env_or_env_info \
@@ -312,17 +303,16 @@ class Algorithm(metaclass=ABCMeta):
 
         Returns:
             bool: True if the algorithm supports the environment. Otherwise False.
-        '''
+        """
         raise NotImplementedError
 
     @classmethod
     def is_rnn_supported(cls) -> bool:
-        '''
-        Check whether the algorithm supports rnn models or not
+        """Check whether the algorithm supports rnn models or not.
 
         Returns:
             bool: True if the algorithm supports rnn models. Otherwise False.
-        '''
+        """
         return False
 
     @property

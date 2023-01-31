@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,10 +29,11 @@ from nnabla_rl.models.policy import DeterministicPolicy, StochasticPolicy
 
 
 class TD3Policy(DeterministicPolicy):
-    '''
-    Actor model proposed by S. Fujimoto in TD3 paper for mujoco environment.
+    """Actor model proposed by S.
+
+    Fujimoto in TD3 paper for mujoco environment.
     See: https://arxiv.org/abs/1802.09477
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -65,10 +66,11 @@ class TD3Policy(DeterministicPolicy):
 
 
 class SACPolicy(StochasticPolicy):
-    '''
-    Actor model proposed by T. Haarnoja in SAC paper for mujoco environment.
+    """Actor model proposed by T.
+
+    Haarnoja in SAC paper for mujoco environment.
     See: https://arxiv.org/pdf/1801.01290.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -109,10 +111,11 @@ class SACPolicy(StochasticPolicy):
 
 
 class BEARPolicy(StochasticPolicy):
-    '''
-    Actor model proposed by A. Kumar, et al. in BEAR paper for mujoco environment.
+    """Actor model proposed by A.
+
+    Kumar, et al. in BEAR paper for mujoco environment.
     See: https://arxiv.org/pdf/1906.00949.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -147,11 +150,12 @@ class BEARPolicy(StochasticPolicy):
 
 
 class PPOPolicy(StochasticPolicy):
-    '''
-    Actor model proposed by John Schulman, et al. in PPO paper for mujoco environment.
+    """Actor model proposed by John Schulman, et al.
+
+    in PPO paper for mujoco environment.
     This network outputs the policy distribution
     See: https://arxiv.org/pdf/1707.06347.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -182,10 +186,11 @@ class PPOPolicy(StochasticPolicy):
 
 
 class ICML2015TRPOPolicy(StochasticPolicy):
-    '''
-    Actor model proposed by John Schulman, et al. in TRPO paper for mujoco environment.
+    """Actor model proposed by John Schulman, et al.
+
+    in TRPO paper for mujoco environment.
     See: https://arxiv.org/pdf/1502.05477.pdf (Original paper)
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -211,11 +216,11 @@ class ICML2015TRPOPolicy(StochasticPolicy):
 
 
 class TRPOPolicy(StochasticPolicy):
-    '''
-    Actor model proposed by Peter Henderson, et al.
+    """Actor model proposed by Peter Henderson, et al.
+
     in Deep Reinforcement Learning that Matters paper for mujoco environment.
     See: https://arxiv.org/abs/1709.06560.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -246,11 +251,11 @@ class TRPOPolicy(StochasticPolicy):
 
 
 class ATRPOPolicy(StochasticPolicy):
-    '''
-    Actor model proposed by Yiming Zhang, et al.
+    """Actor model proposed by Yiming Zhang, et al.
+
     in On-Policy Deep Reinforcement Learning for the Average-Reward Criterion
     See: https://arxiv.org/pdf/2106.07329.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -284,10 +289,10 @@ class ATRPOPolicy(StochasticPolicy):
 
 
 class GAILPolicy(StochasticPolicy):
-    '''
-    Actor model proposed by Jonathan Ho, et al.
+    """Actor model proposed by Jonathan Ho, et al.
+
     See: https://arxiv.org/pdf/1606.03476.pdf
-    '''
+    """
 
     def __init__(self, scope_name: str, action_dim: str):
         super(GAILPolicy, self).__init__(scope_name)

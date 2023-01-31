@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ from nnabla_rl.configuration import Configuration
 
 @dataclass
 class NumpyModelTrainerConfig(Configuration):
-    '''Configuration class for ModelTrainer
-    '''
+    """Configuration class for ModelTrainer."""
 
     def __post_init__(self):
         super(NumpyModelTrainerConfig, self).__post_init__()

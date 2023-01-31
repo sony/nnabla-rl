@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,8 +42,7 @@ class DQNQFunction(DiscreteQFunction):
         self._n_action = n_action
 
     def all_q(self, s: nn.Variable) -> nn.Variable:
-        ''' Predict all q values of the given state
-        '''
+        """Predict all q values of the given state."""
         with nn.parameter_scope(self.scope_name):
 
             with nn.parameter_scope("conv1"):
@@ -112,8 +111,7 @@ class DRQNQFunction(DiscreteQFunction):
         return self.__class__(self._scope_name, self._n_action)
 
     def all_q(self, s: nn.Variable) -> nn.Variable:
-        ''' Predict all q values of the given state
-        '''
+        """Predict all q values of the given state."""
         with nn.parameter_scope(self.scope_name):
 
             with nn.parameter_scope("conv1"):

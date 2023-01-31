@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,9 +20,7 @@ from gym.envs.mujoco.walker2d import Walker2dEnv
 
 
 class DelayedEnv(gym.Wrapper):
-    ''' Delayed Env
-    Accumulated reward is returned every D timesteps.
-    '''
+    """Delayed Env Accumulated reward is returned every D timesteps."""
 
     def __init__(self, env, delay):
         super().__init__(env)

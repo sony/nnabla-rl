@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,9 +40,7 @@ class TestGAIL():
         assert gail.__name__ == 'GAIL'
 
     def test_discrete_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on discrete action env
-        '''
+        """Check that error occurs when training on discrete action env."""
 
         dummy_env = E.DummyDiscrete()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
@@ -52,9 +50,7 @@ class TestGAIL():
             A.GAIL(dummy_env, dummy_buffer, config=config)
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyContinuous()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
         dummy_buffer = self._create_dummy_buffer(dummy_env, batch_size=15)
@@ -69,9 +65,7 @@ class TestGAIL():
         gail.train_online(dummy_env, total_iterations=5)
 
     def test_run_offline_training(self):
-        '''
-        Check that raising error when calling offline training
-        '''
+        """Check that raising error when calling offline training."""
         dummy_env = E.DummyContinuous()
         dummy_buffer = self._create_dummy_buffer(dummy_env)
         gail = A.GAIL(dummy_env, dummy_buffer)
@@ -121,9 +115,8 @@ class TestGAIL():
             A.GAILConfig(adversary_entropy_coef=-0.5)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyContinuous()
         dummy_buffer = self._create_dummy_buffer(dummy_env)

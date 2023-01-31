@@ -39,8 +39,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class QRDQNConfig(AlgorithmConfig):
-    '''
-    List of configurations for QRDQN algorithm
+    """List of configurations for QRDQN algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -75,7 +74,7 @@ class QRDQNConfig(AlgorithmConfig):
         reset_rnn_on_terminal (bool): Reset recurrent internal states to zero during training if episode ends.
             This flag does not take effect if given model is not an RNN model.
             Defaults to True.
-    '''
+    """
 
     gamma: float = 0.99
     learning_rate: float = 0.00005
@@ -98,11 +97,10 @@ class QRDQNConfig(AlgorithmConfig):
     reset_rnn_on_terminal: bool = True
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check that set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.batch_size, 'batch_size')
         self._assert_positive(self.num_steps, 'num_steps')
@@ -167,7 +165,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class QRDQN(Algorithm):
-    '''Quantile Regression DQN algorithm.
+    """Quantile Regression DQN algorithm.
 
     This class implements the Quantile Regression DQN algorithm
     proposed by W. Dabney, et al. in the paper: "Distributional Reinforcement Learning with Quantile Regression"
@@ -187,7 +185,7 @@ class QRDQN(Algorithm):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

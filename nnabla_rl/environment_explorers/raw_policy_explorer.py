@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ class RawPolicyExplorerConfig(EnvironmentExplorerConfig):
 
 
 class RawPolicyExplorer(EnvironmentExplorer):
-    '''Raw policy explorer
+    """Raw policy explorer.
 
     Explore using policy's action without any changes.
 
@@ -40,7 +40,7 @@ class RawPolicyExplorer(EnvironmentExplorer):
             environment info
         config (:py:class:`LinearDecayEpsilonGreedyExplorerConfig\
             <nnabla_rl.environment_explorers.RawPolicyExplorerConfig>`): the config of this class.
-    '''
+    """
 
     def __init__(self,
                  policy_action_selector: ActionSelector,

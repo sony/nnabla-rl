@@ -41,8 +41,7 @@ from nnabla_rl.utils.data import marshal_experiences
 
 @dataclass
 class TRPOConfig(AlgorithmConfig):
-    '''
-    List of configurations for TRPO algorithm
+    """List of configurations for TRPO algorithm.
 
     Args:
         gamma (float): Discount factor of rewards. Defaults to 0.995.
@@ -71,7 +70,7 @@ class TRPOConfig(AlgorithmConfig):
         gpu_batch_size (int, optional): Actual batch size to reduce one forward gpu calculation memory. \
             As long as gpu memory size is enough, this configuration should not be specified. If not specified,  \
             gpu_batch_size is the same as pi_batch_size. Defaults to None.
-    '''
+    """
     gamma: float = 0.995
     lmb: float = 0.97
     num_steps_per_iteration: int = 5000
@@ -87,11 +86,10 @@ class TRPOConfig(AlgorithmConfig):
     gpu_batch_size: Optional[int] = None
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the values are in valid range.
-
-        '''
+        """
         self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, 'pi_batch_size')
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_between(self.lmb, 0.0, 1.0, 'lmb')
@@ -158,7 +156,8 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class TRPO(Algorithm):
-    '''Trust Region Policy Optimiation method with Generalized Advantage Estimation (GAE) implementation.
+    """Trust Region Policy Optimiation method with Generalized Advantage
+    Estimation (GAE) implementation.
 
     This class implements the Trust Region Policy Optimiation (TRPO)
     with Generalized Advantage Estimation (GAE) algorithm proposed by J. Schulman, et al.
@@ -182,7 +181,7 @@ class TRPO(Algorithm):
             state preprocessor builder to preprocess the states
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

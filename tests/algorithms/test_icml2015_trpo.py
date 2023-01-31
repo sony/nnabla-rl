@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,9 +32,7 @@ class TestICML2015TRPO(object):
         assert trpo.__name__ == 'ICML2015TRPO'
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
         dummy_env = E.DummyDiscreteImg()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
         config = A.ICML2015TRPOConfig(batch_size=5,
@@ -47,9 +45,7 @@ class TestICML2015TRPO(object):
         trpo.train_online(dummy_env, total_iterations=1)
 
     def test_run_offline_training(self):
-        '''
-        Check that no error occurs when calling offline training
-        '''
+        """Check that no error occurs when calling offline training."""
         dummy_env = E.DummyDiscreteImg()
         trpo = A.ICML2015TRPO(dummy_env)
 

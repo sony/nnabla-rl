@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,10 +21,11 @@ from nnabla_rl.models.reward_function import RewardFunction
 
 
 class GAILDiscriminator(RewardFunction):
-    '''
-    discriminator model used as reward function proposed by Jonathan Ho, et al.
+    """discriminator model used as reward function proposed by Jonathan Ho, et
+    al.
+
     See: https://arxiv.org/pdf/1606.03476.pdf
-    '''
+    """
 
     def __init__(self, scope_name: str):
         super(GAILDiscriminator, self).__init__(scope_name)

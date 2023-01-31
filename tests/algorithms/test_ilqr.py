@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -95,9 +95,8 @@ class TestiLQR(object):
         assert ilqr.__name__ == 'iLQR'
 
     def test_continuous_action_env_supported(self):
-        '''
-        Check that no error occurs when training on continuous action env
-        '''
+        """Check that no error occurs when training on continuous action
+        env."""
         env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
@@ -105,9 +104,7 @@ class TestiLQR(object):
         A.iLQR(env, dynamics=dynamics, cost_function=cost_function)
 
     def test_discrete_action_env_not_supported(self):
-        '''
-        Check that error occurs when training on discrete action env
-        '''
+        """Check that error occurs when training on discrete action env."""
         env = E.DummyDiscrete()
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
@@ -157,9 +154,7 @@ class TestiLQR(object):
             np.testing.assert_almost_equal(lqr_state[1], ilqr_state[1], decimal=3)
 
     def test_run_online_training(self):
-        '''
-        Check that error occurs when calling online training
-        '''
+        """Check that error occurs when calling online training."""
         env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
@@ -169,9 +164,7 @@ class TestiLQR(object):
             ilqr.train_online(env)
 
     def test_run_offline_training(self):
-        '''
-        Check that error occurs when calling offline training
-        '''
+        """Check that error occurs when calling offline training."""
         env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()

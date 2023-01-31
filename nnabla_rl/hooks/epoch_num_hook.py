@@ -1,5 +1,5 @@
 
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,13 +18,12 @@ from nnabla_rl.logger import logger
 
 
 class EpochNumHook(Hook):
-    '''
-    Hook to print the epoch number periodically.
-    This hook just prints the epoch number every iteration_per_epoch number of iteration.
+    """Hook to print the epoch number periodically. This hook just prints the
+    epoch number every iteration_per_epoch number of iteration.
 
     Args:
         iteration_per_epoch (int): Printing epoch interval. Defaults to 1 iteration.
-    '''
+    """
 
     def __init__(self, iteration_per_epoch=1):
         super(EpochNumHook, self).__init__(timing=iteration_per_epoch)

@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ class CostFunction(NumpyModel, metaclass=ABCMeta):
     def evaluate(
             self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
     ) -> np.ndarray:
-        ''' evaluate cost for given state and action
+        """Evaluate cost for given state and action.
 
         Args:
             x (np.ndarray): state
@@ -42,13 +42,14 @@ class CostFunction(NumpyModel, metaclass=ABCMeta):
 
         Returns:
             np.ndarray: cost. Returned arrays has (batch_size, 1) if batched is True.
-        '''
+        """
         raise NotImplementedError
 
     def gradient(
         self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-        ''' gradient of cost with respect to the states and actions in sequence form
+        """Gradient of cost with respect to the states and actions in sequence
+        form.
 
         Args:
             x (np.ndarray): state.
@@ -65,13 +66,13 @@ class CostFunction(NumpyModel, metaclass=ABCMeta):
                 gradient of the cost with respect to given state and action.
                 Tuple is in the order of Cx, Cu.
                 Returned arrays has (batch_size, gradient_shape) if batched is True.
-        '''
+        """
         raise NotImplementedError
 
     def hessian(
         self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
     ) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
-        ''' hessian of the cost with respect to given state and action
+        """Hessian of the cost with respect to given state and action.
 
         Args:
             x (np.ndarray): state.
@@ -88,7 +89,7 @@ class CostFunction(NumpyModel, metaclass=ABCMeta):
                 hessian of the cost with respect to given state and action.
                 Tuple is in the order of Cxx, Cxu, Cux, Cuu.
                 Returned arrays has (batch_size, hessian_shape) if batched is True.
-        '''
+        """
         raise NotImplementedError
 
     def __add__(self, o):

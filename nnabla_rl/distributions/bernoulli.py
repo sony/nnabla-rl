@@ -21,14 +21,13 @@ from nnabla_rl.distributions import DiscreteDistribution
 
 
 class Bernoulli(DiscreteDistribution):
-    '''
-    Bernoulli distribution.
+    """Bernoulli distribution.
 
     :math:`p^{k}(1-p)^{1-k} \\enspace \\text{for}\\ k\\in\\{0,1\\}`.
 
     Args:
         z (nn.Variable): Probability of outputting 1 is computed as :math:`p=sigmoid(z)`.
-    '''
+    """
 
     def __init__(self, z):
         super(Bernoulli, self).__init__()
@@ -53,27 +52,26 @@ class Bernoulli(DiscreteDistribution):
         return 1
 
     def sample(self, noise_clip=None):
-        '''
-        Sample a value from the distribution.
+        """Sample a value from the distribution.
 
         Args:
             noise_clip(Tuple[float, float], optional): Noise clip does nothing in Bernoulli distribution.
 
         Returns:
             nn.Variable: Sampled value.
-        '''
+        """
         return NF.random_choice(self._labels, w=self._distribution)
 
     def sample_and_compute_log_prob(self, noise_clip=None):
-        '''
-        Sample a value from the distribution and compute its log probability.
+        """Sample a value from the distribution and compute its log
+        probability.
 
         Args:
             noise_clip(Tuple[float, float], optional): Noise clip does nothing in Bernoulli distribution.
 
         Returns:
             Tuple[nn.Variable, nn.Variable]: Sampled value and its log probabilty
-        '''
+        """
         x = self.sample(noise_clip=noise_clip)
         return x, self.log_prob(x)
 

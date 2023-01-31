@@ -37,8 +37,8 @@ from nnabla_rl.utils.data import marshal_experiences, unzip
 
 @dataclass
 class MPPIConfig(AlgorithmConfig):
-    '''
-    List of configurations for MPPI (Model Predictive Path Integral) algorithm
+    """List of configurations for MPPI (Model Predictive Path Integral)
+    algorithm.
 
     Args:
         learning_rate (float): learning rate which is set to all solvers. \
@@ -68,7 +68,7 @@ class MPPIConfig(AlgorithmConfig):
             Defaults to False.
         dt (float): Time interval between states. Defaults to 0.05 [s].
             We strongly recommended to adjust this interval considering the sensor frequency.
-    '''
+    """
     learning_rate: float = 1.0*1e-3
     batch_size: int = 100
     replay_buffer_size: int = 1000000
@@ -121,11 +121,11 @@ class DefaultReplayBufferBuilder(ReplayBufferBuilder):
 
 
 class MPPI(Algorithm):
-    '''MPPI (Model Predictive Path Integral) algorithm.
-    This class implements the model predictive path integral (MPPI) algorithm
-    proposed by G. Williams, et al. in the paper:
-    "Information Theoretic MPC for Model-Based Reinforcement Learning"
-    For details see: https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf
+    """MPPI (Model Predictive Path Integral) algorithm. This class implements
+    the model predictive path integral (MPPI) algorithm proposed by G.
+    Williams, et al. in the paper: "Information Theoretic MPC for Model-Based
+    Reinforcement Learning" For details see:
+    https://homes.cs.washington.edu/~bboots/files/InformationTheoreticMPC.pdf.
 
     Our implementation of MPPI assumes that environment's state consists of elements in the following order.
     :math:`(x_1, x_2, \\cdots, x_n, \\frac{dx_1}{dt}, \\frac{dx_2}{dt}, \\cdots, \\frac{dx_n}{dt})`.
@@ -160,7 +160,7 @@ class MPPI(Algorithm):
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer. If you have bootstrap data, override the default builder
             and return a replay buffer with bootstrap data.
-    '''
+    """
     _config: MPPIConfig
     _evaluation_dynamics: _DeterministicStatePredictor
 

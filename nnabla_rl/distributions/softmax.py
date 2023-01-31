@@ -22,14 +22,14 @@ from nnabla_rl.distributions import DiscreteDistribution
 
 
 class Softmax(DiscreteDistribution):
-    '''
-    Softmax distribution which samples a class index :math:`i` according to the following probability.
+    """Softmax distribution which samples a class index :math:`i` according to
+    the following probability.
 
     :math:`i \\sim \\frac{\\exp{z_{i}}}{\\sum_{j}\\exp{z_{j}}}`.
 
     Args:
         z (nn.Variable): logits :math:`z`. Logits' dimension should be same as the number of class to sample.
-    '''
+    """
 
     def __init__(self, z):
         super(Softmax, self).__init__()

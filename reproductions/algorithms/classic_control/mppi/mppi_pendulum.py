@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,8 +30,7 @@ from nnabla_rl.utils.data import unzip
 
 
 class AnglePendulum(PendulumEnv):
-    '''Pendulum environment where the state is angle and angle speed.
-    '''
+    """Pendulum environment where the state is angle and angle speed."""
 
     def __init__(self, g=10):
         super().__init__(g)

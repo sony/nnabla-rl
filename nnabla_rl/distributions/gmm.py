@@ -25,8 +25,7 @@ if TYPE_CHECKING:
 
 
 class GMM(ContinuosDistribution):
-    '''
-    Gaussian Mixture Model distribution
+    """Gaussian Mixture Model distribution.
 
     :math:`\\Sum_{k=1}^{N} \\pi_k \\mathcal{N}(\\mu,\\,\\Sigma)`
 
@@ -35,7 +34,7 @@ class GMM(ContinuosDistribution):
         covariances (Union[nn.Variable, np.ndarray]): covariances of each gaussian distribution. :math:`\\Sigma_k`.
         mixing_coefficients (Union[nn.Variable, np.ndarray]):
             mixing coefficients of each gaussian distribution. :math:`\\pi_k`.
-    '''
+    """
 
     def __init__(self,
                  means: Union[nn.Variable, np.ndarray],
@@ -107,14 +106,15 @@ class NumpyGMM(ContinuosDistribution):
         return self._num_classes
 
     def log_prob(self, x):
-        '''compute log observation probabilities of each data under current parameters
+        """Compute log observation probabilities of each data under current
+        parameters.
 
         Args:
             x (np.ndarray): data, shape(num_data, dim)
 
         Returns:
             np.ndarray: log observation probabilities of each data
-        '''
+        """
         num_samples, dim = x.shape
         assert self._dim == dim
         # compute constant part of multiple gaussian log prob
@@ -145,7 +145,7 @@ class NumpyGMM(ContinuosDistribution):
 
 
 def compute_responsibility(data: np.ndarray, distribution: NumpyGMM) -> Tuple[np.ndarray, np.ndarray]:
-    '''compute responsibility under current parameters
+    """Compute responsibility under current parameters.
 
     Args:
         data (np.ndarray): data, shape(num_data, dim)
@@ -153,7 +153,7 @@ def compute_responsibility(data: np.ndarray, distribution: NumpyGMM) -> Tuple[np
 
     Returns:
         Tuple[np.ndarray, np.ndarray]: observation probability, responsibility
-    '''
+    """
     log_probs = distribution.log_prob(data)
     log_responsibility = log_probs - logsumexp(log_probs, axis=1, keepdims=True)  # shape (num_data, num_classes)
 
@@ -162,7 +162,7 @@ def compute_responsibility(data: np.ndarray, distribution: NumpyGMM) -> Tuple[np
 
 def compute_mean_and_covariance(distribution: NumpyGMM,
                                 mixing_coefficients: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
-    '''compute mean and covariance of gmm
+    """Compute mean and covariance of gmm.
 
     Args:
         distribution (NumpyGMM): distribution
@@ -170,7 +170,7 @@ def compute_mean_and_covariance(distribution: NumpyGMM,
 
     Returns:
         Tuple[np.ndarray, np.ndarray]: mean and var of gmm under current parameters
-    '''
+    """
     if mixing_coefficients is None:
         # sum of all class's mean, shape (dim, )
         mean = np.sum(distribution._means *
@@ -191,14 +191,14 @@ def compute_mean_and_covariance(distribution: NumpyGMM,
 
 
 def compute_mixing_coefficient(responsibility: np.ndarray) -> np.ndarray:
-    '''compute mixing coefficient from the given responsibility
+    """Compute mixing coefficient from the given responsibility.
 
     Args:
         responsibility (np.ndarray): responsibility, shape(num_data, num_classes)
 
     Returns:
         np.ndarray: mixing_coefficients
-    '''
+    """
     num_data, _ = responsibility.shape
     # shape (num_classes, )
     log_mixing_coefficients = logsumexp(np.log(responsibility), axis=0, keepdims=True) - np.log(num_data)
@@ -206,7 +206,7 @@ def compute_mixing_coefficient(responsibility: np.ndarray) -> np.ndarray:
 
 
 def inference_data_mean_and_covariance(data: np.ndarray, distribution: NumpyGMM) -> Tuple[np.ndarray, np.ndarray]:
-    '''inference mean and covariance of given data
+    """Inference mean and covariance of given data.
 
     Args:
         data (np.ndarray): data, shape(num_data, dim)
@@ -214,7 +214,7 @@ def inference_data_mean_and_covariance(data: np.ndarray, distribution: NumpyGMM)
 
     Returns:
         Tuple[np.ndarray, np.ndarray]: mean and var of data
-    '''
+    """
     _, responsibility = compute_responsibility(data, distribution)
     mixing_coefficients = compute_mixing_coefficient(responsibility)
     mean, covariance = compute_mean_and_covariance(distribution, mixing_coefficients)
@@ -222,7 +222,7 @@ def inference_data_mean_and_covariance(data: np.ndarray, distribution: NumpyGMM)
 
 
 def logsumexp(x: np.ndarray, axis: int = 0, keepdims: bool = False) -> np.ndarray:
-    r'''compute log sum exp value of the input
+    r"""Compute log sum exp value of the input.
 
     .. math::
         y = \log (\Sigma (\exp (input)))
@@ -234,7 +234,7 @@ def logsumexp(x: np.ndarray, axis: int = 0, keepdims: bool = False) -> np.ndarra
 
     Returns:
         np.ndarray: log sum exp value of the input
-    '''
+    """
     max_x = np.max(x, axis=axis, keepdims=True)
     max_x[max_x == -float('inf')] = 0.
     if keepdims:

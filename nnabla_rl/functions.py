@@ -24,8 +24,7 @@ import nnabla.functions as NF
 def sample_gaussian(mean: nn.Variable,
                     ln_var: nn.Variable,
                     noise_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
-    '''
-    Sample value from a gaussian distribution of given mean and variance.
+    """Sample value from a gaussian distribution of given mean and variance.
 
     Args:
         mean (nn.Variable): Mean of the gaussian distribution
@@ -34,7 +33,7 @@ def sample_gaussian(mean: nn.Variable,
 
     Returns:
         nn.Variable: Sampled value from gaussian distribution of given mean and variance
-    '''
+    """
     if not (mean.shape == ln_var.shape):
         raise ValueError('mean and ln_var has different shape')
 
@@ -50,10 +49,9 @@ def sample_gaussian_multiple(mean: nn.Variable,
                              ln_var: nn.Variable,
                              num_samples: int,
                              noise_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
-    '''
-    Sample multiple values from a gaussian distribution of given mean and variance.
-    The returned variable will have an additional axis in the middle as follows
-    (batch_size, num_samples, dimension)
+    """Sample multiple values from a gaussian distribution of given mean and
+    variance. The returned variable will have an additional axis in the middle
+    as follows (batch_size, num_samples, dimension)
 
     Args:
         mean (nn.Variable): Mean of the gaussian distribution
@@ -63,7 +61,7 @@ def sample_gaussian_multiple(mean: nn.Variable,
 
     Returns:
         nn.Variable: Sampled values from gaussian distribution of given mean and variance
-    '''
+    """
     if not (mean.shape == ln_var.shape):
         raise ValueError('mean and ln_var has different shape')
 
@@ -84,8 +82,7 @@ def sample_gaussian_multiple(mean: nn.Variable,
 
 
 def expand_dims(x: nn.Variable, axis: int) -> nn.Variable:
-    '''
-    Add dimension to target axis of given variable
+    """Add dimension to target axis of given variable.
 
     Args:
         x (nn.Variable): Variable to expand the dimension
@@ -93,14 +90,13 @@ def expand_dims(x: nn.Variable, axis: int) -> nn.Variable:
 
     Returns:
         nn.Variable: Variable with additional dimension in the target axis
-    '''
+    """
     target_shape = (*x.shape[0:axis], 1, *x.shape[axis:])
     return NF.reshape(x, shape=target_shape, inplace=False)
 
 
 def repeat(x: nn.Variable, repeats: int, axis: int) -> nn.Variable:
-    '''
-    Repeats the value along given axis for repeats times.
+    """Repeats the value along given axis for repeats times.
 
     Args:
         x (nn.Variable): Variable to repeat the values along given axis
@@ -109,7 +105,7 @@ def repeat(x: nn.Variable, repeats: int, axis: int) -> nn.Variable:
 
     Returns:
         nn.Variable: Variable with values repeated along given axis
-    '''
+    """
     # TODO: Find more efficient way
     assert isinstance(repeats, int)
     assert axis is not None
@@ -123,21 +119,19 @@ def repeat(x: nn.Variable, repeats: int, axis: int) -> nn.Variable:
 
 
 def sqrt(x: nn.Variable):
-    '''
-    Compute the squared root of given variable
+    """Compute the squared root of given variable.
 
     Args:
         x (nn.Variable): Variable to compute the squared root
 
     Returns:
         nn.Variable: Squared root of given variable
-    '''
+    """
     return NF.pow_scalar(x, 0.5)
 
 
 def std(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -> nn.Variable:
-    '''
-    Compute the standard deviation of given variable along axis.
+    """Compute the standard deviation of given variable along axis.
 
     Args:
         x (nn.Variable): Variable to compute the squared root
@@ -146,7 +140,7 @@ def std(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -> n
 
     Returns:
         nn.Variable: Standard deviation of given variable along axis.
-    '''
+    """
     # sigma = sqrt(E[(X - E[X])^2])
     mean = NF.mean(x, axis=axis, keepdims=True)
     diff = x - mean
@@ -155,8 +149,7 @@ def std(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -> n
 
 
 def argmax(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -> nn.Variable:
-    '''
-    Compute the index which given variable has maximum value along the axis.
+    """Compute the index which given variable has maximum value along the axis.
 
     Args:
         x (nn.Variable): Variable to compute the argmax
@@ -165,13 +158,12 @@ def argmax(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -
 
     Returns:
         nn.Variable: Index of the variable which its value is maximum along the axis
-    '''
+    """
     return NF.max(x=x, axis=axis, keepdims=keepdims, with_index=True, only_index=True)
 
 
 def argmin(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -> nn.Variable:
-    '''
-    Compute the index which given variable has minimum value along the axis.
+    """Compute the index which given variable has minimum value along the axis.
 
     Args:
         x (nn.Variable): Variable to compute the argmin
@@ -180,13 +172,13 @@ def argmin(x: nn.Variable, axis: Optional[int] = None, keepdims: bool = False) -
 
     Returns:
         nn.Variable: Index of the variable which its value is minimum along the axis
-    '''
+    """
     return NF.min(x=x, axis=axis, keepdims=keepdims, with_index=True, only_index=True)
 
 
 def quantile_huber_loss(x0: nn.Variable, x1: nn.Variable, kappa: float, tau: nn.Variable) -> nn.Variable:
-    '''
-    Compute the quantile huber loss. See the following papers for details.
+    """Compute the quantile huber loss. See the following papers for details.
+
       - https://arxiv.org/pdf/1710.10044.pdf
       - https://arxiv.org/pdf/1806.06923.pdf
 
@@ -198,8 +190,7 @@ def quantile_huber_loss(x0: nn.Variable, x1: nn.Variable, kappa: float, tau: nn.
 
     Returns:
         nn.Variable: Quantile huber loss
-
-    '''
+    """
     u = x0 - x1
     # delta(u < 0)
     delta = NF.less_scalar(u, val=0.0)
@@ -215,8 +206,7 @@ def quantile_huber_loss(x0: nn.Variable, x1: nn.Variable, kappa: float, tau: nn.
 
 
 def mean_squared_error(x0: nn.Variable, x1: nn.Variable) -> nn.Variable:
-    '''
-    Convenient alias for mean squared error operation
+    """Convenient alias for mean squared error operation.
 
     Args:
         x0 (nn.Variable): N-D array
@@ -224,20 +214,19 @@ def mean_squared_error(x0: nn.Variable, x1: nn.Variable) -> nn.Variable:
 
     Returns:
         nn.Variable: Mean squared error between x0 and x1
-    '''
+    """
     return NF.mean(NF.squared_error(x0, x1))
 
 
 def minimum_n(variables: Sequence[nn.Variable]) -> nn.Variable:
-    '''
-    Compute the minimum among the list of variables
+    """Compute the minimum among the list of variables.
 
     Args:
         variables (Sequence[nn.Variable]): Sequence of variables. All the variables must have same shape.
 
     Returns:
         nn.Variable: Minimum value among the list of variables
-    '''
+    """
     if len(variables) < 1:
         raise ValueError('Variables must have at least 1 variable')
     if len(variables) == 1:
@@ -255,9 +244,9 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
                                   init_mean: Union[nn.Variable, np.ndarray], init_var: Union[nn.Variable, np.ndarray],
                                   sample_size: int = 500, num_elites: int = 10,
                                   num_iterations: int = 5, alpha: float = 0.25) -> Tuple[nn.Variable, nn.Variable]:
-    '''
-    Optimize objective function with respect to input using cross entropy method using gaussian distribution.
-    Candidates are sampled from a gaussian distribution :math:`\\mathcal{N}(mean,\\,variance)`
+    """Optimize objective function with respect to input using cross entropy
+    method using gaussian distribution. Candidates are sampled from a gaussian
+    distribution :math:`\\mathcal{N}(mean,\\,variance)`
 
     Examples:
         >>> import numpy as np
@@ -311,7 +300,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
             optimal_x.forward()
             # (1, 2) == (batch_size, time_steps*action_dim)
             print(optimal_x.shape)
-    '''
+    """
     if isinstance(init_mean, np.ndarray):
         mean = nn.Variable.from_numpy_array(init_mean)
     else:
@@ -364,9 +353,9 @@ def random_shooting_method(objective_function: Callable[[nn.Variable], nn.Variab
                            upper_bound: np.ndarray,
                            lower_bound: np.ndarray,
                            sample_size: int = 500) -> nn.Variable:
-    '''
-    Optimize objective function with respect to the variable using random shooting method.
-    Candidates are sampled from a uniform distribution :math:`x \\sim U(lower\\:bound, upper\\:bound)`.
+    """Optimize objective function with respect to the variable using random
+    shooting method. Candidates are sampled from a uniform distribution
+    :math:`x \\sim U(lower\\:bound, upper\\:bound)`.
 
     Examples:
         >>> import numpy as np
@@ -419,7 +408,7 @@ def random_shooting_method(objective_function: Callable[[nn.Variable], nn.Variab
             optimal_x.forward()
             # (1, 2) == (batch_size, time_steps*action_dim)
             print(optimal_x.shape)
-    '''
+    """
     batch_size, dim = upper_bound.shape
     assert lower_bound.shape[0] == batch_size
     assert lower_bound.shape[1] == dim
@@ -452,8 +441,7 @@ def random_shooting_method(objective_function: Callable[[nn.Variable], nn.Variab
 
 
 def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable] = None, upper=False) -> nn.Variable:
-    '''
-    Compute triangular_matrix from given diagonal and non_diagonal elements.
+    """Compute triangular_matrix from given diagonal and non_diagonal elements.
     If non_diagonal is None, will create a diagonal matrix.
 
     Example:
@@ -492,8 +480,7 @@ def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable]
 
     Returns:
         nn.Variable: lower triangular matrix constructed from given variables.
-
-    '''
+    """
     def _flat_tri_indices(batch_size, matrix_dim, upper):
         matrix_size = matrix_dim * matrix_dim
 
@@ -523,8 +510,7 @@ def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable]
 
 
 def batch_flatten(x: nn.Variable) -> nn.Variable:
-    '''
-    Collapse the variable shape into (batch_size, rest).
+    """Collapse the variable shape into (batch_size, rest).
 
     Example:
         >>> import numpy as np
@@ -543,7 +529,7 @@ def batch_flatten(x: nn.Variable) -> nn.Variable:
 
     Returns:
         nn.Variable: Flattened variable.
-    '''
+    """
     original_shape = x.shape
     flatten_shape = (original_shape[0], np.prod(original_shape[1:]))
     return NF.reshape(x, shape=flatten_shape)
@@ -554,9 +540,8 @@ def stop_gradient(variable: nn.Variable) -> nn.Variable:
 
 
 def pytorch_equivalent_gather(x: nn.Variable, indices: nn.Variable, axis: int) -> nn.Variable:
-    '''
-    pytorch equivalent gather function.
-    Gather according to given indices from x.
+    """pytorch equivalent gather function. Gather according to given indices
+    from x.
 
     See https://pytorch.org/docs/stable/generated/torch.gather.html for details.
 
@@ -569,7 +554,7 @@ def pytorch_equivalent_gather(x: nn.Variable, indices: nn.Variable, axis: int) -
 
     Returns:
         nn.Variable: gathered (in pytorch's style) variable.
-    '''
+    """
     assert x.shape[:axis] == indices.shape[:axis]
     assert x.shape[axis+1:] == indices.shape[axis+1:]
     if axis != len(x.shape) - 1:
@@ -621,8 +606,7 @@ def concat_interleave(variables: Sequence[nn.Variable], axis: int) -> nn.Variabl
 
 
 def swapaxes(x: nn.Variable, axis1: int, axis2: int) -> nn.Variable:
-    '''
-    Interchange two axis of given variable.
+    """Interchange two axis of given variable.
 
     Args:
         x (Sequence[nn.Variable]): Target variable to interchange its axis.
@@ -631,7 +615,7 @@ def swapaxes(x: nn.Variable, axis1: int, axis2: int) -> nn.Variable:
 
     Returns:
         nn.Variable: Interchanged variable.
-    '''
+    """
     axes = [i for i in range(len(x.shape))]
     axes[axis1] = axis2
     axes[axis2] = axis1

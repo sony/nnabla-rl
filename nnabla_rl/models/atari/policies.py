@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,11 +24,12 @@ from nnabla_rl.models.policy import StochasticPolicy
 
 
 class PPOPolicy(StochasticPolicy):
-    '''
-    Shared parameter function proposed used in PPO paper for atari environment.
+    """Shared parameter function proposed used in PPO paper for atari
+    environment.
+
     This network outputs the policy distribution.
     See: https://arxiv.org/pdf/1707.06347.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -54,11 +55,11 @@ class PPOPolicy(StochasticPolicy):
 
 
 class ICML2015TRPOPolicy(StochasticPolicy):
-    '''
-    Policy network proposed in TRPO original paper for atari environment.
+    """Policy network proposed in TRPO original paper for atari environment.
+
     This network outputs the value and policy distribution.
     See: https://arxiv.org/pdf/1502.05477.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -88,10 +89,10 @@ class ICML2015TRPOPolicy(StochasticPolicy):
 
 
 class A3CPolicy(StochasticPolicy):
-    '''
-    Shared parameter function used in A3C paper for atari environment.
+    """Shared parameter function used in A3C paper for atari environment.
+
     See: https://arxiv.org/pdf/1602.01783.pdf
-    '''
+    """
 
     def __init__(self, head, scope_name, state_shape, action_dim):
         super(A3CPolicy, self).__init__(scope_name=scope_name)

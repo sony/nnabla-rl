@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,14 +20,14 @@ from nnabla_rl.logger import logger
 
 
 class IterationStateHook(Hook):
-    '''
-    Hook which retrieves the iteration state to print/save the training status through writer.
+    """Hook which retrieves the iteration state to print/save the training
+    status through writer.
 
     Args:
         timing (int): Retriving interval. Defaults to 1000 iteration.
         writer (nnabla_rl.writer.Writer, optional): Writer instance to save/print the iteration states.
             Defaults to None.
-    '''
+    """
 
     def __init__(self, writer=None, timing=1000):
         self._timing = timing

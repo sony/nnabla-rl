@@ -20,8 +20,7 @@ from nnabla_rl.models.model import Model
 
 
 class DecisionTransformer(Model, metaclass=ABCMeta):
-    """Base Decision Transformer class
-    """
+    """Base Decision Transformer class."""
 
     def __init__(self, scope_name: str, num_heads: int, embedding_dim: int):
         super().__init__(scope_name)
@@ -50,7 +49,8 @@ class DeterministicDecisionTransformer(DecisionTransformer):
 class StochasticDecisionTransformer(DecisionTransformer):
     @abstractmethod
     def pi(self, s: nn.Variable, a: nn.Variable,  rtg: nn.Variable, t: nn.Variable) -> Distribution:
-        """Compute action distribution for given state, action, and return to go (rtg)
+        """Compute action distribution for given state, action, and return to
+        go (rtg)
 
         Args:
             s (nn.Variable): state variable

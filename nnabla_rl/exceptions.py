@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,17 @@
 # limitations under the License.
 
 class NNablaRLError(Exception):
-    '''
-    Base class of all specific exceptions defined for nnabla_rl.
-    '''
+    """Base class of all specific exceptions defined for nnabla_rl."""
     pass
 
 
 class UnsupportedTrainingException(NNablaRLError):
-    '''
-    Raised when the algorithm does not support requested training procedure.
-    '''
+    """Raised when the algorithm does not support requested training
+    procedure."""
     pass
 
 
 class UnsupportedEnvironmentException(NNablaRLError):
-    '''
-    Raised when the algorithm does not support given environment to train the policy.
-    '''
+    """Raised when the algorithm does not support given environment to train
+    the policy."""
     pass

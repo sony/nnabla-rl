@@ -26,8 +26,8 @@ from nnabla_rl.numpy_models.dynamics import Dynamics
 
 @dataclass
 class DDPConfig(AlgorithmConfig):
-    '''
-    List of configurations for DDP (Differential Dynamic Programming) algorithm
+    """List of configurations for DDP (Differential Dynamic Programming)
+    algorithm.
 
     Args:
         T_max (int): Planning time step length. Defaults to 50.
@@ -35,7 +35,7 @@ class DDPConfig(AlgorithmConfig):
         mu_min (float): Minimum value for regularizing the hessian of the value funtion. Defaults to 1e-6.
         modification_factor (float): Modification factor for the regularizer. Defaults to 2.0.
         accept_improvement_ratio (float): Threshold value for deciding to accept the update or not. Defaults to 0.0
-    '''
+    """
     T_max: int = 50
     num_iterations: int = 10
     mu_min: float = 1e-6
@@ -50,12 +50,13 @@ class DDPConfig(AlgorithmConfig):
 
 
 class DDP(Algorithm):
-    '''Differential Dynamic Programming algorithm.
-    This class implements the differential dynamic programming (DDP) algorithm proposed by D. Mayne in the paper:
-    "A Second-order Gradient Method for Determining Optimal Trajectories of Non-linear Discrete-time Systems".
-    We also referred the paper written by Y. Tassa et al.:
-    "Synthesis and Stabilization of Complex Behaviors through Online Trajectory Optimization"
-    for the implementation of this algorithm.
+    """Differential Dynamic Programming algorithm. This class implements the
+    differential dynamic programming (DDP) algorithm proposed by D. Mayne in
+    the paper: "A Second-order Gradient Method for Determining Optimal
+    Trajectories of Non-linear Discrete-time Systems". We also referred the
+    paper written by Y. Tassa et al.: "Synthesis and Stabilization of Complex
+    Behaviors through Online Trajectory Optimization" for the implementation of
+    this algorithm.
 
     Args:
         env_or_env_info\
@@ -67,7 +68,7 @@ class DDP(Algorithm):
             cost function to optimize the trajectory
         config (:py:class:`DDPConfig <nnabla_rl.algorithmss.ilqr.DDPConfig>`):
             the parameter for DDP controller
-    '''
+    """
     _config: DDPConfig
 
     def __init__(self,

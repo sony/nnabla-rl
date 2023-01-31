@@ -50,8 +50,7 @@ from nnabla_rl.utils.reproductions import set_global_seed
 
 @dataclass
 class PPOConfig(AlgorithmConfig):
-    '''PPOConfig
-    List of configurations for PPO algorithm
+    """PPOConfig List of configurations for PPO algorithm.
 
     Args:
         epsilon (float): PPO's probability ratio clipping range. Defaults to 0.1
@@ -76,7 +75,7 @@ class PPOConfig(AlgorithmConfig):
         seed (int): base seed of random number generator used by the actors. Defaults to 1.
         preprocess_state (bool): Enable preprocessing the states in the collected experiences\
             before feeding as training batch. Defaults to True.
-    '''
+    """
 
     epsilon: float = 0.1
     gamma: float = 0.99
@@ -95,11 +94,10 @@ class PPOConfig(AlgorithmConfig):
     preprocess_state: bool = True
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.actor_num, 'actor num')
         self._assert_positive(self.epochs, 'epochs')
@@ -187,7 +185,7 @@ class DefaultPreprocessorBuilder(PreprocessorBuilder):
 
 
 class PPO(Algorithm):
-    '''Proximal Policy Optimization (PPO) algorithm implementation.
+    """Proximal Policy Optimization (PPO) algorithm implementation.
 
     This class implements the Proximal Policy Optimization (PPO) algorithm
     proposed by J. Schulman, et al. in the paper: "Proximal Policy Optimization Algorithms"
@@ -208,7 +206,7 @@ class PPO(Algorithm):
         policy_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for policy solvers
         state_preprocessor_builder (None or :py:class:`PreprocessorBuilder <nnabla_rl.builders.PreprocessorBuilder>`):
             state preprocessor builder to preprocess the states
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

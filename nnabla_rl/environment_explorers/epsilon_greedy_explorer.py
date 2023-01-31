@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,8 +72,7 @@ class NoDecayEpsilonGreedyExplorer(EnvironmentExplorer):
 
 @dataclass
 class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
-    """
-    List of configurations for Linear decay epsilon-greedy explorer
+    """List of configurations for Linear decay epsilon-greedy explorer.
 
     Args:
         initial_epsilon (float): Initial value of epsilon. Defaults to 1.0.
@@ -95,7 +94,7 @@ class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
 
 
 class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
-    '''Linear decay epsilon-greedy explorer
+    """Linear decay epsilon-greedy explorer.
 
     Epsilon-greedy style explorer. Epsilon is linearly decayed until max_eplore_steps set in the config.
 
@@ -108,7 +107,7 @@ class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
             environment info
         config (:py:class:`LinearDecayEpsilonGreedyExplorerConfig\
             <nnabla_rl.environment_explorers.LinearDecayEpsilonGreedyExplorerConfig>`): the config of this class.
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

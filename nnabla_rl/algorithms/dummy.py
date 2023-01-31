@@ -23,9 +23,10 @@ class DummyConfig(AlgorithmConfig):
 
 
 class Dummy(Algorithm):
-    '''
-    This algorithm does nothing. Just used for understanding the concept of the framework.
-    '''
+    """This algorithm does nothing.
+
+    Just used for understanding the concept of the framework.
+    """
 
     def __init__(self, env_or_env_info, config=DummyConfig()):
         super(Dummy, self).__init__(env_or_env_info, config=config)

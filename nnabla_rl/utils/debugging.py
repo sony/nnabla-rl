@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,7 +65,8 @@ def profile_graph(
     device_id: int = 0,
     n_run: int = 1000,
 ) -> None:
-    '''Profile computational graph. Print the profile result to console and save it to the csv_file_path.
+    """Profile computational graph. Print the profile result to console and
+    save it to the csv_file_path.
 
     Args:
         output_variable (nn.Variable): output variable of the graph.
@@ -85,7 +86,7 @@ def profile_graph(
         >>> output_file_path = "sample.csv"
         >>> profile_graph(y, output_file_path)
         # The profile result is shown in the console and the result is saved as sample.csv.
-    '''
+    """
     B = GraphProfiler(output_variable, solver=solver, device_id=device_id, ext_name=ext_name, n_run=n_run)
     B.run()
     B.print_result()

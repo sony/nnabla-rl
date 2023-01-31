@@ -39,8 +39,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class DQNConfig(AlgorithmConfig):
-    """
-    List of configurations for DQN algorithm
+    """List of configurations for DQN algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -97,11 +96,10 @@ class DQNConfig(AlgorithmConfig):
     reset_rnn_on_terminal: bool = True
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_positive(self.learning_rate, 'learning_rate')
         self._assert_positive(self.batch_size, 'batch_size')
@@ -172,7 +170,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class DQN(Algorithm):
-    '''DQN algorithm.
+    """DQN algorithm.
 
     This class implements the Deep Q-Network (DQN) algorithm
     proposed by V. Mnih, et al. in the paper: "Human-level control through deep reinforcement learning"
@@ -195,7 +193,7 @@ class DQN(Algorithm):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

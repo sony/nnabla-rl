@@ -17,10 +17,10 @@ import numpy as np
 
 
 class BufferIterator(object):
-    '''
-    Simple iterator for iterating through the replay buffer.
+    """Simple iterator for iterating through the replay buffer.
+
     Replay buffer must support indexing.
-    '''
+    """
 
     def __init__(self, buffer, batch_size, shuffle=True, repeat=True):
         super(BufferIterator, self).__init__()

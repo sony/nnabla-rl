@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,8 +31,9 @@ def add_axis_if_single_dim(data):
 
 
 def marshal_experiences(experiences: Iterable[TupledData]) -> TupledData:
-    '''Marshall experiences. This function concatenates each of the elements in the given experience and
-    return it as a tuple. Note that if the given experience has a tuple, this function be applied recursively.
+    """Marshall experiences. This function concatenates each of the elements in
+    the given experience and return it as a tuple. Note that if the given
+    experience has a tuple, this function be applied recursively.
 
     Example:
         >>> import numpy as np
@@ -59,7 +60,7 @@ def marshal_experiences(experiences: Iterable[TupledData]) -> TupledData:
         experiences (Iterable[TupledData]): iterable object of experience
     Returns:
         TupledData: marshaled experiences
-    '''
+    """
     unzipped_experiences = unzip(experiences)
     marshaled_experiences: List = []
     for data in unzipped_experiences:
@@ -104,12 +105,12 @@ def convert_to_list_if_not_list(value: Union[Iterable[T], T]) -> List[T]:
 
 def set_data_to_variable(variable: Union[nn.Variable, Tuple[nn.Variable, ...]],
                          data: Union[float, np.ndarray, Tuple[np.ndarray, ...]]) -> None:
-    '''Set data to variable
+    """Set data to variable.
 
     Args:
         variable (Union[nn.Variable, Tuple[nn.Variable, ...]]): variable
         data (Union[float, np.ndarray, Tuple[np.ndarray, ...]]): data set to variable.d
-    '''
+    """
     if isinstance(data, tuple) and isinstance(variable, tuple):
         assert len(variable) == len(data)
         for v, d in zip(variable, data):
@@ -123,13 +124,14 @@ def set_data_to_variable(variable: Union[nn.Variable, Tuple[nn.Variable, ...]],
 
 
 def add_batch_dimension(data: Union[np.ndarray, Tuple[np.ndarray, ...]]) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
-    '''Apply np.expand_dims to data. If the data is tuple, this function apply np.expand_dims to each elements of data.
+    """Apply np.expand_dims to data. If the data is tuple, this function apply
+    np.expand_dims to each elements of data.
 
     Args:
         data (Union[np.ndarray, Tuple[np.ndarray, ...]]): data
     Returns:
         Union[np.ndarray, Tuple[np.ndarray, ...]]: expanded data
-    '''
+    """
     if isinstance(data, np.ndarray):
         return cast(np.ndarray, np.expand_dims(data, axis=0))
     else:
@@ -137,10 +139,10 @@ def add_batch_dimension(data: Union[np.ndarray, Tuple[np.ndarray, ...]]) -> Unio
 
 
 class DataHolder(Generic[T]):
-    '''DataHolder
+    """DataHolder.
 
     FIFO (First Input First Out) data container.
-    '''
+    """
 
     def __len__(self):
         raise NotImplementedError
@@ -149,27 +151,27 @@ class DataHolder(Generic[T]):
         raise NotImplementedError
 
     def append(self, data: T):
-        '''
-        Append new data. If the holder's capacity exceeds by appending new data, oldest data will be removed and
-        new data will be appended to the tail.
+        """Append new data. If the holder's capacity exceeds by appending new
+        data, oldest data will be removed and new data will be appended to the
+        tail.
 
         Args:
             data T: data to append.
-        '''
+        """
         raise NotImplementedError
 
     def append_with_removed_item_check(self, data: T) -> Union[T, None]:
-        '''
-        Append new data. If the holder's capacity exceeds by appending new data, oldest data will be removed and
-        new data will be appended to the tail. If oldest data is removed from the holder, will return removed data
-        otherwise None.
+        """Append new data. If the holder's capacity exceeds by appending new
+        data, oldest data will be removed and new data will be appended to the
+        tail. If oldest data is removed from the holder, will return removed
+        data otherwise None.
 
         Args:
             data T: data to append.
 
         Returns:
             Union[T, None]: Removed item. If no data is removed, None will be returned.
-        '''
+        """
         raise NotImplementedError
 
 

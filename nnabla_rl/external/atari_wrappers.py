@@ -37,6 +37,7 @@ cv2.ocl.setUseOpenCL(False)
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):
         """Sample initial states by taking random number of no-ops on reset.
+
         No-op is assumed to be action 0.
         """
         gym.Wrapper.__init__(self, env)
@@ -50,7 +51,7 @@ class NoopResetEnv(gym.Wrapper):
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 
     def reset(self, **kwargs):
-        """ Do no-op action for a number of steps in [1, noop_max]."""
+        """Do no-op action for a number of steps in [1, noop_max]."""
         self.env.reset(**kwargs)
         if self.override_num_noops is not None:
             noops = self.override_num_noops
@@ -70,7 +71,8 @@ class NoopResetEnv(gym.Wrapper):
 
 class FireResetEnv(gym.Wrapper):
     def __init__(self, env):
-        """Take action on reset for environments that are fixed until firing."""
+        """Take action on reset for environments that are fixed until
+        firing."""
         gym.Wrapper.__init__(self, env)
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3
@@ -91,8 +93,11 @@ class FireResetEnv(gym.Wrapper):
 
 class EpisodicLifeEnv(gym.Wrapper):
     def __init__(self, env):
-        """Make end-of-life == end-of-episode, but only reset on true game over.
-        Done by DeepMind for the DQN and co. since it helps value estimation.
+        """Make end-of-life == end-of-episode, but only reset on true game
+        over.
+
+        Done by DeepMind for the DQN and co. since it helps value
+        estimation.
         """
         gym.Wrapper.__init__(self, env)
         self.lives = 0
@@ -114,8 +119,10 @@ class EpisodicLifeEnv(gym.Wrapper):
 
     def reset(self, **kwargs):
         """Reset only when lives are exhausted.
-        This way all states are still reachable even though lives are episodic,
-        and the learner need not know about any of this behind-the-scenes.
+
+        This way all states are still reachable even though lives are
+        episodic, and the learner need not know about any of this
+        behind-the-scenes.
         """
         if self.was_real_done:
             obs = self.env.reset(**kwargs)
@@ -128,7 +135,7 @@ class EpisodicLifeEnv(gym.Wrapper):
 
 class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env, skip=4):
-        """Return only every `skip`-th frame"""
+        """Return only every `skip`-th frame."""
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
         self._obs_buffer = np.zeros((2,)+env.observation_space.shape, dtype=np.uint8)
@@ -168,9 +175,10 @@ class ClipRewardEnv(gym.RewardWrapper):
 
 class WarpFrame(gym.ObservationWrapper):
     def __init__(self, env, width=84, height=84, grayscale=True, dict_space_key=None):
-        """
-        Warp frames to 84x84 as done in the Nature paper and later work.
-        If the environment uses dictionary observations, `dict_space_key` can be specified which indicates which
+        """Warp frames to 84x84 as done in the Nature paper and later work.
+
+        If the environment uses dictionary observations,
+        `dict_space_key` can be specified which indicates which
         observation should be warped.
         """
         super().__init__(env)
@@ -263,11 +271,14 @@ class ScaledFloatFrame(gym.ObservationWrapper):
 
 class LazyFrames(object):
     def __init__(self, frames):
-        """This object ensures that common frames between the observations are only stored once.
-        It exists purely to optimize memory usage which can be huge for DQN's 1M frames replay
-        buffers.
-        This object should only be converted to numpy array before being passed to the model.
-        You'd not believe how complex the previous solution was."""
+        """This object ensures that common frames between the observations are
+        only stored once.
+
+        It exists purely to optimize memory usage which can be huge for
+        DQN's 1M frames replay buffers. This object should only be
+        converted to numpy array before being passed to the model. You'd
+        not believe how complex the previous solution was.
+        """
         self._frames = frames
         self._out = None
 
@@ -308,8 +319,7 @@ def make_atari(env_id, max_episode_steps=None):
 
 
 def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False):
-    """Configure environment for DeepMind-style Atari.
-    """
+    """Configure environment for DeepMind-style Atari."""
     if episode_life:
         env = EpisodicLifeEnv(env)
     if 'FIRE' in env.unwrapped.get_action_meanings():

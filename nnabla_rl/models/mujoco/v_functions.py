@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,10 +24,11 @@ from nnabla_rl.models.v_function import VFunction
 
 
 class SACVFunction(VFunction):
-    '''
-    VFunciton model proposed by T. Haarnoja in SAC paper for mujoco environment.
+    """VFunciton model proposed by T.
+
+    Haarnoja in SAC paper for mujoco environment.
     See: https://arxiv.org/pdf/1801.01290.pdf
-    '''
+    """
 
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
@@ -40,11 +41,11 @@ class SACVFunction(VFunction):
 
 
 class TRPOVFunction(VFunction):
-    '''
-    Vfunction proposed by Peter Henderson, et al.
+    """Vfunction proposed by Peter Henderson, et al.
+
     in Deep Reinforcement Learning that Matters paper for mujoco environment.
     See: https://arxiv.org/abs/1709.06560.pdf
-    '''
+    """
 
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
@@ -60,11 +61,12 @@ class TRPOVFunction(VFunction):
 
 
 class PPOVFunction(VFunction):
-    '''
-    Shared parameter function proposed used in PPO paper for mujoco environment.
+    """Shared parameter function proposed used in PPO paper for mujoco
+    environment.
+
     This network outputs the state value
     See: https://arxiv.org/pdf/1707.06347.pdf
-    '''
+    """
 
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
@@ -83,10 +85,10 @@ class PPOVFunction(VFunction):
 
 
 class GAILVFunction(VFunction):
-    '''
-    Value function proposed by Jonathan Ho, et al.
+    """Value function proposed by Jonathan Ho, et al.
+
     See: https://arxiv.org/pdf/1606.03476.pdf
-    '''
+    """
 
     def __init__(self, scope_name: str):
         super(GAILVFunction, self).__init__(scope_name)
@@ -105,11 +107,11 @@ class GAILVFunction(VFunction):
 
 
 class ATRPOVFunction(VFunction):
-    '''
-    Actor model proposed by Yiming Zhang, et al.
+    """Actor model proposed by Yiming Zhang, et al.
+
     in On-Policy Deep Reinforcement Learning for the Average-Reward Criterion
     See: https://arxiv.org/pdf/2106.07329.pdf
-    '''
+    """
 
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):

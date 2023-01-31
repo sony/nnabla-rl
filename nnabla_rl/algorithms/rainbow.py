@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,8 +32,7 @@ from nnabla_rl.replay_buffers import ProportionalPrioritizedReplayBuffer
 
 @dataclass
 class RainbowConfig(CategoricalDDQNConfig):
-    '''RainbowConfig
-    List of configurations for Rainbow algorithm.
+    """RainbowConfig List of configurations for Rainbow algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -61,7 +60,7 @@ class RainbowConfig(CategoricalDDQNConfig):
         no_double (bool): If true, following normal Q-learning style q value target will be used for
             categorical q value update.  :math:`r + \\gamma\\max_{a}{Q_{\\text{target}}(s_{t+1}, a)}`.
             Defaults to False.
-    '''
+    """
     learning_rate: float = 0.00025 / 4
     start_timesteps: int = 20000  # 20k steps = 80k frames in Atari game
     target_update_frequency: int = 8000  # 8k steps = 32k frames in Atari game

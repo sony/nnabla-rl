@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ import nnabla.initializer as NI
 
 
 def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
-    ''' Create Weight initializer proposed by He et al. (Normal distribution version)
+    """Create Weight initializer proposed by He et al. (Normal distribution
+    version)
 
     Args:
         inmaps (int): Map size of an input Variable,
@@ -32,7 +33,7 @@ def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
         HeNormal : weight initialzier
     Raises:
         NotImplementedError: mode other than 'fan_in' or 'fan_out' is given
-    '''
+    """
     if mode == 'fan_in':
         s = calc_normal_std_he_forward(
             inmaps, outmaps, kernel, factor)
@@ -46,7 +47,8 @@ def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
 
 
 def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
-    ''' Create Weight initializer proposed in LeCun 98, Efficient Backprop (Normal distribution version)
+    """Create Weight initializer proposed in LeCun 98, Efficient Backprop
+    (Normal distribution version)
 
     Args:
         inmaps (int): Map size of an input Variable,
@@ -59,7 +61,7 @@ def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
         LeCunNormal : weight initialzier
     Raises:
         NotImplementedError: mode other than 'fan_in' is given
-    '''
+    """
     if mode == 'fan_in':
         s = calc_normal_std_he_forward(inmaps, outmaps, kernel, factor)
     else:
@@ -69,7 +71,8 @@ def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
 
 
 def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in', rng=None):
-    ''' Create Weight initializer proposed by He et al. (Uniform distribution version)
+    """Create Weight initializer proposed by He et al. (Uniform distribution
+    version)
 
     Args:
         inmaps (int): Map size of an input Variable,
@@ -82,7 +85,7 @@ def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in', rng=Non
         HeUniform : weight initialzier
     Raises:
         NotImplementedError: mode other than 'fan_in' or 'fan_out' is given
-    '''
+    """
     if mode == 'fan_in':
         lim = calc_uniform_lim_he_forward(inmaps, outmaps, kernel, factor)
     elif mode == 'fan_out':

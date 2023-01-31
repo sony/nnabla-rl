@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,8 +60,7 @@ class LossIntegration(Enum):
 
 @dataclass
 class TrainerConfig(Configuration):
-    """Configuration class for ModelTrainer
-    """
+    """Configuration class for ModelTrainer."""
     unroll_steps: int = 1
     burn_in_steps: int = 0
     reset_on_terminal: bool = True  # Reset internal rnn state to given state if previous state is terminal.
@@ -74,7 +73,7 @@ class TrainerConfig(Configuration):
 
 
 class TrainingBatch():
-    """Mini-Batch class for train
+    """Mini-Batch class for train.
 
     Args:
        batch_size (int): the size of mini-batch

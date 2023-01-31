@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,14 +30,13 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class REDQConfig(SACConfig):
-    '''REDQConfig
-    List of configurations for REDQ algorithm
+    """REDQConfig List of configurations for REDQ algorithm.
 
     Args:
         G (int): Number of update-to-data ratio. Defaults to 20.
         M (int): Size of subset M. Defaults to 2.
         N (int): Number of q functions of an ensemble. Defaults to 10.
-    '''
+    """
     # override timesteps
     start_timesteps: int = 5000
 
@@ -47,9 +46,7 @@ class REDQConfig(SACConfig):
     N: int = 10
 
     def __post_init__(self):
-        '''__post_init__
-        Check set values are in valid range.
-        '''
+        """__post_init__ Check set values are in valid range."""
         super().__post_init__()
         self._assert_positive(self.G, 'G')
         self._assert_positive(self.N, 'N')
@@ -57,7 +54,7 @@ class REDQConfig(SACConfig):
 
 
 class REDQ(SAC):
-    '''Randomized Ensembled Double Q-learning (REDQ) algorithm implementation.
+    """Randomized Ensembled Double Q-learning (REDQ) algorithm implementation.
 
     This class implements the Randomized Ensembled Double Q-learning (REDQ) algorithm
     proposed by X. Chen, et al. in the paper: "Randomized Ensembled Double Q-learning: Learning Fast Without a Model"
@@ -83,7 +80,7 @@ class REDQ(SAC):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

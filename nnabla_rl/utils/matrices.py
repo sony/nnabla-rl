@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,14 +20,14 @@ import nnabla.functions as NF
 
 
 def compute_hessian(y, x):
-    ''' Compute hessian (= dy^2 / dx^2) in Naive way,
+    """Compute hessian (= dy^2 / dx^2) in Naive way,
 
     Args:
         y (nn.Variable): Outputs of the differentiable function.
         x (list[nn.Variable]): List of parameters
     Returns:
         hessian (numpy.ndarray): Hessian of outputs with respect to the parameters
-    '''
+    """
     for param in x:
         param.grad.zero()
     grads = nn.grad([y], x)

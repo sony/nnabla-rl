@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,9 @@ from nnabla_rl.external.goal_env import GoalEnv
 
 class GoalEnvWrapper(GoalEnv):
     def __init__(self, env: gym.Env) -> None:
-        """Wraps an environment to allow a modular transformation of the :meth:`step` and :meth:`reset` methods.
+        """Wraps an environment to allow a modular transformation of the
+        :meth:`step` and :meth:`reset` methods.
+
         Args:
             env: The environment to wrap
         """
@@ -33,7 +35,8 @@ class GoalEnvWrapper(GoalEnv):
         self._metadata: Optional[dict] = None
 
     def __getattr__(self, name):
-        """Returns an attribute with ``name``, unless ``name`` starts with an underscore."""
+        """Returns an attribute with ``name``, unless ``name`` starts with an
+        underscore."""
         if name.startswith("_"):
             raise AttributeError(f"accessing private attribute '{name}' is prohibited")
         return getattr(self._gym_env, name)

@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,11 +29,11 @@ class iLQRConfig(DDPConfig):
 
 
 class iLQR(DDP):
-    '''iterative LQR (Linear Quadratic Regulator) algorithm.
-    This class implements the iterative Linear Quadratic Requlator (iLQR) algorithm
-    proposed by Y. Tassa, et al. in the paper:
-    "Synthesis and Stabilization of Complex Behaviors through Online Trajectory Optimization"
-    For details see: https://homes.cs.washington.edu/~todorov/papers/TassaIROS12.pdf
+    """Iterative LQR (Linear Quadratic Regulator) algorithm. This class
+    implements the iterative Linear Quadratic Requlator (iLQR) algorithm
+    proposed by Y. Tassa, et al. in the paper: "Synthesis and Stabilization of
+    Complex Behaviors through Online Trajectory Optimization" For details see:
+    https://homes.cs.washington.edu/~todorov/papers/TassaIROS12.pdf.
 
     Args:
         env_or_env_info\
@@ -45,7 +45,7 @@ class iLQR(DDP):
             cost function to optimize the trajectory
         config (:py:class:`iLQRConfig <nnabla_rl.algorithmss.ilqr.iLQRConfig>`):
             the parameter for iLQR controller
-    '''
+    """
     _config: iLQRConfig
 
     def __init__(self,

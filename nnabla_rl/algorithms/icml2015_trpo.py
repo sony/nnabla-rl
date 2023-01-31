@@ -37,8 +37,7 @@ from nnabla_rl.utils.data import marshal_experiences
 
 @dataclass
 class ICML2015TRPOConfig(AlgorithmConfig):
-    '''
-    List of configurations for ICML2015TRPO algorithm
+    """List of configurations for ICML2015TRPO algorithm.
 
     Args:
         gamma (float): Discount factor of rewards. Defaults to 0.99.
@@ -55,7 +54,7 @@ class ICML2015TRPOConfig(AlgorithmConfig):
         maximum_backtrack_numbers (int): Maximum backtrack numbers of linesearch. Defaults to 10.
         conjugate_gradient_damping (float): Damping size of conjugate gradient method. Defaults to 0.1.
         conjugate_gradient_iterations (int): Number of iterations of conjugate gradient method. Defaults to 20.
-    '''
+    """
     gamma: float = 0.99
     num_steps_per_iteration: int = int(1e5)
     batch_size: int = int(1e5)
@@ -66,11 +65,10 @@ class ICML2015TRPOConfig(AlgorithmConfig):
     conjugate_gradient_iterations: int = 10
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_between(self.batch_size, 0, self.num_steps_per_iteration, 'batch_size')
         self._assert_positive(self.num_steps_per_iteration, 'num_steps_per_iteration')
@@ -120,7 +118,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class ICML2015TRPO(Algorithm):
-    '''Trust Region Policy Optimiation method with Single Path algorithm.
+    """Trust Region Policy Optimiation method with Single Path algorithm.
 
     This class implements the Trust Region Policy Optimiation (TRPO)
     with Single Path algorithm proposed by J. Schulman, et al. in the paper: "Trust Region Policy Optimization"
@@ -136,7 +134,7 @@ class ICML2015TRPO(Algorithm):
             builder of policy models
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

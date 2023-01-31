@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,8 +31,7 @@ from nnabla_rl.utils.misc import sync_model
 
 @dataclass
 class MunchausenDQNConfig(DQNConfig):
-    """
-    List of configurations for Munchausen DQN algorithm
+    """List of configurations for Munchausen DQN algorithm.
 
     Args:
         learning_rate (float): learning rate which is set to all solvers. \
@@ -56,11 +55,10 @@ class MunchausenDQNConfig(DQNConfig):
     clipping_value: float = -1
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check set values are in valid range.
-
-        '''
+        """
         super().__post_init__()
         self._assert_positive(self.max_explore_steps, 'max_explore_steps')
         self._assert_negative(self.clipping_value, 'clipping_value')
@@ -76,7 +74,7 @@ class DefaultQSolverBuilder(SolverBuilder):
 
 
 class MunchausenDQN(DQN):
-    '''Munchausen-DQN algorithm.
+    """Munchausen-DQN algorithm.
 
     This class implements the Munchausen-DQN (Munchausen Deep Q Network) algorithm
     proposed by N. Vieillard, et al. in the paper: "Munchausen Reinforcement Learning"
@@ -96,7 +94,7 @@ class MunchausenDQN(DQN):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

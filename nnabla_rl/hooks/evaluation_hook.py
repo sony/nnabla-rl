@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,7 @@ from nnabla_rl.utils.evaluator import EpisodicEvaluator
 
 
 class EvaluationHook(Hook):
-    '''
-    Hook to run evaluation during training.
+    """Hook to run evaluation during training.
 
     Args:
         env (gym.Env): Environment to run the evaluation
@@ -32,7 +31,7 @@ class EvaluationHook(Hook):
         timing (int): Evaluation interval. Defaults to 1000 iteration.
         writer (nnabla_rl.writer.Writer, optional): Writer instance to save/print the evaluation results.
             Defaults to None.
-    '''
+    """
 
     def __init__(self, env, evaluator=EpisodicEvaluator(), timing=1000, writer=None):
         super(EvaluationHook, self).__init__(timing=timing)

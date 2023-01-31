@@ -17,8 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Simplified grasping environment using PyBullet.
-"""
+"""Simplified grasping environment using PyBullet."""
 
 from __future__ import absolute_import, division, print_function
 
@@ -46,8 +45,7 @@ else:
 
 
 class KukaGraspingProceduralEnv(gym.Env):
-    """Simplified grasping environment with discrete and continuous actions.
-    """
+    """Simplified grasping environment with discrete and continuous actions."""
 
     def __init__(
             self,
@@ -73,6 +71,7 @@ class KukaGraspingProceduralEnv(gym.Env):
             max_num_training_models=900,
             max_num_test_models=100):
         """Creates a KukaGraspingEnv.
+
         Args:
           block_random: How much randomness to use in positioning blocks.
           camera_random: How much randomness to use in positioning camera.
@@ -176,8 +175,7 @@ class KukaGraspingProceduralEnv(gym.Env):
         self.viewer = None
 
     def setup(self):
-        """Sets up the robot + tray + objects.
-        """
+        """Sets up the robot + tray + objects."""
         test = self._test
         if not self._urdf_list:  # Load from procedural random objects.
             if not self._object_filenames:
@@ -286,6 +284,7 @@ class KukaGraspingProceduralEnv(gym.Env):
 
     def _get_simple_observation(self):
         """Observations for simplified observation space.
+
         Returns:
           Numpy array containing location and orientation of nearest block and
           location of end-effector.
@@ -335,6 +334,7 @@ class KukaGraspingProceduralEnv(gym.Env):
 
     def _step_continuous(self, action):
         """Applies a continuous velocity-control action.
+
         Args:
           action: 5-vector parameterizing XYZ offset, vertical angle offset
           (radians), and grasp angle (radians).
@@ -415,6 +415,7 @@ class KukaGraspingProceduralEnv(gym.Env):
 
     def _get_random_objects(self, num_objects, test, replace=True):
         """Randomly choose an object urdf from the random_urdfs directory.
+
         Args:
           num_objects: Number of graspable objects.
           test: Whether to use the training or test pool of objects.

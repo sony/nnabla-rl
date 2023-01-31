@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,9 +33,7 @@ class TestMunchausenIQN(object):
         assert m_iqn.__name__ == 'MunchausenIQN'
 
     def test_continuous_action_env_unsupported(self):
-        '''
-        Check that error occurs when training on continuous action env
-        '''
+        """Check that error occurs when training on continuous action env."""
 
         dummy_env = E.DummyContinuous()
         config = A.MunchausenIQNConfig()
@@ -43,9 +41,7 @@ class TestMunchausenIQN(object):
             A.MunchausenIQN(dummy_env, config=config)
 
     def test_run_online_training(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
 
         dummy_env = E.DummyDiscreteImg()
         config = A.MunchausenIQNConfig()
@@ -58,9 +54,7 @@ class TestMunchausenIQN(object):
         m_iqn.train_online(dummy_env, total_iterations=5)
 
     def test_run_online_training_multistep(self):
-        '''
-        Check that no error occurs when calling online training
-        '''
+        """Check that no error occurs when calling online training."""
 
         dummy_env = E.DummyDiscreteImg()
         config = A.MunchausenIQNConfig()
@@ -133,9 +127,8 @@ class TestMunchausenIQN(object):
             A.MunchausenIQNConfig(clipping_value=100)
 
     def test_latest_iteration_state(self):
-        '''
-        Check that latest iteration state has the keys and values we expected
-        '''
+        """Check that latest iteration state has the keys and values we
+        expected."""
 
         dummy_env = E.DummyDiscreteImg()
         m_iqn = A.MunchausenIQN(dummy_env)

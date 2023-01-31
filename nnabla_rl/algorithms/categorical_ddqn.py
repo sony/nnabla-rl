@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ class CategoricalDDQNConfig(CategoricalDQNConfig):
 
 
 class CategoricalDDQN(CategoricalDQN):
-    '''Categorical Double DQN algorithm.
+    """Categorical Double DQN algorithm.
 
     This class implements the Categorical Double DQN algorithm introduced by M. Bellemare, et al.
     in the paper: "Rainbow: Combining Improvements in Deep Reinforcement Learning"
@@ -56,7 +56,7 @@ class CategoricalDDQN(CategoricalDQN):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
     def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
                  config: CategoricalDQNConfig = CategoricalDDQNConfig(),

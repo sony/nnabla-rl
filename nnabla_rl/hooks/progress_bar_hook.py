@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,12 +19,11 @@ from nnabla_rl.hook import Hook
 
 
 class ProgressBarHook(Hook):
-    '''
-    Hook to show progress bar.
+    """Hook to show progress bar.
 
     Args:
         timing (int): Updating interval. Defaults to 1 iteration.
-    '''
+    """
 
     def __init__(self, timing: int = 1):
         super(ProgressBarHook, self).__init__(timing=timing)

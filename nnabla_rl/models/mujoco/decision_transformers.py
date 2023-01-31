@@ -93,8 +93,7 @@ class MujocoDecisionTransformer(DeterministicDecisionTransformer):
                 return NPF.affine(rtg, n_outmaps=self._embedding_dim, base_axis=2)
 
     def _embed_t(self, timesteps: nn.Variable, T: int) -> nn.Variable:
-        '''T stands for max timestep among trajectories in the dataset
-        '''
+        """T stands for max timestep among trajectories in the dataset."""
         with nn.parameter_scope("t_embedding"):
             embedding = NPF.embed(timesteps, n_inputs=T, n_features=self._embedding_dim)
             return NF.reshape(embedding, shape=(embedding.shape[0], embedding.shape[1], -1))

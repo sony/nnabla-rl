@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,12 +18,11 @@ from nnabla_rl.utils.serializers import save_snapshot
 
 
 class SaveSnapshotHook(Hook):
-    '''
-    Hook to save the training snapshot of current algorithm.
+    """Hook to save the training snapshot of current algorithm.
 
     Args:
         timing (int): Saving interval. Defaults to 1000 iteration.
-    '''
+    """
 
     def __init__(self, outdir, timing=1000):
         super(SaveSnapshotHook, self).__init__(timing=timing)

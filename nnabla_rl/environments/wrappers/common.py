@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ from nnabla_rl.logger import logger
 
 
 class Float32ObservationEnv(gym.ObservationWrapper):
-
     def __init__(self, env):
         super(Float32ObservationEnv, self).__init__(env)
         self.dtype = np.float32
@@ -65,7 +64,6 @@ class Float32RewardEnv(gym.RewardWrapper):
 
 
 class Float32ActionEnv(gym.ActionWrapper):
-
     def __init__(self, env):
         super(Float32ActionEnv, self).__init__(env)
         self.dtype = np.float32
@@ -78,7 +76,6 @@ class Float32ActionEnv(gym.ActionWrapper):
 
 
 class Int32ActionEnv(gym.ActionWrapper):
-
     def __init__(self, env):
         super(Int32ActionEnv, self).__init__(env)
         self.dtype = np.int32
@@ -160,9 +157,11 @@ class PrintEpisodeResultEnv(gym.Wrapper):
 
 
 class TimestepAsStateEnv(gym.Wrapper):
-    '''Timestep as state environment wrapper.
-    This wrapper adds the timestep to original state. The concatenated state provides in TupleState type.
-    '''
+    """Timestep as state environment wrapper.
+
+    This wrapper adds the timestep to original state. The concatenated
+    state provides in TupleState type.
+    """
 
     def __init__(self, env):
         super(TimestepAsStateEnv, self).__init__(env)
@@ -186,9 +185,11 @@ class TimestepAsStateEnv(gym.Wrapper):
 
 
 class HWCToCHWEnv(gym.ObservationWrapper):
-    '''HWC to CHW env wrapper.
-    This wrapper changes the order of the image, from (height, width, channel) to (channel, height, width)
-    '''
+    """HWC to CHW env wrapper.
+
+    This wrapper changes the order of the image, from (height, width,
+    channel) to (channel, height, width)
+    """
 
     def __init__(self, env):
         gym.ObservationWrapper.__init__(self, env)

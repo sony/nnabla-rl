@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,8 +44,8 @@ class Node(Generic[T]):
 
 
 class BinaryTree(Generic[T]):
-    """ Common Binary Tree Class
-    SumTree and MinTree is derived from this class.
+    """Common Binary Tree Class SumTree and MinTree is derived from this class.
+
     Args:
         capacity (int): the maximum number of saved data.
         init_node_value (T): the initial value of node.
@@ -122,8 +122,7 @@ class SumTree(BinaryTree[float]):
         super(SumTree, self).__init__(capacity, init_node_value=0.0)
 
     def get_absolute_index_from_query(self, query: float):
-        """ Sample absolute index from query value
-        """
+        """Sample absolute index from query value."""
         if query < 0 or query > self.sum():
             raise ValueError(f"You must use value between [0, {self.sum()}] as query")
         node = self._tree[0]

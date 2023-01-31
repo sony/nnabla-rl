@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,26 +17,24 @@ import os
 
 
 def file_exists(path):
-    '''
-    Check file existence on given path
+    """Check file existence on given path.
 
     Args:
         path (str or pathlib.Path): Path of the file to check existence
     Returns:
         file_existence (bool): True if file exists otherwise False
-    '''
+    """
     return os.path.exists(path)
 
 
 def create_dir_if_not_exist(outdir):
-    '''
-    Check directory existence and creates new directory if not exist
+    """Check directory existence and creates new directory if not exist.
 
     Args:
         outdir (str or pathlib.Path): Path of the file to create directory
     Raises:
         RuntimeError: File exists in outdir but it is not a directory
-    '''
+    """
     if file_exists(outdir):
         if not os.path.isdir(outdir):
             raise RuntimeError('{} is not a directory'.format(outdir))
@@ -46,25 +44,23 @@ def create_dir_if_not_exist(outdir):
 
 
 def read_text_from_file(file_path):
-    '''
-    Read given file as text
+    """Read given file as text.
 
     Args:
         file_path (str or pathlib.Path): Path of the file to read data
     Returns:
         data (str): Text read from the file
-    '''
+    """
     with open(file_path, 'r') as f:
         return f.read()
 
 
 def write_text_to_file(file_path, data):
-    '''
-    Write given text data to file
+    """Write given text data to file.
 
     Args:
         file_path (str or pathlib.Path): Path of the file to write data
         data (str): Text to write to the file
-    '''
+    """
     with open(file_path, 'w') as f:
         f.write(data)

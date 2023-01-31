@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,11 +26,11 @@ from nnabla_rl.models.policy import StochasticPolicy
 
 
 class REINFORCEDiscretePolicy(StochasticPolicy):
-    '''
-    REINFORCE policy for classic control discrete environment.
+    """REINFORCE policy for classic control discrete environment.
+
     This network outputs the policy distribution.
     See: http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-5.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
@@ -56,11 +56,11 @@ class REINFORCEDiscretePolicy(StochasticPolicy):
 
 
 class REINFORCEContinousPolicy(StochasticPolicy):
-    '''
-    REINFORCE policy for classic control continous environment.
+    """REINFORCE policy for classic control continous environment.
+
     This network outputs the policy distribution.
     See: http://rail.eecs.berkeley.edu/deeprlcourse/static/slides/lec-5.pdf
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

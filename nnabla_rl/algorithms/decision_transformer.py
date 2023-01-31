@@ -38,8 +38,7 @@ DecisionTransformerModel = Union[StochasticDecisionTransformer, DeterministicDec
 
 @dataclass
 class DecisionTransformerConfig(AlgorithmConfig):
-    """
-    List of configurations for DecisionTransformer algorithm
+    """List of configurations for DecisionTransformer algorithm.
 
     Args:
         learning_rate (float): learning rate which is set to all solvers. \
@@ -66,11 +65,10 @@ class DecisionTransformerConfig(AlgorithmConfig):
     reward_scale: float = 1.0
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check set values are in valid range.
-
-        '''
+        """
         self._assert_positive(self.learning_rate, 'learning_rate')
         self._assert_positive(self.batch_size, 'batch_size')
         self._assert_positive(self.context_length, 'context_length')
@@ -104,7 +102,7 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class DecisionTransformer(Algorithm):
-    '''DecisionTransformer algorithm.
+    """DecisionTransformer algorithm.
 
     This class implements the DecisionTransformer algorithm
     proposed by L. Chen, et al. in the paper: "Decision Transformer: Reinforcement Learning via Sequence Modeling"
@@ -118,7 +116,7 @@ class DecisionTransformer(Algorithm):
             the parameter for DecisionTransformer training
         transformer_builder (:py:class:`ModelBuilder <nnabla_rl.builders.ModelBuilder>`): builder of transformer model
         solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder of transformer solver
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

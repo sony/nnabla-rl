@@ -38,8 +38,7 @@ from nnabla_rl.utils.misc import create_variable, sync_model
 
 @dataclass
 class BEARConfig(AlgorithmConfig):
-    '''BEARConfig
-    List of configurations for BEAR algorithm.
+    """BEARConfig List of configurations for BEAR algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -64,7 +63,7 @@ class BEARConfig(AlgorithmConfig):
         warmup_iterations (int): Number of iterations until start updating the policy. Defaults to 20000
         use_mean_for_eval (bool): Use mean value instead of best action among the samples for evaluation.\
             Defaults to False.
-    '''
+    """
     gamma: float = 0.99
     learning_rate: float = 1e-3
     batch_size: int = 100
@@ -82,11 +81,10 @@ class BEARConfig(AlgorithmConfig):
     use_mean_for_eval: bool = False
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check set values are in valid range.
-
-        '''
+        """
         if not ((0.0 <= self.tau) & (self.tau <= 1.0)):
             raise ValueError('tau must lie between [0.0, 1.0]')
         if not ((0.0 <= self.gamma) & (self.gamma <= 1.0)):
@@ -142,7 +140,7 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class BEAR(Algorithm):
-    '''Bootstrapping Error Accumulation Reduction (BEAR) algorithm.
+    """Bootstrapping Error Accumulation Reduction (BEAR) algorithm.
 
     This class implements the Bootstrapping Error Accumulation Reduction (BEAR) algorithm
     proposed by A. Kumar, et al. in the paper: "Stabilizing Off-Policy Q-learning via Bootstrapping Error Reduction"
@@ -170,7 +168,7 @@ class BEAR(Algorithm):
             builder for variational auto encoder solvers
         lagrange_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`):
             builder for lagrange multiplier solver
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

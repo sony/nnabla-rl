@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,11 +22,10 @@ from nnabla_rl.models.model import Model
 
 
 class QFunction(Model, metaclass=ABCMeta):
-    """Base QFunction Class
-    """
+    """Base QFunction Class."""
     @abstractmethod
     def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
-        """Compute Q-value for given state and action
+        """Compute Q-value for given state and action.
 
         Args:
             s (nn.Variable): state variable
@@ -38,7 +37,7 @@ class QFunction(Model, metaclass=ABCMeta):
         raise NotImplementedError
 
     def all_q(self, s: nn.Variable) -> nn.Variable:
-        """Compute Q-values for each action for given state
+        """Compute Q-values for each action for given state.
 
         Args:
             s (nn.Variable): state variable
@@ -49,7 +48,7 @@ class QFunction(Model, metaclass=ABCMeta):
         raise NotImplementedError
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
-        """Compute maximum Q-value for given state
+        """Compute maximum Q-value for given state.
 
         Args:
             s (nn.Variable): state variable
@@ -60,7 +59,7 @@ class QFunction(Model, metaclass=ABCMeta):
         raise NotImplementedError
 
     def argmax_q(self, s: nn.Variable) -> nn.Variable:
-        """Compute the action which maximizes the Q-value for given state
+        """Compute the action which maximizes the Q-value for given state.
 
         Args:
             s (nn.Variable): state variable
@@ -72,8 +71,7 @@ class QFunction(Model, metaclass=ABCMeta):
 
 
 class DiscreteQFunction(QFunction):
-    """Base QFunction Class for discrete action environment
-    """
+    """Base QFunction Class for discrete action environment."""
     @abstractmethod
     def all_q(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError
@@ -96,17 +94,16 @@ class DiscreteQFunction(QFunction):
 
 
 class ContinuousQFunction(QFunction):
-    """Base QFunction Class for continuous action environment
-    """
+    """Base QFunction Class for continuous action environment."""
     pass
 
 
 class FactoredContinuousQFunction(ContinuousQFunction):
-    """Base FactoredContinuousQFunction Class for continuous action environment
-    """
+    """Base FactoredContinuousQFunction Class for continuous action
+    environment."""
     @abstractmethod
     def factored_q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
-        """Compute factored Q-value for given state
+        """Compute factored Q-value for given state.
 
         Args:
             s (nn.Variable): state variable
@@ -120,7 +117,7 @@ class FactoredContinuousQFunction(ContinuousQFunction):
     @property
     @abstractmethod
     def num_factors(self) -> int:
-        """Return the number of output dimensions
+        """Return the number of output dimensions.
 
         Returns:
             nn.Variable: output dimensions

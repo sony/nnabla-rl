@@ -41,8 +41,7 @@ from nnabla_rl.utils.reproductions import set_global_seed
 
 @dataclass
 class A2CConfig(AlgorithmConfig):
-    """
-    List of configurations for A2C algorithm
+    """List of configurations for A2C algorithm.
 
     Args:
         gamma (float): discount factor of rewards. Defaults to 0.99.
@@ -82,11 +81,10 @@ class A2CConfig(AlgorithmConfig):
     learning_rate_decay_iterations: int = 50000000
 
     def __post_init__(self):
-        '''__post_init__
+        """__post_init__
 
         Check the set values are in valid range.
-
-        '''
+        """
         self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
         self._assert_between(self.decay, 0.0, 1.0, 'decay')
         self._assert_positive(self.n_steps, 'n_steps')
@@ -132,7 +130,7 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class A2C(Algorithm):
-    '''Advantage Actor-Critic (A2C) algorithm implementation.
+    """Advantage Actor-Critic (A2C) algorithm implementation.
 
     This class implements the Advantage Actor-Critic (A2C) algorithm.
     A2C is the synchronous version of A3C, Asynchronous Advantage Actor-Critic.
@@ -152,7 +150,7 @@ class A2C(Algorithm):
             builder of policy models
         policy_solver_builder (:py:class:`SolverBuilder <nnabla_rl.builders.SolverBuilder>`): builder for policy solvers
         config (:py:class:`A2CConfig <nnabla_rl.algorithms.a2c.A2CConfig>`): configuration of A2C algorithm
-    '''
+    """
 
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar

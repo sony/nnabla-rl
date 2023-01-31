@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,9 +23,7 @@ from nnabla_rl.hook import Hook
 class RenderHook(Hook):
     def __init__(self, env):
         super(RenderHook, self).__init__(timing=1)
-        '''
-        Hook to render environment during training.
-        '''
+        """Hook to render environment during training."""
         self._env = env
         self._display = Display()
         self._display.start()
