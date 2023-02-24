@@ -33,7 +33,6 @@ class TestDecisionTransformer(object):
 
     def test_run_online_training(self):
         """Check that error occurs when calling online training."""
-
         dummy_env = E.DummyDiscreteImg(max_episode_steps=10)
 
         batch_size = 5
@@ -46,7 +45,6 @@ class TestDecisionTransformer(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         dummy_env = E.DummyDiscreteImg(max_episode_steps=3)
 
         trajectory_num = 3

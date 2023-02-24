@@ -32,7 +32,6 @@ class TestTRPO():
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
-
         dummy_env = E.DummyDiscrete()
         with pytest.raises(Exception):
             A.ATRPO(dummy_env)

@@ -15,8 +15,11 @@
 
 from typing import Optional, Tuple
 
+import numpy as np
+
 import nnabla as nn
 import nnabla.functions as NF
+import nnabla.initializer as NI
 import nnabla.parametric_functions as NPF
 import nnabla_rl.initializers as RI
 from nnabla_rl.models.policy import DeterministicPolicy
@@ -158,6 +161,40 @@ class HERQFunction(ContinuousQFunction):
             pred_q_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=1)
             q = NPF.affine(h, n_outmaps=1, name='pred_q', w_init=pred_q_init)
         return q
+
+    def max_q(self, s: nn.Variable) -> nn.Variable:
+        assert self._optimal_policy, 'Optimal policy is not set!'
+        optimal_action = self._optimal_policy.pi(s)
+        return self.q(s, optimal_action)
+
+
+class XQLQFunction(ContinuousQFunction):
+    """QFunction model used in the training of XQL.
+
+    Used by D. Garg et al. for experiments in mujoco environment.
+    Same as the SACQFunction except for the initializer.
+    See: https://github.com/Div99/XQL
+    """
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _optimal_policy: Optional[DeterministicPolicy]
+
+    def __init__(self, scope_name, optimal_policy: Optional[DeterministicPolicy] = None):
+        super(XQLQFunction, self).__init__(scope_name)
+        self._optimal_policy = optimal_policy
+
+    def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        w_init = NI.OrthogonalInitializer(np.sqrt(2.0))
+        with nn.parameter_scope(self.scope_name):
+            h = NF.concatenate(s, a)
+            h = NPF.affine(h, n_outmaps=256, name="linear1", w_init=w_init)
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=256, name="linear2", w_init=w_init)
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=1, name="linear3", w_init=w_init)
+        return h
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
         assert self._optimal_policy, 'Optimal policy is not set!'

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -170,11 +170,12 @@ class DummyMujocoEnv(AbstractDummyEnv):
 
     def get_dataset(self):
         dataset = {}
-        datasize = 100
+        datasize = 2000
         dataset['observations'] = np.stack([self.observation_space.sample() for _ in range(datasize)], axis=0)
         dataset['actions'] = np.stack([self.action_space.sample() for _ in range(datasize)], axis=0)
         dataset['rewards'] = np.random.randn(datasize, 1)
-        dataset['terminals'] = np.zeros((datasize, 1))
+        dataset['terminals'] = np.random.randint(2, size=(datasize, 1))
+        dataset['timeouts'] = np.zeros((datasize, 1))
         return dataset
 
 

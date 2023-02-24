@@ -50,6 +50,7 @@ from nnabla_rl.algorithms.sac import SAC, SACConfig
 from nnabla_rl.algorithms.sacd import SACD, SACDConfig
 from nnabla_rl.algorithms.td3 import TD3, TD3Config
 from nnabla_rl.algorithms.trpo import TRPO, TRPOConfig
+from nnabla_rl.algorithms.xql import XQL, XQLConfig
 
 # Do NOT manipulate this dictionary directly.
 # Use register_algorithm() instead.
@@ -114,3 +115,4 @@ register_algorithm(ICML2015TRPO, ICML2015TRPOConfig)
 register_algorithm(TRPO, TRPOConfig)
 register_algorithm(GAIL, GAILConfig)
 register_algorithm(ICRA2018QtOpt, ICRA2018QtOptConfig)
+register_algorithm(XQL, XQLConfig)

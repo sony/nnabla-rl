@@ -32,7 +32,6 @@ class TestREINFORCE(object):
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
-
         dummy_env = E.DummyContinuous()
         dummy_env = EpisodicEnv(dummy_env)
         reinforce = A.REINFORCE(dummy_env)
@@ -40,7 +39,6 @@ class TestREINFORCE(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         dummy_env = E.DummyDiscrete()
         reinforce = A.REINFORCE(dummy_env)
 

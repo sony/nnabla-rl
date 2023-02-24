@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,12 +29,15 @@ from nnabla_rl.utils.misc import create_variable, create_variables
 
 @dataclass
 class SquaredTDQFunctionTrainerConfig(MultiStepTrainerConfig):
+    loss_type: str = 'squared'
     reduction_method: str = 'mean'
     grad_clip: Optional[tuple] = None
     q_loss_scalar: float = 1.0
     reward_dimension: int = 1
+    huber_delta: Optional[float] = None
 
     def __post_init__(self):
+        self._assert_one_of(self.loss_type, ['squared', 'huber'], 'loss_type')
         self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
         if self.grad_clip is not None:
             self._assert_ascending_order(self.grad_clip, 'grad_clip')
@@ -149,7 +152,13 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
             minimum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_min))
             maximum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_max))
             td_error = NF.clip_grad_by_value(td_error, minimum, maximum)
-        squared_td_error = training_variables.weight * NF.pow_scalar(td_error, 2.0)
+        if self._config.loss_type == 'squared':
+            squared_td_error = training_variables.weight * NF.pow_scalar(td_error, 2.0)
+        elif self._config.loss_type == 'huber':
+            zero = nn.Variable.from_numpy_array(np.zeros(shape=td_error.shape))
+            squared_td_error = training_variables.weight * NF.huber_loss(td_error, zero, delta=self._config.huber_delta)
+        else:
+            raise RuntimeError
         if self._config.reduction_method == 'mean':
             q_loss += self._config.q_loss_scalar * NF.mean(squared_td_error)
         elif self._config.reduction_method == 'sum':

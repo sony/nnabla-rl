@@ -132,7 +132,6 @@ class TestPPO(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         dummy_env = E.DummyDiscreteImg()
         ppo = A.PPO(dummy_env)
 

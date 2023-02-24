@@ -33,7 +33,6 @@ class TestDRQN(object):
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
-
         dummy_env = E.DummyContinuous()
         config = A.DRQNConfig()
         with pytest.raises(Exception):

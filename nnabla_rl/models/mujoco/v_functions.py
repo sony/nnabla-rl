@@ -127,3 +127,28 @@ class ATRPOVFunction(VFunction):
                            w_init=RI.HeUniform(inmaps=64, outmaps=1, factor=0.01/3.),
                            b_init=NI.ConstantInitializer(0.))
         return h
+
+
+class XQLVFunction(VFunction):
+    """VFunciton model used in the training of XQL.
+
+    Used by D. Garg et al. for experiments in mujoco environment.
+    See: https://github.com/Div99/XQL
+    """
+
+    def v(self, s: nn.Variable) -> nn.Variable:
+        w_init = NI.OrthogonalInitializer(np.sqrt(2.0))
+        with nn.parameter_scope(self.scope_name):
+            with nn.parameter_scope('linear1'):
+                h = NPF.affine(s, n_outmaps=256, w_init=w_init)
+            with nn.parameter_scope('layer_norm1'):
+                h = NPF.layer_normalization(h, eps=1e-6)
+            h = NF.relu(x=h)
+            with nn.parameter_scope('linear2'):
+                h = NPF.affine(h, n_outmaps=256, w_init=w_init)
+            with nn.parameter_scope('layer_norm2'):
+                h = NPF.layer_normalization(h, eps=1e-6)
+            h = NF.relu(x=h)
+            with nn.parameter_scope('linear3'):
+                h = NPF.affine(h, n_outmaps=1, w_init=w_init)
+        return h

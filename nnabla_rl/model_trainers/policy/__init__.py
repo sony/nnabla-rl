@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,3 +21,5 @@ from nnabla_rl.model_trainers.policy.ppo_policy_trainer import PPOPolicyTrainer,
 from nnabla_rl.model_trainers.policy.soft_policy_trainer import SoftPolicyTrainer, SoftPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.reinforce_policy_trainer import REINFORCEPolicyTrainer, REINFORCEPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.trpo_policy_trainer import TRPOPolicyTrainer, TRPOPolicyTrainerConfig  # noqa
+from nnabla_rl.model_trainers.policy.xql_forward_policy_trainer import XQLForwardPolicyTrainer, XQLForwardPolicyTrainerConfig  # noqa
+from nnabla_rl.model_trainers.policy.xql_reverse_policy_trainer import XQLReversePolicyTrainer, XQLReversePolicyTrainerConfig  # noqa

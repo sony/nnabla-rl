@@ -358,3 +358,14 @@ TRPO (ICML 2015 version)
 .. autoclass:: nnabla_rl.algorithms.icml2015_trpo.ICML2015TRPO
    :members:
    :show-inheritance:
+
+XQL (eXtreme Q-Learning)
+=====
+.. autoclass:: nnabla_rl.algorithms.xql.XQLConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.xql.XQL
+   :members:
+   :show-inheritance:
+

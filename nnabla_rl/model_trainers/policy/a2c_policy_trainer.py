@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Sequence, Union, cast
+from typing import Dict, Sequence, Union, cast
 
 import numpy as np
 
@@ -24,13 +24,12 @@ from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTraine
                                                     TrainingVariables)
 from nnabla_rl.models import Model, StochasticPolicy
 from nnabla_rl.utils.data import set_data_to_variable
-from nnabla_rl.utils.misc import clip_grad_by_global_norm, create_variable
+from nnabla_rl.utils.misc import create_variable
 
 
 @dataclass
 class A2CPolicyTrainerConfig(TrainerConfig):
     entropy_coefficient: float = 0.01
-    max_grad_norm: Optional[float] = 0.5
 
 
 class A2CPolicyTrainer(ModelTrainer):
@@ -65,8 +64,6 @@ class A2CPolicyTrainer(ModelTrainer):
         self._pi_loss.forward()
         self._pi_loss.backward()
         for solver in solvers.values():
-            if self._config.max_grad_norm is not None:
-                clip_grad_by_global_norm(solver, self._config.max_grad_norm)
             solver.update()
 
         trainer_state = {}

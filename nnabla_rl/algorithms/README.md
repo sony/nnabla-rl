@@ -42,6 +42,7 @@ nnabla-rl offers various (deep) reinforcement learning and optimal control algor
 |[TD3](https://arxiv.org/abs/1802.09477)|:heavy_check_mark:|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|
 |[TRPO](https://arxiv.org/abs/1502.05477)|:heavy_check_mark:|:x:|:heavy_check_mark:|(We will support discrete action in the future)|:x:|
 |[TRPO (ICML 2015 version)](https://arxiv.org/abs/1502.05477)|:heavy_check_mark:|:x:|:heavy_check_mark:|:heavy_check_mark:|:x:|
+|[XQL](https://arxiv.org/abs/2301.02328)|:x:|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|
 
 <sup>*</sup>May require special treatment to train with RNN layers.
 

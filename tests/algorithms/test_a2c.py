@@ -32,7 +32,6 @@ class TestA2C(object):
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
-
         dummy_env = E.DummyContinuous()
         config = A.A2CConfig()
         with pytest.raises(Exception):
@@ -52,7 +51,6 @@ class TestA2C(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         dummy_env = E.DummyDiscreteImg()
         a2c = A.A2C(dummy_env)
 

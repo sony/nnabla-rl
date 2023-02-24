@@ -35,11 +35,13 @@ from nnabla_rl.models.reward_function import RewardFunction  # noqa
 from nnabla_rl.models.encoder import Encoder, VariationalAutoEncoder  # noqa
 
 from nnabla_rl.models.mujoco.policies import TD3Policy, SACPolicy, BEARPolicy, TRPOPolicy  # noqa
-from nnabla_rl.models.mujoco.q_functions import TD3QFunction, SACQFunction, SACDQFunction, HERQFunction  # noqa
+from nnabla_rl.models.mujoco.q_functions import TD3QFunction, SACQFunction, SACDQFunction, HERQFunction, XQLQFunction  # noqa
 from nnabla_rl.models.mujoco.decision_transformers import MujocoDecisionTransformer  # noqa
 from nnabla_rl.models.mujoco.distributional_functions import QRSACQuantileDistributionFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import SACVFunction, TRPOVFunction, ATRPOVFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import PPOVFunction as PPOMujocoVFunction  # noqa
+from nnabla_rl.models.mujoco.v_functions import GAILVFunction  # noqa
+from nnabla_rl.models.mujoco.v_functions import XQLVFunction  # noqa
 from nnabla_rl.models.mujoco.encoders import UnsquashedVariationalAutoEncoder, BCQVariationalAutoEncoder  # noqa
 from nnabla_rl.models.mujoco.perturbators import BCQPerturbator  # noqa
 from nnabla_rl.models.mujoco.policies import ICML2015TRPOPolicy as ICML2015TRPOMujocoPolicy  # noqa
@@ -47,7 +49,7 @@ from nnabla_rl.models.mujoco.policies import PPOPolicy as PPOMujocoPolicy  # noq
 from nnabla_rl.models.mujoco.policies import GAILPolicy  # noqa
 from nnabla_rl.models.mujoco.policies import HERPolicy  # noqa
 from nnabla_rl.models.mujoco.policies import ATRPOPolicy  # noqa
-from nnabla_rl.models.mujoco.v_functions import GAILVFunction  # noqa
+from nnabla_rl.models.mujoco.policies import XQLPolicy  # noqa
 from nnabla_rl.models.mujoco.reward_functions import GAILDiscriminator  # noqa
 from nnabla_rl.models.atari.decision_transformers import AtariDecisionTransformer  # noqa
 from nnabla_rl.models.atari.policies import PPOPolicy as PPOAtariPolicy  # noqa

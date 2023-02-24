@@ -233,7 +233,6 @@ class TestHER(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         batch_size = 5
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
         dummy_env = GoalConditionedTupleObservationEnv(dummy_env)

@@ -41,7 +41,6 @@ class TestGAIL():
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
-
         dummy_env = E.DummyDiscrete()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
         dummy_buffer = self._create_dummy_buffer(dummy_env, batch_size=15)

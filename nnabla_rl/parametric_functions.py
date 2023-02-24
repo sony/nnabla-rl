@@ -229,7 +229,6 @@ def lstm_cell(x, h, c, state_size, w_init=None, b_init=None, fix_parameters=Fals
     Returns:
         :class:`~nnabla.Variable`
     """
-
     xh = NF.concatenate(*(x, h), axis=base_axis)
     iofc = NPF.affine(xh, (4, state_size), base_axis=base_axis, w_init=w_init,
                       b_init=b_init, fix_parameters=fix_parameters)

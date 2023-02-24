@@ -37,6 +37,7 @@ from nnabla_rl.utils.data import marshal_experiences, unzip
 from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
                                           mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
 from nnabla_rl.utils.reproductions import set_global_seed
+from nnabla_rl.utils.solver_wrappers import AutoClipGradByGlobalNorm
 
 
 @dataclass
@@ -61,7 +62,7 @@ class A2CConfig(AlgorithmConfig):
         timelimit_as_terminal (bool): Treat as done if the environment reaches the \
             `timelimit <https://github.com/openai/gym/blob/master/gym/wrappers/time_limit.py>`_.\
             Defaults to False.
-        max_grad_norm (float): threshold value for clipping gradient. Defaults to 0.5.
+        max_grad_norm (Optional[float]): threshold value for clipping gradient. Defaults to 0.5.
         seed (int): base seed of random number generator used by the actors. Defaults to 1.
         learning_rate_decay_iterations (int): learning rate will be decreased lineary to 0 till this iteration number.
             If 0 or negative, learning rate will be kept fixed. Defaults to 50000000.
@@ -124,9 +125,13 @@ class DefaultSolverBuilder(SolverBuilder):
                      env_info: EnvironmentInfo,
                      algorithm_config: A2CConfig,
                      **kwargs) -> nn.solver.Solver:
-        return NS.RMSprop(lr=algorithm_config.learning_rate,
-                          decay=algorithm_config.decay,
-                          eps=algorithm_config.epsilon)
+        solver = NS.RMSprop(lr=algorithm_config.learning_rate,
+                            decay=algorithm_config.decay,
+                            eps=algorithm_config.epsilon)
+        if algorithm_config.max_grad_norm is None:
+            return solver
+        else:
+            return AutoClipGradByGlobalNorm(solver, algorithm_config.max_grad_norm)
 
 
 class A2C(Algorithm):
@@ -235,8 +240,7 @@ class A2C(Algorithm):
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.A2CPolicyTrainerConfig(
-            entropy_coefficient=self._config.entropy_coefficient,
-            max_grad_norm=self._config.max_grad_norm
+            entropy_coefficient=self._config.entropy_coefficient
         )
         policy_trainer = MT.policy_trainers.A2CPolicyTrainer(
             models=self._policy,
@@ -249,8 +253,7 @@ class A2C(Algorithm):
         # training input/loss variables
         v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
             reduction_method='mean',
-            v_loss_scalar=self._config.value_coefficient,
-            max_grad_norm=self._config.max_grad_norm
+            v_loss_scalar=self._config.value_coefficient
         )
         v_function_trainer = MT.v_value.MonteCarloVTrainer(
             train_functions=self._v_function,
