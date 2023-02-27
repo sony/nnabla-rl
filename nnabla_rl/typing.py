@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Sequence, Tuple, Union
+from inspect import signature
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
+
+F = TypeVar('F', bound=Callable[..., Any])
+
 
 State = Union[np.ndarray, Tuple[np.ndarray, ...]]
 # https://github.com/python/mypy/issues/7866
@@ -41,3 +45,57 @@ except ModuleNotFoundError:
 
 class ActionSelector(Protocol):
     def __call__(self, state: np.ndarray, *, begin_of_episode=False) -> Tuple[np.ndarray, Dict]: ...
+
+
+def accepted_shapes(**shape_kwargs: Dict[str, Optional[Tuple[int]]]) -> Callable[[F], F]:
+    """accepted shape decorator. This decorator checks the argument shapes are
+    the same as the expected shapes. If their sizes are different, Assertation
+    error will be raised.
+
+    Args:
+        shape_kwargs(Dict[str, Optional[Tuple[int]]]): Expected shape.
+            Not define the shape where the shape check is not needed.
+            Also if the shape check for a part of axis is not needed, you can use None such as `x=(None, 1)`.
+
+    Examples:
+
+        .. code-block:: python
+
+            @accepted_shapes(x=(3, 2), y=(1, 5), z=(None, 3))
+            def dummy_function(x, y, z, non_shape_args=False):
+                pass
+
+            # Assertation error will be raised, x size is different
+            dummy_function(x=np.zeros((3, 3)), y=np.zeros((1, 5)), z=np.zeros((3, 3)), non_shape_args=False)
+
+            # Pass the decorator
+            dummy_function(x=np.zeros((3, 2)), y=np.zeros((1, 5)), z=np.zeros((3, 3)), non_shape_args=False)
+
+            # You can define the decorator in this way not to check the shape of z
+            @accepted_shapes(x=(3, 2), y=(1, 5))
+            def dummy_function(x, y, z, non_shape_args=False):
+                pass
+    """
+    def accepted_shapes_wrapper(f: F) -> F:
+        signature_f = signature(f)
+
+        def wrapped_with_accepted_shapes(*args, **kwargs):
+            binded_args = signature_f.bind(*args, **kwargs)
+            _check_kwargs_shape(binded_args.arguments, shape_kwargs)
+            return f(*args, **kwargs)
+
+        return cast(F, wrapped_with_accepted_shapes)
+    return accepted_shapes_wrapper
+
+
+def _is_same_shape(actual_shape: Tuple[int], expected_shape: Tuple[int]) -> bool:
+    if len(actual_shape) != len(expected_shape):
+        return False
+    return all([actual == expected or expected is None
+                for actual, expected in zip(actual_shape, expected_shape)])
+
+
+def _check_kwargs_shape(kwargs, expected_kwargs_shapes):
+    for kw, expected_shape in expected_kwargs_shapes.items():
+        assert kw in kwargs
+        assert _is_same_shape(kwargs[kw].shape, expected_shape)
