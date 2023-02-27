@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Tuple, cast
 
 import numpy as np
 
@@ -30,14 +29,14 @@ class GaussianExplorerConfig(EnvironmentExplorerConfig):
 
     Args:
         action_clip_low (float): Minimum noise value. Noise below this value will be clipped.
-            Defaults to sys.float_info.min.
+            Defaults to np.finfo(np.float).min
         action_clip_high (float): Maximum noise value. Noise above this value will be clipped.
-            Defaults to sys.float_info.max.
+            Defaults to np.finfo(np.float).max
         sigma (float): Standard deviation of gaussian noise. Must be positive. Defaults to 1.0.
     """
 
-    action_clip_low: float = sys.float_info.min
-    action_clip_high: float = sys.float_info.max
+    action_clip_low: float = cast(float, np.finfo(np.float32).min)
+    action_clip_high: float = cast(float, np.finfo(np.float32).max)
     sigma: float = 1.0
 
     def __post_init__(self):
@@ -47,7 +46,7 @@ class GaussianExplorerConfig(EnvironmentExplorerConfig):
 class GaussianExplorer(EnvironmentExplorer):
     """Gaussian explorer.
 
-    Explore using policy's action without gaussian noise appended to it. Policy's action must be continuous action.
+    Explore using policy's action with gaussian noise appended to it. Policy's action must be continuous action.
 
     Args:
         policy_action_selector (:py:class:`ActionSelector <nnabla_rl.typing.ActionSelector>`):
