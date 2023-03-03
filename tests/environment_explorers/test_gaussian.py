@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,6 +42,27 @@ class TestRandomGaussianActionStrategy(object):
         action, info = explorer.action(steps, state)
 
         assert np.all(clip_low <= action) and np.all(action <= clip_high)
+        assert info['test'] == 'success'
+
+    @pytest.mark.parametrize("sigma", np.arange(start=0.01, stop=5.0, step=1.0))
+    def test_random_gaussian_without_clipping(self, sigma):
+        def policy_action_selector(state, *,  begin_of_episode=False):
+            return np.zeros(shape=state.shape), {'test': 'success'}
+
+        config = GaussianExplorerConfig(
+            sigma=sigma
+        )
+        explorer = GaussianExplorer(
+            env_info=None,
+            policy_action_selector=policy_action_selector,
+            config=config
+        )
+
+        steps = 1
+        state = np.empty(shape=(1, 4))
+        action, info = explorer.action(steps, state)
+
+        assert not np.allclose(action, np.zeros(action.shape))
         assert info['test'] == 'success'
 
 
