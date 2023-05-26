@@ -21,7 +21,7 @@ from nnabla_rl.models.reward_function import RewardFunction
 
 
 class GAILDiscriminator(RewardFunction):
-    """discriminator model used as reward function proposed by Jonathan Ho, et
+    """Discriminator model used as reward function proposed by Jonathan Ho, et
     al.
 
     See: https://arxiv.org/pdf/1606.03476.pdf

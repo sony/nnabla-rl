@@ -66,12 +66,11 @@ class SquashedGaussian(ContinuosDistribution):
         return NF.tanh(x)
 
     def sample_and_compute_log_prob(self, noise_clip=None):
-        '''
-        NOTE: In order to avoid sampling different random values for sample and log_prob,
-        you'll need to use nnabla.forward_all(sample, log_prob)
-        If you forward the two variables independently, you'll get a log_prob for different sample,
-        since different random variables are sampled internally.
-        '''
+        """NOTE: In order to avoid sampling different random values for sample
+        and log_prob, you'll need to use nnabla.forward_all(sample, log_prob)
+        If you forward the two variables independently, you'll get a log_prob
+        for different sample, since different random variables are sampled
+        internally."""
         x = RF.sample_gaussian(
             mean=self._mean, ln_var=self._ln_var, noise_clip=noise_clip)
         log_prob = self._log_prob_internal(
@@ -79,12 +78,11 @@ class SquashedGaussian(ContinuosDistribution):
         return NF.tanh(x), log_prob
 
     def sample_multiple_and_compute_log_prob(self, num_samples, noise_clip=None):
-        '''
-        NOTE: In order to avoid sampling different random values for sample and log_prob,
-        you'll need to use nnabla.forward_all(sample, log_prob)
-        If you forward the two variables independently, you'll get a log_prob for different sample,
-        since different random variables are sampled internally.
-        '''
+        """NOTE: In order to avoid sampling different random values for sample
+        and log_prob, you'll need to use nnabla.forward_all(sample, log_prob)
+        If you forward the two variables independently, you'll get a log_prob
+        for different sample, since different random variables are sampled
+        internally."""
         x = RF.sample_gaussian_multiple(self._mean,
                                         self._ln_var,
                                         num_samples=num_samples,

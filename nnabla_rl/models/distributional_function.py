@@ -406,7 +406,7 @@ def risk_neutral_measure(tau: nn.Variable) -> nn.Variable:
 
 
 class StateActionQuantileFunction(Model, metaclass=ABCMeta):
-    """state-action quantile function class.
+    """State-action quantile function class.
 
     Computes the return samples of q-value for each action.
     State-action quantile function computes the return samples of q value for each action
