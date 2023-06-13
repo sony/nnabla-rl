@@ -27,7 +27,7 @@ class RewardFunction(Model, metaclass=ABCMeta):
 
     @abstractmethod
     def r(self, s_current: nn.Variable, a_current: nn.Variable, s_next: nn.Variable) -> nn.Variable:
-        """r Computes the reward for the given state, action and next state.
+        """R Computes the reward for the given state, action and next state.
         One (or more than one) of the input variables may not be used in the
         actual computation.
 

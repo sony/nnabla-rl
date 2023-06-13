@@ -121,7 +121,7 @@ class DefaultExplorerBuilder(ExplorerBuilder):
 
 
 class REINFORCE(Algorithm):
-    """episodic REINFORCE implementation.
+    """Episodic REINFORCE implementation.
 
     This class implements the episodic REINFORCE algorithm proposed by Ronald J. Williams.
     in the paper: "Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning"

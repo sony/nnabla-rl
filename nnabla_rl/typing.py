@@ -48,7 +48,7 @@ class ActionSelector(Protocol):
 
 
 def accepted_shapes(**shape_kwargs: Dict[str, Optional[Tuple[int]]]) -> Callable[[F], F]:
-    """accepted shape decorator. This decorator checks the argument shapes are
+    """Accepted shape decorator. This decorator checks the argument shapes are
     the same as the expected shapes. If their sizes are different, Assertation
     error will be raised.
 

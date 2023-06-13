@@ -540,7 +540,7 @@ def stop_gradient(variable: nn.Variable) -> nn.Variable:
 
 
 def pytorch_equivalent_gather(x: nn.Variable, indices: nn.Variable, axis: int) -> nn.Variable:
-    """pytorch equivalent gather function. Gather according to given indices
+    """Pytorch equivalent gather function. Gather according to given indices
     from x.
 
     See https://pytorch.org/docs/stable/generated/torch.gather.html for details.
@@ -567,11 +567,11 @@ def pytorch_equivalent_gather(x: nn.Variable, indices: nn.Variable, axis: int) -
 
 
 def concat_interleave(variables: Sequence[nn.Variable], axis: int) -> nn.Variable:
-    '''
-    concat given variables along given axis.
-    For example if we have a sequence which consists of 3 variables A, B, C with same size.
-    This function will concat A, B, and C along given axis but interleaving its elements.
-    For example, if you concat 3 variables along axis = 0 this function should return:
+    """Concat given variables along given axis. For example if we have a
+    sequence which consists of 3 variables A, B, C with same size. This
+    function will concat A, B, and C along given axis but interleaving its
+    elements. For example, if you concat 3 variables along axis = 0 this
+    function should return:
 
         >>> interleaved[0::3, ...] == A
         >>> interleaved[1::3, ...] == B
@@ -583,7 +583,7 @@ def concat_interleave(variables: Sequence[nn.Variable], axis: int) -> nn.Variabl
 
     Returns:
         nn.Variable: concatenated variable which elements are interleaved in given axis.
-    '''
+    """
     assert all([variable.shape == variables[0].shape for variable in variables])
     variable_num = len(variables)
     if variable_num == 1:

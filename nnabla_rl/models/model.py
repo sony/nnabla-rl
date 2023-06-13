@@ -134,7 +134,7 @@ class Model(object):
             nn.load_parameters(path=filepath)
 
     def deepcopy(self: T, new_scope_name: str) -> T:
-        """deepcopy Create a (deep) copy of the model. All the model
+        """Deepcopy Create a (deep) copy of the model. All the model
         parameter's (if exist) associated with will be copied and
         new_scope_name will be assigned.
 
@@ -162,7 +162,7 @@ class Model(object):
         return copied
 
     def shallowcopy(self: T) -> T:
-        """shallowcopy Create a (shallow) copy of the model. Unlike deepcopy,
+        """Shallowcopy Create a (shallow) copy of the model. Unlike deepcopy,
         shallowcopy will KEEP sharing the original network parameter by using
         same scope_name as original model. However, all the class members will
         be (deep) copied to the new instance. Do NOT use this method unless you
