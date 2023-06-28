@@ -277,7 +277,7 @@ class KukaGraspingProceduralEnv(gym.Env):
         # Extract RGB components only.
         img = Image.fromarray(np_img_arr[:, :, :3].astype(np.uint8))
         shape = (self._downsample_width, self._downsample_height)
-        img = img.resize(shape, Image.ANTIALIAS)
+        img = img.resize(shape, Image.LANCZOS)
         img = np.array(img)
         return img
 
