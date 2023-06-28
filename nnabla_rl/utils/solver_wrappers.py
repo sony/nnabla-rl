@@ -13,6 +13,8 @@
 # limitations under the License.
 
 from nnabla.solver import Solver
+from nnabla.utils.learning_rate_scheduler import BaseLearningRateScheduler
+from nnabla_rl.utils.misc import clip_grad_by_global_norm
 
 
 class SolverWrapper(Solver):
@@ -39,7 +41,7 @@ class SolverWrapper(Solver):
         return self._solver.get_states()
 
     def set_states(self, states):
-        return self._solver.set_states()
+        return self._solver.set_states(states)
 
     def save_states(self, path):
         self._solver.save_states(path)
@@ -118,3 +120,28 @@ class AutoClipGradByNorm(UpdateWrapper):
 
     def before_update(self):
         self.clip_grad_by_norm(self._clip_norm)
+
+
+class AutoClipGradByGlobalNorm(UpdateWrapper):
+    def __init__(self, solver: Solver, max_grad_norm: float):
+        super().__init__(solver)
+        self._max_grad_norm = max_grad_norm
+
+    def before_update(self):
+        clip_grad_by_global_norm(self._solver, self._max_grad_norm)
+
+
+class AutoLearningRateScheduler(UpdateWrapper):
+    def __init__(self, solver: Solver, scheduler: BaseLearningRateScheduler):
+        super().__init__(solver)
+        self._scheduler = scheduler
+        self._iterations = 1
+
+    def before_update(self):
+        learning_rate = self._scheduler.get_learning_rate(self._iterations)
+        self.set_learning_rate(learning_rate)
+        return super().before_update()
+
+    def after_update(self):
+        self._iterations += 1
+        return super().after_update()

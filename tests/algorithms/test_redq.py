@@ -178,14 +178,12 @@ class TestREDQ(object):
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
-
         dummy_env = E.DummyDiscrete()
         with pytest.raises(Exception):
             A.REDQ(dummy_env)
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
-
         dummy_env = E.DummyContinuous()
         config = A.REDQConfig(G=1)
         redq = A.REDQ(dummy_env, config=config)
@@ -194,7 +192,6 @@ class TestREDQ(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         batch_size = 5
         dummy_env = E.DummyContinuous()
         config = A.REDQConfig(batch_size=batch_size, G=1)

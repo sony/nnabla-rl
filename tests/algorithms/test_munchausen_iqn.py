@@ -34,7 +34,6 @@ class TestMunchausenIQN(object):
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
-
         dummy_env = E.DummyContinuous()
         config = A.MunchausenIQNConfig()
         with pytest.raises(Exception):
@@ -42,7 +41,6 @@ class TestMunchausenIQN(object):
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
-
         dummy_env = E.DummyDiscreteImg()
         config = A.MunchausenIQNConfig()
         config.start_timesteps = 5
@@ -55,7 +53,6 @@ class TestMunchausenIQN(object):
 
     def test_run_online_training_multistep(self):
         """Check that no error occurs when calling online training."""
-
         dummy_env = E.DummyDiscreteImg()
         config = A.MunchausenIQNConfig()
         config.num_steps = 2

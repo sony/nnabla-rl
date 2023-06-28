@@ -340,3 +340,52 @@ class HERPolicy(DeterministicPolicy):
             action_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=self._action_dim)
             h = NPF.affine(h, n_outmaps=self._action_dim, name='action', w_init=action_init)
         return NF.tanh(h) * self._max_action_value
+
+
+class XQLPolicy(StochasticPolicy):
+    """Actor model proposed by D.
+
+    Garg in XQL paper for offline mujoco environment.
+    See: https://arxiv.org/pdf/2301.02328.pdf
+    """
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _action_dim: int
+    _clip_log_sigma: bool
+    _min_log_sigma: float
+    _max_log_sigma: float
+
+    def __init__(self,
+                 scope_name: str,
+                 action_dim: int,
+                 clip_log_sigma: bool = True,
+                 min_log_sigma: float = -5.0,
+                 max_log_sigma: float = 2.0):
+        super(XQLPolicy, self).__init__(scope_name)
+        self._action_dim = action_dim
+        self._clip_log_sigma = clip_log_sigma
+        self._min_log_sigma = min_log_sigma
+        self._max_log_sigma = max_log_sigma
+
+    def pi(self, s: nn.Variable) -> Distribution:
+        w_init = NI.OrthogonalInitializer(np.sqrt(2.0))
+        with nn.parameter_scope(self.scope_name):
+            h = NPF.affine(s, n_outmaps=256, name="linear1", w_init=w_init)
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=256, name="linear2", w_init=w_init)
+            h = NF.relu(x=h)
+            h = NPF.affine(h, n_outmaps=self._action_dim, name="linear3", w_init=w_init)
+            mean = NF.tanh(h)
+            # create parameter with shape (1, self._action_dim)
+            # because these parameters should be independent from states (and from batches also)
+            ln_sigma = get_parameter_or_create("ln_sigma", shape=(1, self._action_dim),
+                                               initializer=NI.ConstantInitializer(0.))
+            ln_sigma = NF.broadcast(ln_sigma, (s.shape[0], self._action_dim))
+            assert mean.shape == ln_sigma.shape
+            assert mean.shape == (s.shape[0], self._action_dim)
+            if self._clip_log_sigma:
+                ln_sigma = NF.clip_by_value(ln_sigma, min=self._min_log_sigma, max=self._max_log_sigma)
+            ln_var = ln_sigma * 2.0
+        return D.Gaussian(mean=mean, ln_var=ln_var)

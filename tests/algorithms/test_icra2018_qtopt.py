@@ -115,7 +115,6 @@ class TestICRA2018QtOpt(object):
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
-
         dummy_env = E.DummyDiscreteImg()
         config = A.ICRA2018QtOptConfig()
         with pytest.raises(Exception):

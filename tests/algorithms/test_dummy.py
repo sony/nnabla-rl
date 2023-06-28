@@ -33,7 +33,6 @@ class TestDummy(object):
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
-
         dummy_env = E.DummyContinuous()
         dummy = A.Dummy(dummy_env)
 
@@ -41,7 +40,6 @@ class TestDummy(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         dummy_env = E.DummyContinuous()
         dummy = A.Dummy(dummy_env)
 

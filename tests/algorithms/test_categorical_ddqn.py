@@ -33,7 +33,6 @@ class TestCategoricalDDQN(object):
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
-
         dummy_env = E.DummyContinuous()
         config = A.CategoricalDDQNConfig()
         with pytest.raises(Exception):
@@ -41,7 +40,6 @@ class TestCategoricalDDQN(object):
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
-
         dummy_env = E.DummyDiscreteImg()
         config = A.CategoricalDDQNConfig()
         config.start_timesteps = 5
@@ -54,7 +52,6 @@ class TestCategoricalDDQN(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         batch_size = 5
         dummy_env = E.DummyDiscreteImg()
         config = A.CategoricalDDQNConfig(batch_size=batch_size)

@@ -172,14 +172,12 @@ class TestTD3(object):
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
-
         dummy_env = E.DummyDiscrete()
         with pytest.raises(Exception):
             A.TD3(dummy_env)
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
-
         dummy_env = E.DummyContinuous()
         batch_size = 5
         config = A.TD3Config(batch_size=batch_size, start_timesteps=5)
@@ -212,7 +210,6 @@ class TestTD3(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         dummy_env = E.DummyContinuous()
         batch_size = 5
         config = A.TD3Config(batch_size=batch_size)

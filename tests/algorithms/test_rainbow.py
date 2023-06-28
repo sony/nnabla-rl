@@ -35,7 +35,6 @@ class TestRainbow(object):
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
-
         dummy_env = E.DummyContinuous()
         config = A.RainbowConfig()
         config.replay_buffer_size = 3
@@ -57,7 +56,6 @@ class TestRainbow(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         batch_size = 5
         dummy_env = E.DummyDiscreteImg()
         config = A.RainbowConfig(batch_size=batch_size)

@@ -34,7 +34,6 @@ class TestBEAR(object):
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
-
         dummy_env = E.DummyDiscrete()
         config = A.BEARConfig()
         with pytest.raises(Exception):
@@ -42,7 +41,6 @@ class TestBEAR(object):
 
     def test_run_online_training(self):
         """Check that error occurs when calling online training."""
-
         dummy_env = E.DummyContinuous()
         bear = A.BEAR(dummy_env)
 
@@ -51,7 +49,6 @@ class TestBEAR(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         batch_size = 5
         dummy_env = E.DummyContinuous()
         config = A.BEARConfig(batch_size=batch_size)

@@ -34,7 +34,6 @@ class TestBCQ(object):
 
     def test_run_online_training(self):
         """Check that error occurs when calling online training."""
-
         dummy_env = E.DummyContinuous()
         config = A.BCQConfig()
         bcq = A.BCQ(dummy_env, config=config)
@@ -44,7 +43,6 @@ class TestBCQ(object):
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
-
         dummy_env = E.DummyDiscrete()
         config = A.BCQConfig()
         with pytest.raises(Exception):
@@ -52,7 +50,6 @@ class TestBCQ(object):
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
-
         batch_size = 5
         dummy_env = E.DummyContinuous()
         config = A.BCQConfig(batch_size=batch_size)
