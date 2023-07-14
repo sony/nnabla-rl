@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,7 +48,10 @@ class MyScalarWriter(Writer):
 
 
 def build_env(seed=None):
-    env = gym.make('Pendulum-v0')
+    try:
+        env = gym.make('Pendulum-v0')
+    except gym.error.DeprecatedEnv:
+        env = gym.make('Pendulum-v1')
     env = NumpyFloat32Env(env)
     env.seed(seed)
     return env
