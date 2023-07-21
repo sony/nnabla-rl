@@ -638,7 +638,7 @@ class _PPOActor(object):
         info = {}
         info['log_prob'] = log_prob
         if self._env_info.is_discrete_action_env():
-            return np.int(action), info
+            return np.int32(action), info
         else:
             return action, info
 

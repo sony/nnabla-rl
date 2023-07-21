@@ -41,7 +41,7 @@ class Bernoulli(DiscreteDistribution):
         self._distribution = NF.concatenate(self._p, 1 - self._p)
         self._log_distribution = NF.concatenate(self._log_p, self._log_1_minus_p)
 
-        labels = np.array([1, 0], dtype=np.int)
+        labels = np.array([1, 0], dtype=np.int32)
         labels = nn.Variable.from_numpy_array(labels)
         self._labels = labels
         for size in reversed(z.shape[0:-1]):

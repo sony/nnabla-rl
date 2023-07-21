@@ -42,7 +42,7 @@ class Softmax(DiscreteDistribution):
         self._num_class = z.shape[-1]
 
         labels = np.array(
-            [label for label in range(self._num_class)], dtype=np.int)
+            [label for label in range(self._num_class)], dtype=np.int32)
         self._labels = nn.Variable.from_numpy_array(labels)
         self._actions = self._labels
         for size in reversed(z.shape[0:-1]):

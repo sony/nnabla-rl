@@ -523,7 +523,7 @@ class _A2CActor(object):
     def _compute_action(self, s, *, begin_of_episode=False):
         action, info = self._exploration_actor(s, begin_of_episode=begin_of_episode)
         if self._env_info.is_discrete_action_env():
-            return np.int(action), info
+            return np.int32(action), info
         else:
             return action, info
 

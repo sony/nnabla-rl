@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ class TestCommonUtils():
                 r = np.ones(1, )
                 non_terminal = np.ones(1, )
                 if i == episode_length-1:
-                    non_terminal = 0
+                    non_terminal = np.zeros(1, )
                 experience.append((s_current, a, r, non_terminal, s_next))
         return experience
 
