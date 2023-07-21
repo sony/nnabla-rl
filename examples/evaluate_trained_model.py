@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,10 @@ from nnabla_rl.utils.evaluator import EpisodicEvaluator
 
 
 def build_env():
-    env = gym.make('Pendulum-v0')
+    try:
+        env = gym.make('Pendulum-v0')
+    except gym.error.DeprecatedEnv:
+        env = gym.make('Pendulum-v1')
     env = NumpyFloat32Env(env)
     env = ScreenRenderEnv(env)
     return env
