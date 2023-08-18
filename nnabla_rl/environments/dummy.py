@@ -28,7 +28,7 @@ from nnabla_rl.external.goal_env import GoalEnv
 
 class AbstractDummyEnv(gym.Env):
     def __init__(self, max_episode_steps):
-        self.spec = EnvSpec(id='dummy-v0', max_episode_steps=max_episode_steps)
+        self.spec = EnvSpec('dummy-v0', max_episode_steps=max_episode_steps)
         self._episode_steps = 0
 
     def reset(self):
@@ -181,7 +181,7 @@ class DummyMujocoEnv(AbstractDummyEnv):
 
 class DummyContinuousActionGoalEnv(GoalEnv):
     def __init__(self, max_episode_steps=10):
-        self.spec = EnvSpec(id='dummy-continuou-action-goal-v0', max_episode_steps=max_episode_steps)
+        self.spec = EnvSpec('dummy-continuou-action-goal-v0', max_episode_steps=max_episode_steps)
         self.observation_space = gym.spaces.Dict({'observation': gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
                                                   'achieved_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
                                                   'desired_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))})
@@ -218,7 +218,7 @@ class DummyContinuousActionGoalEnv(GoalEnv):
 
 class DummyDiscreteActionGoalEnv(GoalEnv):
     def __init__(self, max_episode_steps=10):
-        self.spec = EnvSpec(id='dummy-discrete-action-goal-v0', max_episode_steps=max_episode_steps)
+        self.spec = EnvSpec('dummy-discrete-action-goal-v0', max_episode_steps=max_episode_steps)
         self.observation_space = gym.spaces.Dict({'observation': gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
                                                   'achieved_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
                                                   'desired_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))})
