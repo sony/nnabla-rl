@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ $# -ne 5 ]; then
-    echo "usage: $0 <script_file_name> <gpu_id> <env> <save_dir> <num_seeds>"
+if [ $# -lt 5 ] && [ $# -gt 6 ]; then
+    echo "usage: $0 <script_file_name> <gpu_id> <env> <save_dir> <num_seeds> <batch_size>"
     exit 1
 fi
 RESULTDIR="$4/$3_results"
@@ -23,11 +23,19 @@ NUM_SEEDS=$5
 if [ $NUM_SEEDS -eq 3 ]; then
     for seed in 1 10 100
     do
-        python $1 --gpu $2 --seed $seed --env $3 --save-dir $4
+        if [ $# -eq 5 ]; then
+            python $1 --gpu $2 --seed $seed --env $3 --save-dir $4
+        else
+            python $1 --gpu $2 --seed $seed --env $3 --save-dir $4 --batch-size $6
+        fi
     done
 else
     for seed in $(seq 1 $NUM_SEEDS);
     do
-        python $1 --gpu $2 --seed $seed --env $3 --save-dir $4
+        if [ $# -eq 5 ]; then
+            python $1 --gpu $2 --seed $seed --env $3 --save-dir $4
+        else
+            python $1 --gpu $2 --seed $seed --env $3 --save-dir $4 --batch-size $6
+        fi
     done
 fi

@@ -132,6 +132,8 @@ do
             SAVE_DIR="$1";;
         "--num_seeds" )
             NUM_SEEDS="$1";;
+        "--batch_size" )
+            BATCH_SIZE="$1";;
         "-h" )
             echo ""
             echo "[Usage] : ./evaluate_algo
@@ -142,6 +144,7 @@ do
                 --env_end_index <env_end_index>
                 --envs <env1> <env2> <env3>
                 --save_dir <save_dir>
+                --batch_size <batch_size>
 
                 e.g. ./evaluate_algo --algo_name dqn --base_env_name atari --env_start_index 0 --env_end_index 1 --save_dir sample
                 or if you want directly specify the training envs
@@ -183,5 +186,9 @@ do
         ENV_NAME=${DELAYED_MUJOCO_ENV_LIST[$INDEX]}
     fi
     echo "Start running training for: " ${ENV_NAME}
-    ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR $NUM_SEEDS &
+    if [ -n "$BATCH_SIZE" ]; then
+        ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR $NUM_SEEDS $BATCH_SIZE &
+    else
+        ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR $NUM_SEEDS &
+    fi
 done
