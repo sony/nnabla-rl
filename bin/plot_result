@@ -85,7 +85,7 @@ def plot_results(args):
             ax.fill_between(x, avg_y + std_y, avg_y - std_y, alpha=0.3)
 
         if args.plot_median:
-            median_label = 'mean'
+            median_label = 'median'
             if i < len(args.tsvlabels):
                 median_label = f'{median_label}({args.tsvlabels[i]})'
                 med_y = smooth_with_moving_average(med_y, k=args.smooth_k)
