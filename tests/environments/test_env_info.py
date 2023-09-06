@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gym
 import numpy as np
 import pytest
 
@@ -77,6 +78,12 @@ class TestEnvInfo(object):
         assert env_info.is_continuous_state_env()
         assert env_info.is_tuple_state_env()
 
+    def test_is_tuple_and_mixed_env(self):
+        dummy_env = E.DummyTupleMixed()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+        assert env_info.is_tuple_state_env()
+        assert env_info.is_mixed_state_env()
+
     def test_action_shape_continuous(self):
         dummy_env = E.DummyContinuous()
         env_info = EnvironmentInfo.from_env(dummy_env)
@@ -131,6 +138,13 @@ class TestEnvInfo(object):
 
         assert env_info.state_shape == tuple(space.shape for space in dummy_env.observation_space)
 
+    def test_state_shape_tuple_mixed(self):
+        dummy_env = E.DummyTupleMixed()
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_shape == tuple(space.shape if isinstance(
+            space, gym.spaces.Box) else (1, ) for space in dummy_env.observation_space)
+
     def test_state_dim_discrete(self):
         dummy_env = E.DummyDiscrete()
         env_info = EnvironmentInfo.from_env(dummy_env)
@@ -161,10 +175,12 @@ class TestEnvInfo(object):
 
         assert env_info.state_dim == tuple(np.prod(space.shape) for space in env_info.observation_space)
 
-    def test_error_tuple_mixed_env(self):
+    def test_state_dim_tuple_mixed(self):
         dummy_env = E.DummyTupleMixed()
-        with pytest.raises(ValueError):
-            EnvironmentInfo.from_env(dummy_env)
+        env_info = EnvironmentInfo.from_env(dummy_env)
+
+        assert env_info.state_dim == tuple(np.prod(space.shape) if isinstance(
+            space, gym.spaces.Box) else space.n for space in env_info.observation_space)
 
 
 if __name__ == "__main__":

@@ -46,7 +46,7 @@ class EnvironmentInfo(object):
         self.unwrapped_env = unwrapped_env
         self.reward_function = reward_function
 
-        if not (self.is_discrete_state_env() or self.is_continuous_state_env()):
+        if not (self.is_discrete_state_env() or self.is_continuous_state_env() or self.is_tuple_state_env()):
             raise ValueError("Unsupported state space")
 
         if not (self.is_discrete_action_env() or self.is_continuous_action_env()):
@@ -116,6 +116,18 @@ class EnvironmentInfo(object):
                 Note that if the state is gym.spaces.Tuple and all of the element are continuous, it returns True.
         """
         return is_same_space_type(self.observation_space, gym.spaces.Box)
+
+    def is_mixed_state_env(self):
+        """Check whether the state of the environment consists of either
+        continuous or discrete state.
+
+        Returns:
+            bool: True if the state of the environment is either continuous or discrete. Otherwise False.
+                Note that if the state is not a gym.spaces.Tuple, then returns False.
+        """
+        if not self.is_tuple_state_env():
+            return False
+        return all(isinstance(s, gym.spaces.Discrete) or isinstance(s, gym.spaces.Box) for s in self.observation_space)
 
     def is_tuple_state_env(self):
         """Check whether the state of the environment is tuple or not.
