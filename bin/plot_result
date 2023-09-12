@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ def load_data(path):
 
 
 def plot_results(args):
+    plt.style.use('tableau-colorblind10')
     fig = plt.figure(figsize=(5, 4), dpi=80)
     ax = fig.add_subplot(111)
 
@@ -85,7 +86,7 @@ def plot_results(args):
             ax.fill_between(x, avg_y + std_y, avg_y - std_y, alpha=0.3)
 
         if args.plot_median:
-            median_label = 'mean'
+            median_label = 'median'
             if i < len(args.tsvlabels):
                 median_label = f'{median_label}({args.tsvlabels[i]})'
                 med_y = smooth_with_moving_average(med_y, k=args.smooth_k)
