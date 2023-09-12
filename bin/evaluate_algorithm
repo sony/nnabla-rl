@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -132,6 +132,8 @@ do
             SAVE_DIR="$1";;
         "--num_seeds" )
             NUM_SEEDS="$1";;
+        "--batch_size" )
+            BATCH_SIZE="$1";;
         "-h" )
             echo ""
             echo "[Usage] : ./evaluate_algo
@@ -142,6 +144,7 @@ do
                 --env_end_index <env_end_index>
                 --envs <env1> <env2> <env3>
                 --save_dir <save_dir>
+                --batch_size <batch_size>
 
                 e.g. ./evaluate_algo --algo_name dqn --base_env_name atari --env_start_index 0 --env_end_index 1 --save_dir sample
                 or if you want directly specify the training envs
@@ -156,7 +159,11 @@ do
 done
 
 REPRODUCTION_CODE_DIR="${ROOT_DIR}/reproductions/algorithms/${BASE_ENV_NAME}/${ALGO_NAME}"
-SAVE_DIR=$REPRODUCTION_CODE_DIR
+if [ -n "$SAVE_DIR" ]; then
+    SAVE_DIR=$REPRODUCTION_CODE_DIR/$SAVE_DIR
+else
+    SAVE_DIR=$REPRODUCTION_CODE_DIR
+fi
 
 for ENV_NAME in ${ENVS}
 do
@@ -179,5 +186,9 @@ do
         ENV_NAME=${DELAYED_MUJOCO_ENV_LIST[$INDEX]}
     fi
     echo "Start running training for: " ${ENV_NAME}
-    ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR $NUM_SEEDS &
+    if [ -n "$BATCH_SIZE" ]; then
+        ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR $NUM_SEEDS $BATCH_SIZE &
+    else
+        ${ROOT_DIR}/bin/train_with_seeds "${REPRODUCTION_CODE_DIR}/${ALGO_NAME}_reproduction.py" $GPU_ID $ENV_NAME $SAVE_DIR $NUM_SEEDS &
+    fi
 done
