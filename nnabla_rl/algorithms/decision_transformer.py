@@ -263,7 +263,8 @@ class DecisionTransformer(Algorithm):
     def is_supported_env(cls, env_or_env_info):
         env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(
             env_or_env_info, gym.Env) else env_or_env_info
-        return env_info.is_continuous_action_env() or env_info.is_discrete_action_env()
+        return ((env_info.is_continuous_action_env() or env_info.is_discrete_action_env())
+                and not env_info.is_tuple_action_env())
 
     @classmethod
     def is_rnn_supported(self):

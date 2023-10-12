@@ -49,7 +49,7 @@ class EnvironmentInfo(object):
         if not (self.is_discrete_state_env() or self.is_continuous_state_env() or self.is_tuple_state_env()):
             raise ValueError("Unsupported state space")
 
-        if not (self.is_discrete_action_env() or self.is_continuous_action_env()):
+        if not (self.is_discrete_action_env() or self.is_continuous_action_env() or self.is_tuple_action_env()):
             raise ValueError("Unsupported action space")
 
     @staticmethod
@@ -98,6 +98,26 @@ class EnvironmentInfo(object):
                 Note that if the action is gym.spaces.Tuple and all of the element are continuous, it returns True.
         """
         return is_same_space_type(self.action_space, gym.spaces.Box)
+
+    def is_mixed_action_env(self):
+        """Check whether the action of the environment consists of either
+        continuous or discrete action.
+
+        Returns:
+            bool: True if the action of the environment is either continuous or discrete. Otherwise False.
+                Note that if the action is not a gym.spaces.Tuple, then returns False.
+        """
+        if not self.is_tuple_action_env():
+            return False
+        return all(isinstance(a, gym.spaces.Discrete) or isinstance(a, gym.spaces.Box) for a in self.action_space)
+
+    def is_tuple_action_env(self):
+        """Check whether the action of the environment is tuple or not.
+
+        Returns:
+            bool: True if the action of the environment is tuple. Otherwise False.
+        """
+        return isinstance(self.action_space, gym.spaces.Tuple)
 
     def is_discrete_state_env(self):
         """Check whether the state of the environment is discrete or not.
@@ -180,19 +200,31 @@ class EnvironmentInfo(object):
     @property
     def action_high(self):
         """The upper limit of action space."""
-        return get_space_high(self.action_space)
+        if self.is_tuple_action_env():
+            return tuple(map(get_space_high, self.action_space))
+        else:
+            return get_space_high(self.action_space)
 
     @property
     def action_low(self):
         """The lower limit of action space."""
-        return get_space_low(self.action_space)
+        if self.is_tuple_action_env():
+            return tuple(map(get_space_low, self.action_space))
+        else:
+            return get_space_low(self.action_space)
 
     @property
     def action_shape(self):
         """The shape of action space."""
-        return get_space_shape(self.action_space)
+        if self.is_tuple_action_env():
+            return tuple(map(get_space_shape, self.action_space))
+        else:
+            return get_space_shape(self.action_space)
 
     @property
     def action_dim(self):
         """The dimension of action assuming that the action is flatten."""
-        return get_space_dim(self.action_space)
+        if self.is_tuple_action_env():
+            return tuple(map(get_space_dim, self.action_space))
+        else:
+            return get_space_dim(self.action_space)

@@ -448,7 +448,9 @@ class PPO(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        return True  # supports all enviroments
+        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
+            else env_or_env_info
+        return not env_info.is_tuple_action_env()
 
     def _build_ppo_actors(self, env, v_function, policy, state_preprocessor):
         actors = []

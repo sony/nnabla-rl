@@ -374,9 +374,13 @@ class _ActionSelector(Generic[M], metaclass=ABCMeta):
             for key in self._rnn_internal_states.keys():
                 # copy internal states of previous iteration
                 self._rnn_internal_states[key].d = prev_rnn_states[key].d
-        self._action.forward(clear_no_need_grad=True)
-        # No need to save internal states
-        action = np.squeeze(self._action.d, axis=0) if batch_size == 1 else self._action.d
+        if self._env_info.is_tuple_action_env():
+            nn.forward_all(self._action, clear_no_need_grad=True)
+            action = tuple(np.squeeze(a.d, axis=0) if batch_size == 1 else a.d for a in self._action)
+        else:
+            self._action.forward(clear_no_need_grad=True)
+            # No need to save internal states
+            action = np.squeeze(self._action.d, axis=0) if batch_size == 1 else self._action.d
         return action, {}
 
     @abstractmethod

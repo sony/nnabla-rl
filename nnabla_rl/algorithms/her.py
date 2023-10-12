@@ -352,4 +352,4 @@ class HER(DDPG):
         # continuous action env
         is_continuous_action_env = env_info.is_continuous_action_env()
         is_goal_conditioned_env = env_info.is_goal_conditioned_env()
-        return (is_continuous_action_env and is_goal_conditioned_env)
+        return (is_continuous_action_env and is_goal_conditioned_env) and not env_info.is_tuple_action_env()

@@ -77,26 +77,77 @@ class DummyTupleContinuous(AbstractDummyEnv):
     def __init__(self, max_episode_steps=None):
         super(DummyTupleContinuous, self).__init__(
             max_episode_steps=max_episode_steps)
-        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))
+        self.action_space = gym.spaces.Tuple((gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
+                                              gym.spaces.Box(low=0.0, high=1.0, shape=(3, ))))
         self.observation_space = gym.spaces.Tuple((gym.spaces.Box(low=0.0, high=1.0, shape=(4, )),
                                                    gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))))
+
+    def step(self, a):
+        for a, action_space in zip(a, self.action_space):
+            assert a.shape == action_space.shape
+        return super().step(a)
 
 
 class DummyTupleDiscrete(AbstractDummyEnv):
     def __init__(self, max_episode_steps=None):
         super(DummyTupleDiscrete, self).__init__(
             max_episode_steps=max_episode_steps)
-        self.action_space = gym.spaces.Discrete(2)
+        self.action_space = gym.spaces.Tuple((gym.spaces.Discrete(2), gym.spaces.Discrete(3)))
         self.observation_space = gym.spaces.Tuple((gym.spaces.Discrete(4), gym.spaces.Discrete(5)))
+
+    def step(self, a):
+        for a, action_space in zip(a, self.action_space):
+            assert isinstance(a, int) or a.shape == action_space.shape
+        return super().step(a)
 
 
 class DummyTupleMixed(AbstractDummyEnv):
     def __init__(self, max_episode_steps=None):
         super(DummyTupleMixed, self).__init__(
             max_episode_steps=max_episode_steps)
-        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(3, ))
+        self.action_space = gym.spaces.Tuple((gym.spaces.Discrete(2),
+                                              gym.spaces.Box(low=0.0, high=1.0, shape=(3, ))))
         self.observation_space = gym.spaces.Tuple((gym.spaces.Discrete(4),
                                                    gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))))
+
+    def step(self, a):
+        for a, action_space in zip(a, self.action_space):
+            assert isinstance(a, int) or a.shape == action_space.shape
+        return super().step(a)
+
+
+class DummyTupleStateContinuous(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyTupleStateContinuous, self).__init__(
+            max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))
+        self.observation_space = gym.spaces.Tuple((gym.spaces.Box(low=0.0, high=1.0, shape=(4, )),
+                                                   gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))))
+
+
+class DummyTupleStateDiscrete(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyTupleStateDiscrete, self).__init__(
+            max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Discrete(2)
+        self.observation_space = gym.spaces.Tuple((gym.spaces.Discrete(4), gym.spaces.Discrete(5)))
+
+
+class DummyTupleActionContinuous(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyTupleActionContinuous, self).__init__(
+            max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Tuple((gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
+                                              gym.spaces.Box(low=0.0, high=1.0, shape=(3, ))))
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4, ))
+
+
+class DummyTupleActionDiscrete(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyTupleActionDiscrete, self).__init__(
+            max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Tuple((gym.spaces.Discrete(2), gym.spaces.Discrete(3)))
+        self.observation_space = gym.spaces.Discrete(4)
 
 
 class DummyDiscreteImg(AbstractDummyEnv):
@@ -184,7 +235,7 @@ class DummyContinuousActionGoalEnv(GoalEnv):
         self.spec = EnvSpec('dummy-continuou-action-goal-v0', max_episode_steps=max_episode_steps)
         self.observation_space = gym.spaces.Dict({'observation': gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
                                                   'achieved_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
-                                                  'desired_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))})
+                                                 'desired_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))})
         self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))
         self._max_episode_length = max_episode_steps
         self._episode_length = 0
@@ -221,7 +272,7 @@ class DummyDiscreteActionGoalEnv(GoalEnv):
         self.spec = EnvSpec('dummy-discrete-action-goal-v0', max_episode_steps=max_episode_steps)
         self.observation_space = gym.spaces.Dict({'observation': gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
                                                   'achieved_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
-                                                  'desired_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))})
+                                                 'desired_goal': gym.spaces.Box(low=0.0, high=1.0, shape=(2, ))})
         self.action_space = gym.spaces.Discrete(n=3)
         self._max_episode_length = max_episode_steps
         self._episode_length = 0

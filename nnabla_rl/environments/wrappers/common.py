@@ -66,13 +66,47 @@ class Float32RewardEnv(gym.RewardWrapper):
 class Float32ActionEnv(gym.ActionWrapper):
     def __init__(self, env):
         super(Float32ActionEnv, self).__init__(env)
-        self.dtype = np.float32
+        self.continuous_dtype = np.float32
+        self.discrete_dtype = np.int32
+        if isinstance(env.action_space, spaces.Tuple):
+            self.action_space = spaces.Tuple(
+                [self._create_action_space(action_space) for action_space in env.action_space]
+            )
+        else:
+            self.action_space = self._create_action_space(env.action_space)
 
     def action(self, action):
-        return self.dtype(action)
+        def _action(action, action_space):
+            if isinstance(action_space, spaces.Discrete):
+                if isinstance(action, np.ndarray):
+                    action = action[0]
+                return self.discrete_dtype(action)
+            else:
+                return self.continuous_dtype(action)
+
+        if isinstance(action, tuple):
+            return tuple(_action(a, action_space) for a, action_space in zip(action, self.env.action_space))
+        else:
+            return self.continuous_dtype(action)
 
     def reverse_action(self, action):
-        return self.env.action_space.dtype(action)
+        if isinstance(action, tuple):
+            return tuple(action_space.dtype(action) for action_space in self.env.action_space)
+        else:
+            return self.env.action_space.dtype(action)
+
+    def _create_action_space(self, action_space):
+        if isinstance(action_space, spaces.Box):
+            return spaces.Box(
+                low=action_space.low,
+                high=action_space.high,
+                shape=action_space.shape,
+                dtype=self.continuous_dtype
+            )
+        elif isinstance(action_space, spaces.Discrete):
+            return spaces.Discrete(n=action_space.n)
+        else:
+            raise NotImplementedError
 
 
 class Int32ActionEnv(gym.ActionWrapper):
