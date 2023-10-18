@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,7 +75,8 @@ class TestData():
 
         assert state[0].shape == (batch_size, dummy_env.observation_space[0].shape[0])
         assert state[1].shape == (batch_size, dummy_env.observation_space[1].shape[0])
-        assert action.shape == (batch_size, dummy_env.action_space.shape[0])
+        assert action[0].shape == (batch_size, dummy_env.action_space[0].shape[0])
+        assert action[1].shape == (batch_size, dummy_env.action_space[1].shape[0])
         assert reward.shape == (batch_size, 1)
         assert done.shape == (batch_size, 1)
         assert next_state[0].shape == (batch_size, dummy_env.observation_space[0].shape[0])
@@ -94,7 +95,8 @@ class TestData():
 
         assert state[0].shape == (batch_size, 1)
         assert state[1].shape == (batch_size, 1)
-        assert action.shape == (batch_size, 1)
+        assert action[0].shape == (batch_size, 1)
+        assert action[1].shape == (batch_size, 1)
         assert reward.shape == (batch_size, 1)
         assert done.shape == (batch_size, 1)
         assert next_state[0].shape == (batch_size, 1)

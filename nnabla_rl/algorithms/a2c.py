@@ -366,7 +366,7 @@ class A2C(Algorithm):
     def is_supported_env(cls, env_or_env_info):
         env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
             else env_or_env_info
-        return not env_info.is_continuous_action_env()
+        return not env_info.is_continuous_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):

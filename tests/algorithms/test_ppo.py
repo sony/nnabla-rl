@@ -96,7 +96,7 @@ class TestPPO(object):
         """Check that no error occurs when calling online training (tuple state
         env)"""
 
-        dummy_env = E.DummyTupleContinuous()
+        dummy_env = E.DummyTupleStateContinuous()
         actor_timesteps = 10
         actor_num = 2
         config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num, preprocess_state=False)

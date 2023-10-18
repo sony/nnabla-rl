@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ class TestCommon(object):
         assert next_state.dtype == np.float32
         assert reward.dtype == np.float32
 
-    def test_numpy_float32_env_tuple(self):
+    def test_numpy_float32_env_tuple_continuous(self):
         env = E.DummyTupleContinuous()
         env = NumpyFloat32Env(env)
 
@@ -53,6 +53,34 @@ class TestCommon(object):
 
         assert next_state[0].dtype == np.float32
         assert next_state[1].dtype == np.float32
+        assert action[0].dtype == np.float32
+        assert action[1].dtype == np.float32
+        assert reward.dtype == np.float32
+
+    def test_numpy_float32_env_tuple_discrete(self):
+        env = E.DummyTupleDiscrete()
+        env = NumpyFloat32Env(env)
+
+        action = env.action_space.sample()
+        next_state, reward, _, _ = env.step(action)
+
+        assert next_state[0].dtype == np.float32
+        assert next_state[1].dtype == np.float32
+        assert isinstance(action[0], int)
+        assert isinstance(action[0], int)
+        assert reward.dtype == np.float32
+
+    def test_numpy_float32_env_tuple_mixed(self):
+        env = E.DummyTupleMixed()
+        env = NumpyFloat32Env(env)
+
+        action = env.action_space.sample()
+        next_state, reward, _, _ = env.step(action)
+
+        assert next_state[0].dtype == np.float32
+        assert next_state[1].dtype == np.float32
+        assert isinstance(action[0], int)
+        assert action[1].dtype == np.float32
         assert reward.dtype == np.float32
 
     def test_timestep_as_state_env_continuous(self):

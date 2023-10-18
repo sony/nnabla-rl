@@ -122,12 +122,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
     def _step_once(self, env, *, begin_of_episode=False) -> Tuple[Experience, bool]:
         self._steps += 1
         if self._steps < self._config.warmup_random_steps:
-            action_info: Dict[str, Any] = {}
-            if self._env_info.is_discrete_action_env():
-                action = env.action_space.sample()
-                self._action = np.asarray(action).reshape((1, ))
-            else:
-                self._action = env.action_space.sample()
+            self._action, action_info = self._warmup_action(env)
         else:
             self._action, action_info = self.action(self._steps,
                                                     cast(np.ndarray, self._state),
@@ -156,9 +151,30 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             self._state = self._next_state
         return experience, done
 
+    def _warmup_action(self, env):
+        return _sample_action(env, self._env_info)
+
 
 def _is_end_of_episode(done, timelimit, timelimit_as_terminal):
     if not done:
         return False
     else:
         return (not timelimit) or (timelimit and timelimit_as_terminal)
+
+
+def _sample_action(env, env_info):
+    action_info: Dict[str, Any] = {}
+    if env_info.is_tuple_action_env():
+        action = []
+        for a, action_space in zip(env.action_space.sample(), env_info.action_space):
+            if isinstance(action_space, gym.spaces.Discrete):
+                a = np.asarray(a).reshape((1, ))
+            action.append(a)
+        action = tuple(action)
+    else:
+        if env_info.is_discrete_action_env():
+            action = env.action_space.sample()
+            action = np.asarray(action).reshape((1, ))
+        else:
+            action = env.action_space.sample()
+    return action, action_info
