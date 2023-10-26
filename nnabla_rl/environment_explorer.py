@@ -122,7 +122,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
     def _step_once(self, env, *, begin_of_episode=False) -> Tuple[Experience, bool]:
         self._steps += 1
         if self._steps < self._config.warmup_random_steps:
-            self._action, action_info = self._warmup_action(env)
+            self._action, action_info = self._warmup_action(env, begin_of_episode=begin_of_episode)
         else:
             self._action, action_info = self.action(self._steps,
                                                     cast(np.ndarray, self._state),
@@ -151,7 +151,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
             self._state = self._next_state
         return experience, done
 
-    def _warmup_action(self, env):
+    def _warmup_action(self, env, *, begin_of_episode=False):
         return _sample_action(env, self._env_info)
 
 
