@@ -107,7 +107,7 @@ class ICRA2018QtOptQFunction(ContinuousQFunction):
         def objective_function(a: nn.Variable) -> nn.Variable:
             batch_size, sample_size, action_dim = a.shape
             a = a.reshape((batch_size*sample_size, action_dim))
-            q_value = self.q(tiled_s, a)  # type: ignore
+            q_value = self.q(tiled_s, a)
             q_value = q_value.reshape((batch_size, sample_size, 1))
             return q_value
 
