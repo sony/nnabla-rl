@@ -15,6 +15,7 @@
 
 import numpy as np
 import pytest
+from packaging.version import parse
 
 import nnabla as nn
 import nnabla_rl.environments as E
@@ -131,6 +132,27 @@ class TestData():
         assert len(key2_experiences) == 2
 
         np.testing.assert_allclose(np.asarray(key1_experiences), 1)
+        np.testing.assert_allclose(np.asarray(key2_experiences), 2)
+
+    def test_marashal_dict_experiences_with_inhomogeneous_part(self):
+        installed_numpy_version = parse(np.__version__)
+        numpy_version1_24 = parse('1.24.0')
+
+        if installed_numpy_version < numpy_version1_24:
+            # no need to test
+            return
+
+        experiences = {'key1': 1, 'key2': 2}
+        inhomgeneous_experiences = {'key1': np.empty(shape=(6, )), 'key2': 2}
+        dict_experiences = [{'key_parent': experiences}, {'key_parent': inhomgeneous_experiences}]
+
+        marshaled_experience = marshal_dict_experiences(dict_experiences)
+
+        assert 'key1' not in marshaled_experience['key_parent']
+
+        key2_experiences = marshaled_experience['key_parent']['key2']
+        assert key2_experiences.shape == (2, 1)
+
         np.testing.assert_allclose(np.asarray(key2_experiences), 2)
 
     def test_list_of_dict_to_dict_of_list(self):
