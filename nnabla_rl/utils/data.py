@@ -18,6 +18,7 @@ from typing import Any, Dict, Generic, Iterable, List, Sequence, Tuple, TypeVar,
 import numpy as np
 
 import nnabla as nn
+from nnabla_rl.logger import logger
 from nnabla_rl.typing import TupledData
 
 T = TypeVar('T')
@@ -77,10 +78,14 @@ def marshal_dict_experiences(dict_experiences: Sequence[Dict[str, Any]]) -> Dict
     dict_of_list = list_of_dict_to_dict_of_list(dict_experiences)
     marshaled_experiences = {}
     for key, data in dict_of_list.items():
-        if isinstance(data[0], Dict):
-            marshaled_experiences.update({key: marshal_dict_experiences(data)})
-        else:
-            marshaled_experiences.update({key: add_axis_if_single_dim(np.asarray(data))})
+        try:
+            if isinstance(data[0], Dict):
+                marshaled_experiences.update({key: marshal_dict_experiences(data)})
+            else:
+                marshaled_experiences.update({key: add_axis_if_single_dim(np.asarray(data))})
+        except ValueError as e:
+            # do nothing
+            logger.warn(f'key: {key} contains inconsistent elements!. Details: {e}')
     return marshaled_experiences
 
 
