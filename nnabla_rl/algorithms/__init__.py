@@ -30,6 +30,7 @@ from nnabla_rl.algorithms.drqn import DRQN, DRQNConfig
 from nnabla_rl.algorithms.dummy import Dummy, DummyConfig
 from nnabla_rl.algorithms.gail import GAIL, GAILConfig
 from nnabla_rl.algorithms.her import HER, HERConfig
+from nnabla_rl.algorithms.hyar import HyAR, HyARConfig
 from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOConfig
 from nnabla_rl.algorithms.icml2018_sac import ICML2018SAC, ICML2018SACConfig
 from nnabla_rl.algorithms.icra2018_qtopt import ICRA2018QtOpt, ICRA2018QtOptConfig
@@ -94,6 +95,7 @@ register_algorithm(DQN, DQNConfig)
 register_algorithm(DRQN, DRQNConfig)
 register_algorithm(Dummy, DummyConfig)
 register_algorithm(HER, HERConfig)
+register_algorithm(HyAR, HyARConfig)
 register_algorithm(ICML2018SAC, ICML2018SACConfig)
 register_algorithm(iLQR, iLQRConfig)
 register_algorithm(IQN, IQNConfig)

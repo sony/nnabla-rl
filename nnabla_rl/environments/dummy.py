@@ -302,3 +302,10 @@ class DummyDiscreteActionGoalEnv(GoalEnv):
             return 1
         else:
             return 0
+
+
+class DummyHybridEnv(AbstractDummyEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyHybridEnv, self).__init__(max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Tuple((gym.spaces.Discrete(5), gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))))
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))

@@ -20,7 +20,8 @@ from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyC
                                           DummyFactoredContinuous, DummyMujocoEnv,
                                           DummyTupleContinuous, DummyTupleDiscrete, DummyTupleMixed,
                                           DummyTupleStateContinuous, DummyTupleStateDiscrete,
-                                          DummyTupleActionContinuous, DummyTupleActionDiscrete)
+                                          DummyTupleActionContinuous, DummyTupleActionDiscrete,
+                                          DummyHybridEnv)
 
 register(
     id='FakeMujocoNNablaRL-v1',
@@ -79,4 +80,10 @@ register(
     id='FactoredHumanoidV4NNablaRL-v1',
     entry_point='nnabla_rl.environments.factored_envs:FactoredHumanoidV4',
     max_episode_steps=1000,
+)
+
+register(
+    id='FakeHybridNNablaRL-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyHybridEnv',
+    max_episode_steps=10
 )

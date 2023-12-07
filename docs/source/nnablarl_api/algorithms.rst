@@ -160,6 +160,16 @@ HER
    :members:
    :show-inheritance:
 
+HyAR
+====
+.. autoclass:: nnabla_rl.algorithms.hyar.HyARConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.hyar.HyAR
+   :members:
+   :show-inheritance:
+
 iLQR
 ====
 .. autoclass:: nnabla_rl.algorithms.ilqr.iLQRConfig
