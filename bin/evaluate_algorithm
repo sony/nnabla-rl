@@ -105,6 +105,11 @@ DELAYED_MUJOCO_ENV_LIST=(
     "DelayedWalker2d-v1"
 )
 
+HYBRID_ENV_LIST=(
+    "Goal-v0"
+    "Platform-v0"
+)
+
 GPU_ID=0
 ALGO_NAME="dqn"
 BASE_ENV_NAME="atari"
@@ -184,6 +189,9 @@ do
     fi
     if [ $BASE_ENV_NAME = "delayed_mujoco" ]; then
         ENV_NAME=${DELAYED_MUJOCO_ENV_LIST[$INDEX]}
+    fi
+    if [ $BASE_ENV_NAME = "hybrid_env" ]; then
+        ENV_NAME=${HYBRID_ENV_LIST[$INDEX]}
     fi
     echo "Start running training for: " ${ENV_NAME}
     if [ -n "$BATCH_SIZE" ]; then

@@ -116,6 +116,15 @@ do
             python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --snapshot-dir ${SNAPSHOT_DIR} --showcase \
                 --showcase_runs ${SHOWCASE_RUNS} --dataset-path ${DATASET_PATH}
         fi
+    elif [ ${ALGORITHM} = "hyar" ]; then
+        echo "Test run of training for ${ALGORITHM}"
+        python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --save-dir "${RESULT_BASE_DIR}/${ALGORITHM}" --seed ${SEED} \
+            --total_iterations ${TOTAL_ITERATIONS} --save_timing ${TOTAL_ITERATIONS} \
+            --vae-pretrain-episodes 1 --vae-pretrain-times 1
+        SNAPSHOT_DIR="${RESULT_BASE_DIR}/${ALGORITHM}/${ENV}_results/seed-${SEED}/iteration-${TOTAL_ITERATIONS}"
+        echo "Test run of showcase for ${ALGORITHM}"
+        python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --snapshot-dir ${SNAPSHOT_DIR} --showcase \
+            --showcase_runs ${SHOWCASE_RUNS} 
     else
         echo "Test run of training for ${ALGORITHM}"
         python ${SCRIPT} --gpu ${GPU_ID} --env ${ENV} --save-dir "${RESULT_BASE_DIR}/${ALGORITHM}" --seed ${SEED} \

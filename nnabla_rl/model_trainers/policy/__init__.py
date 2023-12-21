@@ -17,6 +17,7 @@ from nnabla_rl.model_trainers.policy.bear_policy_trainer import BEARPolicyTraine
 from nnabla_rl.model_trainers.policy.demme_policy_trainer import DEMMEPolicyTrainer, DEMMEPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.dpg_policy_trainer import DPGPolicyTrainer, DPGPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.her_policy_trainer import HERPolicyTrainer, HERPolicyTrainerConfig  # noqa
+from nnabla_rl.model_trainers.policy.hyar_policy_trainer import HyARPolicyTrainer, HyARPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.ppo_policy_trainer import PPOPolicyTrainer, PPOPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.soft_policy_trainer import SoftPolicyTrainer, SoftPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.reinforce_policy_trainer import REINFORCEPolicyTrainer, REINFORCEPolicyTrainerConfig  # noqa

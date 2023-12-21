@@ -70,3 +70,7 @@ from nnabla_rl.models.pybullet.q_functions import ICRA2018QtOptQFunction  # noqa
 
 from nnabla_rl.models.classic_control.policies import REINFORCEContinousPolicy, REINFORCEDiscretePolicy  # noqa
 from nnabla_rl.models.classic_control.dynamics import MPPIDeterministicDynamics  # noqa
+
+from nnabla_rl.models.hybrid_env.encoders import HyARVAE  # noqa
+from nnabla_rl.models.hybrid_env.policies import HyARPolicy  # noqa
+from nnabla_rl.models.hybrid_env.q_functions import HyARQFunction  # noqa
