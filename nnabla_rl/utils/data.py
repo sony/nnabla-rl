@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Generic, Iterable, List, Sequence, Tuple, TypeVar, Union, cast
+from typing import Any, Dict, Generic, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 
@@ -211,3 +211,70 @@ class RingBuffer(DataHolder[Any]):
         removed = self._buffer[index]
         self._buffer[index] = data
         return removed
+
+
+def normalize_ndarray(ndarray: np.ndarray,
+                      mean: np.ndarray,
+                      std: np.ndarray,
+                      value_clip: Optional[Tuple[float, float]] = None) -> np.ndarray:
+    """Normalize the given ndarray.
+
+    Args:
+        ndarray (np.ndarray): variable to be normalized.
+        mean (np.ndarray): mean.
+        std (np.ndarray): standard deviation.
+        value_clip (Optional[Tuple[float, float]]): clipping value. defaults to None.
+
+    Returns:
+        np.ndarray: normalized value.
+    """
+    normalized: np.ndarray = (ndarray - mean) / std
+    if value_clip is not None:
+        normalized = np.clip(normalized, a_min=value_clip[0], a_max=value_clip[1])
+    return normalized
+
+
+def unnormalize_ndarray(ndarray: np.ndarray,
+                        mean: np.ndarray,
+                        std: np.ndarray,
+                        value_clip: Optional[Tuple[float, float]] = None) -> np.ndarray:
+    """Unnormalize the given ndarray.
+
+    Args:
+        ndarray (np.ndarray): variable to be unnormalized.
+        mean (np.ndarray): mean.
+        std (np.ndarray): standard deviation.
+        value_clip (Optional[Tuple[float, float]]): clipping value. defaults to None.
+
+    Returns:
+        np.ndarray: unnormalized value.
+    """
+    unnormalized: np.ndarray = ndarray * std + mean
+    if value_clip is not None:
+        unnormalized = np.clip(unnormalized, a_min=value_clip[0], a_max=value_clip[1])
+    return unnormalized
+
+
+def compute_std_ndarray(var: np.ndarray, epsilon: float, mode_for_floating_point_error: str) -> np.ndarray:
+    """Compute standard deviation.
+
+    Args:
+        var (nn.Variable): variance
+        epsilon (float): value to improve numerical stability for computing the standard deviation.
+        mode_for_floating_point_error (str): mode for avoiding a floating point error
+            when computing the standard deviation. Must be one of:
+
+            - `add`: It returns the square root of the sum of var and epsilon.
+            - `max`: It returns epsilon if the square root of var is smaller than epsilon, \
+                otherwise it returns the square root of var.
+
+    Returns:
+        nn.Variable: standard deviation
+    """
+    if mode_for_floating_point_error == "add":
+        std = (var + epsilon) ** 0.5
+    elif mode_for_floating_point_error == "max":
+        std = np.maximum(var**0.5, epsilon)
+    else:
+        raise ValueError
+    return std

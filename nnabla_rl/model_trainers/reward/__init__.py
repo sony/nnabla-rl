@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,3 +14,5 @@
 
 from nnabla_rl.model_trainers.reward.gail_reward_function_trainer import (  # noqa
     GAILRewardFunctionTrainer,  GAILRewardFunctionTrainerConfig)
+from nnabla_rl.model_trainers.reward.amp_reward_function_trainer import (  # noqa
+    AMPRewardFunctionTrainer,  AMPRewardFunctionTrainerConfig)

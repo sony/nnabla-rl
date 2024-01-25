@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -232,3 +232,70 @@ class HWCToCHWEnv(gym.ObservationWrapper):
 
     def observation(self, obs):
         return np.transpose(obs, [2, 0, 1])
+
+
+class FlattenNestedTupleStateWrapper(gym.ObservationWrapper):
+    """Flatten a nested tuple state observation wrapper.
+
+    This wapper flattens a state.
+    For example, if the original env_info.observation_shape is
+
+
+    ```
+    Tuple(Tuple(Box(-inf, inf, (2,), float32), Box(-inf, inf, (6,), float32)),
+          Tuple(Box(-inf, inf, (1,), float32), Box(-inf, inf, (3,), float32)))
+    ```,
+
+    then the wrapped observation_shape is
+
+    ```
+    Tuple(Box(-inf, inf, (2,), float32),
+          Box(-inf, inf, (6,), float32),
+          Box(-inf, inf, (1,), float32),
+          Box(-inf, inf, (3,), float32))
+    ```.
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        original_observation_space = env.observation_space
+        assert isinstance(original_observation_space, gym.spaces.Tuple)
+        self.observation_space = self._flatten_observation_space(original_observation_space)
+
+    def _flatten_observation_space(self, observation_space):
+        flattened_obs = []
+        for space in observation_space:
+            if isinstance(space, gym.spaces.Tuple):
+                space = self._flatten_tuple_space(space)
+                flattened_obs.extend(space)
+            else:
+                flattened_obs.append(space)
+        return gym.spaces.Tuple(flattened_obs)
+
+    def _flatten_tuple_space(self, tuple_space):
+        flattened = []
+        for item in tuple_space:
+            if isinstance(item, gym.spaces.Tuple):
+                flattened.extend(self._flatten_tuple_space(item))
+            else:
+                flattened.append(item)
+        return flattened
+
+    def observation(self, observation):
+        flattened_obs = []
+        for obs in observation:
+            if isinstance(obs, tuple):
+                obs = self._flatten_nested_array(obs)
+                flattened_obs.extend(obs)
+            else:
+                flattened_obs.append(obs)
+        return tuple(flattened_obs)
+
+    def _flatten_nested_array(self, arr):
+        flattened = []
+        for item in arr:
+            if isinstance(item, tuple):
+                flattened.extend(self._flatten_nested_array(item))
+            else:
+                flattened.append(item)
+        return flattened

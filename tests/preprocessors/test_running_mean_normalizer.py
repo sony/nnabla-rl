@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 
 import nnabla as nn
+import nnabla.initializer as NI
 from nnabla_rl.preprocessors.running_mean_normalizer import RunningMeanNormalizer
 
 
@@ -69,3 +70,53 @@ class TestRunningMeanNormalizer():
     def test_invalid_value_clip(self):
         with pytest.raises(ValueError):
             RunningMeanNormalizer("test", (1, 1), value_clip=[5., -5.])
+
+    def test_numpy_initializer(self):
+        shape = (6, )
+        mean_initializer = np.random.rand(6)
+        var_initializer = np.random.rand(6)
+        normalizer = RunningMeanNormalizer(scope_name="test", shape=shape, epsilon=0.0,
+                                           mean_initializer=mean_initializer, var_initializer=var_initializer)
+
+        # dummy process
+        output = normalizer.process(nn.Variable.from_numpy_array(np.random.rand(1, 6)))
+        output.forward()
+
+        actual_params = normalizer.get_parameters()
+        assert np.allclose(actual_params["mean"].d, mean_initializer[np.newaxis, :])
+        assert np.allclose(actual_params["var"].d, var_initializer[np.newaxis, :])
+        # count should be default initial value
+        assert np.allclose(actual_params["count"].d, np.ones((1, 1)) * 1e-4)
+
+    def test_nnabla_initializer(self):
+        shape = (6, )
+        mean_initializer = NI.ConstantInitializer(5.0)
+        var_initializer = NI.ConstantInitializer(6.0)
+        normalizer = RunningMeanNormalizer(scope_name="test", shape=shape, epsilon=0.0,
+                                           mean_initializer=mean_initializer, var_initializer=var_initializer)
+
+        # dummy process
+        output = normalizer.process(nn.Variable.from_numpy_array(np.random.rand(1, 6)))
+        output.forward()
+
+        actual_params = normalizer.get_parameters()
+        assert np.allclose(actual_params["mean"].d, np.ones((1, 6)) * 5.0)
+        assert np.allclose(actual_params["var"].d, np.ones((1, 6)) * 6.0)
+        # count should be default initial value
+        assert np.allclose(actual_params["count"].d, np.ones((1, 1)) * 1e-4)
+
+    def test_numpy_initializer_with_invalid_mean_initializer_shape(self):
+        shape = (6, )
+        mean_initializer = np.random.rand(4)
+        var_initializer = np.random.rand(6)
+        with pytest.raises(AssertionError):
+            RunningMeanNormalizer(scope_name="test", shape=shape, epsilon=0.0,
+                                  mean_initializer=mean_initializer, var_initializer=var_initializer)
+
+    def test_numpy_initializer_with_invalid_var_initializer_shape(self):
+        shape = (6, )
+        mean_initializer = np.random.rand(6)
+        var_initializer = np.random.rand(4)
+        with pytest.raises(AssertionError):
+            RunningMeanNormalizer(scope_name="test", shape=shape, epsilon=0.0,
+                                  mean_initializer=mean_initializer, var_initializer=var_initializer)

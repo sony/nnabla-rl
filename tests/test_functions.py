@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -512,6 +512,63 @@ class TestFunctions(object):
         reswapped.forward()
 
         assert np.allclose(original.d, reswapped.d)
+
+    @pytest.mark.parametrize("x, mean, std, value_clip, expected",
+                             [
+                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]), None,  np.array([5.0])),
+                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]),  (-1.5, 1.5), np.array([1.5])),
+                                 (np.array([-2.0]), np.array([1.0]), np.array([0.2]),  (-1.5, 1.5), np.array([-1.5])),
+                                 (np.array([[2.0], [1.0]]), np.array([[1.0]]), np.array([[0.2]]), None,
+                                  np.array([[5.0], [0.0]])),
+                             ])
+    def test_normalize(self, x, expected, mean, std, value_clip):
+        x_var = nn.Variable.from_numpy_array(x)
+        mean_var = nn.Variable.from_numpy_array(mean)
+        std_var = nn.Variable.from_numpy_array(std)
+
+        actual_var = RF.normalize(x_var, mean_var, std_var, value_clip=value_clip)
+        actual_var.forward()
+
+        assert np.allclose(actual_var.d, expected)
+
+    @pytest.mark.parametrize("x, mean, std, value_clip, expected",
+                             [
+                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]), None, np.array([1.4])),
+                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]),  (-1.0, 1.0), np.array([1.0])),
+                                 (np.array([-2.0]), np.array([-1.0]), np.array([0.2]),  (-1.0, 1.0),  np.array([-1.0])),
+                                 (np.array([[2.0], [1.0]]), np.array([[1.0]]), np.array([[0.2]]), None,
+                                  np.array([[1.4], [1.2]])),
+                             ])
+    def test_unnormalize(self, x, expected, mean, std, value_clip):
+        x_var = nn.Variable.from_numpy_array(x)
+        mean_var = nn.Variable.from_numpy_array(mean)
+        std_var = nn.Variable.from_numpy_array(std)
+
+        actual_var = RF.unnormalize(x_var, mean_var, std_var, value_clip=value_clip)
+        actual_var.forward()
+
+        assert np.allclose(actual_var.d, expected)
+
+    @pytest.mark.parametrize("var, epsilon, mode_for_floating_point_error, expected",
+                             [
+                                 (np.array([3.0]), 1.0, "add", np.array([2.0])),
+                                 (np.array([4.0]), 0.01, "max", np.array([2.0])),
+                                 (np.array([0.4]), 1.0, "max", np.array([1.0])),
+                                 (np.array([[3.0], [8.0]]), 1.0, "add", np.array([[2.0], [3.0]])),
+                                 (np.array([[4.0], [9.0]]), 0.01, "max", np.array([[2.0], [3.0]])),
+                                 (np.array([[0.4], [0.9]]), 1.0, "max", np.array([[1.0], [1.0]])),
+                             ])
+    def test_compute_std(self, var, epsilon, mode_for_floating_point_error, expected):
+        variance_variable = nn.Variable.from_numpy_array(var)
+        actual_var = RF.compute_std(variance_variable, epsilon, mode_for_floating_point_error)
+        actual_var.forward()
+
+        assert np.allclose(actual_var.d, expected)
+
+    def test_compute_std_with_invalid_args(self):
+        variance_variable = nn.Variable.from_numpy_array(np.ones(1))
+        with pytest.raises(ValueError):
+            RF.compute_std(variance_variable, 0.01, "dummy_add")
 
 
 if __name__ == "__main__":

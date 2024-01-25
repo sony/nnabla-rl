@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -620,3 +620,70 @@ def swapaxes(x: nn.Variable, axis1: int, axis2: int) -> nn.Variable:
     axes[axis1] = axis2
     axes[axis2] = axis1
     return NF.transpose(x, axes=axes)
+
+
+def normalize(x: nn.Variable,
+              mean: nn.Variable,
+              std: nn.Variable,
+              value_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+    """Normalize the given variable.
+
+    Args:
+        x (nn.Varible): variable to be normalized.
+        mean (nn.Variable): mean.
+        std (nn.Variable): standard deviation.
+        value_clip (Optional[Tuple[float, float]]): clipping value. defaults to None.
+
+    Returns:
+        nn.Variable: normalized value.
+    """
+    normalized = (x - mean) / std
+    if value_clip is not None:
+        normalized = NF.clip_by_value(normalized, min=value_clip[0], max=value_clip[1])
+    return normalized
+
+
+def unnormalize(x: nn.Variable,
+                mean: nn.Variable,
+                std: nn.Variable,
+                value_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+    """Unnormalize the given variable.
+
+    Args:
+        x (nn.Varible): variable to be normalized.
+        mean (nn.Variable): mean.
+        std (nn.Variable): standard deviation.
+        value_clip (Optional[Tuple[float, float]]): clipping value. defaults to None.
+
+    Returns:
+        nn.Variable: unnormalized value.
+    """
+    unnormalized = x * std + mean
+    if value_clip is not None:
+        unnormalized = NF.clip_by_value(unnormalized, min=value_clip[0], max=value_clip[1])
+    return unnormalized
+
+
+def compute_std(var: nn.Variable, epsilon: float, mode_for_floating_point_error: str) -> nn.Variable:
+    """Compute standard deviation.
+
+    Args:
+        variance (nn.Variable)
+        epsilon (float): value to improve numerical stability for computing the standard deviation.
+        mode_for_floating_point_error (str): mode for avoiding a floating point error
+            when computing the standard deviation. Must be one of:
+
+            - `add`: It returns the square root of the sum of var and epsilon.
+            - `max`: It returns epsilon if the square root of var is smaller than epsilon, \
+                otherwise it returns the square root of var.
+
+    Returns:
+        nn.Variable: standard deviation
+    """
+    if mode_for_floating_point_error == "add":
+        std = (var + epsilon) ** 0.5
+    elif mode_for_floating_point_error == "max":
+        std = NF.maximum_scalar(var**0.5, epsilon)
+    else:
+        raise ValueError
+    return std

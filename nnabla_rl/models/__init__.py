@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,6 +67,9 @@ from nnabla_rl.models.atari.distributional_functions import (C51ValueDistributio
 from nnabla_rl.models.atari.policies import ICML2015TRPOPolicy as ICML2015TRPOAtariPolicy  # noqa
 
 from nnabla_rl.models.pybullet.q_functions import ICRA2018QtOptQFunction  # noqa
+from nnabla_rl.models.pybullet.reward_functions import AMPDiscriminator  # noqa
+from nnabla_rl.models.pybullet.policy import AMPGatedPolicy, AMPPolicy  # noqa
+from nnabla_rl.models.pybullet.v_functions import AMPGatedVFunction, AMPVFunction  # noqa
 
 from nnabla_rl.models.classic_control.policies import REINFORCEContinousPolicy, REINFORCEDiscretePolicy  # noqa
 from nnabla_rl.models.classic_control.dynamics import MPPIDeterministicDynamics  # noqa

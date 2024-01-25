@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 from typing import Optional, SupportsFloat, Tuple, cast
 
 import gym
@@ -171,7 +172,7 @@ class GoalConditionedTupleObservationEnv(gym.ObservationWrapper):
 
     def observation(self, observation):
         self._check_observation(observation)
-        return tuple(observation[key].copy() for key in self._observation_keys)
+        return tuple(copy.deepcopy(observation[key]) for key in self._observation_keys)
 
     def _check_observation(self, observation):
         for key in observation.keys():

@@ -22,7 +22,7 @@ from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyC
                                           DummyTupleContinuous, DummyTupleDiscrete, DummyTupleMixed,
                                           DummyTupleStateContinuous, DummyTupleStateDiscrete,
                                           DummyTupleActionContinuous, DummyTupleActionDiscrete,
-                                          DummyHybridEnv,
+                                          DummyHybridEnv, DummyAMPEnv, DummyAMPGoalEnv,
                                           DummyGymnasiumAtariEnv, DummyGymnasiumMujocoEnv)
 
 register(
@@ -96,6 +96,17 @@ register(
     max_episode_steps=10
 )
 
+register(
+    id='FakeAMPNNablaRL-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyAMPEnv',
+    max_episode_steps=10
+)
+
+register(
+    id='FakeAMPGoalConditionedNNablaRL-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyAMPGoalEnv',
+    max_episode_steps=10
+)
 
 gymnasium_register(
     id='FakeGymnasiumMujocoNNablaRL-v1',

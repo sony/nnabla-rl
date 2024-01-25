@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, List, cast
 
 import gym
+import gym.spaces
 import gymnasium
 import numpy as np
 from gym.envs.registration import EnvSpec
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from gym.utils.seeding import RandomNumberGenerator
 
 import nnabla_rl
+from nnabla_rl.environments.amp_env import AMPEnv, AMPGoalEnv, TaskResult
 from nnabla_rl.external.goal_env import GoalEnv
 
 
@@ -315,6 +317,119 @@ class DummyHybridEnv(AbstractDummyEnv):
         super(DummyHybridEnv, self).__init__(max_episode_steps=max_episode_steps)
         self.action_space = gym.spaces.Tuple((gym.spaces.Discrete(5), gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))))
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))
+
+
+class DummyAMPEnv(AMPEnv):
+    def __init__(self, max_episode_steps=10):
+        self.spec = EnvSpec('dummy-amp-v0', max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4, ))
+        self.observation_space = gym.spaces.Tuple(
+            [gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
+             gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
+             gym.spaces.Box(low=0.0, high=1.0, shape=(1, ))])
+        self.reward_range = (0.0, 1.0)
+        self.observation_mean = tuple([np.zeros(2, dtype=np.float32), np.zeros(
+            5, dtype=np.float32), np.zeros(1, dtype=np.float32)])
+        self.observation_var = tuple([np.ones(2, dtype=np.float32), np.ones(
+            5, dtype=np.float32), np.ones(1, dtype=np.float32)])
+        self.action_mean = np.zeros((4,), dtype=np.float32)
+        self.action_var = np.ones((4,), dtype=np.float32)
+        self.reward_at_task_fail = 0.0
+        self.reward_at_task_success = 10.0
+        self._episode_steps = 0
+
+    def reset(self):
+        self._episode_steps = 0
+        state = list(self.observation_space.sample())
+        return tuple(state)
+
+    def task_result(self, state, reward, done, info) -> TaskResult:
+        return TaskResult(TaskResult.UNKNOWN.value)
+
+    def is_valid_episode(self, state, reward, done, info) -> bool:
+        return True
+
+    def expert_experience(self, state, reward, done, info):
+        state = list(self.observation_space.sample())
+        action = self.action_space.sample()
+        next_state = list(self.observation_space.sample())
+        return tuple(state), action, 0.0, False, tuple(next_state), {}
+
+    def _step(self, a):
+        self._episode_steps += 1
+        next_state = list(self.observation_space.sample())
+        reward = np.random.randn()
+        done = self._episode_steps >= self.spec.max_episode_steps
+        info = {'rnn_states': {'dummy_scope': {'dummy_state1': 1, 'dummy_state2': 2}}}
+        return tuple(next_state), reward, done, info
+
+
+class DummyAMPGoalEnv(AMPGoalEnv):
+    def __init__(self, max_episode_steps=10):
+        self.spec = EnvSpec('dummy-amp-goal-v0', max_episode_steps=max_episode_steps)
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4, ))
+        observation_space = gym.spaces.Tuple(
+            [gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
+             gym.spaces.Box(low=0.0, high=1.0, shape=(5, )),
+             gym.spaces.Box(low=0.0, high=1.0, shape=(1, ))])
+        goal_state_space = gym.spaces.Tuple([gym.spaces.Box(low=-np.inf,
+                                                            high=np.inf,
+                                                            shape=(3,),
+                                                            dtype=np.float32),
+                                             gym.spaces.Box(low=0.0,
+                                                            high=1.0,
+                                                            shape=(1,),
+                                                            dtype=np.float32)])
+        self.observation_space = gym.spaces.Dict({"observation": observation_space,
+                                                  "desired_goal": goal_state_space,
+                                                  "achieved_goal": goal_state_space})
+
+        self.reward_range = (0.0, 1.0)
+        self.observation_mean = tuple([np.zeros(2, dtype=np.float32), np.zeros(
+            5, dtype=np.float32), np.zeros(1, dtype=np.float32)])
+        self.observation_var = tuple([np.ones(2, dtype=np.float32), np.ones(
+            5, dtype=np.float32), np.ones(1, dtype=np.float32)])
+        self.action_mean = np.zeros((4,), dtype=np.float32)
+        self.action_var = np.ones((4,), dtype=np.float32)
+        self.reward_at_task_fail = 0.0
+        self.reward_at_task_success = 10.0
+        self._episode_steps = 0
+
+    def reset(self):
+        super().reset()
+        self._episode_steps = 0
+        return self.observation_space.sample()
+
+    def task_result(self, state, reward, done, info) -> TaskResult:
+        return TaskResult(TaskResult.UNKNOWN.value)
+
+    def is_valid_episode(self, state, reward, done, info) -> bool:
+        return True
+
+    def expert_experience(self, state, reward, done, info):
+        action = self.action_space.sample()
+        return (self._generate_dummy_goal_env_flatten_state(), action, 0.0,
+                False, self._generate_dummy_goal_env_flatten_state(), {})
+
+    def _generate_dummy_goal_env_flatten_state(self):
+        state: List[np.ndarray] = []
+        sample = self.observation_space.sample()
+        for key in ["observation", "desired_goal", "achieved_goal"]:
+            s = sample[key]
+            if isinstance(s, tuple):
+                state.extend(s)
+            else:
+                state.append(s)
+        state = list(map(lambda v: v * 0.0, state))
+        return tuple(state)
+
+    def _step(self, a):
+        self._episode_steps += 1
+        next_state = self.observation_space.sample()
+        reward = np.random.randn()
+        done = self._episode_steps >= self.spec.max_episode_steps
+        info = {'rnn_states': {'dummy_scope': {'dummy_state1': 1, 'dummy_state2': 2}}}
+        return next_state, reward, done, info
 
 
 # =========== gymnasium ==========

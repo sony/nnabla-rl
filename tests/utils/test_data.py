@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ from packaging.version import parse
 
 import nnabla as nn
 import nnabla_rl.environments as E
-from nnabla_rl.utils.data import (RingBuffer, add_batch_dimension, list_of_dict_to_dict_of_list,
-                                  marshal_dict_experiences, marshal_experiences, set_data_to_variable)
+from nnabla_rl.utils.data import (RingBuffer, add_batch_dimension, compute_std_ndarray, list_of_dict_to_dict_of_list,
+                                  marshal_dict_experiences, marshal_experiences, normalize_ndarray,
+                                  set_data_to_variable, unnormalize_ndarray)
 
 
 class TestData():
@@ -182,6 +183,47 @@ class TestData():
 
         assert actual_array[0].shape == (1, *array1.shape)
         assert actual_array[1].shape == (1, *array2.shape)
+
+    @pytest.mark.parametrize("x, mean, std, value_clip, expected",
+                             [
+                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]), None,  np.array([5.0])),
+                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]),  (-1.5, 1.5), np.array([1.5])),
+                                 (np.array([-2.0]), np.array([1.0]), np.array([0.2]),  (-1.5, 1.5), np.array([-1.5])),
+                                 (np.array([[2.0], [1.0]]), np.array([[1.0]]), np.array([[0.2]]), None,
+                                  np.array([[5.0], [0.0]])),
+                             ])
+    def test_normalize_ndarray(self, x, expected, mean, std, value_clip):
+        actual_var = normalize_ndarray(x, mean, std, value_clip=value_clip)
+        assert np.allclose(actual_var, expected)
+
+    @pytest.mark.parametrize("x, mean, std, value_clip, expected",
+                             [
+                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]), None, np.array([1.4])),
+                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]),  (-1.0, 1.0), np.array([1.0])),
+                                 (np.array([-2.0]), np.array([-1.0]), np.array([0.2]),  (-1.0, 1.0),  np.array([-1.0])),
+                                 (np.array([[2.0], [1.0]]), np.array([[1.0]]), np.array([[0.2]]), None,
+                                  np.array([[1.4], [1.2]])),
+                             ])
+    def test_unnormalize_ndarray(self, x, expected, mean, std, value_clip):
+        actual_var = unnormalize_ndarray(x, mean, std, value_clip=value_clip)
+        assert np.allclose(actual_var, expected)
+
+    @pytest.mark.parametrize("var, epsilon, mode_for_floating_point_error, expected",
+                             [
+                                 (np.array([3.0]), 1.0, "add", np.array([2.0])),
+                                 (np.array([4.0]), 0.01, "max", np.array([2.0])),
+                                 (np.array([0.4]), 1.0, "max", np.array([1.0])),
+                                 (np.array([[3.0], [8.0]]), 1.0, "add", np.array([[2.0], [3.0]])),
+                                 (np.array([[4.0], [9.0]]), 0.01, "max", np.array([[2.0], [3.0]])),
+                                 (np.array([[0.4], [0.9]]), 1.0, "max", np.array([[1.0], [1.0]])),
+                             ])
+    def test_compute_std_ndarray(self, var, epsilon, mode_for_floating_point_error, expected):
+        actual_var = compute_std_ndarray(var, epsilon, mode_for_floating_point_error)
+        assert np.allclose(actual_var, expected)
+
+    def test_compute_std_ndarray_with_invalid_args(self):
+        with pytest.raises(ValueError):
+            compute_std_ndarray(np.ones(1), 0.01, "dummy_add")
 
 
 class TestRingBuffer(object):

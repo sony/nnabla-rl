@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -93,6 +93,35 @@ class TestEpsilonGreedyActionStrategy(object):
         assert np.isclose(explorer._compute_epsilon(99), expected_epsilon(99))
         assert np.isclose(explorer._compute_epsilon(100), expected_epsilon(100))
         assert explorer._compute_epsilon(200) == final_epsilon
+
+    def test_return_explorer_info(self, ):
+        initial_epsilon = 1.0
+        final_epsilon = 0.0
+        max_explore_steps = 100
+        greedy_selector_mock = mock.MagicMock(return_value=(1, {}))
+        random_selector_mock = mock.MagicMock(return_value=(2, {}))
+        config = LinearDecayEpsilonGreedyExplorerConfig(initial_epsilon=initial_epsilon,
+                                                        final_epsilon=final_epsilon,
+                                                        max_explore_steps=max_explore_steps,
+                                                        append_explorer_info=True)
+        explorer = LinearDecayEpsilonGreedyExplorer(greedy_selector_mock,
+                                                    random_selector_mock,
+                                                    env_info=None,
+                                                    config=config)
+
+        action, action_info = explorer.action(50, np.random.rand(5))
+
+        assert "greedy_action" in action_info
+        assert "explore_rate" in action_info
+
+        if action == 1:
+            assert action_info["greedy_action"]
+        elif action == 2:
+            assert not action_info["greedy_action"]
+        else:
+            raise RuntimeError("Should not reach here")
+
+        assert action_info["explore_rate"] == 0.5
 
 
 if __name__ == '__main__':
