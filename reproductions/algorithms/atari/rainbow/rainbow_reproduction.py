@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -191,7 +191,8 @@ def run_training(args):
     eval_env = build_atari_env(args.env,
                                test=True, seed=args.seed + 100,
                                render=args.render,
-                               max_frames_per_episode=max_frames_per_episode)
+                               max_frames_per_episode=max_frames_per_episode,
+                               use_gymnasium=args.use_gymnasium)
     evaluator = TimestepEvaluator(num_timesteps=125000)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
@@ -201,7 +202,8 @@ def run_training(args):
     iteration_num_hook = H.IterationNumHook(timing=100)
 
     train_env = build_atari_env(args.env, seed=args.seed, render=args.render,
-                                max_frames_per_episode=max_frames_per_episode)
+                                max_frames_per_episode=max_frames_per_episode,
+                                use_gymnasium=args.use_gymnasium)
 
     rainbow = setup_rainbow(train_env, args)
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
@@ -223,7 +225,8 @@ def run_showcase(args):
                                test=True,
                                seed=args.seed + 200,
                                render=args.render,
-                               max_frames_per_episode=max_frames_per_episode)
+                               max_frames_per_episode=max_frames_per_episode,
+                               use_gymnasium=args.use_gymnasium)
     rainbow = load_rainbow(eval_env, args)
     if not isinstance(rainbow, A.Rainbow):
         raise ValueError('Loaded snapshot is not trained with Rainbow!')
@@ -254,6 +257,7 @@ def main():
     parser.add_argument('--save_timing', type=int, default=250000)
     parser.add_argument('--eval_timing', type=int, default=250000)
     parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument('--use-gymnasium', action='store_true')
     add_algorithm_options(parser)
 
     args = parser.parse_args()

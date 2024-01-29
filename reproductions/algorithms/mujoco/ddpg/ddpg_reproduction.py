@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ def run_training(args):
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100, use_gymnasium=args.use_gymnasium)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env,
                                        evaluator,
@@ -48,7 +48,7 @@ def run_training(args):
     iteration_num_hook = H.IterationNumHook(timing=100)
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
 
-    train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
+    train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render, use_gymnasium=args.use_gymnasium)
     timesteps = select_start_timesteps(args.env)
     config = A.DDPGConfig(gpu_id=args.gpu, start_timesteps=timesteps)
     ddpg = A.DDPG(train_env, config=config)
@@ -66,7 +66,9 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
+
+    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200,
+                                render=args.render, use_gymnasium=args.use_gymnasium)
     config = A.DDPGConfig(gpu_id=args.gpu)
     ddpg = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(ddpg, A.DDPG):
@@ -89,6 +91,7 @@ def main():
     parser.add_argument('--save_timing', type=int, default=5000)
     parser.add_argument('--eval_timing', type=int, default=5000)
     parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument('--use-gymnasium', action='store_true')
 
     args = parser.parse_args()
 

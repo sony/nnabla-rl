@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,8 @@ def run_training(args):
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render,
+                               use_gymnasium=args.use_gymnasium)
     evaluator = TimestepEvaluator(num_timesteps=125000)
     evaluation_hook = H.EvaluationHook(
         eval_env, evaluator, timing=args.evaluate_timing, writer=W.FileWriter(outdir=outdir,
@@ -39,7 +40,7 @@ def run_training(args):
 
     actor_num = 8
 
-    train_env = build_atari_env(args.env, seed=args.seed, render=args.render)
+    train_env = build_atari_env(args.env, seed=args.seed, render=args.render, use_gymnasium=args.use_gymnasium)
     config = A.PPOConfig(gpu_id=args.gpu,
                          actor_num=actor_num,
                          total_timesteps=args.total_iterations,
@@ -61,7 +62,8 @@ def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError(
             'Please specify the snapshot dir for showcasing')
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render,
+                               use_gymnasium=args.use_gymnasium)
     config = A.PPOConfig(gpu_id=args.gpu,
                          timelimit_as_terminal=True,
                          seed=args.seed,
@@ -87,6 +89,7 @@ def main():
     parser.add_argument('--save_timing', type=int, default=250000)
     parser.add_argument('--evaluate_timing', type=int, default=250000)
     parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument('--use-gymnasium', action='store_true')
 
     args = parser.parse_args()
 

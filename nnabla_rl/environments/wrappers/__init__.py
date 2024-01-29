@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,3 +20,4 @@ from nnabla_rl.environments.wrappers.mujoco import EndlessEnv  # noqa
 from nnabla_rl.environments.wrappers.atari import make_atari, wrap_deepmind  # noqa
 from nnabla_rl.environments.wrappers.hybrid_env import (EmbedActionWrapper, FlattenActionWrapper,  # noqa
                                                         RemoveStepWrapper, ScaleActionWrapper, ScaleStateWrapper)
+from nnabla_rl.environments.wrappers.gymnasium import Gymnasium2GymWrapper  # noqa
