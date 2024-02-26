@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -244,9 +244,7 @@ class SAC(Algorithm):
             self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
             self._pi_solver = policy_solver_builder(self._env_info, self._config)
 
-            self._temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
-                scope_name='temperature',
-                initial_value=self._config.initial_temperature)
+            self._temperature = self._setup_temperature_model()
             if not self._config.fix_temperature:
                 self._temperature_solver = temperature_solver_builder(self._env_info, self._config)
             else:
@@ -254,10 +252,8 @@ class SAC(Algorithm):
 
             self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
-        self._evaluation_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._pi.shallowcopy(), deterministic=True)
-        self._exploration_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._pi.shallowcopy(), deterministic=False)
+        self._evaluation_actor = self._setup_evaluation_actor()
+        self._exploration_actor = self._setup_exploration_actor()
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
@@ -270,11 +266,21 @@ class SAC(Algorithm):
         context.set_nnabla_context(self._config.gpu_id)
         self._environment_explorer = self._setup_environment_explorer(env_or_buffer)
         self._policy_trainer = self._setup_policy_training(env_or_buffer)
-        self._q_function_trainer = self._setup_q_function_training(
-            env_or_buffer)
+        self._q_function_trainer = self._setup_q_function_training(env_or_buffer)
+
+    def _setup_evaluation_actor(self):
+        return _StochasticPolicyActionSelector(self._env_info, self._pi.shallowcopy(), deterministic=True)
+
+    def _setup_exploration_actor(self):
+        return _StochasticPolicyActionSelector(self._env_info, self._pi.shallowcopy(), deterministic=False)
 
     def _setup_environment_explorer(self, env_or_buffer):
         return None if self._is_buffer(env_or_buffer) else self._explorer_builder(self._env_info, self._config, self)
+
+    def _setup_temperature_model(self):
+        return MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
+            scope_name='temperature',
+            initial_value=self._config.initial_temperature)
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.SoftPolicyTrainerConfig(

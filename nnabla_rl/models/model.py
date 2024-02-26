@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,6 +58,12 @@ class Model(object):
         """
         with nn.parameter_scope(self.scope_name):
             parameters: Dict[str, nn.Variable] = nn.get_parameters(grad_only=grad_only)
+            return parameters
+
+    def clear_parameters(self):
+        """clear_parameters Clear all parameters associated with this model."""
+        with nn.parameter_scope(self.scope_name):
+            parameters: Dict[str, nn.Variable] = nn.clear_parameters()
             return parameters
 
     def is_recurrent(self) -> bool:

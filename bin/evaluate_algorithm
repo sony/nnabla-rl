@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -110,6 +110,24 @@ HYBRID_ENV_LIST=(
     "Platform-v0"
 )
 
+DM_CONTROL_LIST=(
+    "acrobot-swingup" 
+    "cheetah-run" 
+    "finger-turn_hard" 
+    "fish-swim" 
+    "hopper-hop" 
+    "hopper-stand" 
+    "humanoid-run" 
+    "humanoid-stand" 
+    "humanoid-walk" 
+    "pendulum-swingup" 
+    "quadruped-run" 
+    "quadruped-walk" 
+    "reacher-hard" 
+    "swimmer-swimmer6" 
+    "walker-run" 
+)
+
 GPU_ID=0
 ALGO_NAME="dqn"
 BASE_ENV_NAME="atari"
@@ -192,6 +210,9 @@ do
     fi
     if [ $BASE_ENV_NAME = "hybrid_env" ]; then
         ENV_NAME=${HYBRID_ENV_LIST[$INDEX]}
+    fi
+    if [ $BASE_ENV_NAME = "dm_control" ]; then
+        ENV_NAME=${DM_CONTROL_LIST[$INDEX]}
     fi
     echo "Start running training for: " ${ENV_NAME}
     if [ -n "$BATCH_SIZE" ]; then

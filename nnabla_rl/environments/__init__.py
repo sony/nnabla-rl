@@ -32,6 +32,12 @@ register(
 )
 
 register(
+    id='FakeDMControlNNablaRL-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyDMControlEnv',
+    max_episode_steps=10
+)
+
+register(
     id='FakeAtariNNablaRLNoFrameskip-v1',
     entry_point='nnabla_rl.environments.dummy:DummyAtariEnv',
     max_episode_steps=10

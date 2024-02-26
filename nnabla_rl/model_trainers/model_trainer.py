@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -346,7 +346,7 @@ class ModelTrainer(metaclass=ABCMeta):
         # Initially create training variables with batch_size 1.
         # The batch_size will be updated later depending on the given experience data
         # This procedure is a workaround to initialize model parameters (it it is not created).
-        total_timesteps = self._config.unroll_steps + self._config.burn_in_steps
+        total_timesteps = self._total_timesteps()
         next_step_variables = None
         for _ in range(total_timesteps):
             training_variables = self._setup_training_variables(1)
@@ -372,7 +372,7 @@ class ModelTrainer(metaclass=ABCMeta):
         new_batch_size = batch.batch_size
         prev_batch_size = self._training_variables.batch_size
         if new_batch_size != prev_batch_size:
-            total_timesteps = self._config.unroll_steps + self._config.burn_in_steps
+            total_timesteps = self._total_timesteps()
             assert 0 < total_timesteps
             next_step_variables = None
             for _ in range(total_timesteps):
@@ -404,6 +404,9 @@ class ModelTrainer(metaclass=ABCMeta):
     def support_rnn(self) -> bool:
         return False
 
+    def _total_timesteps(self) -> int:
+        return self._config.unroll_steps + self._config.burn_in_steps
+
     def _setup_batch(self, training_batch: TrainingBatch) -> TrainingBatch:
         return training_batch
 
@@ -434,7 +437,7 @@ class ModelTrainer(metaclass=ABCMeta):
                 solver.set_parameters(model.get_parameters(), reset=False, retain_state=True)
 
     def _assert_variable_length_equals_total_timesteps(self):
-        total_timesptes = self._config.unroll_steps + self._config.burn_in_steps
+        total_timesptes = self._total_timesteps()
         if len(self._training_variables) != total_timesptes:
             raise RuntimeError(f'Training variables length and rnn unroll + burn-in steps does not match!. \
                                    {len(self._training_variables)} != {total_timesptes}. \

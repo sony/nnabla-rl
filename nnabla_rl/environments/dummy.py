@@ -232,6 +232,10 @@ class DummyMujocoEnv(AbstractDummyEnv):
         return dataset
 
 
+class DummyDMControlEnv(DummyMujocoEnv):
+    pass
+
+
 class DummyContinuousActionGoalEnv(GoalEnv):
     def __init__(self, max_episode_steps=10):
         self.spec = EnvSpec('dummy-continuou-action-goal-v0', max_episode_steps=max_episode_steps)
