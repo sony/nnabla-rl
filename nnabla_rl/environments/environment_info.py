@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,10 +47,10 @@ class EnvironmentInfo(object):
         self.reward_function = reward_function
 
         if not (self.is_discrete_state_env() or self.is_continuous_state_env() or self.is_tuple_state_env()):
-            raise ValueError("Unsupported state space")
+            raise ValueError(f"Unsupported state space: {observation_space}")
 
         if not (self.is_discrete_action_env() or self.is_continuous_action_env() or self.is_tuple_action_env()):
-            raise ValueError("Unsupported action space")
+            raise ValueError(f"Unsupported action space: {action_space}")
 
     @staticmethod
     def from_env(env):

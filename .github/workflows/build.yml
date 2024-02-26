@@ -142,6 +142,10 @@ jobs:
       - name: HyAR reproductions test
         run: |
           ./bin/test_reproductions --gpu_id -1 --base_env hybrid_env --env FakeHybridNNablaRL-v1
+      - name: DeepMind control suite reproductions test
+        run: |
+          pip install dm_control
+          ./bin/test_reproductions --gpu_id -1 --base_env dm_control --env FakeDMControlNNablaRL-v1
   copyright:
     runs-on: ubuntu-latest
     timeout-minutes: 3

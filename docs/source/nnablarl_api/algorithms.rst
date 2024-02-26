@@ -331,11 +331,31 @@ SAC (ICML 2018 version)
 
 SAC-D
 ====
-.. autoclass:: nnabla_rl.algorithms.sac.SACDConfig
+.. autoclass:: nnabla_rl.algorithms.sacd.SACDConfig
    :members:
    :show-inheritance:
 
 .. autoclass:: nnabla_rl.algorithms.sacd.SACD
+   :members:
+   :show-inheritance:
+
+SRSAC
+====
+.. autoclass:: nnabla_rl.algorithms.srsac.SRSACConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.srsac.SRSAC
+   :members:
+   :show-inheritance:
+
+SRSAC(Computationally efficient ver.)
+====
+.. autoclass:: nnabla_rl.algorithms.srsac.EfficientSRSACConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.srsac.EfficientSRSAC
    :members:
    :show-inheritance:
 
