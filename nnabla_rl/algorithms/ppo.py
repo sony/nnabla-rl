@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import os
 import threading as th
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Dict, List, NamedTuple, Optional, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 import gym
 import numpy as np
@@ -645,23 +645,15 @@ class _PPOActor(object):
             return action, info
 
     def _fill_result(self, experiences, v_targets, advantages):
-        def array_and_dtype(mp_arrays_item):
-            return mp_arrays_item[0], mp_arrays_item[2]
-
-        def _np_to_mp_array(np_array, mp_array):
-            if isinstance(np_array, tuple) and isinstance(mp_array, tuple):
-                (np_to_mp_array(np_ary, *array_and_dtype(mp_ary)) for np_ary, mp_ary in zip(np_array, mp_array))
-            else:
-                np_to_mp_array(np_array, *array_and_dtype(mp_array))
         (s, a, r, non_terminal, s_next, log_prob) = marshal_experiences(experiences)
-        _np_to_mp_array(s, self._mp_arrays.state)
-        _np_to_mp_array(a, self._mp_arrays.action)
-        _np_to_mp_array(r, self._mp_arrays.reward)
-        _np_to_mp_array(non_terminal, self._mp_arrays.non_terminal)
-        _np_to_mp_array(s_next, self._mp_arrays.next_state)
-        _np_to_mp_array(log_prob, self._mp_arrays.log_prob)
-        _np_to_mp_array(v_targets, self._mp_arrays.v_target)
-        _np_to_mp_array(advantages, self._mp_arrays.advantage)
+        _copy_np_array_to_mp_array(s, self._mp_arrays.state)
+        _copy_np_array_to_mp_array(a, self._mp_arrays.action)
+        _copy_np_array_to_mp_array(r, self._mp_arrays.reward)
+        _copy_np_array_to_mp_array(non_terminal, self._mp_arrays.non_terminal)
+        _copy_np_array_to_mp_array(s_next, self._mp_arrays.next_state)
+        _copy_np_array_to_mp_array(log_prob, self._mp_arrays.log_prob)
+        _copy_np_array_to_mp_array(v_targets, self._mp_arrays.v_target)
+        _copy_np_array_to_mp_array(advantages, self._mp_arrays.advantage)
 
     def _update_params(self, src, dest):
         copy_params_to_mp_arrays(src, dest)
@@ -707,3 +699,25 @@ class _PPOActor(object):
             action_mp_array = mp_array_from_np_array(
                 np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
         return (action_mp_array, action_mp_array_shape, action_space.dtype)
+
+
+def _copy_np_array_to_mp_array(
+    np_array: Union[np.ndarray, Tuple[np.ndarray]],
+    mp_array_shape_type: Union[Tuple[np.ndarray, Tuple[int], np.dtype], Tuple[Tuple[np.ndarray, Tuple[int], np.dtype]]],
+):
+    """Copy numpy array to multiprocessing array.
+
+    Args:
+        np_array (Union[np.ndarray, Tuple[np.ndarray]]): copy source of numpy array.
+        mp_array_shape_type
+            (Union[Tuple[np.ndarray, Tuple[int], np.dtype], Tuple[Tuple[np.ndarray, Tuple[int], np.dtype]]]):
+            copy target of multiprocessing array, shape and type.
+    """
+    if isinstance(np_array, tuple) and isinstance(mp_array_shape_type[0], tuple):
+        assert len(np_array) == len(mp_array_shape_type)
+        for np_ary, mp_ary_shape_type in zip(np_array, mp_array_shape_type):
+            np_to_mp_array(np_ary, mp_ary_shape_type[0], mp_ary_shape_type[2])
+    elif isinstance(np_array, np.ndarray) and isinstance(mp_array_shape_type[0], np.ndarray):
+        np_to_mp_array(np_array, mp_array_shape_type[0], mp_array_shape_type[2])
+    else:
+        raise ValueError("Invalid pair of np_array and mp_array!")
