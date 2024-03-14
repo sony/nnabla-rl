@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,14 +22,14 @@ from nnabla_rl.writer import Writer
 
 
 class FileWriter(Writer):
-    def __init__(self, outdir, file_prefix):
+    def __init__(self, outdir, file_prefix, fmt="%.3f"):
         super(FileWriter, self).__init__()
         if isinstance(outdir, str):
             outdir = pathlib.Path(outdir)
         self._outdir = outdir
         files.create_dir_if_not_exist(outdir=outdir)
         self._file_prefix = file_prefix
-        self._fmt = '%.3f'
+        self._fmt = fmt
 
     def write_scalar(self, iteration_num, scalar):
         outfile = self._outdir / (self._file_prefix + '_scalar.tsv')
