@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from gym.envs.registration import register
+from gymnasium.envs.registration import register as gymnasium_register
 
 from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyContinuousActionGoalEnv, DummyDiscrete,  # noqa
                                           DummyDiscreteActionGoalEnv, DummyDiscreteImg, DummyContinuousImg,
@@ -21,7 +22,8 @@ from nnabla_rl.environments.dummy import (DummyAtariEnv, DummyContinuous, DummyC
                                           DummyTupleContinuous, DummyTupleDiscrete, DummyTupleMixed,
                                           DummyTupleStateContinuous, DummyTupleStateDiscrete,
                                           DummyTupleActionContinuous, DummyTupleActionDiscrete,
-                                          DummyHybridEnv)
+                                          DummyHybridEnv,
+                                          DummyGymnasiumAtariEnv, DummyGymnasiumMujocoEnv)
 
 register(
     id='FakeMujocoNNablaRL-v1',
@@ -85,5 +87,18 @@ register(
 register(
     id='FakeHybridNNablaRL-v1',
     entry_point='nnabla_rl.environments.dummy:DummyHybridEnv',
+    max_episode_steps=10
+)
+
+
+gymnasium_register(
+    id='FakeGymnasiumMujocoNNablaRL-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyGymnasiumMujocoEnv',
+    max_episode_steps=10
+)
+
+gymnasium_register(
+    id='FakeGymnasiumAtariNNablaRLNoFrameskip-v1',
+    entry_point='nnabla_rl.environments.dummy:DummyGymnasiumAtariEnv',
     max_episode_steps=10
 )

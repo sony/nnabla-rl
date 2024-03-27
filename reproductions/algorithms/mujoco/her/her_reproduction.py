@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +16,14 @@ import os
 from typing import List
 
 import gym
+import gymnasium
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.hooks as H
 import nnabla_rl.writers as W
 from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv
 from nnabla_rl.environments.wrappers.goal_conditioned import GoalConditionedTupleObservationEnv, GoalEnvWrapper
+from nnabla_rl.environments.wrappers.gymnasium import Gymnasium2GymWrapper
 from nnabla_rl.typing import Experience
 from nnabla_rl.utils import serializers
 from nnabla_rl.utils.evaluator import EpisodicSuccessEvaluator
@@ -54,7 +56,7 @@ def check_success(experiences: List[Experience]) -> bool:
         return False
 
 
-def build_mujoco_goal_conditioned_env(id_or_env, test=False, seed=None, render=False):
+def build_mujoco_goal_conditioned_env(id_or_env, test=False, seed=None, render=False, use_gymnasium=False):
     try:
         # Add pybullet env
         import pybullet_envs  # noqa
@@ -70,10 +72,17 @@ def build_mujoco_goal_conditioned_env(id_or_env, test=False, seed=None, render=F
 
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
+    elif isinstance(id_or_env, gymnasium.Env):
+        env = Gymnasium2GymWrapper(id_or_env)
+        use_gymnasium = True
     else:
-        # Currently, env-checker of OpenAI gym cannot handle dict observation.
-        # So, avoid to use env-checker.
-        env = gym.make(id_or_env, disable_env_checker=True)
+        if use_gymnasium:
+            env = gymnasium.make(id_or_env)
+            env = Gymnasium2GymWrapper(env)
+        else:
+            # Currently, env-checker of OpenAI gym cannot handle dict observation.
+            # So, avoid to use env-checker.
+            env = gym.make(id_or_env, disable_env_checker=True)
     env = GoalEnvWrapper(env)
     env = GoalConditionedTupleObservationEnv(env)
     print_env_info(env)
@@ -83,7 +92,8 @@ def build_mujoco_goal_conditioned_env(id_or_env, test=False, seed=None, render=F
     if render:
         env = ScreenRenderEnv(env)
 
-    env.seed(seed)
+    if not use_gymnasium:
+        env.seed(seed)
     return env
 
 
@@ -94,8 +104,10 @@ def run_training(args):
     set_global_seed(args.seed)
 
     n_cycles = select_n_cycles(env_name=args.env)
-    train_env = build_mujoco_goal_conditioned_env(args.env, seed=args.seed, render=args.render)
-    eval_env = build_mujoco_goal_conditioned_env(args.env, test=True, seed=args.seed + 100, render=args.render)
+    train_env = build_mujoco_goal_conditioned_env(args.env, seed=args.seed, render=args.render,
+                                                  use_gymnasium=args.use_gymnasium)
+    eval_env = build_mujoco_goal_conditioned_env(args.env, test=True, seed=args.seed + 100, render=args.render,
+                                                 use_gymnasium=args.use_gymnasium)
 
     max_timesteps = train_env.spec.max_episode_steps
     iteration_per_epoch = n_cycles * n_update * max_timesteps
@@ -137,7 +149,8 @@ def run_training(args):
 def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
-    eval_env = build_mujoco_goal_conditioned_env(args.env, test=True, seed=args.seed + 200, render=args.render)
+    eval_env = build_mujoco_goal_conditioned_env(args.env, test=True, seed=args.seed + 200, render=args.render,
+                                                 use_gymnasium=args.use_gymnasium)
     config = A.HERConfig(gpu_id=args.gpu)
     her = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(her, A.HER):
@@ -159,6 +172,7 @@ def main():
     parser.add_argument('--save-dir', type=str, default=None)
     parser.add_argument('--total_iterations', type=int, default=20000000)
     parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument('--use-gymnasium', action='store_true')
 
     args = parser.parse_args()
 

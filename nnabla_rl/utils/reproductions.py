@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +16,14 @@
 import random as py_random
 
 import gym
+import gymnasium
 import numpy as np
 
 import nnabla as nn
 import nnabla_rl as rl
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv, make_atari, wrap_deepmind
+from nnabla_rl.environments.wrappers import (Gymnasium2GymWrapper, NumpyFloat32Env, ScreenRenderEnv, make_atari,
+                                             wrap_deepmind)
 from nnabla_rl.logger import logger
 
 
@@ -53,11 +55,14 @@ def build_atari_env(id_or_env,
                     print_info=True,
                     max_frames_per_episode=None,
                     frame_stack=True,
-                    flicker_probability=0.0):
+                    flicker_probability=0.0,
+                    use_gymnasium=False):
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
+    elif isinstance(id_or_env, gymnasium.Env):
+        env = Gymnasium2GymWrapper(id_or_env)
     else:
-        env = make_atari(id_or_env, max_frames_per_episode=max_frames_per_episode)
+        env = make_atari(id_or_env, max_frames_per_episode=max_frames_per_episode, use_gymnasium=use_gymnasium)
     if print_info:
         print_env_info(env)
 
@@ -75,7 +80,7 @@ def build_atari_env(id_or_env,
     return env
 
 
-def build_mujoco_env(id_or_env, test=False, seed=None, render=False, print_info=True):
+def build_mujoco_env(id_or_env, test=False, seed=None, render=False, print_info=True, use_gymnasium=False):
     try:
         # Add pybullet env
         import pybullet_envs  # noqa
@@ -91,8 +96,14 @@ def build_mujoco_env(id_or_env, test=False, seed=None, render=False, print_info=
 
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
+    elif isinstance(id_or_env, gymnasium.Env):
+        env = Gymnasium2GymWrapper(id_or_env)
     else:
-        env = gym.make(id_or_env)
+        if use_gymnasium:
+            env = gymnasium.make(id_or_env)
+            env = Gymnasium2GymWrapper(env)
+        else:
+            env = gym.make(id_or_env)
 
     if print_info:
         print_env_info(env)

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,12 @@ from collections import deque
 
 import cv2
 import gym
+import gymnasium
 import numpy as np
 from gym import spaces
 
 import nnabla_rl as rl
+from nnabla_rl.environments.wrappers.gymnasium import Gymnasium2GymWrapper
 from nnabla_rl.external.atari_wrappers import (ClipRewardEnv, EpisodicLifeEnv, FireResetEnv, MaxAndSkipEnv,
                                                NoopResetEnv, ScaledFloatFrame)
 
@@ -97,8 +99,14 @@ class CHWLazyFrames(object):
         return out
 
 
-def make_atari(env_id, max_frames_per_episode=None):
-    env = gym.make(env_id)
+def make_atari(env_id, max_frames_per_episode=None, use_gymnasium=False):
+    if use_gymnasium:
+        env = gymnasium.make(env_id)
+        env = Gymnasium2GymWrapper(env)
+        # gymnasium env is not wrapped TimeLimit wrapper
+        env = gym.wrappers.TimeLimit(env, max_episode_steps=env.spec.kwargs["max_num_frames_per_episode"])
+    else:
+        env = gym.make(env_id)
     if max_frames_per_episode is not None:
         env = env.unwrapped
         env = gym.wrappers.TimeLimit(env, max_episode_steps=max_frames_per_episode)

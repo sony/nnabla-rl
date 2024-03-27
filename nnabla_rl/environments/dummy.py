@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 from typing import TYPE_CHECKING, cast
 
 import gym
+import gymnasium
 import numpy as np
 from gym.envs.registration import EnvSpec
+from gymnasium.envs.registration import EnvSpec as GymnasiumEnvSpec
 
 if TYPE_CHECKING:
     from gym.utils.seeding import RandomNumberGenerator
@@ -309,3 +311,88 @@ class DummyHybridEnv(AbstractDummyEnv):
         super(DummyHybridEnv, self).__init__(max_episode_steps=max_episode_steps)
         self.action_space = gym.spaces.Tuple((gym.spaces.Discrete(5), gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))))
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(5, ))
+
+
+# =========== gymnasium ==========
+class AbstractDummyGymnasiumEnv(gymnasium.Env):
+    def __init__(self, max_episode_steps):
+        self.spec = GymnasiumEnvSpec('dummy-v0', max_episode_steps=max_episode_steps)
+        self._episode_steps = 0
+
+    def reset(self):
+        self._episode_steps = 0
+        return self.observation_space.sample(), {}
+
+    def step(self, a):
+        next_state = self.observation_space.sample()
+        reward = np.random.randn()
+        terminated = False
+        if self.spec.max_episode_steps is None:
+            truncated = False
+        else:
+            truncated = bool(self._episode_steps < self.spec.max_episode_steps)
+        info = {'rnn_states': {'dummy_scope': {'dummy_state1': 1, 'dummy_state2': 2}}}
+        self._episode_steps += 1
+        return next_state, reward, terminated, truncated, info
+
+
+class DummyGymnasiumAtariEnv(AbstractDummyGymnasiumEnv):
+    class DummyALE(object):
+        def __init__(self):
+            self._lives = 100
+
+        def lives(self):
+            self._lives -= 1
+            if self._lives < 0:
+                self._lives = 100
+            return self._lives
+
+    # seeding.np_random outputs np_random and seed
+    np_random = cast("RandomNumberGenerator", nnabla_rl.random.drng)
+
+    def __init__(self, done_at_random=True, max_episode_length=None):
+        super(DummyGymnasiumAtariEnv, self).__init__(
+            max_episode_steps=max_episode_length)
+        self.action_space = gymnasium.spaces.Discrete(4)
+        self.observation_space = gymnasium.spaces.Box(
+            low=0, high=255, shape=(84, 84, 3), dtype=np.uint8)
+        self.ale = DummyGymnasiumAtariEnv.DummyALE()
+        self._done_at_random = done_at_random
+        self._max_episode_length = max_episode_length
+        self._episode_length = None
+
+    def step(self, action):
+        assert self._episode_length is not None
+        observation = self.observation_space.sample()
+        self._episode_length += 1
+        if self._done_at_random:
+            done = bool(self.np_random.integers(10) == 0)
+        else:
+            done = False
+        if self._max_episode_length is not None:
+            done = (self._max_episode_length <= self._episode_length) or done
+        return observation, 1.0, done, {'needs_reset': False}
+
+    def reset(self):
+        self._episode_length = 0
+        return self.observation_space.sample()
+
+    def get_action_meanings(self):
+        return ['NOOP', 'FIRE', 'LEFT', 'RIGHT']
+
+
+class DummyGymnasiumMujocoEnv(AbstractDummyGymnasiumEnv):
+    def __init__(self, max_episode_steps=None):
+        super(DummyGymnasiumMujocoEnv, self).__init__(max_episode_steps=max_episode_steps)
+        self.action_space = gymnasium.spaces.Box(low=0.0, high=1.0, shape=(5, ))
+        self.observation_space = gymnasium.spaces.Box(low=0.0, high=1.0, shape=(5, ))
+
+    def get_dataset(self):
+        dataset = {}
+        datasize = 2000
+        dataset['observations'] = np.stack([self.observation_space.sample() for _ in range(datasize)], axis=0)
+        dataset['actions'] = np.stack([self.action_space.sample() for _ in range(datasize)], axis=0)
+        dataset['rewards'] = np.random.randn(datasize, 1)
+        dataset['terminals'] = np.random.randint(2, size=(datasize, 1))
+        dataset['timeouts'] = np.zeros((datasize, 1))
+        return dataset

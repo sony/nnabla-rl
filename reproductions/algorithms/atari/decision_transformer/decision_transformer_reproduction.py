@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -190,7 +190,8 @@ def run_training(args):
     set_global_seed(args.seed)
 
     writer = FileWriter(outdir, "evaluation_result")
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render,
+                               use_gymnasium=args.use_gymnasium)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
     evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=args.eval_timing, writer=writer)
 
@@ -230,7 +231,8 @@ def run_training(args):
 def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render,
+                               use_gymnasium=args.use_gymnasium)
     config = {'gpu_id': args.gpu}
     decision_transformer = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(decision_transformer, A.DecisionTransformer):
@@ -264,6 +266,7 @@ def main():
     parser.add_argument('--eval_timing', type=int, default=1)
     parser.add_argument('--showcase_runs', type=int, default=10)
     parser.add_argument('--target-return', type=int, default=None)
+    parser.add_argument('--use-gymnasium', action='store_true')
 
     args = parser.parse_args()
 

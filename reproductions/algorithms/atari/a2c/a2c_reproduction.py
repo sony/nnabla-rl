@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ from nnabla_rl.writers import FileWriter
 
 def run_training(args):
     set_global_seed(args.seed)
-    train_env = build_atari_env(args.env, seed=args.seed)
+    train_env = build_atari_env(args.env, seed=args.seed, use_gymnasium=args.use_gymnasium)
     eval_env = build_atari_env(
-        args.env, test=True, seed=args.seed + 100, render=args.render)
+        args.env, test=True, seed=args.seed + 100, render=args.render, use_gymnasium=args.use_gymnasium)
 
     iteration_num_hook = H.IterationNumHook(timing=100)
 
@@ -56,7 +56,8 @@ def run_training(args):
 def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError('Please specify the snapshot dir for showcasing')
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=False)
+    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=False,
+                               use_gymnasium=args.use_gymnasium)
     config = A.A2CConfig(gpu_id=args.gpu)
     a2c = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(a2c, A.A2C):
@@ -83,6 +84,7 @@ def main():
     parser.add_argument('--save_timing', type=int, default=250000)
     parser.add_argument('--eval_timing', type=int, default=250000)
     parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument('--use-gymnasium', action='store_true')
 
     args = parser.parse_args()
 
