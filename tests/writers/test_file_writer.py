@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 
 from nnabla_rl.writers.file_writer import FileWriter
 
@@ -62,6 +63,27 @@ class TestFileWriter():
                 os.path.join(test_file_dir, 'evaluation_results_histogram.tsv')
             self._check_same_tsv_file(file_path, test_file_path)
 
+    @pytest.mark.parametrize("format", ["%f", "%.3f", "%.5f"])
+    def test_data_formatting(self, format):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_returns = np.arange(5)
+            test_results = {}
+            test_results['mean'] = np.mean(test_returns)
+            test_results['std_dev'] = np.std(test_returns)
+            test_results['min'] = np.min(test_returns)
+            test_results['max'] = np.max(test_returns)
+            test_results['median'] = np.median(test_returns)
+
+            writer = FileWriter(outdir=tmpdir, file_prefix='actual_results', fmt=format)
+            writer.write_scalar(1, test_results)
+
+            actual_file_path = os.path.join(tmpdir, 'actual_results_scalar.tsv')
+
+            this_file_dir = os.path.dirname(__file__)
+            expected_file_dir = this_file_dir.replace('tests', 'test_resources')
+            expected_file_path = os.path.join(expected_file_dir, f'evaluation_results_scalar{format}.tsv')
+            self._check_same_tsv_file(actual_file_path, expected_file_path)
+
     def _check_same_tsv_file(self, file_path1, file_path2):
         # check each line
         with open(file_path1, mode='rt') as data_1, \
@@ -71,5 +93,4 @@ class TestFileWriter():
 
 
 if __name__ == "__main__":
-    import pytest
     pytest.main()
