@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import SupportsIndex, cast
 
 import gym
 import gym.spaces
@@ -46,8 +46,9 @@ class ScaleStateWrapper(gym.ObservationWrapper):
         self._original_observation_space = env.observation_space
 
         if self._is_box(env.observation_space):
-            self.observation_space = gym.spaces.Box(low=-np.ones(shape=env.observation_space.shape),
-                                                    high=np.ones(shape=env.observation_space.shape),
+            observation_shape = cast(SupportsIndex, env.observation_space.shape)
+            self.observation_space = gym.spaces.Box(low=-np.ones(shape=observation_shape),
+                                                    high=np.ones(shape=observation_shape),
                                                     dtype=np.float32)
         elif self._is_tuple(env.observation_space):
             spaces = [gym.spaces.Box(low=-np.ones(shape=space.shape),
@@ -85,8 +86,9 @@ class ScaleActionWrapper(gym.ActionWrapper):
         self._original_action_space = env.action_space
 
         if self._is_box(env.action_space):
-            self.action_space = gym.spaces.Box(low=-np.ones(shape=env.action_space.shape),
-                                               high=np.ones(shape=env.action_space.shape),
+            action_shape = cast(SupportsIndex, env.action_space.shape)
+            self.action_space = gym.spaces.Box(low=-np.ones(shape=action_shape),
+                                               high=np.ones(shape=action_shape),
                                                dtype=np.float32)
         elif self._is_tuple(env.action_space):
             spaces = [gym.spaces.Box(low=-np.ones(shape=space.shape),
