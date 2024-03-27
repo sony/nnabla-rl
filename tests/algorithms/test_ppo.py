@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,9 +20,11 @@ import nnabla as nn
 import nnabla.functions as NF
 import nnabla_rl.algorithms as A
 import nnabla_rl.environments as E
+from nnabla_rl.algorithms.ppo import _copy_np_array_to_mp_array
 from nnabla_rl.builders import ModelBuilder
 from nnabla_rl.distributions import Gaussian
 from nnabla_rl.models import StochasticPolicy, VFunction
+from nnabla_rl.utils.multiprocess import mp_array_from_np_array, mp_to_np_array
 
 
 class TupleStateActor(StochasticPolicy):
@@ -167,6 +169,54 @@ class TestPPO(object):
         assert 'v_loss' in latest_iteration_state['scalar']
         assert latest_iteration_state['scalar']['pi_loss'] == 0.
         assert latest_iteration_state['scalar']['v_loss'] == 1.
+
+    def test_copy_np_array_to_mp_array(self):
+        shape = (10, 9, 8, 7)
+        mp_array_shape_type = (mp_array_from_np_array(np.random.uniform(size=shape)), shape, np.float64)
+
+        test_array = np.random.uniform(size=shape)
+        before_copying = mp_to_np_array(mp_array_shape_type[0], shape, dtype=mp_array_shape_type[2])
+        assert not np.allclose(before_copying, test_array)
+
+        _copy_np_array_to_mp_array(test_array, mp_array_shape_type)
+
+        after_copying = mp_to_np_array(mp_array_shape_type[0], shape, dtype=mp_array_shape_type[2])
+        assert np.allclose(after_copying, test_array)
+
+    def test_copy_tuple_np_array_to_tuple_mp_array_shape_type(self):
+        shape = ((10, 9, 8, 7), (6, 5, 4, 3))
+        tuple_mp_array_shape_type = tuple(
+            [(mp_array_from_np_array(np.random.uniform(size=s)), shape, np.float64) for s in shape]
+        )
+        tuple_test_array = tuple([np.random.uniform(size=s) for s in shape])
+
+        for mp_ary_shape_type, s, test_ary in zip(tuple_mp_array_shape_type, shape, tuple_test_array):
+            before_copying = mp_to_np_array(mp_ary_shape_type[0], s, dtype=mp_ary_shape_type[2])
+            assert not np.allclose(before_copying, test_ary)
+
+        _copy_np_array_to_mp_array(tuple_test_array, tuple_mp_array_shape_type)
+
+        for mp_ary_shape_type, s, test_ary in zip(tuple_mp_array_shape_type, shape, tuple_test_array):
+            after_copying = mp_to_np_array(mp_ary_shape_type[0], s, dtype=mp_ary_shape_type[2])
+            assert np.allclose(after_copying, test_ary)
+
+    def test_copy_np_array_to_tuple_mp_array_shape_type(self):
+        shape = ((10, 9, 8, 7), (6, 5, 4, 3))
+        tuple_mp_array_shape_type = tuple(
+            [(mp_array_from_np_array(np.random.uniform(size=s)), shape, np.float64) for s in shape]
+        )
+        test_array = np.random.uniform(size=shape[0])
+
+        with pytest.raises(ValueError):
+            _copy_np_array_to_mp_array(test_array, tuple_mp_array_shape_type)
+
+    def test_copy_tuple_np_array_to_mp_array_shape_type(self):
+        shape = ((10, 9, 8, 7), (6, 5, 4, 3))
+        mp_array_shape_type = (mp_array_from_np_array(np.random.uniform(size=shape[0])), shape, np.float64)
+        tuple_test_array = tuple([np.random.uniform(size=s) for s in shape])
+
+        with pytest.raises(ValueError):
+            _copy_np_array_to_mp_array(tuple_test_array, mp_array_shape_type)
 
 
 if __name__ == "__main__":
