@@ -117,6 +117,32 @@ def build_mujoco_env(id_or_env, test=False, seed=None, render=False, print_info=
     return env
 
 
+def build_dmc_env(id_or_env, test=False, seed=None, render=False, print_info=True):
+    from nnabla_rl.external.dmc_env import DMCEnv
+
+    if isinstance(id_or_env, gym.Env):
+        env = id_or_env
+    elif id_or_env.startswith("FakeDMControl"):
+        env = gym.make(id_or_env)
+    else:
+        domain_name, task_name = id_or_env.split('-')
+        env = DMCEnv(domain_name,
+                     task_name=task_name,
+                     task_kwargs={'random': seed})
+        env = gym.wrappers.FlattenObservation(env)
+        env = gym.wrappers.RescaleAction(env, min_action=-1., max_action=1.)
+
+    if print_info:
+        print_env_info(env)
+    env = NumpyFloat32Env(env)
+
+    if render:
+        env = ScreenRenderEnv(env)
+
+    env.seed(seed)
+    return env
+
+
 def d4rl_dataset_to_experiences(dataset, size=1000000):
     size = min(dataset['observations'].shape[0], size)
     states = dataset['observations'][:size]
