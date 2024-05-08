@@ -29,6 +29,16 @@ A2C
    :members:
    :show-inheritance:
 
+AMP
+====
+.. autoclass:: nnabla_rl.algorithms.amp.AMPConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.amp.AMP
+   :members:
+   :show-inheritance:
+
 ATRPO
 ======
 .. autoclass:: nnabla_rl.algorithms.atrpo.ATRPOConfig

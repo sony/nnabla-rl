@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,11 +80,14 @@ class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
             This value must be smaller than initial_epsilon. Defaults to 0.05.
         max_explore_steps (int): Number of steps to decay epsilon from initial_epsilon to final_epsilon.
             Defaults to 1000000.
+        append_explorer_info (bool): Flag for appending explorer info to the action info. \
+            The explore info includes whether the action is greedy or not, and explore rate. Defaults to False.
     """
 
     initial_epsilon: float = 1.0
     final_epsilon: float = 0.05
     max_explore_steps: float = 1000000
+    append_explorer_info: bool = False
 
     def __post_init__(self):
         self._assert_between(self.initial_epsilon, 0.0, 1.0, 'initial_epsilon')
@@ -125,11 +128,13 @@ class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
 
     def action(self, step: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
         epsilon = self._compute_epsilon(step)
-        (action, info), _ = epsilon_greedy_action_selection(state,
-                                                            self._greedy_action_selector,
-                                                            self._random_action_selector,
-                                                            epsilon,
-                                                            begin_of_episode=begin_of_episode)
+        (action, info), is_greedy_action = epsilon_greedy_action_selection(state,
+                                                                           self._greedy_action_selector,
+                                                                           self._random_action_selector,
+                                                                           epsilon,
+                                                                           begin_of_episode=begin_of_episode)
+        if self._config.append_explorer_info:
+            info.update({"greedy_action": is_greedy_action, "explore_rate": epsilon})
         return action, info
 
     def _compute_epsilon(self, step):

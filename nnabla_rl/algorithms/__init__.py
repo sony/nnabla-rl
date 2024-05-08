@@ -15,6 +15,7 @@
 
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig
 from nnabla_rl.algorithms.a2c import A2C, A2CConfig
+from nnabla_rl.algorithms.amp import AMP, AMPConfig
 from nnabla_rl.algorithms.atrpo import ATRPO, ATRPOConfig
 from nnabla_rl.algorithms.bcq import BCQ, BCQConfig
 from nnabla_rl.algorithms.bear import BEAR, BEARConfig
@@ -83,6 +84,7 @@ def get_class_of(name):
 
 register_algorithm(A2C, A2CConfig)
 register_algorithm(ATRPO, ATRPOConfig)
+register_algorithm(AMP, AMPConfig)
 register_algorithm(BCQ, BCQConfig)
 register_algorithm(BEAR, BEARConfig)
 register_algorithm(CategoricalDDQN, CategoricalDDQNConfig)
