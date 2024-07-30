@@ -172,6 +172,6 @@ class AMPPolicyTrainer(ModelTrainer):
         extra["advantage"] = advantage_var
         return TrainingVariables(batch_size, s_current_var, a_current_var, extra=extra)
 
-    @ property
+    @property
     def loss_variables(self) -> Dict[str, nn.Variable]:
         return {"pi_loss": self._pi_loss}
