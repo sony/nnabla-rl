@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,17 +29,19 @@ class TestICML2015TRPO(object):
         dummy_env = E.DummyDiscreteImg()
         trpo = A.ICML2015TRPO(dummy_env)
 
-        assert trpo.__name__ == 'ICML2015TRPO'
+        assert trpo.__name__ == "ICML2015TRPO"
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
         dummy_env = E.DummyDiscreteImg()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
-        config = A.ICML2015TRPOConfig(batch_size=5,
-                                      gpu_batch_size=2,
-                                      num_steps_per_iteration=5,
-                                      sigma_kl_divergence_constraint=10.0,
-                                      maximum_backtrack_numbers=2)
+        config = A.ICML2015TRPOConfig(
+            batch_size=5,
+            gpu_batch_size=2,
+            num_steps_per_iteration=5,
+            sigma_kl_divergence_constraint=10.0,
+            maximum_backtrack_numbers=2,
+        )
         trpo = A.ICML2015TRPO(dummy_env, config=config)
 
         trpo.train_online(dummy_env, total_iterations=1)
@@ -79,20 +81,18 @@ class TestICML2015TRPO(object):
         gamma = 0.99
         episode_length = 3
         reward_sequence = np.arange(episode_length)
-        gamma_seq = np.array(
-            [gamma**i for i in range(episode_length)])
+        gamma_seq = np.array([gamma**i for i in range(episode_length)])
         gamma_seqs = np.zeros((episode_length, episode_length))
         gamma_seqs[0] = gamma_seq
         for i in range(1, episode_length):
             gamma_seqs[i, i:] = gamma_seq[:-i]
 
-        expect = np.sum(reward_sequence*gamma_seqs, axis=1)
+        expect = np.sum(reward_sequence * gamma_seqs, axis=1)
 
         dummy_envinfo = E.DummyContinuous()
         icml2015_trpo = A.ICML2015TRPO(dummy_envinfo)
 
-        accumulated_reward = icml2015_trpo._compute_accumulated_reward(
-            reward_sequence, gamma)
+        accumulated_reward = icml2015_trpo._compute_accumulated_reward(reward_sequence, gamma)
 
         assert expect == pytest.approx(accumulated_reward.flatten())
 
@@ -110,6 +110,7 @@ class TestICML2015TRPO(object):
 
 if __name__ == "__main__":
     from testing_utils import EpisodicEnv
+
     pytest.main()
 else:
     from ..testing_utils import EpisodicEnv

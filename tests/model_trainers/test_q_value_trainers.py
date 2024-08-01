@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,42 +57,46 @@ class TestSquaredTDQFunctionTrainer(object):
     def setup_method(self, method):
         nn.clear_parameters()
 
-    @pytest.mark.parametrize('num_steps', [1, 2])
-    @pytest.mark.parametrize('unroll_steps', [1, 2, 3])
-    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
-    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    @pytest.mark.parametrize("num_steps", [1, 2])
+    @pytest.mark.parametrize("unroll_steps", [1, 2, 3])
+    @pytest.mark.parametrize("burn_in_steps", [0, 1, 2])
+    @pytest.mark.parametrize("loss_integration", [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
     def test_with_non_rnn_model(self, num_steps, unroll_steps, burn_in_steps, loss_integration):
         env_info = EnvironmentInfo.from_env(DummyDiscreteImg())
 
         env_info = EnvironmentInfo.from_env(DummyDiscreteImg())
 
-        train_q = DQNQFunction('stub', n_action=env_info.action_dim)
-        target_q = train_q.deepcopy('stub2')
+        train_q = DQNQFunction("stub", n_action=env_info.action_dim)
+        target_q = train_q.deepcopy("stub2")
         # Using DQN Q trainer as representative trainer
-        config = MT.q_value_trainers.DQNQTrainerConfig(unroll_steps=unroll_steps,
-                                                       burn_in_steps=burn_in_steps,
-                                                       num_steps=num_steps,
-                                                       loss_integration=loss_integration)
+        config = MT.q_value_trainers.DQNQTrainerConfig(
+            unroll_steps=unroll_steps,
+            burn_in_steps=burn_in_steps,
+            num_steps=num_steps,
+            loss_integration=loss_integration,
+        )
         DQNQTrainer(train_functions=train_q, solvers={}, target_function=target_q, env_info=env_info, config=config)
 
         # pass: If no ecror occurs
 
-    @pytest.mark.parametrize('num_steps', [1, 2])
-    @pytest.mark.parametrize('unroll_steps', [1, 2, 3])
-    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
-    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    @pytest.mark.parametrize("num_steps", [1, 2])
+    @pytest.mark.parametrize("unroll_steps", [1, 2, 3])
+    @pytest.mark.parametrize("burn_in_steps", [0, 1, 2])
+    @pytest.mark.parametrize("loss_integration", [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
     def test_with_rnn_model(self, num_steps, unroll_steps, burn_in_steps, loss_integration):
         env_info = EnvironmentInfo.from_env(DummyDiscreteImg())
 
         env_info = EnvironmentInfo.from_env(DummyDiscreteImg())
 
-        train_q = DRQNQFunction('stub',  n_action=env_info.action_dim)
-        target_q = train_q.deepcopy('stub2')
+        train_q = DRQNQFunction("stub", n_action=env_info.action_dim)
+        target_q = train_q.deepcopy("stub2")
         # Using DQN Q trainer as representative trainer
-        config = MT.q_value_trainers.DQNQTrainerConfig(unroll_steps=unroll_steps,
-                                                       burn_in_steps=burn_in_steps,
-                                                       num_steps=num_steps,
-                                                       loss_integration=loss_integration)
+        config = MT.q_value_trainers.DQNQTrainerConfig(
+            unroll_steps=unroll_steps,
+            burn_in_steps=burn_in_steps,
+            num_steps=num_steps,
+            loss_integration=loss_integration,
+        )
         DQNQTrainer(train_functions=train_q, solvers={}, target_function=target_q, env_info=env_info, config=config)
 
         # pass: If no ecror occurs
@@ -126,7 +130,7 @@ class TestMultiStepTrainer(object):
         num_steps = 5
         env_info = EnvironmentInfo.from_env(DummyDiscreteImg())
 
-        train_q = DQNQFunction('stub',  n_action=env_info.action_dim)
+        train_q = DQNQFunction("stub", n_action=env_info.action_dim)
         config = MT.q_value_trainers.multi_step_trainer.MultiStepTrainerConfig(num_steps=num_steps)
         trainer = MultiStepTrainerForTest(models=train_q, solvers={}, env_info=env_info, config=config)
 
@@ -157,9 +161,10 @@ class TestMultiStepTrainer(object):
         unroll_steps = 3
         env_info = EnvironmentInfo.from_env(DummyDiscreteImg())
 
-        train_q = DRQNQFunction('stub',  n_action=env_info.action_dim)
-        config = MT.q_value_trainers.multi_step_trainer.MultiStepTrainerConfig(num_steps=num_steps,
-                                                                               unroll_steps=unroll_steps)
+        train_q = DRQNQFunction("stub", n_action=env_info.action_dim)
+        config = MT.q_value_trainers.multi_step_trainer.MultiStepTrainerConfig(
+            num_steps=num_steps, unroll_steps=unroll_steps
+        )
         trainer = MultiStepTrainerForTest(models=train_q, solvers={}, env_info=env_info, config=config)
 
         batch = _generate_batch(batch_size, num_steps + unroll_steps - 1, env_info)
@@ -186,10 +191,10 @@ class TestMultiStepTrainer(object):
         burn_in_steps = 2
         env_info = EnvironmentInfo.from_env(DummyDiscreteImg())
 
-        train_q = DRQNQFunction('stub',  n_action=env_info.action_dim)
-        config = MT.q_value_trainers.multi_step_trainer.MultiStepTrainerConfig(num_steps=num_steps,
-                                                                               unroll_steps=unroll_steps,
-                                                                               burn_in_steps=burn_in_steps)
+        train_q = DRQNQFunction("stub", n_action=env_info.action_dim)
+        config = MT.q_value_trainers.multi_step_trainer.MultiStepTrainerConfig(
+            num_steps=num_steps, unroll_steps=unroll_steps, burn_in_steps=burn_in_steps
+        )
         trainer = MultiStepTrainerForTest(models=train_q, solvers={}, env_info=env_info, config=config)
 
         batch = _generate_batch(batch_size, num_steps + unroll_steps + burn_in_steps - 1, env_info)
@@ -227,16 +232,18 @@ class TestMultiStepTrainer(object):
 
                 next_batch = next_batch.next_step_batch
 
-            return TrainingBatch(batch_size=training_batch.batch_size,
-                                 s_current=training_batch.s_current,
-                                 a_current=training_batch.a_current,
-                                 reward=n_step_reward,
-                                 gamma=n_step_gamma,
-                                 non_terminal=n_step_non_terminal,
-                                 s_next=n_step_state,
-                                 weight=training_batch.weight,
-                                 extra=training_batch.extra,
-                                 next_step_batch=None)
+            return TrainingBatch(
+                batch_size=training_batch.batch_size,
+                s_current=training_batch.s_current,
+                a_current=training_batch.a_current,
+                reward=n_step_reward,
+                gamma=n_step_gamma,
+                non_terminal=n_step_non_terminal,
+                s_next=n_step_state,
+                weight=training_batch.weight,
+                extra=training_batch.extra,
+                next_step_batch=None,
+            )
 
 
 def _generate_batch(batch_size, num_steps, env_info) -> TrainingBatch:
@@ -247,21 +254,23 @@ def _generate_batch(batch_size, num_steps, env_info) -> TrainingBatch:
     tail_batch: Optional[TrainingBatch] = None
     s_current = np.random.normal(size=(batch_size, state_dim))
     for _ in range(num_steps):
-        a_current = np.random.randint(action_num, size=(batch_size, 1)).astype('float32')
+        a_current = np.random.randint(action_num, size=(batch_size, 1)).astype("float32")
         reward = np.random.normal(size=(batch_size, 1))
         gamma = 0.99
-        non_terminal = np.random.randint(2, size=(batch_size, 1)).astype('float32')
+        non_terminal = np.random.randint(2, size=(batch_size, 1)).astype("float32")
         s_next = np.random.normal(size=(batch_size, state_dim))
         weight = np.random.normal(size=(batch_size, 1))
 
-        batch = TrainingBatch(batch_size=batch_size,
-                              s_current=s_current,
-                              a_current=a_current,
-                              reward=reward,
-                              gamma=gamma,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=weight)
+        batch = TrainingBatch(
+            batch_size=batch_size,
+            s_current=s_current,
+            a_current=a_current,
+            reward=reward,
+            gamma=gamma,
+            non_terminal=non_terminal,
+            s_next=s_next,
+            weight=weight,
+        )
         if head_batch is None:
             head_batch = batch
         if tail_batch is None:

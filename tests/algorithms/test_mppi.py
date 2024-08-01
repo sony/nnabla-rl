@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,17 +73,17 @@ class QuadraticCostFunction(CostFunction):
 
 class TestMPPI(object):
     def test_algorithm_name(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         cost_function = QuadraticCostFunction()
 
         mppi = A.MPPI(env, cost_function=cost_function)
 
-        assert mppi.__name__ == 'MPPI'
+        assert mppi.__name__ == "MPPI"
 
     def test_continuous_action_env_supported(self):
         """Check that no error occurs when training on continuous action
         env."""
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         cost_function = QuadraticCostFunction()
 
         A.MPPI(env, cost_function=cost_function)
@@ -97,7 +97,7 @@ class TestMPPI(object):
             A.MPPI(env, cost_function=cost_function)
 
     def test_compute_eval_action(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         cost_function = QuadraticCostFunction()
 
         T = 20
@@ -108,20 +108,22 @@ class TestMPPI(object):
         x0 = np.array([[2.0], [0.0]])
         mppi_action = mppi.compute_eval_action(x0)
 
-        assert mppi_action.shape == (*env.action_space.shape, )
+        assert mppi_action.shape == (*env.action_space.shape,)
 
     def test_compute_trajectory(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
         T = 100
         covariance = np.eye(N=2) * 0.3
-        config = A.MPPIConfig(T=T, use_known_dynamics=True, dt=0.2, covariance=covariance,)
-        mppi = A.MPPI(env,
-                      known_dynamics=dynamics,
-                      cost_function=cost_function,
-                      config=config)
+        config = A.MPPIConfig(
+            T=T,
+            use_known_dynamics=True,
+            dt=0.2,
+            covariance=covariance,
+        )
+        mppi = A.MPPI(env, known_dynamics=dynamics, cost_function=cost_function, config=config)
 
         # initial pose
         x0 = np.array([[2.5], [0.0]])
@@ -140,7 +142,7 @@ class TestMPPI(object):
         assert np.abs(pos) < 0.5
 
     def test_run_online_training(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ), max_episode_steps=5)
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,), max_episode_steps=5)
         cost_function = QuadraticCostFunction()
 
         config = A.MPPIConfig(batch_size=2, training_iterations=2)
@@ -149,7 +151,7 @@ class TestMPPI(object):
 
     def test_run_offline_training(self):
         """Check that error occurs when calling offline training."""
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ), max_episode_steps=5)
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,), max_episode_steps=5)
         cost_function = QuadraticCostFunction()
 
         with pytest.raises(Exception):

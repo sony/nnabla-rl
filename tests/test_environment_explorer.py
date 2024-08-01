@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,13 @@ import gym
 import pytest
 
 from nnabla_rl.environment_explorer import _is_end_of_episode, _sample_action
-from nnabla_rl.environments.dummy import (DummyContinuous, DummyDiscrete, DummyTupleActionContinuous,
-                                          DummyTupleActionDiscrete, DummyTupleMixed)
+from nnabla_rl.environments.dummy import (
+    DummyContinuous,
+    DummyDiscrete,
+    DummyTupleActionContinuous,
+    DummyTupleActionDiscrete,
+    DummyTupleMixed,
+)
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 
@@ -41,8 +46,16 @@ class TestEnvironmentExplorer(object):
             else:
                 raise RuntimeError
 
-    @pytest.mark.parametrize("env", [DummyContinuous(), DummyDiscrete(),
-                                     DummyTupleActionContinuous(), DummyTupleActionDiscrete(), DummyTupleMixed()])
+    @pytest.mark.parametrize(
+        "env",
+        [
+            DummyContinuous(),
+            DummyDiscrete(),
+            DummyTupleActionContinuous(),
+            DummyTupleActionDiscrete(),
+            DummyTupleMixed(),
+        ],
+    )
     def test_sample_action(self, env):
         env_info = EnvironmentInfo.from_env(env)
         action, *_ = _sample_action(env, env_info)
@@ -50,15 +63,15 @@ class TestEnvironmentExplorer(object):
         if env_info.is_tuple_action_env():
             for a, space in zip(action, env_info.action_space):
                 if isinstance(space, gym.spaces.Discrete):
-                    assert a.shape == (1, )
+                    assert a.shape == (1,)
                 else:
                     assert a.shape == space.shape
         else:
             if isinstance(env_info.action_space, gym.spaces.Discrete):
-                assert action.shape == (1, )
+                assert action.shape == (1,)
             else:
-                assert action.shape == env_info.action_space.shape or action.shape == (1, )
+                assert action.shape == env_info.action_space.shape or action.shape == (1,)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

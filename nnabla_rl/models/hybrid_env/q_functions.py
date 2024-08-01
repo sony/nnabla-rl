@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ class HyARQFunction(ContinuousQFunction):
     in the HyAR paper.
     See: https://arxiv.org/abs/2109.05490
     """
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -35,14 +36,11 @@ class HyARQFunction(ContinuousQFunction):
     def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NF.concatenate(s, a)
-            linear1_init = RI.HeUniform(inmaps=h.shape[1], outmaps=256, factor=1/3)
-            h = NPF.affine(h, n_outmaps=256, name="linear1",
-                           w_init=linear1_init, b_init=linear1_init)
+            linear1_init = RI.HeUniform(inmaps=h.shape[1], outmaps=256, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=256, name="linear1", w_init=linear1_init, b_init=linear1_init)
             h = NF.relu(x=h)
-            linear2_init = RI.HeUniform(inmaps=h.shape[1], outmaps=256, factor=1/3)
-            h = NPF.affine(h, n_outmaps=256, name="linear2",
-                           w_init=linear2_init, b_init=linear2_init)
+            linear2_init = RI.HeUniform(inmaps=h.shape[1], outmaps=256, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=256, name="linear2", w_init=linear2_init, b_init=linear2_init)
             h = NF.relu(x=h)
-            linear3_init = RI.HeUniform(inmaps=h.shape[1], outmaps=1, factor=1/3)
-            return NPF.affine(h, n_outmaps=1, name="linear3",
-                              w_init=linear3_init, b_init=linear3_init)
+            linear3_init = RI.HeUniform(inmaps=h.shape[1], outmaps=1, factor=1 / 3)
+            return NPF.affine(h, n_outmaps=1, name="linear3", w_init=linear3_init, b_init=linear3_init)

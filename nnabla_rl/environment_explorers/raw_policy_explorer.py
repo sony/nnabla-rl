@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,10 +42,12 @@ class RawPolicyExplorer(EnvironmentExplorer):
             <nnabla_rl.environment_explorers.RawPolicyExplorerConfig>`): the config of this class.
     """
 
-    def __init__(self,
-                 policy_action_selector: ActionSelector,
-                 env_info: EnvironmentInfo,
-                 config: RawPolicyExplorerConfig = RawPolicyExplorerConfig()):
+    def __init__(
+        self,
+        policy_action_selector: ActionSelector,
+        env_info: EnvironmentInfo,
+        config: RawPolicyExplorerConfig = RawPolicyExplorerConfig(),
+    ):
         super().__init__(env_info, config)
         self._policy_action_selector = policy_action_selector
 

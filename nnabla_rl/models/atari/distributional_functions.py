@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,11 @@ import nnabla.functions as NF
 import nnabla.parametric_functions as NPF
 import nnabla_rl.functions as RF
 import nnabla_rl.parametric_functions as RPF
-from nnabla_rl.models import (DiscreteQuantileDistributionFunction, DiscreteStateActionQuantileFunction,
-                              DiscreteValueDistributionFunction)
+from nnabla_rl.models import (
+    DiscreteQuantileDistributionFunction,
+    DiscreteStateActionQuantileFunction,
+    DiscreteValueDistributionFunction,
+)
 
 
 class C51ValueDistributionFunction(DiscreteValueDistributionFunction):
@@ -44,8 +47,7 @@ class C51ValueDistributionFunction(DiscreteValueDistributionFunction):
                 h = NPF.affine(h, n_outmaps=512)
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
-                h = NPF.affine(
-                    h, n_outmaps=self._n_action * self._n_atom)
+                h = NPF.affine(h, n_outmaps=self._n_action * self._n_atom)
             h = NF.reshape(h, (-1, self._n_action, self._n_atom))
         assert h.shape == (batch_size, self._n_action, self._n_atom)
         return NF.softmax(h, axis=2)
@@ -168,8 +170,7 @@ class QRDQNQuantileDistributionFunction(DiscreteQuantileDistributionFunction):
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
                 h = NPF.affine(h, n_outmaps=self._n_action * self._n_quantile)
-            quantiles = NF.reshape(
-                h, (-1, self._n_action, self._n_quantile))
+            quantiles = NF.reshape(h, (-1, self._n_action, self._n_quantile))
         assert quantiles.shape == (batch_size, self._n_action, self._n_quantile)
         return quantiles
 
@@ -180,8 +181,14 @@ class IQNQuantileFunction(DiscreteStateActionQuantileFunction):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _embedding_dim: int
 
-    def __init__(self, scope_name: str, n_action: int, embedding_dim: int, K: int,
-                 risk_measure_function: Callable[[nn.Variable], nn.Variable]):
+    def __init__(
+        self,
+        scope_name: str,
+        n_action: int,
+        embedding_dim: int,
+        K: int,
+        risk_measure_function: Callable[[nn.Variable], nn.Variable],
+    ):
         super(IQNQuantileFunction, self).__init__(scope_name, n_action, K, risk_measure_function)
         self._embedding_dim = embedding_dim
 

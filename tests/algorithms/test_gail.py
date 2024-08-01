@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import nnabla_rl.environments as E
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
-class TestGAIL():
+class TestGAIL:
     def setup_method(self):
         nn.clear_parameters()
 
@@ -37,7 +37,7 @@ class TestGAIL():
         dummy_buffer = self._create_dummy_buffer(dummy_env)
         gail = A.GAIL(dummy_env, dummy_buffer)
 
-        assert gail.__name__ == 'GAIL'
+        assert gail.__name__ == "GAIL"
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
@@ -54,12 +54,14 @@ class TestGAIL():
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
         dummy_buffer = self._create_dummy_buffer(dummy_env, batch_size=15)
 
-        config = A.GAILConfig(num_steps_per_iteration=5,
-                              pi_batch_size=5,
-                              vf_batch_size=2,
-                              discriminator_batch_size=2,
-                              sigma_kl_divergence_constraint=10.0,
-                              maximum_backtrack_numbers=50)
+        config = A.GAILConfig(
+            num_steps_per_iteration=5,
+            pi_batch_size=5,
+            vf_batch_size=2,
+            discriminator_batch_size=2,
+            sigma_kl_divergence_constraint=10.0,
+            maximum_backtrack_numbers=50,
+        )
         gail = A.GAIL(dummy_env, dummy_buffer, config=config)
         gail.train_online(dummy_env, total_iterations=5)
 
@@ -121,18 +123,19 @@ class TestGAIL():
         dummy_buffer = self._create_dummy_buffer(dummy_env)
         gail = A.GAIL(dummy_env, dummy_buffer)
 
-        gail._v_function_trainer_state = {'v_loss': 0.}
-        gail._discriminator_trainer_state = {'reward_loss': 1.}
+        gail._v_function_trainer_state = {"v_loss": 0.0}
+        gail._discriminator_trainer_state = {"reward_loss": 1.0}
 
         latest_iteration_state = gail.latest_iteration_state
-        assert 'v_loss' in latest_iteration_state['scalar']
-        assert 'reward_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['v_loss'] == 0.
-        assert latest_iteration_state['scalar']['reward_loss'] == 1.
+        assert "v_loss" in latest_iteration_state["scalar"]
+        assert "reward_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["v_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["reward_loss"] == 1.0
 
 
 if __name__ == "__main__":
     from testing_utils import EpisodicEnv, generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import EpisodicEnv, generate_dummy_experiences

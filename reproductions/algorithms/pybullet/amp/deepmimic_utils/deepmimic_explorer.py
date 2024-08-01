@@ -17,8 +17,10 @@ from typing import List, Union, cast
 import gym
 
 from nnabla_rl.environment_explorer import EnvironmentExplorer, EnvironmentExplorerConfig
-from nnabla_rl.environment_explorers.epsilon_greedy_explorer import (LinearDecayEpsilonGreedyExplorer,
-                                                                     LinearDecayEpsilonGreedyExplorerConfig)
+from nnabla_rl.environment_explorers.epsilon_greedy_explorer import (
+    LinearDecayEpsilonGreedyExplorer,
+    LinearDecayEpsilonGreedyExplorerConfig,
+)
 from nnabla_rl.environments.amp_env import AMPEnv, AMPGoalEnv
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.typing import ActionSelector, Experience, State
@@ -60,11 +62,13 @@ class ExploreUntilValidEnvironmentExplorer(EnvironmentExplorer):
 
 
 class DeepMimicExplorer(LinearDecayEpsilonGreedyExplorer, ExploreUntilValidEnvironmentExplorer):
-    def __init__(self,
-                 greedy_action_selector: ActionSelector,
-                 random_action_selector: ActionSelector,
-                 env_info: EnvironmentInfo,
-                 config: LinearDecayEpsilonGreedyExplorerConfig = LinearDecayEpsilonGreedyExplorerConfig()):
+    def __init__(
+        self,
+        greedy_action_selector: ActionSelector,
+        random_action_selector: ActionSelector,
+        env_info: EnvironmentInfo,
+        config: LinearDecayEpsilonGreedyExplorerConfig = LinearDecayEpsilonGreedyExplorerConfig(),
+    ):
         super().__init__(
             env_info=env_info,
             config=config,

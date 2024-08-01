@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ class TestA2C(object):
         dummy_env = E.DummyDiscreteImg()
         a2c = A.A2C(dummy_env)
 
-        assert a2c.__name__ == 'A2C'
+        assert a2c.__name__ == "A2C"
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
@@ -47,7 +47,7 @@ class TestA2C(object):
         config = A.A2CConfig(n_steps=n_steps, actor_num=actor_num)
         a2c = A.A2C(dummy_env, config=config)
 
-        a2c.train_online(dummy_env, total_iterations=n_steps*actor_num)
+        a2c.train_online(dummy_env, total_iterations=n_steps * actor_num)
 
     def test_run_offline_training(self):
         """Check that no error occurs when calling offline training."""
@@ -80,14 +80,14 @@ class TestA2C(object):
         dummy_env = E.DummyDiscreteImg()
         a2c = A.A2C(dummy_env)
 
-        a2c._policy_trainer_state = {'pi_loss': 0.}
-        a2c._v_function_trainer_state = {'v_loss': 1.}
+        a2c._policy_trainer_state = {"pi_loss": 0.0}
+        a2c._v_function_trainer_state = {"v_loss": 1.0}
 
         latest_iteration_state = a2c.latest_iteration_state
-        assert 'pi_loss' in latest_iteration_state['scalar']
-        assert 'v_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['pi_loss'] == 0.
-        assert latest_iteration_state['scalar']['v_loss'] == 1.
+        assert "pi_loss" in latest_iteration_state["scalar"]
+        assert "v_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["pi_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["v_loss"] == 1.0
 
 
 if __name__ == "__main__":

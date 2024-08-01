@@ -78,7 +78,7 @@ class SACConfig(AlgorithmConfig):
     """
 
     gamma: float = 0.99
-    learning_rate: float = 3.0*1e-4
+    learning_rate: float = 3.0 * 1e-4
     batch_size: int = 256
     tau: float = 0.005
     environment_steps: int = 1
@@ -101,69 +101,72 @@ class SACConfig(AlgorithmConfig):
 
     def __post_init__(self):
         """__post_init__ Check set values are in valid range."""
-        self._assert_between(self.tau, 0.0, 1.0, 'tau')
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.gradient_steps, 'gradient_steps')
-        self._assert_positive(self.environment_steps, 'environment_steps')
+        self._assert_between(self.tau, 0.0, 1.0, "tau")
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_positive(self.gradient_steps, "gradient_steps")
+        self._assert_positive(self.environment_steps, "environment_steps")
         if self.initial_temperature is not None:
-            self._assert_positive(
-                self.initial_temperature, 'initial_temperature')
-        self._assert_positive(self.start_timesteps, 'start_timesteps')
+            self._assert_positive(self.initial_temperature, "initial_temperature")
+        self._assert_positive(self.start_timesteps, "start_timesteps")
 
-        self._assert_positive(self.critic_unroll_steps, 'critic_unroll_steps')
-        self._assert_positive_or_zero(self.critic_burn_in_steps, 'critic_burn_in_steps')
-        self._assert_positive(self.actor_unroll_steps, 'actor_unroll_steps')
-        self._assert_positive_or_zero(self.actor_burn_in_steps, 'actor_burn_in_steps')
+        self._assert_positive(self.critic_unroll_steps, "critic_unroll_steps")
+        self._assert_positive_or_zero(self.critic_burn_in_steps, "critic_burn_in_steps")
+        self._assert_positive(self.actor_unroll_steps, "actor_unroll_steps")
+        self._assert_positive_or_zero(self.actor_burn_in_steps, "actor_burn_in_steps")
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: SACConfig,
-                    **kwargs) -> QFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: SACConfig,
+        **kwargs,
+    ) -> QFunction:
         return SACQFunction(scope_name)
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: SACConfig,
-                    **kwargs) -> StochasticPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: SACConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
         return SACPolicy(scope_name, env_info.action_dim)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: SACConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: SACConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: SACConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: SACConfig, **kwargs
+    ) -> ReplayBuffer:
         return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: SACConfig,
-                       algorithm: "SAC",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: SACConfig,
+        algorithm: "SAC",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.RawPolicyExplorerConfig(
             warmup_random_steps=algorithm_config.start_timesteps,
             initial_step_num=algorithm.iteration_num,
-            timelimit_as_terminal=False
+            timelimit_as_terminal=False,
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
-                                        env_info=env_info,
-                                        config=explorer_config)
+        explorer = EE.RawPolicyExplorer(
+            policy_action_selector=algorithm._exploration_action_selector, env_info=env_info, config=explorer_config
+        )
         return explorer
 
 
@@ -222,24 +225,28 @@ class SAC(Algorithm):
     _policy_trainer_state: Dict[str, Any]
     _q_function_trainer_state: Dict[str, Any]
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: SACConfig = SACConfig(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: SACConfig = SACConfig(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(SAC, self).__init__(env_or_env_info, config=config)
 
         self._explorer_builder = explorer_builder
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._train_q_functions = self._build_q_functions(q_function_builder)
-            self._train_q_solvers = {q.scope_name: q_solver_builder(self._env_info, self._config)
-                                     for q in self._train_q_functions}
-            self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in self._train_q_functions]
+            self._train_q_solvers = {
+                q.scope_name: q_solver_builder(self._env_info, self._config) for q in self._train_q_functions
+            }
+            self._target_q_functions = [q.deepcopy("target_" + q.scope_name) for q in self._train_q_functions]
 
             self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
             self._pi_solver = policy_solver_builder(self._env_info, self._config)
@@ -279,8 +286,8 @@ class SAC(Algorithm):
 
     def _setup_temperature_model(self):
         return MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
-            scope_name='temperature',
-            initial_value=self._config.initial_temperature)
+            scope_name="temperature", initial_value=self._config.initial_temperature
+        )
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.SoftPolicyTrainerConfig(
@@ -288,7 +295,8 @@ class SAC(Algorithm):
             target_entropy=self._config.target_entropy,
             unroll_steps=self._config.actor_unroll_steps,
             burn_in_steps=self._config.actor_burn_in_steps,
-            reset_on_terminal=self._config.actor_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.actor_reset_rnn_on_terminal,
+        )
         policy_trainer = MT.policy_trainers.SoftPolicyTrainer(
             models=self._pi,
             solvers={self._pi.scope_name: self._pi_solver},
@@ -296,18 +304,20 @@ class SAC(Algorithm):
             temperature_solver=self._temperature_solver,
             q_functions=self._train_q_functions,
             env_info=self._env_info,
-            config=policy_trainer_config)
+            config=policy_trainer_config,
+        )
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
         q_function_trainer_config = MT.q_value_trainers.SoftQTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             grad_clip=None,
             num_steps=self._config.num_steps,
             unroll_steps=self._config.critic_unroll_steps,
             burn_in_steps=self._config.critic_burn_in_steps,
-            reset_on_terminal=self._config.critic_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.critic_reset_rnn_on_terminal,
+        )
 
         q_function_trainer = MT.q_value_trainers.SoftQTrainer(
             train_functions=self._train_q_functions,
@@ -316,7 +326,8 @@ class SAC(Algorithm):
             target_policy=self._pi,
             temperature=self._policy_trainer.get_temperature(),
             env_info=self._env_info,
-            config=q_function_trainer_config)
+            config=q_function_trainer_config,
+        )
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
             sync_model(q, target_q)
         return q_function_trainer
@@ -344,30 +355,32 @@ class SAC(Algorithm):
         num_steps = max(actor_steps, critic_steps)
         experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = (experiences_tuple, )
+            experiences_tuple = (experiences_tuple,)
         assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
             (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
-            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
-            batch = TrainingBatch(batch_size=self._config.batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  gamma=self._config.gamma,
-                                  reward=r,
-                                  non_terminal=non_terminal,
-                                  s_next=s_next,
-                                  weight=info['weights'],
-                                  next_step_batch=batch,
-                                  rnn_states=rnn_states)
+            rnn_states = rnn_states_dict["rnn_states"] if "rnn_states" in rnn_states_dict else {}
+            batch = TrainingBatch(
+                batch_size=self._config.batch_size,
+                s_current=s,
+                a_current=a,
+                gamma=self._config.gamma,
+                reward=r,
+                non_terminal=non_terminal,
+                s_next=s_next,
+                weight=info["weights"],
+                next_step_batch=batch,
+                rnn_states=rnn_states,
+            )
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
             sync_model(q, target_q, tau=self._config.tau)
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
-        td_errors = self._q_function_trainer_state['td_errors']
+        td_errors = self._q_function_trainer_state["td_errors"]
         replay_buffer.update_priorities(td_errors)
 
     def _evaluation_action_selector(self, s, *, begin_of_episode=False):
@@ -401,19 +414,21 @@ class SAC(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(SAC, self).latest_iteration_state
-        if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
-        if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
-            latest_iteration_state['histogram'].update(
-                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
+        if hasattr(self, "_policy_trainer_state"):
+            latest_iteration_state["scalar"].update({"pi_loss": float(self._policy_trainer_state["pi_loss"])})
+        if hasattr(self, "_q_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"q_loss": float(self._q_function_trainer_state["q_loss"])})
+            latest_iteration_state["histogram"].update(
+                {"td_errors": self._q_function_trainer_state["td_errors"].flatten()}
+            )
         return latest_iteration_state
 
     @property

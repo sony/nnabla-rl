@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ class HERMeanNormalizer(RunningMeanNormalizer):
 
     def process(self, x):
         assert 0 < self._count.d
-        std = NF.maximum2(self._var ** 0.5, self._fixed_epsilon)
+        std = NF.maximum2(self._var**0.5, self._fixed_epsilon)
         normalized = (x - self._mean) / std
         if self._value_clip is not None:
             normalized = NF.clip_by_value(normalized, min=self._value_clip[0], max=self._value_clip[1])
@@ -35,7 +35,7 @@ class HERMeanNormalizer(RunningMeanNormalizer):
 
     @property
     def _fixed_epsilon(self):
-        if not hasattr(self, '_epsilon_var'):
+        if not hasattr(self, "_epsilon_var"):
             self._epsilon_var = create_variable(batch_size=1, shape=self._shape)
             self._epsilon_var.d = self._epsilon
         return self._epsilon_var
@@ -46,14 +46,12 @@ class HERPreprocessor(Preprocessor, Model):
         super(HERPreprocessor, self).__init__(scope_name)
 
         observation_shape, goal_shape, _ = shape
-        self._observation_preprocessor = HERMeanNormalizer(scope_name=f'{scope_name}/observation',
-                                                           shape=observation_shape,
-                                                           epsilon=epsilon,
-                                                           value_clip=value_clip)
-        self._goal_preprocessor = HERMeanNormalizer(scope_name=f'{scope_name}/goal',
-                                                    shape=goal_shape,
-                                                    epsilon=epsilon,
-                                                    value_clip=value_clip)
+        self._observation_preprocessor = HERMeanNormalizer(
+            scope_name=f"{scope_name}/observation", shape=observation_shape, epsilon=epsilon, value_clip=value_clip
+        )
+        self._goal_preprocessor = HERMeanNormalizer(
+            scope_name=f"{scope_name}/goal", shape=goal_shape, epsilon=epsilon, value_clip=value_clip
+        )
 
     def process(self, x):
         observation, goal, achived_goal = x

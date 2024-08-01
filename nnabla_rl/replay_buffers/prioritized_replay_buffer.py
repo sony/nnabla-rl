@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.typing import Experience
 from nnabla_rl.utils.data import DataHolder, RingBuffer
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 # NOTE: index naming convention used in this module
@@ -34,6 +34,7 @@ T = TypeVar('T')
 # absolute index: actual data index in list. 0: list's head. capacity - 1: list's tail.
 # tree index: 0: root of the tree. 2 * capacity - 1: right most leaf of the tree.
 # heap index: 0: head of the heap. If max heap, maximum value is saved in this index. capacity - 1: tail of the heap.
+
 
 @dataclass
 class Node(Generic[T]):
@@ -62,7 +63,7 @@ class BinaryTree(Generic[T]):
         self._init_node_value = init_node_value
         self._tail_index = 0
         self._length = 0
-        self._tree = [self._make_init_node(i) for i in range(2*capacity-1)]
+        self._tree = [self._make_init_node(i) for i in range(2 * capacity - 1)]
 
     def __len__(self):
         return self._length
@@ -343,7 +344,7 @@ class MaxHeapDataHolder(PrioritizedDataHolder):
     def get_priority(self, relative_index: int):
         absolute_index = self._relative_to_absolute_index(relative_index)
         heap_index = self._max_heap.absolute_to_heap_index(absolute_index)
-        rank = (heap_index + 1)
+        rank = heap_index + 1
         return self._compute_priority(rank)
 
     def get_relative_index_from_heap_index(self, heap_index: int):
@@ -366,12 +367,9 @@ class MaxHeapDataHolder(PrioritizedDataHolder):
 
 
 class _PrioritizedReplayBuffer(ReplayBuffer):
-    def __init__(self,
-                 capacity: int,
-                 alpha: float,
-                 beta: float,
-                 betasteps: int,
-                 error_clip: Optional[Tuple[float, float]]):
+    def __init__(
+        self, capacity: int, alpha: float, beta: float, betasteps: int, error_clip: Optional[Tuple[float, float]]
+    ):
         # Do not call super class' constructor
         self._capacity_check(capacity)
         self._capacity = capacity
@@ -397,15 +395,17 @@ class _PrioritizedReplayBuffer(ReplayBuffer):
 
     def sample_indices(self, indices: Sequence[int], num_steps: int = 1):
         if len(indices) == 0:
-            raise ValueError('Indices are empty')
+            raise ValueError("Indices are empty")
         if self._last_sampled_indices is not None:
-            raise RuntimeError('Trying to sample data from buffer without updating priority. '
-                               'Check that the algorithm supports prioritized replay buffer.')
+            raise RuntimeError(
+                "Trying to sample data from buffer without updating priority. "
+                "Check that the algorithm supports prioritized replay buffer."
+            )
         experiences: Union[Sequence[Experience], Tuple[Sequence[Experience], ...]]
         if num_steps == 1:
             experiences = [self.__getitem__(index) for index in indices]
         else:
-            experiences = tuple([self.__getitem__(index+i) for index in indices] for i in range(num_steps))
+            experiences = tuple([self.__getitem__(index + i) for index in indices] for i in range(num_steps))
 
         weights = self._get_weights(indices, self._alpha, self._beta)
         info = dict(weights=weights)
@@ -427,7 +427,7 @@ class _PrioritizedReplayBuffer(ReplayBuffer):
 
     def _capacity_check(self, capacity: int):
         if capacity is None or capacity <= 0:
-            error_msg = 'buffer size must be greater than 0'
+            error_msg = "buffer size must be greater than 0"
             raise ValueError(error_msg)
 
 
@@ -438,18 +438,21 @@ class ProportionalPrioritizedReplayBuffer(_PrioritizedReplayBuffer):
     _buffer: SumTreeDataHolder
     _epsilon: float
 
-    def __init__(self, capacity: int,
-                 alpha: float = 0.6,
-                 beta: float = 0.4,
-                 betasteps: int = 10000,
-                 error_clip: Optional[Tuple[float, float]] = (-1, 1),
-                 epsilon: float = 1e-8,
-                 init_max_error: float = 1.0,
-                 normalization_method: str = "buffer_max"):
+    def __init__(
+        self,
+        capacity: int,
+        alpha: float = 0.6,
+        beta: float = 0.4,
+        betasteps: int = 10000,
+        error_clip: Optional[Tuple[float, float]] = (-1, 1),
+        epsilon: float = 1e-8,
+        init_max_error: float = 1.0,
+        normalization_method: str = "buffer_max",
+    ):
         super(ProportionalPrioritizedReplayBuffer, self).__init__(capacity, alpha, beta, betasteps, error_clip)
         assert normalization_method in ("batch_max", "buffer_max")
         self._normalization_method = normalization_method
-        keep_min = (self._normalization_method == "buffer_max")
+        keep_min = self._normalization_method == "buffer_max"
         self._buffer = SumTreeDataHolder(capacity=capacity, initial_max_priority=init_max_error, keep_min=keep_min)
         self._epsilon = epsilon
 
@@ -459,10 +462,10 @@ class ProportionalPrioritizedReplayBuffer(_PrioritizedReplayBuffer):
     def sample(self, num_samples: int = 1, num_steps: int = 1):
         buffer_length = len(self)
         if num_samples > buffer_length:
-            error_msg = f'num_samples: {num_samples} is greater than the size of buffer: {buffer_length}'
+            error_msg = f"num_samples: {num_samples} is greater than the size of buffer: {buffer_length}"
             raise ValueError(error_msg)
         if buffer_length - num_steps < 0:
-            raise RuntimeError(f'Insufficient buffer length. buffer: {buffer_length} < steps: {num_steps}')
+            raise RuntimeError(f"Insufficient buffer length. buffer: {buffer_length} < steps: {num_steps}")
 
         # In paper,
         # "To sample a minibatch of size k, the range [0, ptotal] is divided equally into k ranges.
@@ -510,13 +513,16 @@ class RankBasedPrioritizedReplayBuffer(_PrioritizedReplayBuffer):
     _prev_num_steps: int
     _appends_since_prev_start: int
 
-    def __init__(self, capacity: int,
-                 alpha: float = 0.7,
-                 beta: float = 0.5,
-                 betasteps: int = 10000,
-                 error_clip: Optional[Tuple[float, float]] = (-1, 1),
-                 reset_segment_interval: int = 1000,
-                 sort_interval: int = 1000000):
+    def __init__(
+        self,
+        capacity: int,
+        alpha: float = 0.7,
+        beta: float = 0.5,
+        betasteps: int = 10000,
+        error_clip: Optional[Tuple[float, float]] = (-1, 1),
+        reset_segment_interval: int = 1000,
+        sort_interval: int = 1000000,
+    ):
         super(RankBasedPrioritizedReplayBuffer, self).__init__(capacity, alpha, beta, betasteps, error_clip)
         self._buffer = MaxHeapDataHolder(capacity, alpha)
 
@@ -540,15 +546,16 @@ class RankBasedPrioritizedReplayBuffer(_PrioritizedReplayBuffer):
     def sample(self, num_samples: int = 1, num_steps: int = 1):
         buffer_length = len(self)
         if num_samples > buffer_length:
-            error_msg = f'num_samples: {num_samples} is greater than the size of buffer: {buffer_length}'
+            error_msg = f"num_samples: {num_samples} is greater than the size of buffer: {buffer_length}"
             raise ValueError(error_msg)
         if buffer_length - num_steps < 0:
-            raise RuntimeError(
-                f'Insufficient buffer length. buffer: {buffer_length} < steps: {num_steps}')
-        if (num_samples != self._prev_num_samples) or \
-           (num_steps != self._prev_num_steps) or \
-           (buffer_length % self._reset_segment_interval == 0 and buffer_length != self._capacity) or \
-           (len(self._boundaries) == 0):
+            raise RuntimeError(f"Insufficient buffer length. buffer: {buffer_length} < steps: {num_steps}")
+        if (
+            (num_samples != self._prev_num_samples)
+            or (num_steps != self._prev_num_steps)
+            or (buffer_length % self._reset_segment_interval == 0 and buffer_length != self._capacity)
+            or (len(self._boundaries) == 0)
+        ):
             self._boundaries = self._compute_segment_boundaries(N=buffer_length, k=num_samples)
             self._prev_num_samples = num_samples
             self._prev_num_steps = num_steps
@@ -586,7 +593,7 @@ class RankBasedPrioritizedReplayBuffer(_PrioritizedReplayBuffer):
         if N < k:
             raise ValueError(f"Batch size {k} is greater than buffer size {N}")
         boundaries: List[int] = []
-        denominator = self._ps_cumsum[N-1]
+        denominator = self._ps_cumsum[N - 1]
         for i in range(N):
             if (len(boundaries) + 1) / k <= self._ps_cumsum[i] / denominator:
                 boundaries.append(i + 1)
@@ -601,36 +608,37 @@ class RankBasedPrioritizedReplayBuffer(_PrioritizedReplayBuffer):
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
-    _variants: ClassVar[Sequence[str]] = ['proportional', 'rank_based']
+    _variants: ClassVar[Sequence[str]] = ["proportional", "rank_based"]
     _buffer_impl: _PrioritizedReplayBuffer
 
-    def __init__(self,
-                 capacity: int,
-                 alpha: float = 0.6,
-                 beta: float = 0.4,
-                 betasteps: int = 10000,
-                 error_clip: Optional[Tuple[float, float]] = (-1, 1),
-                 epsilon: float = 1e-8,
-                 reset_segment_interval: int = 1000,
-                 sort_interval: int = 1000000,
-                 variant: str = 'proportional'):
+    def __init__(
+        self,
+        capacity: int,
+        alpha: float = 0.6,
+        beta: float = 0.4,
+        betasteps: int = 10000,
+        error_clip: Optional[Tuple[float, float]] = (-1, 1),
+        epsilon: float = 1e-8,
+        reset_segment_interval: int = 1000,
+        sort_interval: int = 1000000,
+        variant: str = "proportional",
+    ):
         if variant not in PrioritizedReplayBuffer._variants:
-            raise ValueError(f'Unknown prioritized replay buffer variant: {variant}')
-        if variant == 'proportional':
-            self._buffer_impl = ProportionalPrioritizedReplayBuffer(capacity=capacity,
-                                                                    alpha=alpha,
-                                                                    beta=beta,
-                                                                    betasteps=betasteps,
-                                                                    error_clip=error_clip,
-                                                                    epsilon=epsilon)
-        elif variant == 'rank_based':
-            self._buffer_impl = RankBasedPrioritizedReplayBuffer(capacity=capacity,
-                                                                 alpha=alpha,
-                                                                 beta=beta,
-                                                                 betasteps=betasteps,
-                                                                 error_clip=error_clip,
-                                                                 reset_segment_interval=reset_segment_interval,
-                                                                 sort_interval=sort_interval)
+            raise ValueError(f"Unknown prioritized replay buffer variant: {variant}")
+        if variant == "proportional":
+            self._buffer_impl = ProportionalPrioritizedReplayBuffer(
+                capacity=capacity, alpha=alpha, beta=beta, betasteps=betasteps, error_clip=error_clip, epsilon=epsilon
+            )
+        elif variant == "rank_based":
+            self._buffer_impl = RankBasedPrioritizedReplayBuffer(
+                capacity=capacity,
+                alpha=alpha,
+                beta=beta,
+                betasteps=betasteps,
+                error_clip=error_clip,
+                reset_segment_interval=reset_segment_interval,
+                sort_interval=sort_interval,
+            )
         else:
             raise NotImplementedError
 

@@ -10,8 +10,8 @@ pytest
 pytest-cov
 mypy!=1.11.0
 typing-extensions
-isort
-autopep8
+isort>5.0.0
+black
 packaging
 docformatter
 gymnasium

@@ -36,8 +36,10 @@ class TupleStateActor(StochasticPolicy):
 
     def pi(self, s: nn.Variable):
         s, *_ = s
-        return Gaussian(mean=nn.Variable.from_numpy_array(np.zeros(shape=(s.shape[0], self._action_dim))),
-                        ln_var=nn.Variable.from_numpy_array(np.zeros(shape=(s.shape[0], self._action_dim))))
+        return Gaussian(
+            mean=nn.Variable.from_numpy_array(np.zeros(shape=(s.shape[0], self._action_dim))),
+            ln_var=nn.Variable.from_numpy_array(np.zeros(shape=(s.shape[0], self._action_dim))),
+        )
 
 
 class TupleStateActorBuilder(ModelBuilder[VFunction]):
@@ -68,7 +70,7 @@ class TestPPO(object):
         dummy_env = E.DummyDiscreteImg()
         ppo = A.PPO(dummy_env)
 
-        assert ppo.__name__ == 'PPO'
+        assert ppo.__name__ == "PPO"
 
     def test_run_online_discrete_env_training(self):
         """Check that no error occurs when calling online training (discrete
@@ -80,7 +82,7 @@ class TestPPO(object):
         config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
         ppo = A.PPO(dummy_env, config=config)
 
-        ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
+        ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
     def test_run_online_continuous_env_training(self):
         """Check that no error occurs when calling online training (continuous
@@ -102,11 +104,14 @@ class TestPPO(object):
         actor_timesteps = 10
         actor_num = 2
         config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num, preprocess_state=False)
-        ppo = A.PPO(dummy_env, config=config,
-                    v_function_builder=TupleStateVFunctionBuilder(),
-                    policy_builder=TupleStateActorBuilder())
+        ppo = A.PPO(
+            dummy_env,
+            config=config,
+            v_function_builder=TupleStateVFunctionBuilder(),
+            policy_builder=TupleStateActorBuilder(),
+        )
 
-        ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
+        ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
     def test_run_online_discrete_single_actor(self):
         """Check that no error occurs when calling online training (discrete
@@ -118,7 +123,7 @@ class TestPPO(object):
         config = A.PPOConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
         ppo = A.PPO(dummy_env, config=config)
 
-        ppo.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
+        ppo.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
     def test_run_online_continuous_single_actor(self):
         """Check that no error occurs when calling online training (continuous
@@ -161,14 +166,14 @@ class TestPPO(object):
         dummy_env = E.DummyContinuous()
         ppo = A.PPO(dummy_env)
 
-        ppo._policy_trainer_state = {'pi_loss': 0.}
-        ppo._v_function_trainer_state = {'v_loss': 1.}
+        ppo._policy_trainer_state = {"pi_loss": 0.0}
+        ppo._v_function_trainer_state = {"v_loss": 1.0}
 
         latest_iteration_state = ppo.latest_iteration_state
-        assert 'pi_loss' in latest_iteration_state['scalar']
-        assert 'v_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['pi_loss'] == 0.
-        assert latest_iteration_state['scalar']['v_loss'] == 1.
+        assert "pi_loss" in latest_iteration_state["scalar"]
+        assert "v_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["pi_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["v_loss"] == 1.0
 
     def test_copy_np_array_to_mp_array(self):
         shape = (10, 9, 8, 7)

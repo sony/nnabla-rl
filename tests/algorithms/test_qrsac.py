@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class RNNActorFunction(StochasticPolicy):
     def __init__(self, scope_name: str, action_dim: int):
         super(RNNActorFunction, self).__init__(scope_name)
         self._action_dim = action_dim
-        self._lstm_state_size = action_dim*2
+        self._lstm_state_size = action_dim * 2
         self._h = None
         self._c = None
 
@@ -70,14 +70,14 @@ class RNNActorFunction(StochasticPolicy):
 
     def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
         shapes: Dict[str, nn.Variable] = {}
-        shapes['lstm_hidden'] = (self._lstm_state_size, )
-        shapes['lstm_cell'] = (self._lstm_state_size, )
+        shapes["lstm_hidden"] = (self._lstm_state_size,)
+        shapes["lstm_cell"] = (self._lstm_state_size,)
         return shapes
 
     def get_internal_states(self) -> Dict[str, nn.Variable]:
         states: Dict[str, nn.Variable] = {}
-        states['lstm_hidden'] = self._h
-        states['lstm_cell'] = self._c
+        states["lstm_hidden"] = self._h
+        states["lstm_cell"] = self._c
         return states
 
     def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
@@ -87,8 +87,8 @@ class RNNActorFunction(StochasticPolicy):
             if self._c is not None:
                 self._c.data.zero()
         else:
-            self._h = states['lstm_hidden']
-            self._c = states['lstm_cell']
+            self._h = states["lstm_hidden"]
+            self._c = states["lstm_cell"]
 
     def _create_internal_states(self, batch_size):
         self._h = nn.Variable((batch_size, self._lstm_state_size))
@@ -135,14 +135,14 @@ class RNNCriticFunction(ContinuousQuantileDistributionFunction):
 
     def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
         shapes: Dict[str, nn.Variable] = {}
-        shapes['lstm_hidden'] = (self._lstm_state_size, )
-        shapes['lstm_cell'] = (self._lstm_state_size, )
+        shapes["lstm_hidden"] = (self._lstm_state_size,)
+        shapes["lstm_cell"] = (self._lstm_state_size,)
         return shapes
 
     def get_internal_states(self) -> Dict[str, nn.Variable]:
         states: Dict[str, nn.Variable] = {}
-        states['lstm_hidden'] = self._h
-        states['lstm_cell'] = self._c
+        states["lstm_hidden"] = self._h
+        states["lstm_cell"] = self._c
         return states
 
     def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
@@ -152,8 +152,8 @@ class RNNCriticFunction(ContinuousQuantileDistributionFunction):
             if self._c is not None:
                 self._c.data.zero()
         else:
-            self._h = states['lstm_hidden']
-            self._c = states['lstm_cell']
+            self._h = states["lstm_hidden"]
+            self._c = states["lstm_cell"]
 
     def _create_internal_states(self, batch_size):
         self._h = nn.Variable((batch_size, self._lstm_state_size))
@@ -174,7 +174,7 @@ class TestQRSAC(object):
         dummy_env = E.DummyContinuous()
         qrsac = A.QRSAC(dummy_env)
 
-        assert qrsac.__name__ == 'QRSAC'
+        assert qrsac.__name__ == "QRSAC"
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
@@ -204,6 +204,7 @@ class TestQRSAC(object):
     def test_run_online_rnn_training(self):
         """Check that no error occurs when calling online training with RNN
         model."""
+
         class RNNActorBuilder(ModelBuilder[StochasticPolicy]):
             def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
                 return RNNActorFunction(scope_name, action_dim=env_info.action_dim)
@@ -220,8 +221,9 @@ class TestQRSAC(object):
         config.critic_burn_in_steps = 2
         config.start_timesteps = 7
         config.batch_size = 2
-        qrsac = A.QRSAC(dummy_env, config=config, quantile_function_builder=RNNCriticBuilder(),
-                        policy_builder=RNNActorBuilder())
+        qrsac = A.QRSAC(
+            dummy_env, config=config, quantile_function_builder=RNNCriticBuilder(), policy_builder=RNNActorBuilder()
+        )
 
         qrsac.train_online(dummy_env, total_iterations=10)
 
@@ -264,18 +266,19 @@ class TestQRSAC(object):
         dummy_env = E.DummyContinuous()
         qrsac = A.QRSAC(dummy_env)
 
-        qrsac._quantile_function_trainer_state = {'q_loss': 0.}
-        qrsac._policy_trainer_state = {'pi_loss': 1.}
+        qrsac._quantile_function_trainer_state = {"q_loss": 0.0}
+        qrsac._policy_trainer_state = {"pi_loss": 1.0}
 
         latest_iteration_state = qrsac.latest_iteration_state
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert 'pi_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['q_loss'] == 0.
-        assert latest_iteration_state['scalar']['pi_loss'] == 1.
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert "pi_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["q_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["pi_loss"] == 1.0
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

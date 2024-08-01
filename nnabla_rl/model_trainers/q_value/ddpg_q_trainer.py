@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ import nnabla as nn
 import nnabla_rl.functions as RNF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
-from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (SquaredTDQFunctionTrainer,
-                                                                            SquaredTDQFunctionTrainerConfig)
+from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (
+    SquaredTDQFunctionTrainer,
+    SquaredTDQFunctionTrainerConfig,
+)
 from nnabla_rl.models import DeterministicPolicy, QFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 from nnabla_rl.utils.misc import create_variables
@@ -40,13 +42,15 @@ class DDPGQTrainer(SquaredTDQFunctionTrainer):
     _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _prev_q_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_functions: Union[QFunction, Sequence[QFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_functions: Union[QFunction, Sequence[QFunction]],
-                 target_policy: DeterministicPolicy,
-                 env_info: EnvironmentInfo,
-                 config: DDPGQTrainerConfig = DDPGQTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[QFunction, Sequence[QFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_functions: Union[QFunction, Sequence[QFunction]],
+        target_policy: DeterministicPolicy,
+        env_info: EnvironmentInfo,
+        config: DDPGQTrainerConfig = DDPGQTrainerConfig(),
+    ):
         self._target_policy = target_policy
         self._target_functions = convert_to_list_if_not_list(target_functions)
         self._assert_no_duplicate_model(self._target_functions)

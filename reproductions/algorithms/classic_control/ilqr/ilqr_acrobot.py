@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,9 +33,7 @@ class ContinuousAcrobot(AcrobotEnv):
     def __init__(self):
         super().__init__()
         self.dt = 0.02
-        high = np.array(
-            [np.pi, np.pi, self.MAX_VEL_1, self.MAX_VEL_2], dtype=np.float32
-        )
+        high = np.array([np.pi, np.pi, self.MAX_VEL_1, self.MAX_VEL_2], dtype=np.float32)
         low = -high
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.action_space = spaces.Box(low=-np.inf, high=np.inf, shape=(1,))
@@ -86,8 +84,9 @@ class AcrobotDynamics(Dynamics):
         self.max_link1_dtheta = 4 * np.pi
         self.max_link2_dtheta = 9 * np.pi
 
-    def next_state(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, Dict[str, Any]]:
+    def next_state(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
         if batched:
             raise NotImplementedError
         x = x.flatten()
@@ -145,19 +144,23 @@ class AcrobotDynamics(Dynamics):
         fx_du = non_wrapped_next_state(x, du, t).flatten()
         (fx1_du, fx2_du, fx3_du, fx4_du) = fx_du[0], fx_du[1], fx_du[2], fx_du[3]
 
-        Fx = np.asarray([[(fx1_dx1 - fx1) / eps, (fx1_dx2 - fx1) / eps, (fx1_dx3 - fx1) / eps, (fx1_dx4 - fx1) / eps],
-                         [(fx2_dx1 - fx2) / eps, (fx2_dx2 - fx2) / eps, (fx2_dx3 - fx2) / eps, (fx2_dx4 - fx2) / eps],
-                         [(fx3_dx1 - fx3) / eps, (fx3_dx2 - fx3) / eps, (fx3_dx3 - fx3) / eps, (fx3_dx4 - fx3) / eps],
-                         [(fx4_dx1 - fx4) / eps, (fx4_dx2 - fx4) / eps, (fx4_dx3 - fx4) / eps, (fx4_dx4 - fx4) / eps]])
-        Fu = np.asarray([[(fx1_du - fx1) / eps],
-                         [(fx2_du - fx2) / eps],
-                         [(fx3_du - fx3) / eps],
-                         [(fx4_du - fx4) / eps]])
+        Fx = np.asarray(
+            [
+                [(fx1_dx1 - fx1) / eps, (fx1_dx2 - fx1) / eps, (fx1_dx3 - fx1) / eps, (fx1_dx4 - fx1) / eps],
+                [(fx2_dx1 - fx2) / eps, (fx2_dx2 - fx2) / eps, (fx2_dx3 - fx2) / eps, (fx2_dx4 - fx2) / eps],
+                [(fx3_dx1 - fx3) / eps, (fx3_dx2 - fx3) / eps, (fx3_dx3 - fx3) / eps, (fx3_dx4 - fx3) / eps],
+                [(fx4_dx1 - fx4) / eps, (fx4_dx2 - fx4) / eps, (fx4_dx3 - fx4) / eps, (fx4_dx4 - fx4) / eps],
+            ]
+        )
+        Fu = np.asarray(
+            [[(fx1_du - fx1) / eps], [(fx2_du - fx2) / eps], [(fx3_du - fx3) / eps], [(fx4_du - fx4) / eps]]
+        )
 
         return Fx, Fu
 
-    def hessian(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def hessian(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         raise NotImplementedError
 
     def state_dim(self) -> int:
@@ -187,8 +190,9 @@ class AcrobotDynamics(Dynamics):
             + (self.m1 * self.lc1 + self.m2 * self.l1) * self.g * np.cos(theta1 - np.pi / 2)
             + phi2
         )
-        ddtheta2 = (u + d2 / d1 * phi1 - self.m2 * self.l1 * self.lc2 * dtheta1**2 *
-                    np.sin(theta2) - phi2) / (self.m2 * self.lc2**2 + self.I2 - d2**2 / d1)
+        ddtheta2 = (u + d2 / d1 * phi1 - self.m2 * self.l1 * self.lc2 * dtheta1**2 * np.sin(theta2) - phi2) / (
+            self.m2 * self.lc2**2 + self.I2 - d2**2 / d1
+        )
         ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
         return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.0)
 
@@ -204,10 +208,9 @@ class AcrobotCostFunction(CostFunction):
         self._x_target = np.asarray([[np.pi], [0.0], [0.0], [0.0]], dtype=np.float32)
         self.T = T
         self.Q = np.zeros(shape=(4, 4))
-        self.Q_final = np.asarray([[weight_th1, 0, 0, 0],
-                                   [0, weight_th2, 0, 0],
-                                   [0, 0, weight_th1dot, 0],
-                                   [0, 0, 0, weight_th2dot]])
+        self.Q_final = np.asarray(
+            [[weight_th1, 0, 0, 0], [0, weight_th2, 0, 0], [0, 0, weight_th1dot, 0], [0, 0, 0, weight_th2dot]]
+        )
 
     def evaluate(
         self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
@@ -229,7 +232,7 @@ class AcrobotCostFunction(CostFunction):
             # x.shape = (state_dim, 1) and u.shape = (input_dim, 1)
             # error vector
             state_cost = (x).T.dot(self.Q).dot(x)
-            act_cost = self._weight_u * (u.flatten()**2)
+            act_cost = self._weight_u * (u.flatten() ** 2)
             return state_cost + act_cost
 
     def gradient(
@@ -305,7 +308,7 @@ def run_control(args):
             start = time.time()
             improved_trajectory, trajectory_info = ilqr.compute_trajectory(initial_trajectory)
             end = time.time()
-            print(f'optimization time: {end - start} [s]')
+            print(f"optimization time: {end - start} [s]")
 
             u = improved_trajectory[0][1]
             next_state, reward, done, info = env.step(u)
@@ -316,11 +319,11 @@ def run_control(args):
             theta2 = state[1] / np.pi * 180.0
             dtheta1 = state[2] / np.pi * 180.0
             dtheta2 = state[3] / np.pi * 180.0
-            print(f'control input torque: {u}')
-            print(f'theta1: {theta1} [deg]')
-            print(f'theta2: {theta2} [deg]')
-            print(f'dtheta1: {dtheta1} [deg/s]')
-            print(f'dtheta2: {dtheta2} [deg/s]')
+            print(f"control input torque: {u}")
+            print(f"theta1: {theta1} [deg]")
+            print(f"theta2: {theta2} [deg]")
+            print(f"dtheta1: {dtheta1} [deg/s]")
+            print(f"dtheta2: {dtheta2} [deg/s]")
 
             state = next_state
             state = np.reshape(state, (4, 1))
@@ -332,13 +335,13 @@ def run_control(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--T', type=int, default=100)
-    parser.add_argument('--num_episodes', type=int, default=25)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--T", type=int, default=100)
+    parser.add_argument("--num_episodes", type=int, default=25)
     args = parser.parse_args()
     run_control(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

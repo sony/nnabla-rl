@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ def build_kuka_grasping_procedural_env(test: bool = False, render: bool = False)
         num_objects=5,
         max_num_training_models=100 if test else 900,
         target=False,
-        test=test
+        test=test,
     )
     env = Float32RewardEnv(env)
     env = HWCToCHWEnv(env)
@@ -123,9 +123,7 @@ def collect_data(
 
 
 def run_training(args):
-    outdir = (
-        f"KukaGraspingProceduralEnv_{args.num_collection_episodes}_results/seed-{args.seed}"
-    )
+    outdir = f"KukaGraspingProceduralEnv_{args.num_collection_episodes}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
@@ -159,9 +157,7 @@ def run_training(args):
 
     # NOTE: Downbiased for z-axis
     # See: https://github.com/google-research/google-research/blob/master/dql_grasping/policies.py#L298
-    config = A.ICRA2018QtOptConfig(
-        gpu_id=args.gpu, cem_initial_mean=(0.0, 0.0, -1.0, 0.0), batch_size=args.batch_size
-    )
+    config = A.ICRA2018QtOptConfig(gpu_id=args.gpu, cem_initial_mean=(0.0, 0.0, -1.0, 0.0), batch_size=args.batch_size)
     icra2018qtopt = A.ICRA2018QtOpt(train_env, config=config)
 
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook, latest_state_hook]
@@ -178,9 +174,7 @@ def run_showcase(args):
     eval_env = build_kuka_grasping_procedural_env(test=True, render=args.render)
 
     config = A.ICRA2018QtOptConfig(gpu_id=args.gpu)
-    icra2018qtopt = serializers.load_snapshot(
-        args.snapshot_dir, eval_env, algorithm_kwargs={"config": config}
-    )
+    icra2018qtopt = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(icra2018qtopt, A.ICRA2018QtOpt):
         raise ValueError("Loaded snapshot is not trained with ICRA2018QtOpt!")
 
@@ -204,9 +198,7 @@ def main():
     parser.add_argument("--num_collection_episodes", type=int, default=1000000)
     parser.add_argument("--multi_process", action="store_true")
     parser.add_argument("--ncpu", type=int, default=None)
-    parser.add_argument(
-        "--replay_buffer_file_path", type=str, default="./replay_buffer_1m_data.pkl"
-    )
+    parser.add_argument("--replay_buffer_file_path", type=str, default="./replay_buffer_1m_data.pkl")
 
     args = parser.parse_args()
 

@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import pytest
 from nnabla_rl.typing import accepted_shapes
 
 
-class TestTyping():
+class TestTyping:
     def test_accepted_shapes_call_with_args(self):
         @accepted_shapes(x=(3, 5), u=(2, 4))
         def dummy_function(x, u):
@@ -105,6 +105,7 @@ class TestTyping():
 
     def test_accepted_shapes_decorator_has_invalid_args(self):
         with pytest.raises(TypeError):
+
             @accepted_shapes((4, 3), u=(2, 1))
             def dummy_function(x, u=np.ones((2, 1)), batched=True):
                 pass
@@ -153,5 +154,5 @@ class TestTyping():
         dummy_function(u=np.zeros((2, 4)), x=np.zeros((3, 5)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

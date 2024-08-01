@@ -23,35 +23,70 @@ from nnabla_rl.environments.amp_env import AMPEnv, AMPGoalEnv, TaskResult
 from nnabla_rl.typing import Experience
 
 import sys  # noqa
+
 sys.path.append(str(pathlib.Path(__file__).parent))  # noqa
-from deepmimic_env_utils import (update_core_for_num_substeps, initialize_env, compile_observation,  # noqa
-                                 generate_dummy_goal_env_state, compile_goal_env_observation,
-                                 load_goal_env_observation_and_action_space, load_observation_and_action_space,
-                                 record_invalid_or_valid_state, label_task_result)
+from deepmimic_env_utils import (  # noqa
+    update_core_for_num_substeps,
+    initialize_env,
+    compile_observation,
+    generate_dummy_goal_env_state,
+    compile_goal_env_observation,
+    load_goal_env_observation_and_action_space,
+    load_observation_and_action_space,
+    record_invalid_or_valid_state,
+    label_task_result,
+)
 
 try:
     sys.path.append(str(pathlib.Path(__file__).parent.parent / "DeepMimic"))  # noqa
     from DeepMimicCore import DeepMimicCore  # noqa
 except ModuleNotFoundError:
     from nnabla_rl.logger import logger
+
     logger.info("No DeepMimicCore file. Please build the DeepMimic environment and generate the python file.")
 
 try:
-    from OpenGL.GLUT import (GLUT_DEPTH, GLUT_DOUBLE, GLUT_ELAPSED_TIME, GLUT_RGBA, glutCreateWindow, glutDisplayFunc,
-                             glutGet, glutInit, glutInitDisplayMode, glutInitWindowSize, glutKeyboardFunc,
-                             glutLeaveMainLoop, glutMainLoop, glutMotionFunc, glutMouseFunc, glutPostRedisplay,
-                             glutReshapeFunc, glutSwapBuffers, glutTimerFunc)
+    from OpenGL.GLUT import (
+        GLUT_DEPTH,
+        GLUT_DOUBLE,
+        GLUT_ELAPSED_TIME,
+        GLUT_RGBA,
+        glutCreateWindow,
+        glutDisplayFunc,
+        glutGet,
+        glutInit,
+        glutInitDisplayMode,
+        glutInitWindowSize,
+        glutKeyboardFunc,
+        glutLeaveMainLoop,
+        glutMainLoop,
+        glutMotionFunc,
+        glutMouseFunc,
+        glutPostRedisplay,
+        glutReshapeFunc,
+        glutSwapBuffers,
+        glutTimerFunc,
+    )
 except ModuleNotFoundError:
     from nnabla_rl.logger import logger
-    logger.info("No OpenGL lib. Please build the DeepMimic environment and generate the python file, "
-                "OpenGL lib is installed automatically.")
+
+    logger.info(
+        "No OpenGL lib. Please build the DeepMimic environment and generate the python file, "
+        "OpenGL lib is installed automatically."
+    )
 
 
 class DeepMimicEnv(AMPEnv):
     unwrapped: "DeepMimicEnv"
 
-    def __init__(self, args_file: str, eval_mode: bool,
-                 fps: int = 60, num_processes: int = 1, step_until_action_needed: bool = True) -> None:
+    def __init__(
+        self,
+        args_file: str,
+        eval_mode: bool,
+        fps: int = 60,
+        num_processes: int = 1,
+        step_until_action_needed: bool = True,
+    ) -> None:
         assert fps > 0
         assert num_processes > 0
 
@@ -66,16 +101,18 @@ class DeepMimicEnv(AMPEnv):
         self._initialized = False
         self._action_needed = True
 
-        (self.reward_range,
-         self.observation_space,
-         self.observation_mean,
-         self.observation_var,
-         self.action_space,
-         self.action_mean,
-         self.action_var,
-         self.reward_at_task_fail,
-         self.reward_at_task_success) = self._reward_range_state_and_action_space()
-        self.spec = EnvSpec(pathlib.Path(args_file).name.replace('train_amp_', '').replace('_args.txt', '-v0'))
+        (
+            self.reward_range,
+            self.observation_space,
+            self.observation_mean,
+            self.observation_var,
+            self.action_space,
+            self.action_mean,
+            self.action_var,
+            self.reward_at_task_fail,
+            self.reward_at_task_success,
+        ) = self._reward_range_state_and_action_space()
+        self.spec = EnvSpec(pathlib.Path(args_file).name.replace("train_amp_", "").replace("_args.txt", "-v0"))
 
         super().__init__()
 
@@ -137,9 +174,12 @@ class DeepMimicEnv(AMPEnv):
         if self._action_needed:
             self._core.SetAction(self._agent_id, np.array(action, dtype=np.float32).tolist())
 
-        done, info = update_core_for_num_substeps(until_action_needed=self._step_until_action_needed,
-                                                  core=self._core, update_timesteps=self._update_timesteps,
-                                                  agent_id=self._agent_id)
+        done, info = update_core_for_num_substeps(
+            until_action_needed=self._step_until_action_needed,
+            core=self._core,
+            update_timesteps=self._update_timesteps,
+            agent_id=self._agent_id,
+        )
         self._action_needed = info["action_needed"]
         next_state = compile_observation(self._core, self._num_timesteps, self._agent_id)
 
@@ -156,32 +196,42 @@ class DeepMimicEnv(AMPEnv):
         dummy_core.Init()
         assert dummy_core.GetGoalSize(self._agent_id) == 0, "This env has a goal! Use DeepMimicGoalEnv."
 
-        (observation_space,
-         observation_mean,
-         observation_var,
-         action_space,
-         action_mean,
-         action_var,
-         reward_at_task_fail,
-         reward_at_task_success) = load_observation_and_action_space(dummy_core, self._agent_id)
+        (
+            observation_space,
+            observation_mean,
+            observation_var,
+            action_space,
+            action_mean,
+            action_var,
+            reward_at_task_fail,
+            reward_at_task_success,
+        ) = load_observation_and_action_space(dummy_core, self._agent_id)
         reward_range = (dummy_core.GetRewardMin(self._agent_id), dummy_core.GetRewardMax(self._agent_id))
 
-        return (reward_range,
-                observation_space,
-                observation_mean,
-                observation_var,
-                action_space,
-                action_mean,
-                action_var,
-                reward_at_task_fail,
-                reward_at_task_success)
+        return (
+            reward_range,
+            observation_space,
+            observation_mean,
+            observation_var,
+            action_space,
+            action_mean,
+            action_var,
+            reward_at_task_fail,
+            reward_at_task_success,
+        )
 
 
 class DeepMimicGoalEnv(AMPGoalEnv):
     unwrapped: "DeepMimicGoalEnv"
 
-    def __init__(self, args_file: str, eval_mode: bool,
-                 fps: int = 60, num_processes: int = 1, step_until_action_needed: bool = True) -> None:
+    def __init__(
+        self,
+        args_file: str,
+        eval_mode: bool,
+        fps: int = 60,
+        num_processes: int = 1,
+        step_until_action_needed: bool = True,
+    ) -> None:
         assert fps > 0
         assert num_processes > 0
 
@@ -196,17 +246,19 @@ class DeepMimicGoalEnv(AMPGoalEnv):
         self._initialized = False
         self._action_needed = True
 
-        (self.reward_range,
-         self.observation_space,
-         self.observation_mean,
-         self.observation_var,
-         self.action_space,
-         self.action_mean,
-         self.action_var,
-         self.reward_at_task_fail,
-         self.reward_at_task_success) = self._reward_range_state_and_action_space()
+        (
+            self.reward_range,
+            self.observation_space,
+            self.observation_mean,
+            self.observation_var,
+            self.action_space,
+            self.action_mean,
+            self.action_var,
+            self.reward_at_task_fail,
+            self.reward_at_task_success,
+        ) = self._reward_range_state_and_action_space()
         assert self.reward_at_task_fail < self.reward_at_task_success
-        self.spec = EnvSpec(pathlib.Path(args_file).name.replace('train_amp_', '').replace('_args.txt', '-v0'))
+        self.spec = EnvSpec(pathlib.Path(args_file).name.replace("train_amp_", "").replace("_args.txt", "-v0"))
 
         super().__init__()
 
@@ -274,9 +326,12 @@ class DeepMimicGoalEnv(AMPGoalEnv):
         if self._action_needed:
             self._core.SetAction(self._agent_id, np.array(action, dtype=np.float32).tolist())
 
-        done, info = update_core_for_num_substeps(until_action_needed=self._step_until_action_needed,
-                                                  core=self._core, update_timesteps=self._update_timesteps,
-                                                  agent_id=self._agent_id)
+        done, info = update_core_for_num_substeps(
+            until_action_needed=self._step_until_action_needed,
+            core=self._core,
+            update_timesteps=self._update_timesteps,
+            agent_id=self._agent_id,
+        )
         self._action_needed = info["action_needed"]
         next_state = compile_goal_env_observation(self._core, self._num_timesteps, self._agent_id)
 
@@ -293,34 +348,40 @@ class DeepMimicGoalEnv(AMPGoalEnv):
         dummy_core.Init()
         assert dummy_core.GetGoalSize(self._agent_id) != 0, "This env does not have a goal! Use DeepMimicEnv."
 
-        (observation_space,
-         observation_mean,
-         observation_var,
-         action_space,
-         action_mean,
-         action_var,
-         reward_at_task_fail,
-         reward_at_task_success) = load_goal_env_observation_and_action_space(dummy_core, self._agent_id)
+        (
+            observation_space,
+            observation_mean,
+            observation_var,
+            action_space,
+            action_mean,
+            action_var,
+            reward_at_task_fail,
+            reward_at_task_success,
+        ) = load_goal_env_observation_and_action_space(dummy_core, self._agent_id)
         reward_range = (dummy_core.GetRewardMin(self._agent_id), dummy_core.GetRewardMax(self._agent_id))
 
-        return (reward_range,
-                observation_space,
-                observation_mean,
-                observation_var,
-                action_space,
-                action_mean,
-                action_var,
-                reward_at_task_fail,
-                reward_at_task_success)
+        return (
+            reward_range,
+            observation_space,
+            observation_mean,
+            observation_var,
+            action_space,
+            action_mean,
+            action_var,
+            reward_at_task_fail,
+            reward_at_task_success,
+        )
 
 
 class DeepMimicWindowViewer:
-    def __init__(self,
-                 env: gym.Env,
-                 policy_callback_function: Optional[Callable[[np.ndarray, np.ndarray], np.ndarray]] = None,
-                 width: int = 800,
-                 height: int = 450,
-                 playback_speed: int = 1) -> None:
+    def __init__(
+        self,
+        env: gym.Env,
+        policy_callback_function: Optional[Callable[[np.ndarray, np.ndarray], np.ndarray]] = None,
+        width: int = 800,
+        height: int = 450,
+        playback_speed: int = 1,
+    ) -> None:
         self._env = env
         assert isinstance(env.unwrapped, DeepMimicEnv) or isinstance(env.unwrapped, DeepMimicGoalEnv)
         self._env_unwrapped = env.unwrapped
@@ -339,8 +400,12 @@ class DeepMimicWindowViewer:
 
         # NOTE: Create window first, then rendering should be enabled.
         self._initialize_window()
-        self._core = initialize_env(self._env_unwrapped._args_file, self._env_unwrapped._agent_id,
-                                    seed=self._env_unwrapped._seed, enable_window_view=True)
+        self._core = initialize_env(
+            self._env_unwrapped._args_file,
+            self._env_unwrapped._agent_id,
+            seed=self._env_unwrapped._seed,
+            enable_window_view=True,
+        )
         self._env_unwrapped._core = self._core  # Force to overwrite core
         self._setup_draw()
 
@@ -391,7 +456,7 @@ class DeepMimicWindowViewer:
         key_val = int.from_bytes(key, byteorder="big")
         self._core.Keyboard(key_val, x, y)
 
-        if (key == b"r"):
+        if key == b"r":
             self._state = self._env.reset()
             self._initial_step = False
 

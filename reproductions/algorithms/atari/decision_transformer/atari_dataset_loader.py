@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import numpy as np
 
 
 def load_data_from_gz(gzfile):
-    with gzip.open(gzfile, mode='rb') as f:
+    with gzip.open(gzfile, mode="rb") as f:
         data = np.load(f, allow_pickle=False)
     return data
 
@@ -49,8 +49,7 @@ def load_experiences(gzfiles, num_experiences_to_load):
             experiences = experience
         else:
             experiences.extend(experience)
-        print('loaded experiences: {} / {}'.format(len(experiences),
-                                                   num_experiences_to_load))
+        print("loaded experiences: {} / {}".format(len(experiences), num_experiences_to_load))
         if num_experiences_to_load <= len(experiences):
             break
     return experiences[:num_experiences_to_load]
@@ -58,16 +57,16 @@ def load_experiences(gzfiles, num_experiences_to_load):
 
 def load_dataset(dataset_dir, percentage):
     dataset_dir = pathlib.Path(dataset_dir)
-    observation_files = find_all_file_with_name(dataset_dir, 'observation')
+    observation_files = find_all_file_with_name(dataset_dir, "observation")
     observation_files.sort()
 
-    action_files = find_all_file_with_name(dataset_dir, 'action')
+    action_files = find_all_file_with_name(dataset_dir, "action")
     action_files.sort()
 
-    reward_files = find_all_file_with_name(dataset_dir, 'reward')
+    reward_files = find_all_file_with_name(dataset_dir, "reward")
     reward_files.sort()
 
-    terminal_files = find_all_file_with_name(dataset_dir, 'terminal')
+    terminal_files = find_all_file_with_name(dataset_dir, "terminal")
     terminal_files.sort()
 
     file_num = len(observation_files)
@@ -84,14 +83,16 @@ def load_dataset(dataset_dir, percentage):
 
 def load_dataset_by_dataset_num(dataset_dir, dataset_num):
     dataset_dir = pathlib.Path(dataset_dir)
-    observation_file = dataset_dir / f'$store$_observation_ckpt.{dataset_num}.gz'
-    action_file = dataset_dir / f'$store$_action_ckpt.{dataset_num}.gz'
-    reward_file = dataset_dir / f'$store$_reward_ckpt.{dataset_num}.gz'
-    terminal_file = dataset_dir / f'$store$_terminal_ckpt.{dataset_num}.gz'
+    observation_file = dataset_dir / f"$store$_observation_ckpt.{dataset_num}.gz"
+    action_file = dataset_dir / f"$store$_action_ckpt.{dataset_num}.gz"
+    reward_file = dataset_dir / f"$store$_reward_ckpt.{dataset_num}.gz"
+    terminal_file = dataset_dir / f"$store$_terminal_ckpt.{dataset_num}.gz"
 
     with futures.ThreadPoolExecutor(max_workers=4) as executor:
-        data_futures = [executor.submit(load_experience, file_name)
-                        for file_name in (observation_file, action_file, reward_file, terminal_file)]
+        data_futures = [
+            executor.submit(load_experience, file_name)
+            for file_name in (observation_file, action_file, reward_file, terminal_file)
+        ]
         observations = data_futures[0].result()
         actions = data_futures[1].result()
         rewards = data_futures[2].result()

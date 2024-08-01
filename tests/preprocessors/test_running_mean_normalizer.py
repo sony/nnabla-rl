@@ -21,18 +21,21 @@ import nnabla.initializer as NI
 from nnabla_rl.preprocessors.running_mean_normalizer import RunningMeanNormalizer
 
 
-class TestRunningMeanNormalizer():
+class TestRunningMeanNormalizer:
     def setup_method(self, method):
         nn.clear_parameters()
         np.random.seed(0)
 
-    @pytest.mark.parametrize("x1, x2, x3",
-                             [(np.random.randn(1, 3), np.random.randn(1, 3), np.random.randn(1, 3)),
-                              (np.random.randn(1, 2), np.random.randn(2, 2), np.random.randn(3, 2))])
+    @pytest.mark.parametrize(
+        "x1, x2, x3",
+        [
+            (np.random.randn(1, 3), np.random.randn(1, 3), np.random.randn(1, 3)),
+            (np.random.randn(1, 2), np.random.randn(2, 2), np.random.randn(3, 2)),
+        ],
+    )
     def test_update(self, x1, x2, x3):
         state_dim = x1.shape[1]
-        normalizer = RunningMeanNormalizer(
-            scope_name="test", shape=(state_dim, ), epsilon=0.0)
+        normalizer = RunningMeanNormalizer(scope_name="test", shape=(state_dim,), epsilon=0.0)
 
         normalizer.update(x1)
         normalizer.update(x2)
@@ -45,13 +48,16 @@ class TestRunningMeanNormalizer():
         assert np.allclose(expected_mean, normalizer._mean.d, atol=1e-4)
         assert np.allclose(expected_var, normalizer._var.d, atol=1e-4)
 
-    @pytest.mark.parametrize("mean, var, s_batch",
-                             [(np.ones((1, 3)), np.ones((1, 3))*0.2, np.random.randn(1, 3)),
-                              (np.ones((1, 2))*0.5, np.ones((1, 2))*0.1, np.random.randn(3, 2))])
+    @pytest.mark.parametrize(
+        "mean, var, s_batch",
+        [
+            (np.ones((1, 3)), np.ones((1, 3)) * 0.2, np.random.randn(1, 3)),
+            (np.ones((1, 2)) * 0.5, np.ones((1, 2)) * 0.1, np.random.randn(3, 2)),
+        ],
+    )
     def test_filter(self, mean, var, s_batch):
         state_dim = s_batch.shape[1]
-        normalizer = RunningMeanNormalizer(
-            scope_name="test", shape=(state_dim, ), epsilon=0.0)
+        normalizer = RunningMeanNormalizer(scope_name="test", shape=(state_dim,), epsilon=0.0)
 
         normalizer._mean.d = mean
         normalizer._var.d = var
@@ -69,14 +75,19 @@ class TestRunningMeanNormalizer():
 
     def test_invalid_value_clip(self):
         with pytest.raises(ValueError):
-            RunningMeanNormalizer("test", (1, 1), value_clip=[5., -5.])
+            RunningMeanNormalizer("test", (1, 1), value_clip=[5.0, -5.0])
 
     def test_numpy_initializer(self):
-        shape = (6, )
+        shape = (6,)
         mean_initializer = np.random.rand(6)
         var_initializer = np.random.rand(6)
-        normalizer = RunningMeanNormalizer(scope_name="test", shape=shape, epsilon=0.0,
-                                           mean_initializer=mean_initializer, var_initializer=var_initializer)
+        normalizer = RunningMeanNormalizer(
+            scope_name="test",
+            shape=shape,
+            epsilon=0.0,
+            mean_initializer=mean_initializer,
+            var_initializer=var_initializer,
+        )
 
         # dummy process
         output = normalizer.process(nn.Variable.from_numpy_array(np.random.rand(1, 6)))
@@ -89,11 +100,16 @@ class TestRunningMeanNormalizer():
         assert np.allclose(actual_params["count"].d, np.ones((1, 1)) * 1e-4)
 
     def test_nnabla_initializer(self):
-        shape = (6, )
+        shape = (6,)
         mean_initializer = NI.ConstantInitializer(5.0)
         var_initializer = NI.ConstantInitializer(6.0)
-        normalizer = RunningMeanNormalizer(scope_name="test", shape=shape, epsilon=0.0,
-                                           mean_initializer=mean_initializer, var_initializer=var_initializer)
+        normalizer = RunningMeanNormalizer(
+            scope_name="test",
+            shape=shape,
+            epsilon=0.0,
+            mean_initializer=mean_initializer,
+            var_initializer=var_initializer,
+        )
 
         # dummy process
         output = normalizer.process(nn.Variable.from_numpy_array(np.random.rand(1, 6)))
@@ -106,17 +122,27 @@ class TestRunningMeanNormalizer():
         assert np.allclose(actual_params["count"].d, np.ones((1, 1)) * 1e-4)
 
     def test_numpy_initializer_with_invalid_mean_initializer_shape(self):
-        shape = (6, )
+        shape = (6,)
         mean_initializer = np.random.rand(4)
         var_initializer = np.random.rand(6)
         with pytest.raises(AssertionError):
-            RunningMeanNormalizer(scope_name="test", shape=shape, epsilon=0.0,
-                                  mean_initializer=mean_initializer, var_initializer=var_initializer)
+            RunningMeanNormalizer(
+                scope_name="test",
+                shape=shape,
+                epsilon=0.0,
+                mean_initializer=mean_initializer,
+                var_initializer=var_initializer,
+            )
 
     def test_numpy_initializer_with_invalid_var_initializer_shape(self):
-        shape = (6, )
+        shape = (6,)
         mean_initializer = np.random.rand(6)
         var_initializer = np.random.rand(4)
         with pytest.raises(AssertionError):
-            RunningMeanNormalizer(scope_name="test", shape=shape, epsilon=0.0,
-                                  mean_initializer=mean_initializer, var_initializer=var_initializer)
+            RunningMeanNormalizer(
+                scope_name="test",
+                shape=shape,
+                epsilon=0.0,
+                mean_initializer=mean_initializer,
+                var_initializer=var_initializer,
+            )

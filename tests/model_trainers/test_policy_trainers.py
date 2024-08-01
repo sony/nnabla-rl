@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,9 +29,11 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import LossIntegration
 from nnabla_rl.model_trainers.policy.dpg_policy_trainer import DPGPolicyTrainer
 from nnabla_rl.model_trainers.policy.soft_policy_trainer import AdjustableTemperature, SoftPolicyTrainer
-from nnabla_rl.model_trainers.policy.trpo_policy_trainer import (_concat_network_params_in_ndarray,
-                                                                 _hessian_vector_product,
-                                                                 _update_network_params_by_flat_params)
+from nnabla_rl.model_trainers.policy.trpo_policy_trainer import (
+    _concat_network_params_in_ndarray,
+    _hessian_vector_product,
+    _update_network_params_by_flat_params,
+)
 from nnabla_rl.models import TD3Policy, TD3QFunction
 from nnabla_rl.models.mujoco.policies import SACPolicy
 from nnabla_rl.models.mujoco.q_functions import SACQFunction
@@ -43,20 +45,20 @@ from nnabla_rl.utils.optimization import conjugate_gradient
 class DeterministicRnnPolicy(DeterministicPolicy):
     def __init__(self, scope_name: str):
         super().__init__(scope_name)
-        self._internal_state_shape = (10, )
+        self._internal_state_shape = (10,)
         self._fake_internal_state = None
 
     def is_recurrent(self) -> bool:
         return True
 
     def internal_state_shapes(self):
-        return {'fake': self._internal_state_shape}
+        return {"fake": self._internal_state_shape}
 
     def set_internal_states(self, states):
-        self._fake_internal_state = states['fake']
+        self._fake_internal_state = states["fake"]
 
     def get_internal_states(self):
-        return {'fake': self._fake_internal_state}
+        return {"fake": self._fake_internal_state}
 
     def pi(self, s):
         self._fake_internal_state = self._fake_internal_state * 2
@@ -66,25 +68,26 @@ class DeterministicRnnPolicy(DeterministicPolicy):
 class StochasticRnnPolicy(StochasticPolicy):
     def __init__(self, scope_name: str):
         super().__init__(scope_name)
-        self._internal_state_shape = (10, )
+        self._internal_state_shape = (10,)
         self._fake_internal_state = None
 
     def is_recurrent(self) -> bool:
         return True
 
     def internal_state_shapes(self):
-        return {'fake': self._internal_state_shape}
+        return {"fake": self._internal_state_shape}
 
     def set_internal_states(self, states):
-        self._fake_internal_state = states['fake']
+        self._fake_internal_state = states["fake"]
 
     def get_internal_states(self):
-        return {'fake': self._fake_internal_state}
+        return {"fake": self._fake_internal_state}
 
     def pi(self, s):
         self._fake_internal_state = self._fake_internal_state * 2
-        return Gaussian(mean=nn.Variable.from_numpy_array(np.zeros(s.shape)),
-                        ln_var=nn.Variable.from_numpy_array(np.ones(s.shape)))
+        return Gaussian(
+            mean=nn.Variable.from_numpy_array(np.zeros(s.shape)), ln_var=nn.Variable.from_numpy_array(np.ones(s.shape))
+        )
 
 
 class TrainerTest(metaclass=ABCMeta):
@@ -97,20 +100,19 @@ class TestBEARPolicyTrainer(TrainerTest):
     def test_compute_gaussian_mmd(self):
         def gaussian_kernel(x):
             return x**2
-        samples1 = np.array([[[1, 1, 1], [2, 2, 2], [3, 3, 3]],
-                             [[2, 2, 2], [2, 2, 2], [3, 3, 3]]], dtype=np.float32)
-        samples2 = np.array([[[0, 0, 0], [1, 1, 1]],
-                             [[1, 2, 3], [1, 1, 1]]], dtype=np.float32)
+
+        samples1 = np.array([[[1, 1, 1], [2, 2, 2], [3, 3, 3]], [[2, 2, 2], [2, 2, 2], [3, 3, 3]]], dtype=np.float32)
+        samples2 = np.array([[[0, 0, 0], [1, 1, 1]], [[1, 2, 3], [1, 1, 1]]], dtype=np.float32)
         samples1_var = nn.Variable(samples1.shape)
         samples1_var.d = samples1
         samples2_var = nn.Variable(samples2.shape)
         samples2_var.d = samples2
 
         actual_mmd = MT.policy_trainers.bear_policy_trainer._compute_gaussian_mmd(
-            samples1=samples1_var, samples2=samples2_var, sigma=20.0)
+            samples1=samples1_var, samples2=samples2_var, sigma=20.0
+        )
         actual_mmd.forward()
-        expected_mmd = self._compute_mmd(
-            samples1, samples2, sigma=20.0, kernel=gaussian_kernel)
+        expected_mmd = self._compute_mmd(samples1, samples2, sigma=20.0, kernel=gaussian_kernel)
 
         assert actual_mmd.shape == (samples1.shape[0], 1)
         assert np.all(np.isclose(actual_mmd.d, expected_mmd))
@@ -118,20 +120,19 @@ class TestBEARPolicyTrainer(TrainerTest):
     def test_compute_laplacian_mmd(self):
         def laplacian_kernel(x):
             return np.abs(x)
-        samples1 = np.array([[[1, 1, 1], [2, 2, 2], [3, 3, 3]],
-                             [[2, 2, 2], [2, 2, 2], [3, 3, 3]]], dtype=np.float32)
-        samples2 = np.array([[[0, 0, 0], [1, 1, 1]],
-                             [[1, 2, 3], [1, 1, 1]]], dtype=np.float32)
+
+        samples1 = np.array([[[1, 1, 1], [2, 2, 2], [3, 3, 3]], [[2, 2, 2], [2, 2, 2], [3, 3, 3]]], dtype=np.float32)
+        samples2 = np.array([[[0, 0, 0], [1, 1, 1]], [[1, 2, 3], [1, 1, 1]]], dtype=np.float32)
         samples1_var = nn.Variable(samples1.shape)
         samples1_var.d = samples1
         samples2_var = nn.Variable(samples2.shape)
         samples2_var.d = samples2
 
         actual_mmd = MT.policy_trainers.bear_policy_trainer._compute_laplacian_mmd(
-            samples1=samples1_var, samples2=samples2_var, sigma=20.0)
+            samples1=samples1_var, samples2=samples2_var, sigma=20.0
+        )
         actual_mmd.forward()
-        expected_mmd = self._compute_mmd(
-            samples1, samples2, sigma=20.0, kernel=laplacian_kernel)
+        expected_mmd = self._compute_mmd(samples1, samples2, sigma=20.0, kernel=laplacian_kernel)
 
         assert actual_mmd.shape == (samples1.shape[0], 1)
         assert np.all(np.isclose(actual_mmd.d, expected_mmd))
@@ -142,9 +143,7 @@ class TestBEARPolicyTrainer(TrainerTest):
         diff_yy = self._compute_kernel_sum(samples2, samples2, sigma, kernel)
         n = samples1.shape[1]
         m = samples2.shape[1]
-        mmd = (diff_xx / (n*n) -
-               2.0 * diff_xy / (n*m) +
-               diff_yy / (m*m))
+        mmd = diff_xx / (n * n) - 2.0 * diff_xy / (n * m) + diff_yy / (m * m)
         mmd = np.sqrt(mmd + 1e-6)
         return mmd
 
@@ -157,8 +156,8 @@ class TestBEARPolicyTrainer(TrainerTest):
                     diff = 0.0
                     for k in range(a.shape[2]):
                         # print(f'samples[{i}] - samples[{j}]={samples1[i]-samples1[j]}')
-                        diff += kernel(a[index][i][k]-b[index][j][k])
-                    kernel_sum += np.exp(-diff/(2.0*sigma))
+                        diff += kernel(a[index][i][k] - b[index][j][k])
+                    kernel_sum += np.exp(-diff / (2.0 * sigma))
             sums.append(kernel_sum)
         return np.reshape(np.array(sums), newshape=(len(sums), 1))
 
@@ -166,11 +165,11 @@ class TestBEARPolicyTrainer(TrainerTest):
 class TestComputeHessianVectorProduct(TrainerTest):
     def test_compute_hessian_vector_product_by_hand(self):
         state = nn.Variable((1, 2))
-        output = NPF.affine(state, 1, w_init=NI.ConstantInitializer(value=1.), with_bias=False)
+        output = NPF.affine(state, 1, w_init=NI.ConstantInitializer(value=1.0), with_bias=False)
 
         loss = NF.sum(output**2)
         grads = nn.grad([loss], nn.get_parameters().values())
-        flat_grads = grads[0].reshape((-1, ))
+        flat_grads = grads[0].reshape((-1,))
         flat_grads.need_grad = True
 
         def compute_Ax(vec):
@@ -180,14 +179,13 @@ class TestComputeHessianVectorProduct(TrainerTest):
         state.d = state_array
         flat_grads.forward()
 
-        actual = conjugate_gradient(
-            compute_Ax, flat_grads.d, max_iterations=1000)
+        actual = conjugate_gradient(compute_Ax, flat_grads.d, max_iterations=1000)
 
         H = np.array(
-            [[2*state_array[0, 0]**2,
-              2*state_array[0, 0]*state_array[0, 1]],
-             [2*state_array[0, 0]*state_array[0, 1],
-              2*state_array[0, 1]**2]]
+            [
+                [2 * state_array[0, 0] ** 2, 2 * state_array[0, 0] * state_array[0, 1]],
+                [2 * state_array[0, 0] * state_array[0, 1], 2 * state_array[0, 1] ** 2],
+            ]
         )
         expected = np.matmul(np.linalg.pinv(H), flat_grads.d.reshape(-1, 1))
 
@@ -195,8 +193,9 @@ class TestComputeHessianVectorProduct(TrainerTest):
 
     def test_compute_hessian_vector_product_by_hessian(self):
         state = nn.Variable((1, 2))
-        output = NPF.affine(state, 1, w_init=NI.ConstantInitializer(
-            value=1.), b_init=NI.ConstantInitializer(value=1.))
+        output = NPF.affine(
+            state, 1, w_init=NI.ConstantInitializer(value=1.0), b_init=NI.ConstantInitializer(value=1.0)
+        )
 
         loss = NF.sum(output**2)
         grads = nn.grad([loss], nn.get_parameters().values())
@@ -210,13 +209,11 @@ class TestComputeHessianVectorProduct(TrainerTest):
         state.d = state_array
         flat_grads.forward()
 
-        actual = conjugate_gradient(
-            compute_Ax, flat_grads.d, max_iterations=1000)
+        actual = conjugate_gradient(compute_Ax, flat_grads.d, max_iterations=1000)
 
         hessian = compute_hessian(loss, nn.get_parameters().values())
 
-        expected = np.matmul(np.linalg.pinv(hessian),
-                             flat_grads.d.reshape(-1, 1))
+        expected = np.matmul(np.linalg.pinv(hessian), flat_grads.d.reshape(-1, 1))
 
         assert expected == pytest.approx(actual.reshape(-1, 1), abs=1e-5)
 
@@ -259,34 +256,34 @@ class TestDPGPolicyTrainer(TrainerTest):
     def setup_method(self, method):
         nn.clear_parameters()
 
-    @pytest.mark.parametrize('unroll_steps', [1, 2])
-    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
-    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    @pytest.mark.parametrize("unroll_steps", [1, 2])
+    @pytest.mark.parametrize("burn_in_steps", [0, 1, 2])
+    @pytest.mark.parametrize("loss_integration", [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
     def test_with_non_rnn_model(self, unroll_steps, burn_in_steps, loss_integration):
         env_info = EnvironmentInfo.from_env(DummyContinuous())
 
-        policy = TD3Policy('stub_pi', action_dim=env_info.action_dim, max_action_value=1)
-        train_q = TD3QFunction('stub_q', None)
+        policy = TD3Policy("stub_pi", action_dim=env_info.action_dim, max_action_value=1)
+        train_q = TD3QFunction("stub_q", None)
         # Using DQN Q trainer as representative trainer
-        config = MT.policy_trainers.DPGPolicyTrainerConfig(unroll_steps=unroll_steps,
-                                                           burn_in_steps=burn_in_steps,
-                                                           loss_integration=loss_integration)
+        config = MT.policy_trainers.DPGPolicyTrainerConfig(
+            unroll_steps=unroll_steps, burn_in_steps=burn_in_steps, loss_integration=loss_integration
+        )
         DPGPolicyTrainer(models=policy, q_function=train_q, solvers={}, env_info=env_info, config=config)
 
         # pass: If no ecror occurs
 
-    @pytest.mark.parametrize('unroll_steps', [1, 2])
-    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
-    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    @pytest.mark.parametrize("unroll_steps", [1, 2])
+    @pytest.mark.parametrize("burn_in_steps", [0, 1, 2])
+    @pytest.mark.parametrize("loss_integration", [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
     def test_with_rnn_model(self, unroll_steps, burn_in_steps, loss_integration):
         env_info = EnvironmentInfo.from_env(DummyContinuous())
 
-        policy = DeterministicRnnPolicy('stub_pi')
-        train_q = TD3QFunction('stub_q', None)
+        policy = DeterministicRnnPolicy("stub_pi")
+        train_q = TD3QFunction("stub_q", None)
         # Using DQN Q trainer as representative trainer
-        config = MT.policy_trainers.DPGPolicyTrainerConfig(unroll_steps=unroll_steps,
-                                                           burn_in_steps=burn_in_steps,
-                                                           loss_integration=loss_integration)
+        config = MT.policy_trainers.DPGPolicyTrainerConfig(
+            unroll_steps=unroll_steps, burn_in_steps=burn_in_steps, loss_integration=loss_integration
+        )
         DPGPolicyTrainer(models=policy, q_function=train_q, solvers={}, env_info=env_info, config=config)
 
         # pass: If no ecror occurs
@@ -296,48 +293,58 @@ class TestSoftPolicyTrainer(TrainerTest):
     def setup_method(self, method):
         nn.clear_parameters()
 
-    @pytest.mark.parametrize('unroll_steps', [1, 2])
-    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
-    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    @pytest.mark.parametrize("unroll_steps", [1, 2])
+    @pytest.mark.parametrize("burn_in_steps", [0, 1, 2])
+    @pytest.mark.parametrize("loss_integration", [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
     def test_with_non_rnn_model(self, unroll_steps, burn_in_steps, loss_integration):
         env_info = EnvironmentInfo.from_env(DummyContinuous())
 
-        policy = SACPolicy('stub_pi', action_dim=env_info.action_dim)
-        train_q1 = SACQFunction('stub_q1', None)
-        train_q2 = SACQFunction('stub_q2', None)
+        policy = SACPolicy("stub_pi", action_dim=env_info.action_dim)
+        train_q1 = SACQFunction("stub_q1", None)
+        train_q2 = SACQFunction("stub_q2", None)
         # Using DQN Q trainer as representative trainer
-        config = MT.policy_trainers.SoftPolicyTrainerConfig(unroll_steps=unroll_steps,
-                                                            burn_in_steps=burn_in_steps,
-                                                            loss_integration=loss_integration,
-                                                            fixed_temperature=True)
-        SoftPolicyTrainer(policy,
-                          solvers={},
-                          q_functions=[train_q1, train_q2],
-                          temperature=AdjustableTemperature('stub_t'),
-                          temperature_solver=None,
-                          env_info=env_info, config=config)
+        config = MT.policy_trainers.SoftPolicyTrainerConfig(
+            unroll_steps=unroll_steps,
+            burn_in_steps=burn_in_steps,
+            loss_integration=loss_integration,
+            fixed_temperature=True,
+        )
+        SoftPolicyTrainer(
+            policy,
+            solvers={},
+            q_functions=[train_q1, train_q2],
+            temperature=AdjustableTemperature("stub_t"),
+            temperature_solver=None,
+            env_info=env_info,
+            config=config,
+        )
 
         # pass: If no ecror occurs
 
-    @pytest.mark.parametrize('unroll_steps', [1, 2])
-    @pytest.mark.parametrize('burn_in_steps', [0, 1, 2])
-    @pytest.mark.parametrize('loss_integration', [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
+    @pytest.mark.parametrize("unroll_steps", [1, 2])
+    @pytest.mark.parametrize("burn_in_steps", [0, 1, 2])
+    @pytest.mark.parametrize("loss_integration", [LossIntegration.LAST_TIMESTEP_ONLY, LossIntegration.ALL_TIMESTEPS])
     def test_with_rnn_model(self, unroll_steps, burn_in_steps, loss_integration):
         env_info = EnvironmentInfo.from_env(DummyContinuous())
 
-        policy = StochasticRnnPolicy('stub_pi')
-        train_q1 = SACQFunction('stub_q1', None)
-        train_q2 = SACQFunction('stub_q2', None)
-        config = MT.policy_trainers.SoftPolicyTrainerConfig(unroll_steps=unroll_steps,
-                                                            burn_in_steps=burn_in_steps,
-                                                            loss_integration=loss_integration,
-                                                            fixed_temperature=True)
-        SoftPolicyTrainer(policy,
-                          solvers={},
-                          q_functions=[train_q1, train_q2],
-                          temperature=AdjustableTemperature('stub_t'),
-                          temperature_solver=None,
-                          env_info=env_info, config=config)
+        policy = StochasticRnnPolicy("stub_pi")
+        train_q1 = SACQFunction("stub_q1", None)
+        train_q2 = SACQFunction("stub_q2", None)
+        config = MT.policy_trainers.SoftPolicyTrainerConfig(
+            unroll_steps=unroll_steps,
+            burn_in_steps=burn_in_steps,
+            loss_integration=loss_integration,
+            fixed_temperature=True,
+        )
+        SoftPolicyTrainer(
+            policy,
+            solvers={},
+            q_functions=[train_q1, train_q2],
+            temperature=AdjustableTemperature("stub_t"),
+            temperature_solver=None,
+            env_info=env_info,
+            config=config,
+        )
 
         # pass: If no ecror occurs
 
@@ -345,8 +352,7 @@ class TestSoftPolicyTrainer(TrainerTest):
 class TestAdjustableTemperature(TrainerTest):
     def test_initial_temperature(self):
         initial_value = 5.0
-        temperature = AdjustableTemperature(
-            scope_name='test', initial_value=initial_value)
+        temperature = AdjustableTemperature(scope_name="test", initial_value=initial_value)
         actual_value = temperature()
         actual_value.forward(clear_no_need_grad=True)
 
@@ -354,7 +360,7 @@ class TestAdjustableTemperature(TrainerTest):
 
         # Create tempearture with random initial value
         nn.clear_parameters()
-        temperature = AdjustableTemperature(scope_name='test')
+        temperature = AdjustableTemperature(scope_name="test")
         actual_value = temperature()
         actual_value.forward(clear_no_need_grad=True)
 
@@ -362,14 +368,13 @@ class TestAdjustableTemperature(TrainerTest):
 
     def test_temperature_is_adjustable(self):
         initial_value = 5.0
-        temperature = AdjustableTemperature(
-            scope_name='test', initial_value=initial_value)
+        temperature = AdjustableTemperature(scope_name="test", initial_value=initial_value)
         solver = nn.solvers.Adam(alpha=1.0)
         solver.set_parameters(temperature.get_parameters())
 
         value = temperature()
 
-        loss = 0.5 * NF.mean(value ** 2)
+        loss = 0.5 * NF.mean(value**2)
         loss.forward()
 
         solver.zero_grad()

@@ -30,13 +30,14 @@ class Gymnasium2GymWrapper(gym.Wrapper):
         # observation space
         if isinstance(env.observation_space, gymnasium_spaces.Tuple):
             self.observation_space = gym_spaces.Tuple(
-                [self._translate_space(observation_space)
-                 for observation_space in env.observation_space]
+                [self._translate_space(observation_space) for observation_space in env.observation_space]
             )
         elif isinstance(env.observation_space, gymnasium_spaces.Dict):
             self.observation_space = gym_spaces.Dict(
-                {key: self._translate_space(observation_space)
-                 for key, observation_space in env.observation_space.items()}
+                {
+                    key: self._translate_space(observation_space)
+                    for key, observation_space in env.observation_space.items()
+                }
             )
         else:
             self.observation_space = self._translate_space(env.observation_space)
@@ -44,13 +45,11 @@ class Gymnasium2GymWrapper(gym.Wrapper):
         # action space
         if isinstance(env.action_space, gymnasium_spaces.Tuple):
             self.action_space = gym_spaces.Tuple(
-                [self._translate_space(action_space)
-                 for action_space in env.action_space]
+                [self._translate_space(action_space) for action_space in env.action_space]
             )
         elif isinstance(env.action_space, gymnasium_spaces.Dict):
             self.action_space = gym_spaces.Dict(
-                {key: self._translate_space(action_space)
-                 for key, action_space in env.action_space.items()}
+                {key: self._translate_space(action_space) for key, action_space in env.action_space.items()}
             )
         else:
             self.action_space = self._translate_space(env.action_space)
@@ -61,7 +60,7 @@ class Gymnasium2GymWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        done = (terminated or truncated)
+        done = terminated or truncated
         info.update({"TimeLimit.truncated": truncated})
         return obs, reward, done, info
 
@@ -76,12 +75,7 @@ class Gymnasium2GymWrapper(gym.Wrapper):
 
     def _translate_space(self, space):
         if isinstance(space, gymnasium_spaces.Box):
-            return gym_spaces.Box(
-                low=space.low,
-                high=space.high,
-                shape=space.shape,
-                dtype=space.dtype
-            )
+            return gym_spaces.Box(low=space.low, high=space.high, shape=space.shape, dtype=space.dtype)
         elif isinstance(space, gymnasium_spaces.Discrete):
             return gym_spaces.Discrete(n=int(space.n))
         else:

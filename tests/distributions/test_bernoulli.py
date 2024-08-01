@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,8 +35,7 @@ class TestBernoulli(object):
         assert np.all(sampled.d == np.array([[1], [0], [0], [1]]))
 
     def test_sample_multi_dimensional(self):
-        z = np.array([[[1000.0], [-1000.0], [-1000.0], [1000.0]],
-                      [[1000.0], [-1000.0], [1000.0], [-1000.0]]])
+        z = np.array([[[1000.0], [-1000.0], [-1000.0], [1000.0]], [[1000.0], [-1000.0], [1000.0], [-1000.0]]])
         assert z.shape == (2, 4, 1)
         batch_size = z.shape[0]
         category_size = z.shape[1]
@@ -58,7 +57,7 @@ class TestBernoulli(object):
         assert actual.shape == (batch_size, 1)
 
         p = self._sigmoid(z)
-        expected = np.where(classes == 1, np.log(p), np.log(1-p))
+        expected = np.where(classes == 1, np.log(p), np.log(1 - p))
         assert actual.shape == expected.shape
         assert np.allclose(actual.d, expected)
 
@@ -74,7 +73,7 @@ class TestBernoulli(object):
         assert actual.shape == (batch_size, category_num, 1)
 
         p = self._sigmoid(z)
-        expected = np.where(classes == 1, np.log(p), np.log(1-p))
+        expected = np.where(classes == 1, np.log(p), np.log(1 - p))
         assert actual.shape == expected.shape
         assert np.allclose(actual.d, expected)
 
@@ -87,7 +86,7 @@ class TestBernoulli(object):
         assert actual.shape == (batch_size, 1)
 
         p = self._sigmoid(z)
-        probabilities = np.concatenate((p, 1-p), axis=-1)
+        probabilities = np.concatenate((p, 1 - p), axis=-1)
         expected = -np.sum(np.log(probabilities) * probabilities, axis=1, keepdims=True)
 
         assert actual.shape == expected.shape
@@ -103,7 +102,7 @@ class TestBernoulli(object):
         assert actual.shape == (batch_size, category_num, 1)
 
         p = self._sigmoid(z)
-        probabilities = np.concatenate((p, 1-p), axis=-1)
+        probabilities = np.concatenate((p, 1 - p), axis=-1)
         expected = -np.sum(np.log(probabilities) * probabilities, axis=len(z.shape) - 1, keepdims=True)
 
         assert actual.shape == expected.shape
@@ -113,12 +112,12 @@ class TestBernoulli(object):
         batch_size = 10
         z_p = np.random.normal(size=(batch_size, 1))
         z_p_p = self._sigmoid(z_p)
-        z_p_dist = np.concatenate((z_p_p, 1-z_p_p), axis=-1)
+        z_p_dist = np.concatenate((z_p_p, 1 - z_p_p), axis=-1)
         distribution_p = D.Bernoulli(z=z_p)
 
         z_q = np.random.normal(size=(batch_size, 1))
         z_q_p = self._sigmoid(z_q)
-        z_q_dist = np.concatenate((z_q_p, 1-z_q_p), axis=-1)
+        z_q_dist = np.concatenate((z_q_p, 1 - z_q_p), axis=-1)
         distribution_q = D.Bernoulli(z=z_q)
 
         actual = distribution_p.kl_divergence(distribution_q)
@@ -135,12 +134,12 @@ class TestBernoulli(object):
         category_num = 3
         z_p = np.random.normal(size=(batch_size, category_num, 1))
         z_p_p = self._sigmoid(z_p)
-        z_p_dist = np.concatenate((z_p_p, 1-z_p_p), axis=-1)
+        z_p_dist = np.concatenate((z_p_p, 1 - z_p_p), axis=-1)
         distribution_p = D.Bernoulli(z=z_p)
 
         z_q = np.random.normal(size=(batch_size, category_num, 1))
         z_q_p = self._sigmoid(z_q)
-        z_q_dist = np.concatenate((z_q_p, 1-z_q_p), axis=-1)
+        z_q_dist = np.concatenate((z_q_p, 1 - z_q_p), axis=-1)
         distribution_q = D.Bernoulli(z=z_q)
 
         actual = distribution_p.kl_divergence(distribution_q)

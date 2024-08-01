@@ -20,7 +20,7 @@ from typing import Dict, Optional, Tuple, TypeVar, Union
 import nnabla as nn
 from nnabla_rl.logger import logger
 
-T = TypeVar('T', bound='Model')
+T = TypeVar("T", bound="Model")
 
 
 class Model(object):
@@ -153,7 +153,7 @@ class Model(object):
         Raises:
             ValueError: Given scope name is same as the model or already exists.
         """
-        assert new_scope_name != self._scope_name, 'Can not use same scope_name!'
+        assert new_scope_name != self._scope_name, "Can not use same scope_name!"
         copied = copy.deepcopy(self)
         copied._scope_name = new_scope_name
         # copy current parameter if is already created
@@ -161,9 +161,10 @@ class Model(object):
         with nn.parameter_scope(new_scope_name):
             for param_name, param in params.items():
                 if nn.parameter.get_parameter(param_name) is not None:
-                    raise RuntimeError(f'Model with scope_name: {new_scope_name} already exists!!')
+                    raise RuntimeError(f"Model with scope_name: {new_scope_name} already exists!!")
                 logger.info(
-                    f'copying param with name: {self.scope_name}/{param_name} ---> {new_scope_name}/{param_name}')
+                    f"copying param with name: {self.scope_name}/{param_name} ---> {new_scope_name}/{param_name}"
+                )
                 nn.parameter.get_parameter_or_create(param_name, shape=param.shape, initializer=param.d)
         return copied
 

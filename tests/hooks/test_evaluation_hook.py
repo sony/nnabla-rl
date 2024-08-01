@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import nnabla_rl.environments as E
 from nnabla_rl.hooks import EvaluationHook
 
 
-class TestEvaluationHook():
+class TestEvaluationHook:
     def test_call(self):
         dummy_env = E.DummyContinuous()
 
@@ -31,9 +31,7 @@ class TestEvaluationHook():
 
         mock_writer = mock.MagicMock()
 
-        hook = EvaluationHook(dummy_env,
-                              evaluator=mock_evaluator,
-                              writer=mock_writer)
+        hook = EvaluationHook(dummy_env, evaluator=mock_evaluator, writer=mock_writer)
 
         hook(dummy_algorithm)
 

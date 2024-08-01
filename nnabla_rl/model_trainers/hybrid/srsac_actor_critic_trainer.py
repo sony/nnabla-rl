@@ -42,6 +42,7 @@ class SRSACActorCriticTrainerConfig(TrainerConfig):
 class SRSACActorCriticTrainer(ModelTrainer):
     """Efficient implementation of SAC style training that trains a policy and
     a q-function in parallel."""
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -56,20 +57,22 @@ class SRSACActorCriticTrainer(ModelTrainer):
     _temperature_losses: Sequence[nn.Variable]
     _config: SRSACActorCriticTrainerConfig
 
-    def __init__(self,
-                 pi: StochasticPolicy,
-                 pi_solvers: Dict[str, nn.solver.Solver],
-                 q_functions: Tuple[QFunction, QFunction],
-                 q_solvers: Dict[str, nn.solver.Solver],
-                 target_q_functions: Tuple[QFunction, QFunction],
-                 temperature: AdjustableTemperature,
-                 temperature_solver: Optional[nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: SRSACActorCriticTrainerConfig = SRSACActorCriticTrainerConfig()):
+    def __init__(
+        self,
+        pi: StochasticPolicy,
+        pi_solvers: Dict[str, nn.solver.Solver],
+        q_functions: Tuple[QFunction, QFunction],
+        q_solvers: Dict[str, nn.solver.Solver],
+        target_q_functions: Tuple[QFunction, QFunction],
+        temperature: AdjustableTemperature,
+        temperature_solver: Optional[nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: SRSACActorCriticTrainerConfig = SRSACActorCriticTrainerConfig(),
+    ):
         if len(q_functions) != 2:
-            raise ValueError('Two q functions should be provided')
+            raise ValueError("Two q functions should be provided")
         if not config.fixed_temperature and temperature_solver is None:
-            raise ValueError('Please set solver for temperature model')
+            raise ValueError("Please set solver for temperature model")
         self._pi_solver = pi_solvers[pi.scope_name]
         self._q_functions = q_functions
         self._q_solvers = [q_solvers[q_function.scope_name] for q_function in q_functions]
@@ -90,12 +93,14 @@ class SRSACActorCriticTrainer(ModelTrainer):
     def _total_timesteps(self) -> int:
         return self._config.replay_ratio
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -113,10 +118,10 @@ class SRSACActorCriticTrainer(ModelTrainer):
             self._pi_training(pi_loss, self._pi_solver, temperature_loss, self._temperature_solver)
 
         trainer_state = {}
-        trainer_state['pi_loss'] = self._pi_losses[-1].d.copy()
-        trainer_state['td_errors'] = self._td_errors[-1].d.copy()
-        trainer_state['q_loss'] = self._q_losses[-1].d.copy()
-        trainer_state['temperature_loss'] = self._temperature_losses[-1].d.copy()
+        trainer_state["pi_loss"] = self._pi_losses[-1].d.copy()
+        trainer_state["td_errors"] = self._td_errors[-1].d.copy()
+        trainer_state["q_loss"] = self._q_losses[-1].d.copy()
+        trainer_state["temperature_loss"] = self._temperature_losses[-1].d.copy()
         return trainer_state
 
     def _q_training(self, q_loss, q_solvers):
@@ -145,9 +150,7 @@ class SRSACActorCriticTrainer(ModelTrainer):
         # Will return exponentiated log temperature. To keep temperature always positive
         return self._temperature()
 
-    def _build_training_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables):
+    def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         self._q_losses = []
         self._td_errors = []
         self._pi_losses = []
@@ -159,9 +162,7 @@ class SRSACActorCriticTrainer(ModelTrainer):
             self._pi_losses.append(pi_loss)
             self._temperature_losses.append(temperature_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         policy = cast(StochasticPolicy, models[0])
         q_functions = cast(Tuple[QFunction, QFunction], models[1:])
         target_q_functions = self._target_q_functions
@@ -174,11 +175,13 @@ class SRSACActorCriticTrainer(ModelTrainer):
         pi_loss, temperature_loss = self._build_policy_training_graph(policy, q_functions, training_variables)
         return q_loss, td_error, pi_loss, temperature_loss
 
-    def _build_q_training_graph(self,
-                                q_functions: Sequence[QFunction],
-                                target_q_functions: Sequence[QFunction],
-                                target_policy: StochasticPolicy,
-                                training_variables: TrainingVariables) -> Tuple[nn.Variable, nn.Variable]:
+    def _build_q_training_graph(
+        self,
+        q_functions: Sequence[QFunction],
+        target_q_functions: Sequence[QFunction],
+        target_policy: StochasticPolicy,
+        training_variables: TrainingVariables,
+    ) -> Tuple[nn.Variable, nn.Variable]:
         # NOTE: Target q value depends on underlying implementation
         target_q = self._compute_q_target(target_q_functions, target_policy, training_variables)
         target_q.need_grad = False
@@ -189,15 +192,14 @@ class SRSACActorCriticTrainer(ModelTrainer):
             q_loss += loss
 
         # FIXME: using the last q function's td error for prioritized replay. Is this fine?
-        td_error = extra['td_error']
+        td_error = extra["td_error"]
         td_error.persistent = True
 
         return q_loss, td_error
 
-    def _compute_squared_td_loss(self,
-                                 model: QFunction,
-                                 target_q: nn.Variable,
-                                 training_variables: TrainingVariables) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
+    def _compute_squared_td_loss(
+        self, model: QFunction, target_q: nn.Variable, training_variables: TrainingVariables
+    ) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
         s_current = training_variables.s_current
         a_current = training_variables.a_current
 
@@ -206,14 +208,16 @@ class SRSACActorCriticTrainer(ModelTrainer):
         squared_td_error = training_variables.weight * NF.pow_scalar(td_error, 2.0)
         q_loss = NF.mean(squared_td_error)
 
-        extra = {'td_error': td_error}
+        extra = {"td_error": td_error}
         return q_loss, extra
 
-    def _compute_q_target(self,
-                          target_q_functions: Sequence[QFunction],
-                          target_policy: StochasticPolicy,
-                          training_variables: TrainingVariables,
-                          **kwargs) -> nn.Variable:
+    def _compute_q_target(
+        self,
+        target_q_functions: Sequence[QFunction],
+        target_policy: StochasticPolicy,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> nn.Variable:
         gamma = training_variables.gamma
         reward = training_variables.reward
         non_terminal = training_variables.non_terminal
@@ -230,9 +234,9 @@ class SRSACActorCriticTrainer(ModelTrainer):
         target_q = RF.minimum_n(q_values)
         return reward + gamma * non_terminal * (target_q - self.get_temperature() * log_pi)
 
-    def _build_policy_training_graph(self, policy: StochasticPolicy,
-                                     q_functions: Sequence[QFunction],
-                                     training_variables: TrainingVariables) -> Tuple[nn.Variable, nn.Variable]:
+    def _build_policy_training_graph(
+        self, policy: StochasticPolicy, q_functions: Sequence[QFunction], training_variables: TrainingVariables
+    ) -> Tuple[nn.Variable, nn.Variable]:
         # Actor optimization graph
         policy_distribution = policy.pi(training_variables.s_current)
         action_var, log_pi = policy_distribution.sample_and_compute_log_prob()
@@ -258,14 +262,16 @@ class SRSACActorCriticTrainer(ModelTrainer):
         non_terminal_var = create_variable(batch_size, 1)
         weight_var = create_variable(batch_size, 1)
 
-        training_variables = TrainingVariables(batch_size=batch_size,
-                                               s_current=s_current_var,
-                                               a_current=a_current_var,
-                                               reward=reward_var,
-                                               gamma=gamma_var,
-                                               non_terminal=non_terminal_var,
-                                               s_next=s_next_var,
-                                               weight=weight_var)
+        training_variables = TrainingVariables(
+            batch_size=batch_size,
+            s_current=s_current_var,
+            a_current=a_current_var,
+            reward=reward_var,
+            gamma=gamma_var,
+            non_terminal=non_terminal_var,
+            s_next=s_next_var,
+            weight=weight_var,
+        )
         return training_variables
 
     def _setup_solver(self):
@@ -275,6 +281,8 @@ class SRSACActorCriticTrainer(ModelTrainer):
 
     @property
     def loss_variables(self) -> Dict[str, nn.Variable]:
-        return {"pi_loss": self._pi_losses[-1],
-                "q_loss": self._q_losses[-1],
-                "temperature_loss": self._temperature_losses[-1]}
+        return {
+            "pi_loss": self._pi_losses[-1],
+            "q_loss": self._q_losses[-1],
+            "temperature_loss": self._temperature_losses[-1],
+        }

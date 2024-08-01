@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,18 +35,19 @@ class SquaredTDVFunctionTrainer(VFunctionTrainer):
     _config: SquaredTDVFunctionTrainerConfig
     _prev_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 models: Union[VFunction, Sequence[VFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: SquaredTDVFunctionTrainerConfig = SquaredTDVFunctionTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[VFunction, Sequence[VFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: SquaredTDVFunctionTrainerConfig = SquaredTDVFunctionTrainerConfig(),
+    ):
         self._prev_rnn_states = {}
         super(SquaredTDVFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _compute_loss(self,
-                      model: VFunction,
-                      target_value: nn.Variable,
-                      training_variables: TrainingVariables) -> nn.Variable:
+    def _compute_loss(
+        self, model: VFunction, target_value: nn.Variable, training_variables: TrainingVariables
+    ) -> nn.Variable:
         prev_rnn_states = self._prev_rnn_states
         train_rnn_states = training_variables.rnn_states
         with rnn_support(model, prev_rnn_states, train_rnn_states, training_variables, self._config):

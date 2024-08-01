@@ -109,9 +109,7 @@ class GoalEnvWrapper(GoalEnv):
 
     @property
     def _np_random(self):
-        raise AttributeError(
-            "Can't access `_np_random` of a wrapper, use `.unwrapped._np_random` or `.np_random`."
-        )
+        raise AttributeError("Can't access `_np_random` of a wrapper, use `.unwrapped._np_random` or `.np_random`.")
 
     def step(self, action):
         """Steps through the environment with action."""
@@ -148,7 +146,7 @@ class GoalEnvWrapper(GoalEnv):
 class GoalConditionedTupleObservationEnv(gym.ObservationWrapper):
     def __init__(self, env: GoalEnv):
         super(GoalConditionedTupleObservationEnv, self).__init__(env)
-        self._observation_keys = ['observation', 'desired_goal', 'achieved_goal']
+        self._observation_keys = ["observation", "desired_goal", "achieved_goal"]
 
         self._check_env(env)
         self._observation_space = self._build_observation_space(env)
@@ -159,7 +157,7 @@ class GoalConditionedTupleObservationEnv(gym.ObservationWrapper):
 
         for key in env.observation_space.spaces:
             if key not in self._observation_keys:
-                error_msg = f'{key} should be included in observation_space!!'
+                error_msg = f"{key} should be included in observation_space!!"
                 raise ValueError(error_msg)
 
     def _build_observation_space(self, env: GoalEnv):
@@ -177,7 +175,7 @@ class GoalConditionedTupleObservationEnv(gym.ObservationWrapper):
     def _check_observation(self, observation):
         for key in observation.keys():
             if key not in self._observation_keys:
-                error_msg = f'{key} should be included in observations!!'
+                error_msg = f"{key} should be included in observations!!"
                 raise ValueError(error_msg)
 
     def compute_reward(self, achieved_goal, desired_goal, info):

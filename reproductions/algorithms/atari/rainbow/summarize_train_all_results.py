@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,25 +18,25 @@ import subprocess
 
 
 def find_tsvs(result_dir: pathlib.Path):
-    print(f'result dir {result_dir}')
+    print(f"result dir {result_dir}")
     tsvs = []
     for f in result_dir.iterdir():
         if f.is_dir():
             tsvs.extend(find_tsvs(f))
-        elif f.name == 'evaluation_result_average_scalar.tsv':
+        elif f.name == "evaluation_result_average_scalar.tsv":
             tsvs.append(f)
     tsvs.sort()
     return tsvs
 
 
 def extract_label(tsv_path: pathlib.Path):
-    pattern = r'.*-v4[- ](.*)_results'
+    pattern = r".*-v4[- ](.*)_results"
     regex = re.compile(pattern)
-    env_method = str(tsv_path).split('/')[2]
+    env_method = str(tsv_path).split("/")[2]
     print(env_method)
     result = regex.findall(env_method)
     if len(result) == 0:
-        return 'rainbow'
+        return "rainbow"
     else:
         return result[0]
 
@@ -61,16 +61,22 @@ def main():
     tsvroot = tsvs[0].parent.parent
     tsvpaths = [str(tsv) for tsv in tsvs]
     tsvlabels = labels
-    print(f'tsvroot: {tsvroot}')
-    print(f'tsvs: {tsvs}')
-    print(f'labels: {labels}')
+    print(f"tsvroot: {tsvroot}")
+    print(f"tsvs: {tsvs}")
+    print(f"labels: {labels}")
 
-    command = ['plot_result', '--tsvpaths'] + tsvpaths + \
-        ['--tsvlabels'] + tsvlabels + \
-        ['--no-stddev'] + \
-        ['--smooth-k'] + ['10'] + \
-        ['--outdir'] + [f'{str(tsvroot)}']
-    print(f'command: {command}')
+    command = (
+        ["plot_result", "--tsvpaths"]
+        + tsvpaths
+        + ["--tsvlabels"]
+        + tsvlabels
+        + ["--no-stddev"]
+        + ["--smooth-k"]
+        + ["10"]
+        + ["--outdir"]
+        + [f"{str(tsvroot)}"]
+    )
+    print(f"command: {command}")
     subprocess.run(command)
 
 

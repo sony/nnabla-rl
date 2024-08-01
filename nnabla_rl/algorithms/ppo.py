@@ -30,21 +30,39 @@ import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
 import nnabla_rl.utils.context as context
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.algorithms.common_utils import (_StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
-                                               _StochasticPolicyActionSelector, compute_v_target_and_advantage)
+from nnabla_rl.algorithms.common_utils import (
+    _StatePreprocessedStochasticPolicy,
+    _StatePreprocessedVFunction,
+    _StochasticPolicyActionSelector,
+    compute_v_target_and_advantage,
+)
 from nnabla_rl.builders import ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
-from nnabla_rl.models import (Model, PPOAtariPolicy, PPOAtariVFunction, PPOMujocoPolicy, PPOMujocoVFunction,
-                              PPOSharedFunctionHead, StochasticPolicy, VFunction)
+from nnabla_rl.models import (
+    Model,
+    PPOAtariPolicy,
+    PPOAtariVFunction,
+    PPOMujocoPolicy,
+    PPOMujocoVFunction,
+    PPOSharedFunctionHead,
+    StochasticPolicy,
+    VFunction,
+)
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers import BufferIterator
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable, unzip
 from nnabla_rl.utils.misc import create_variable
-from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
-                                          mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
+from nnabla_rl.utils.multiprocess import (
+    copy_mp_arrays_to_params,
+    copy_params_to_mp_arrays,
+    mp_array_from_np_array,
+    mp_to_np_array,
+    new_mp_arrays_from_params,
+    np_to_mp_array,
+)
 from nnabla_rl.utils.reproductions import set_global_seed
 
 
@@ -79,7 +97,7 @@ class PPOConfig(AlgorithmConfig):
 
     epsilon: float = 0.1
     gamma: float = 0.99
-    learning_rate: float = 2.5*1e-4
+    learning_rate: float = 2.5 * 1e-4
     lmb: float = 0.95
     entropy_coefficient: float = 0.01
     value_coefficient: float = 1.0
@@ -98,90 +116,81 @@ class PPOConfig(AlgorithmConfig):
 
         Check the set values are in valid range.
         """
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.actor_num, 'actor num')
-        self._assert_positive(self.epochs, 'epochs')
-        self._assert_positive(self.batch_size, 'batch_size')
-        self._assert_positive(self.actor_timesteps, 'actor_timesteps')
-        self._assert_positive(self.total_timesteps, 'total_timesteps')
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_positive(self.actor_num, "actor num")
+        self._assert_positive(self.epochs, "epochs")
+        self._assert_positive(self.batch_size, "batch_size")
+        self._assert_positive(self.actor_timesteps, "actor_timesteps")
+        self._assert_positive(self.total_timesteps, "total_timesteps")
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: PPOConfig,
-                    **kwargs) -> StochasticPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: PPOConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
         if env_info.is_discrete_action_env():
             # scope name is same as that of v-function -> parameter is shared across models automatically
             return self._build_shared_policy("shared", env_info, algorithm_config)
         else:
             return self._build_mujoco_policy(scope_name, env_info, algorithm_config)
 
-    def _build_shared_policy(self,
-                             scope_name: str,
-                             env_info: EnvironmentInfo,
-                             algorithm_config: PPOConfig,
-                             **kwargs) -> StochasticPolicy:
-        _shared_function_head = PPOSharedFunctionHead(scope_name=scope_name,
-                                                      state_shape=env_info.state_shape,
-                                                      action_dim=env_info.action_dim)
+    def _build_shared_policy(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: PPOConfig, **kwargs
+    ) -> StochasticPolicy:
+        _shared_function_head = PPOSharedFunctionHead(
+            scope_name=scope_name, state_shape=env_info.state_shape, action_dim=env_info.action_dim
+        )
         return PPOAtariPolicy(scope_name=scope_name, action_dim=env_info.action_dim, head=_shared_function_head)
 
-    def _build_mujoco_policy(self,
-                             scope_name: str,
-                             env_info: EnvironmentInfo,
-                             algorithm_config: PPOConfig,
-                             **kwargs) -> StochasticPolicy:
+    def _build_mujoco_policy(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: PPOConfig, **kwargs
+    ) -> StochasticPolicy:
         return PPOMujocoPolicy(scope_name=scope_name, action_dim=env_info.action_dim)
 
 
 class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: PPOConfig,
-                    **kwargs) -> VFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: PPOConfig,
+        **kwargs,
+    ) -> VFunction:
         if env_info.is_discrete_action_env():
             # scope name is same as that of policy -> parameter is shared across models automatically
             return self._build_shared_v_function("shared", env_info, algorithm_config)
         else:
             return self._build_mujoco_v_function(scope_name, env_info, algorithm_config)
 
-    def _build_shared_v_function(self,
-                                 scope_name: str,
-                                 env_info: EnvironmentInfo,
-                                 algorithm_config: PPOConfig,
-                                 **kwargs) -> VFunction:
-        _shared_function_head = PPOSharedFunctionHead(scope_name=scope_name,
-                                                      state_shape=env_info.state_shape,
-                                                      action_dim=env_info.action_dim)
+    def _build_shared_v_function(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: PPOConfig, **kwargs
+    ) -> VFunction:
+        _shared_function_head = PPOSharedFunctionHead(
+            scope_name=scope_name, state_shape=env_info.state_shape, action_dim=env_info.action_dim
+        )
         return PPOAtariVFunction(scope_name=scope_name, head=_shared_function_head)
 
-    def _build_mujoco_v_function(self,
-                                 scope_name: str,
-                                 env_info: EnvironmentInfo,
-                                 algorithm_config: PPOConfig,
-                                 **kwargs) -> VFunction:
+    def _build_mujoco_v_function(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: PPOConfig, **kwargs
+    ) -> VFunction:
         return PPOMujocoVFunction(scope_name=scope_name)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,
-                     env_info: EnvironmentInfo,
-                     algorithm_config: AlgorithmConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(self, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs) -> nn.solver.Solver:
         assert isinstance(algorithm_config, PPOConfig)
         return NS.Adam(alpha=algorithm_config.learning_rate, eps=1e-5)
 
 
 class DefaultPreprocessorBuilder(PreprocessorBuilder):
-    def build_preprocessor(self,
-                           scope_name: str,
-                           env_info: EnvironmentInfo,
-                           algorithm_config: AlgorithmConfig,
-                           **kwargs) -> Preprocessor:
-        return RP.RunningMeanNormalizer('preprocessor', env_info.state_shape, value_clip=(-5.0, 5.0))
+    def build_preprocessor(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs
+    ) -> Preprocessor:
+        return RP.RunningMeanNormalizer("preprocessor", env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
 class PPO(Algorithm):
@@ -225,29 +234,32 @@ class PPO(Algorithm):
     _policy_solver_builder: SolverBuilder
     _v_solver_builder: SolverBuilder
 
-    _actors: List['_PPOActor']
+    _actors: List["_PPOActor"]
     _actor_processes: List[Union[mp.Process, th.Thread]]
 
     _policy_trainer_state: Dict[str, Any]
     _v_function_trainer_state: Dict[str, Any]
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: PPOConfig = PPOConfig(),
-                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
-                 v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: PPOConfig = PPOConfig(),
+        v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
+        v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder(),
+    ):
         super(PPO, self).__init__(env_or_env_info, config=config)
 
         # Initialize on cpu and change the context later
         with nn.context_scope(context.get_nnabla_context(-1)):
-            self._v_function = v_function_builder('v', self._env_info, self._config)
-            self._policy = policy_builder('pi', self._env_info, self._config)
+            self._v_function = v_function_builder("v", self._env_info, self._config)
+            self._policy = policy_builder("pi", self._env_info, self._config)
             self._state_preprocessor = None
 
             if self._config.preprocess_state and state_preprocessor_builder is not None:
-                preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
+                preprocessor = state_preprocessor_builder("preprocessor", self._env_info, self._config)
                 assert preprocessor is not None
                 self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
                 self._policy = _StatePreprocessedStochasticPolicy(policy=self._policy, preprocessor=preprocessor)
@@ -259,7 +271,8 @@ class PPO(Algorithm):
             self._v_solver_builder = v_solver_builder  # keep for later use
 
         self._evaluation_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._policy.shallowcopy(), deterministic=False)
+            self._env_info, self._policy.shallowcopy(), deterministic=False
+        )
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
@@ -269,7 +282,7 @@ class PPO(Algorithm):
 
     def _before_training_start(self, env_or_buffer):
         if not self._is_env(env_or_buffer):
-            raise ValueError('PPO only supports online training')
+            raise ValueError("PPO only supports online training")
         env = env_or_buffer
 
         # FIXME: This setup is a workaround for creating underlying model parameters
@@ -295,27 +308,27 @@ class PPO(Algorithm):
 
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.PPOPolicyTrainerConfig(
-            epsilon=self._config.epsilon,
-            entropy_coefficient=self._config.entropy_coefficient
+            epsilon=self._config.epsilon, entropy_coefficient=self._config.entropy_coefficient
         )
         policy_trainer = MT.policy_trainers.PPOPolicyTrainer(
             models=self._policy,
             solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
-            config=policy_trainer_config)
+            config=policy_trainer_config,
+        )
         return policy_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
         # training input/loss variables
         v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
-            reduction_method='mean',
-            v_loss_scalar=self._config.value_coefficient
+            reduction_method="mean", v_loss_scalar=self._config.value_coefficient
         )
         v_function_trainer = MT.v_value.MonteCarloVTrainer(
             train_functions=self._v_function,
             solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
-            config=v_function_trainer_config)
+            config=v_function_trainer_config,
+        )
         return v_function_trainer
 
     def _after_training_finish(self, env_or_buffer):
@@ -332,8 +345,7 @@ class PPO(Algorithm):
         if self.iteration_num % update_interval != 0:
             return
 
-        s, a, r, non_terminal, s_next, log_prob, v_targets, advantages = \
-            self._collect_experiences(self._actors)
+        s, a, r, non_terminal, s_next, log_prob, v_targets, advantages = self._collect_experiences(self._actors)
 
         if self._config.preprocess_state:
             self._state_preprocessor.update(s)
@@ -350,10 +362,9 @@ class PPO(Algorithm):
             buffer_iterator.reset()
 
     def _launch_actor_processes(self, env):
-        actors = self._build_ppo_actors(env,
-                                        v_function=self._v_function,
-                                        policy=self._policy,
-                                        state_preprocessor=self._state_preprocessor)
+        actors = self._build_ppo_actors(
+            env, v_function=self._v_function, policy=self._policy, state_preprocessor=self._state_preprocessor
+        )
         processes = []
         for actor in actors:
             if self._config.actor_num == 1:
@@ -408,21 +419,18 @@ class PPO(Algorithm):
 
     def _ppo_training(self, experiences):
         if self._config.decrease_alpha:
-            alpha = (1.0 - self.iteration_num / self._config.total_timesteps)
+            alpha = 1.0 - self.iteration_num / self._config.total_timesteps
             alpha = np.maximum(alpha, 0.0)
         else:
             alpha = 1.0
 
         (s, a, _, _, _, log_prob, v_target, advantage) = marshal_experiences(experiences)
         extra = {}
-        extra['log_prob'] = log_prob
-        extra['advantage'] = advantage
-        extra['alpha'] = alpha
-        extra['v_target'] = v_target
-        batch = TrainingBatch(batch_size=len(experiences),
-                              s_current=s,
-                              a_current=a,
-                              extra=extra)
+        extra["log_prob"] = log_prob
+        extra["advantage"] = advantage
+        extra["alpha"] = alpha
+        extra["v_target"] = v_target
+        batch = TrainingBatch(batch_size=len(experiences), s_current=s, a_current=a, extra=extra)
 
         self._policy_trainer.set_learning_rate(self._config.learning_rate * alpha)
         self._policy_trainer_state = self._policy_trainer.train(batch)
@@ -448,8 +456,9 @@ class PPO(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_tuple_action_env()
 
     def _build_ppo_actors(self, env, v_function, policy, state_preprocessor):
@@ -462,17 +471,18 @@ class PPO(Algorithm):
                 v_function=v_function,
                 policy=policy,
                 state_preprocessor=state_preprocessor,
-                config=self._config)
+                config=self._config,
+            )
             actors.append(actor)
         return actors
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(PPO, self).latest_iteration_state
-        if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
-        if hasattr(self, '_v_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'v_loss': float(self._v_function_trainer_state['v_loss'])})
+        if hasattr(self, "_policy_trainer_state"):
+            latest_iteration_state["scalar"].update({"pi_loss": float(self._policy_trainer_state["pi_loss"])})
+        if hasattr(self, "_v_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"v_loss": float(self._v_function_trainer_state["v_loss"])})
         return latest_iteration_state
 
     @property
@@ -511,7 +521,7 @@ class _PPOActor(object):
         self._config = config
 
         # IPC communication variables
-        self._disposed = mp.Value('i', False)
+        self._disposed = mp.Value("i", False)
         self._task_start_event = mp.Event()
         self._task_finish_event = mp.Event()
 
@@ -521,35 +531,50 @@ class _PPOActor(object):
             self._state_preprocessor_mp_arrays = new_mp_arrays_from_params(state_preprocessor.get_parameters())
 
         explorer_config = EE.RawPolicyExplorerConfig(
-            initial_step_num=0,
-            timelimit_as_terminal=self._config.timelimit_as_terminal
+            initial_step_num=0, timelimit_as_terminal=self._config.timelimit_as_terminal
         )
-        self._environment_explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
-                                                          env_info=self._env_info,
-                                                          config=explorer_config)
+        self._environment_explorer = EE.RawPolicyExplorer(
+            policy_action_selector=self._compute_action, env_info=self._env_info, config=explorer_config
+        )
 
         obs_space = self._env.observation_space
         action_space = self._env.action_space
 
-        MultiProcessingArrays = namedtuple('MultiProcessingArrays',
-                                           ['state', 'action', 'reward', 'non_terminal',
-                                            'next_state', 'log_prob', 'v_target', 'advantage'])
+        MultiProcessingArrays = namedtuple(
+            "MultiProcessingArrays",
+            ["state", "action", "reward", "non_terminal", "next_state", "log_prob", "v_target", "advantage"],
+        )
 
         state_mp_array = self._prepare_state_mp_array(obs_space, env_info)
         action_mp_array = self._prepare_action_mp_array(action_space, env_info)
 
         scalar_mp_array_shape = (self._timesteps, 1)
-        reward_mp_array = (mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
-        non_terminal_mp_array = (mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
+        reward_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
+        non_terminal_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
         next_state_mp_array = self._prepare_state_mp_array(obs_space, env_info)
-        log_prob_mp_array = (mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
-        v_target_mp_array = (mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
-        advantage_mp_array = (mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32)), scalar_mp_array_shape, np.float32)
+        log_prob_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
+        v_target_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
+        advantage_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
 
         self._mp_arrays = MultiProcessingArrays(
             state_mp_array,
@@ -559,7 +584,7 @@ class _PPOActor(object):
             next_state_mp_array,
             log_prob_mp_array,
             v_target_mp_array,
-            advantage_mp_array
+            advantage_mp_array,
         )
 
     def __call__(self):
@@ -580,6 +605,7 @@ class _PPOActor(object):
                 return tuple(mp_to_np_array(*array) for array in mp_array)
             else:
                 return mp_to_np_array(*mp_array)
+
         self._task_finish_event.wait()
         return tuple(_mp_to_np_array(mp_array) for mp_array in self._mp_arrays)
 
@@ -601,7 +627,7 @@ class _PPOActor(object):
 
         set_global_seed(seed)
         self._env.seed(seed)
-        while (True):
+        while True:
             self._task_start_event.wait()
             if self._disposed.get_obj():
                 break
@@ -620,16 +646,18 @@ class _PPOActor(object):
 
     def _run_data_collection(self):
         experiences = self._environment_explorer.step(self._env, n=self._timesteps)
-        experiences = [(s, a, r, non_terminal, s_next, info['log_prob'])
-                       for (s, a, r, non_terminal, s_next, info) in experiences]
+        experiences = [
+            (s, a, r, non_terminal, s_next, info["log_prob"]) for (s, a, r, non_terminal, s_next, info) in experiences
+        ]
         v_targets, advantages = compute_v_target_and_advantage(
-            self._v_function, experiences, gamma=self._gamma, lmb=self._lambda)
+            self._v_function, experiences, gamma=self._gamma, lmb=self._lambda
+        )
         return experiences, v_targets, advantages
 
     @eval_api
     def _compute_action(self, s, *, begin_of_episode=False):
         s = add_batch_dimension(s)
-        if not hasattr(self, '_eval_state_var'):
+        if not hasattr(self, "_eval_state_var"):
             self._eval_state_var = create_variable(1, self._env_info.state_shape)
             distribution = self._policy.pi(self._eval_state_var)
             self._eval_action, self._eval_log_prob = distribution.sample_and_compute_log_prob()
@@ -638,7 +666,7 @@ class _PPOActor(object):
         action = np.squeeze(self._eval_action.d, axis=0)
         log_prob = np.squeeze(self._eval_log_prob.d, axis=0)
         info = {}
-        info['log_prob'] = log_prob
+        info["log_prob"] = log_prob
         if self._env_info.is_discrete_action_env():
             return np.int32(action), info
         else:
@@ -677,27 +705,23 @@ class _PPOActor(object):
             state_mp_array_dtypes = []
             for space in obs_space:
                 state_mp_array_shape = (self._timesteps, *space.shape)
-                state_mp_array = mp_array_from_np_array(
-                    np.empty(shape=state_mp_array_shape, dtype=space.dtype))
+                state_mp_array = mp_array_from_np_array(np.empty(shape=state_mp_array_shape, dtype=space.dtype))
                 state_mp_array_shapes.append(state_mp_array_shape)
                 state_mp_array_dtypes.append(space.dtype)
                 state_mp_arrays.append(state_mp_array)
             return tuple(x for x in zip(state_mp_arrays, state_mp_array_shapes, state_mp_array_dtypes))
         else:
             state_mp_array_shape = (self._timesteps, *obs_space.shape)
-            state_mp_array = mp_array_from_np_array(
-                np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
+            state_mp_array = mp_array_from_np_array(np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
             return (state_mp_array, state_mp_array_shape, obs_space.dtype)
 
     def _prepare_action_mp_array(self, action_space, env_info):
         if env_info.is_discrete_action_env():
             action_mp_array_shape = (self._timesteps, 1)
-            action_mp_array = mp_array_from_np_array(
-                np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
+            action_mp_array = mp_array_from_np_array(np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
         else:
             action_mp_array_shape = (self._timesteps, action_space.shape[0])
-            action_mp_array = mp_array_from_np_array(
-                np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
+            action_mp_array = mp_array_from_np_array(np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
         return (action_mp_array, action_mp_array_shape, action_space.dtype)
 
 

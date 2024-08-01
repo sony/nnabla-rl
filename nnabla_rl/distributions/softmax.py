@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,8 +41,7 @@ class Softmax(DiscreteDistribution):
         self._batch_size = z.shape[0]
         self._num_class = z.shape[-1]
 
-        labels = np.array(
-            [label for label in range(self._num_class)], dtype=np.int32)
+        labels = np.array([label for label in range(self._num_class)], dtype=np.int32)
         self._labels = nn.Variable.from_numpy_array(labels)
         self._actions = self._labels
         for size in reversed(z.shape[0:-1]):
@@ -73,7 +72,7 @@ class Softmax(DiscreteDistribution):
         raise NotImplementedError
 
     def log_prob(self, x):
-        one_hot_action = NF.one_hot(x, shape=(self._num_class, ))
+        one_hot_action = NF.one_hot(x, shape=(self._num_class,))
         return NF.sum(self._log_distribution * one_hot_action, axis=len(self._distribution.shape) - 1, keepdims=True)
 
     def entropy(self):
@@ -83,6 +82,8 @@ class Softmax(DiscreteDistribution):
     def kl_divergence(self, q):
         if not isinstance(q, Softmax):
             raise ValueError("Invalid q to compute kl divergence")
-        return NF.sum(self._distribution * (self._log_distribution - q._log_distribution),
-                      axis=len(self._distribution.shape) - 1,
-                      keepdims=True)
+        return NF.sum(
+            self._distribution * (self._log_distribution - q._log_distribution),
+            axis=len(self._distribution.shape) - 1,
+            keepdims=True,
+        )

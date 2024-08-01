@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,19 +57,19 @@ class TestModel(object):
         assert len(model.get_parameters()) == 0
 
     def test_deepcopy_without_model_initialization(self):
-        scope_name = 'src'
+        scope_name = "src"
         input_dim = 5
         x = nn.Variable.from_numpy_array(np.empty(shape=(1, input_dim)))
         model = self._create_model_from_input(scope_name=scope_name, x=x)
 
-        new_scope_name = 'copied'
+        new_scope_name = "copied"
         copied = model.deepcopy(new_scope_name)
         assert type(copied) is type(model)
         assert len(model.get_parameters()) == 0
         assert len(copied.get_parameters()) == 0
 
     def test_deepcopy_model_is_same(self):
-        scope_name = 'src'
+        scope_name = "src"
         input_dim = 5
         x = nn.Variable.from_numpy_array(np.ones(shape=(1, input_dim)))
         model = self._create_model_from_input(scope_name=scope_name, x=x)
@@ -77,12 +77,12 @@ class TestModel(object):
         # Call once to create params
         model(x)
 
-        new_scope_name = 'copied'
+        new_scope_name = "copied"
         copied = model.deepcopy(new_scope_name)
         assert type(copied) is type(model)
 
     def test_deepcopy_model_parameters_are_not_shared(self):
-        scope_name = 'src'
+        scope_name = "src"
         input_dim = 5
         x = nn.Variable.from_numpy_array(np.ones(shape=(1, input_dim)))
         model = self._create_model_from_input(scope_name=scope_name, x=x)
@@ -90,7 +90,7 @@ class TestModel(object):
         # Call once to create params
         model(x)
 
-        new_scope_name = 'copied'
+        new_scope_name = "copied"
         copied = model.deepcopy(new_scope_name)
 
         for src_value in model.get_parameters().values():
@@ -98,7 +98,7 @@ class TestModel(object):
                 assert src_value is not dst_value
 
     def test_deepcopy_model_has_same_param_num(self):
-        scope_name = 'src'
+        scope_name = "src"
         input_dim = 5
         x = nn.Variable.from_numpy_array(np.ones(shape=(1, input_dim)))
         model = self._create_model_from_input(scope_name=scope_name, x=x)
@@ -106,7 +106,7 @@ class TestModel(object):
         # Call once to create params
         expected = model(x)
 
-        new_scope_name = 'copied'
+        new_scope_name = "copied"
         copied = model.deepcopy(new_scope_name)
         assert len(copied.get_parameters()) == len(model.get_parameters())
 
@@ -117,7 +117,7 @@ class TestModel(object):
         assert np.allclose(expected.d, actual.d)
 
     def test_deepcopy_same_scope_name_not_allowed(self):
-        scope_name = 'src'
+        scope_name = "src"
         input_dim = 5
         x = nn.Variable.from_numpy_array(np.empty(shape=(1, input_dim)))
         model = self._create_model_from_input(scope_name=scope_name, x=x)
@@ -129,7 +129,7 @@ class TestModel(object):
             model.deepcopy(scope_name)
 
     def test_deepcopy_cannot_create_with_existing_scope_name(self):
-        scope_name = 'src'
+        scope_name = "src"
         input_dim = 5
         x = nn.Variable.from_numpy_array(np.empty(shape=(1, input_dim)))
         model = self._create_model_from_input(scope_name=scope_name, x=x)
@@ -137,7 +137,7 @@ class TestModel(object):
         # Call once to create params
         model(x)
 
-        new_scope_name = 'new'
+        new_scope_name = "new"
         model.deepcopy(new_scope_name)
 
         # Can not create with same scope twice
@@ -145,7 +145,7 @@ class TestModel(object):
             model.deepcopy(new_scope_name)
 
     def test_shallowcopy(self):
-        scope_name = 'src'
+        scope_name = "src"
         input_dim = 5
         x = nn.Variable.from_numpy_array(np.empty(shape=(1, input_dim)))
         model = self._create_model_from_input(scope_name=scope_name, x=x)

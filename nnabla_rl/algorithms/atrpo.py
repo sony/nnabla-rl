@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,8 +24,12 @@ import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.algorithms.common_utils import (_StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
-                                               _StochasticPolicyActionSelector, compute_average_v_target_and_advantage)
+from nnabla_rl.algorithms.common_utils import (
+    _StatePreprocessedStochasticPolicy,
+    _StatePreprocessedVFunction,
+    _StochasticPolicyActionSelector,
+    compute_average_v_target_and_advantage,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, PreprocessorBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -74,6 +78,7 @@ class ATRPOConfig(AlgorithmConfig):
         learning_rate_decay_iterations (int): learning rate will be decreased lineary to 0 till this iteration number.
             If 0 or negative, learning rate will be kept fixed. Defaults to 10000000.
     """
+
     lmb: float = 0.95
     num_steps_per_iteration: int = 5000
     pi_batch_size: int = 5000
@@ -84,8 +89,8 @@ class ATRPOConfig(AlgorithmConfig):
     conjugate_gradient_iterations: int = 10
     vf_epochs: int = 5
     vf_batch_size: int = 64
-    vf_learning_rate: float = 3. * 1e-4
-    vf_l2_reg_coefficient: float = 3. * 1e-3
+    vf_learning_rate: float = 3.0 * 1e-4
+    vf_l2_reg_coefficient: float = 3.0 * 1e-3
     preprocess_state: bool = True
     gpu_batch_size: Optional[int] = None
     learning_rate_decay_iterations: int = 10000000
@@ -95,69 +100,75 @@ class ATRPOConfig(AlgorithmConfig):
 
         Check the values are in valid range.
         """
-        self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, 'pi_batch_size')
-        self._assert_between(self.lmb, 0.0, 1.0, 'lmb')
-        self._assert_positive(self.num_steps_per_iteration, 'num_steps_per_iteration')
-        self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, 'pi_batch_size')
-        self._assert_positive(self.sigma_kl_divergence_constraint, 'sigma_kl_divergence_constraint')
-        self._assert_positive(self.maximum_backtrack_numbers, 'maximum_backtrack_numbers')
-        self._assert_positive(self.backtrack_coefficient, 'backtrack_coefficient')
-        self._assert_positive(self.conjugate_gradient_damping, 'conjugate_gradient_damping')
-        self._assert_positive(self.conjugate_gradient_iterations, 'conjugate_gradient_iterations')
-        self._assert_positive(self.vf_epochs, 'vf_epochs')
-        self._assert_positive(self.vf_batch_size, 'vf_batch_size')
-        self._assert_positive(self.vf_learning_rate, 'vf_learning_rate')
-        self._assert_positive(self.vf_l2_reg_coefficient, 'vf_l2_reg_coefficient')
+        self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, "pi_batch_size")
+        self._assert_between(self.lmb, 0.0, 1.0, "lmb")
+        self._assert_positive(self.num_steps_per_iteration, "num_steps_per_iteration")
+        self._assert_between(self.pi_batch_size, 0, self.num_steps_per_iteration, "pi_batch_size")
+        self._assert_positive(self.sigma_kl_divergence_constraint, "sigma_kl_divergence_constraint")
+        self._assert_positive(self.maximum_backtrack_numbers, "maximum_backtrack_numbers")
+        self._assert_positive(self.backtrack_coefficient, "backtrack_coefficient")
+        self._assert_positive(self.conjugate_gradient_damping, "conjugate_gradient_damping")
+        self._assert_positive(self.conjugate_gradient_iterations, "conjugate_gradient_iterations")
+        self._assert_positive(self.vf_epochs, "vf_epochs")
+        self._assert_positive(self.vf_batch_size, "vf_batch_size")
+        self._assert_positive(self.vf_learning_rate, "vf_learning_rate")
+        self._assert_positive(self.vf_l2_reg_coefficient, "vf_l2_reg_coefficient")
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: ATRPOConfig,
-                    **kwargs) -> StochasticPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: ATRPOConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
         return ATRPOPolicy(scope_name, env_info.action_dim)
 
 
 class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: ATRPOConfig,
-                    **kwargs) -> VFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: ATRPOConfig,
+        **kwargs,
+    ) -> VFunction:
         return ATRPOVFunction(scope_name)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: ATRPOConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: ATRPOConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.vf_learning_rate)
 
 
 class DefaultPreprocessorBuilder(PreprocessorBuilder):
-    def build_preprocessor(self,  # type: ignore[override]
-                           scope_name: str,
-                           env_info: EnvironmentInfo,
-                           algorithm_config: ATRPOConfig,
-                           **kwargs) -> Preprocessor:
+    def build_preprocessor(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: ATRPOConfig,
+        **kwargs,
+    ) -> Preprocessor:
         return RP.RunningMeanNormalizer(scope_name, env_info.state_shape, value_clip=(-5.0, 5.0))
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: ATRPOConfig,
-                       algorithm: "ATRPO",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: ATRPOConfig,
+        algorithm: "ATRPO",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.RawPolicyExplorerConfig(
-            initial_step_num=algorithm.iteration_num,
-            timelimit_as_terminal=True
+            initial_step_num=algorithm.iteration_num, timelimit_as_terminal=True
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
-                                        env_info=env_info,
-                                        config=explorer_config)
+        explorer = EE.RawPolicyExplorer(
+            policy_action_selector=algorithm._exploration_action_selector, env_info=env_info, config=explorer_config
+        )
         return explorer
 
 
@@ -207,25 +218,27 @@ class ATRPO(Algorithm):
     _policy_trainer_state: Dict[str, Any]
     _v_function_trainer_state: Dict[str, Any]
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: ATRPOConfig = ATRPOConfig(),
-                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
-                 v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: ATRPOConfig = ATRPOConfig(),
+        v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
+        v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        state_preprocessor_builder: Optional[PreprocessorBuilder] = DefaultPreprocessorBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(ATRPO, self).__init__(env_or_env_info, config=config)
 
         self._explorer_builder = explorer_builder
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            self._v_function = v_function_builder('v', self._env_info, self._config)
-            self._policy = policy_builder('pi', self._env_info, self._config)
+            self._v_function = v_function_builder("v", self._env_info, self._config)
+            self._policy = policy_builder("pi", self._env_info, self._config)
 
             self._preprocessor: Optional[Preprocessor] = None
             if self._config.preprocess_state and state_preprocessor_builder is not None:
-                preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
+                preprocessor = state_preprocessor_builder("preprocessor", self._env_info, self._config)
                 assert preprocessor is not None
                 self._v_function = _StatePreprocessedVFunction(v_function=self._v_function, preprocessor=preprocessor)
                 self._policy = _StatePreprocessedStochasticPolicy(policy=self._policy, preprocessor=preprocessor)
@@ -235,14 +248,16 @@ class ATRPO(Algorithm):
             self._v_function_solver = solver
 
         self._evaluation_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._policy.shallowcopy(), deterministic=True)
+            self._env_info, self._policy.shallowcopy(), deterministic=True
+        )
         self._exploration_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._policy.shallowcopy(), deterministic=False)
+            self._env_info, self._policy.shallowcopy(), deterministic=False
+        )
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            action, _ = self._evaluation_action_selector(state,  begin_of_episode=begin_of_episode)
+            action, _ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -256,15 +271,13 @@ class ATRPO(Algorithm):
         return None if self._is_buffer(env_or_buffer) else self._explorer_builder(self._env_info, self._config, self)
 
     def _setup_v_function_training(self, env_or_buffer):
-        v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
-            reduction_method='mean',
-            v_loss_scalar=1.0
-        )
+        v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(reduction_method="mean", v_loss_scalar=1.0)
         v_function_trainer = MT.v_value.MonteCarloVTrainer(
             train_functions=self._v_function,
             solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
-            config=v_function_trainer_config)
+            config=v_function_trainer_config,
+        )
         return v_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
@@ -274,11 +287,11 @@ class ATRPO(Algorithm):
             maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._config.conjugate_gradient_damping,
             conjugate_gradient_iterations=self._config.conjugate_gradient_iterations,
-            backtrack_coefficient=self._config.backtrack_coefficient)
+            backtrack_coefficient=self._config.backtrack_coefficient,
+        )
         policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(
-            model=self._policy,
-            env_info=self._env_info,
-            config=policy_trainer_config)
+            model=self._policy, env_info=self._env_info, config=policy_trainer_config
+        )
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
@@ -316,10 +329,12 @@ class ATRPO(Algorithm):
 
         s_batch, a_batch = self._align_state_and_action(buffer_iterator)
 
-        return s_batch[:self._config.num_steps_per_iteration], \
-            a_batch[:self._config.num_steps_per_iteration], \
-            v_target_batch[:self._config.num_steps_per_iteration], \
-            adv_batch[:self._config.num_steps_per_iteration]
+        return (
+            s_batch[: self._config.num_steps_per_iteration],
+            a_batch[: self._config.num_steps_per_iteration],
+            v_target_batch[: self._config.num_steps_per_iteration],
+            adv_batch[: self._config.num_steps_per_iteration],
+        )
 
     def _compute_v_target_and_advantage(self, buffer_iterator):
         v_target_batch = []
@@ -328,7 +343,8 @@ class ATRPO(Algorithm):
         for experiences, _ in buffer_iterator:
             # length of experiences is 1
             v_target, adv = compute_average_v_target_and_advantage(
-                self._v_function, experiences[0], lmb=self._config.lmb)
+                self._v_function, experiences[0], lmb=self._config.lmb
+            )
             v_target_batch.append(v_target.reshape(-1, 1))
             adv_batch.append(adv.reshape(-1, 1))
 
@@ -366,19 +382,21 @@ class ATRPO(Algorithm):
 
         for _ in range(self._config.vf_epochs * num_iterations_per_epoch):
             indices = np.random.randint(0, self._config.num_steps_per_iteration, size=self._config.vf_batch_size)
-            batch = TrainingBatch(batch_size=self._config.vf_batch_size,
-                                  s_current=s[indices],
-                                  extra={'v_target': v_target[indices]})
+            batch = TrainingBatch(
+                batch_size=self._config.vf_batch_size, s_current=s[indices], extra={"v_target": v_target[indices]}
+            )
             self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     def _policy_training(self, s, a, v_target, advantage):
         extra = {}
-        extra['v_target'] = v_target[:self._config.pi_batch_size]
-        extra['advantage'] = advantage[:self._config.pi_batch_size]
-        batch = TrainingBatch(batch_size=self._config.pi_batch_size,
-                              s_current=s[:self._config.pi_batch_size],
-                              a_current=a[:self._config.pi_batch_size],
-                              extra=extra)
+        extra["v_target"] = v_target[: self._config.pi_batch_size]
+        extra["advantage"] = advantage[: self._config.pi_batch_size]
+        batch = TrainingBatch(
+            batch_size=self._config.pi_batch_size,
+            s_current=s[: self._config.pi_batch_size],
+            a_current=a[: self._config.pi_batch_size],
+            extra=extra,
+        )
 
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
@@ -403,15 +421,16 @@ class ATRPO(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(ATRPO, self).latest_iteration_state
-        if hasattr(self, '_v_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'v_loss': self._v_function_trainer_state['v_loss']})
+        if hasattr(self, "_v_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"v_loss": self._v_function_trainer_state["v_loss"]})
         return latest_iteration_state
 
     @property

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,16 +30,17 @@ class DeterministicPolicy(Policy, metaclass=ABCMeta):
 
     This policy returns an action for the given state.
     """
+
     @abstractmethod
     def pi(self, s: nn.Variable) -> nn.Variable:
-        '''pi
+        """pi
 
         Args:
             state (nnabla.Variable): State variable
 
         Returns:
             nnabla.Variable : Action for the given state
-        '''
+        """
         raise NotImplementedError
 
 
@@ -49,14 +50,15 @@ class StochasticPolicy(Policy, metaclass=ABCMeta):
     This policy returns a probability distribution of action for the
     given state.
     """
+
     @abstractmethod
     def pi(self, s: nn.Variable) -> Distribution:
-        '''pi
+        """pi
 
         Args:
             state (nnabla.Variable): State variable
 
         Returns:
             nnabla_rl.distributions.Distribution: Probability distribution of the action for the given state
-        '''
+        """
         raise NotImplementedError

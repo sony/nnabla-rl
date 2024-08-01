@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,9 +21,8 @@ import nnabla.parametric_functions as NPF
 from nnabla_rl.utils.debugging import count_parameter_number
 
 
-class TestCountParameterNumber():
-    @pytest.mark.parametrize("batch_size, state_size, output_size", [
-        (5, 3, 2)])
+class TestCountParameterNumber:
+    @pytest.mark.parametrize("batch_size, state_size, output_size", [(5, 3, 2)])
     def test_affine_count(self, batch_size, state_size, output_size):
         nn.clear_parameters()
         dummy_input = nn.Variable((batch_size, state_size))
@@ -33,4 +32,4 @@ class TestCountParameterNumber():
 
         parameter_number = count_parameter_number(nn.get_parameters())
 
-        assert parameter_number == state_size*output_size + output_size
+        assert parameter_number == state_size * output_size + output_size

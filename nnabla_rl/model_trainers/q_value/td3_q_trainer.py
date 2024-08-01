@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ import nnabla.functions as NF
 import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
-from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (SquaredTDQFunctionTrainer,
-                                                                            SquaredTDQFunctionTrainerConfig)
+from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (
+    SquaredTDQFunctionTrainer,
+    SquaredTDQFunctionTrainerConfig,
+)
 from nnabla_rl.models import DeterministicPolicy, QFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 from nnabla_rl.utils.misc import create_variables
@@ -43,13 +45,15 @@ class TD3QTrainer(SquaredTDQFunctionTrainer):
     _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _prev_q_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_functions: Union[QFunction, Sequence[QFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_functions: Union[QFunction, Sequence[QFunction]],
-                 target_policy: DeterministicPolicy,
-                 env_info: EnvironmentInfo,
-                 config: TD3QTrainerConfig = TD3QTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[QFunction, Sequence[QFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_functions: Union[QFunction, Sequence[QFunction]],
+        target_policy: DeterministicPolicy,
+        env_info: EnvironmentInfo,
+        config: TD3QTrainerConfig = TD3QTrainerConfig(),
+    ):
         self._target_policy = target_policy
         self._target_functions = convert_to_list_if_not_list(target_functions)
         self._assert_no_duplicate_model(self._target_functions)
@@ -84,10 +88,11 @@ class TD3QTrainer(SquaredTDQFunctionTrainer):
 
     def _compute_noisy_action(self, state):
         a_next_var = self._target_policy.pi(state)
-        epsilon = NF.clip_by_value(NF.randn(sigma=self._config.train_action_noise_sigma,
-                                            shape=a_next_var.shape),
-                                   min=-self._config.train_action_noise_abs,
-                                   max=self._config.train_action_noise_abs)
+        epsilon = NF.clip_by_value(
+            NF.randn(sigma=self._config.train_action_noise_sigma, shape=a_next_var.shape),
+            min=-self._config.train_action_noise_abs,
+            max=self._config.train_action_noise_abs,
+        )
         a_tilde_var = a_next_var + epsilon
         return a_tilde_var
 

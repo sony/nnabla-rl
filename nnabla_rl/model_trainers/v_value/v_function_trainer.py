@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,13 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+)
 from nnabla_rl.models import Model, VFunction
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable, create_variables
@@ -30,12 +35,12 @@ from nnabla_rl.utils.misc import create_variable, create_variables
 
 @dataclass
 class VFunctionTrainerConfig(TrainerConfig):
-    reduction_method: str = 'mean'
+    reduction_method: str = "mean"
     v_loss_scalar: float = 1.0
 
     def __post_init__(self):
         super(VFunctionTrainerConfig, self).__post_init__()
-        self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
+        self._assert_one_of(self.reduction_method, ["sum", "mean"], "reduction_method")
 
 
 class VFunctionTrainer(ModelTrainer):
@@ -45,19 +50,23 @@ class VFunctionTrainer(ModelTrainer):
     _config: VFunctionTrainerConfig
     _v_loss: nn.Variable  # Training loss/output
 
-    def __init__(self,
-                 models: Union[VFunction, Sequence[VFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: VFunctionTrainerConfig = VFunctionTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[VFunction, Sequence[VFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: VFunctionTrainerConfig = VFunctionTrainerConfig(),
+    ):
         super(VFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             if self.support_rnn() and self._config.reset_on_terminal and self._need_rnn_support(models):
@@ -85,7 +94,7 @@ class VFunctionTrainer(ModelTrainer):
             solver.update()
 
         trainer_state: Dict[str, np.ndarray] = {}
-        trainer_state['v_loss'] = self._v_loss.d.copy()
+        trainer_state["v_loss"] = self._v_loss.d.copy()
         return trainer_state
 
     def _build_training_graph(self, models: Union[Model, Sequence[Model]], training_variables: TrainingVariables):
@@ -98,10 +107,9 @@ class VFunctionTrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._v_loss += self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool) -> nn.Variable:
+    def _build_one_step_graph(
+        self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool
+    ) -> nn.Variable:
         # value function learning
         target_v = self._compute_target(training_variables)
         target_v.need_grad = False
@@ -110,9 +118,9 @@ class VFunctionTrainer(ModelTrainer):
         for v_function in models:
             v_function = cast(VFunction, v_function)
             v_loss = self._compute_loss(v_function, target_v, training_variables)
-            if self._config.reduction_method == 'mean':
+            if self._config.reduction_method == "mean":
                 v_loss = self._config.v_loss_scalar * NF.mean(v_loss)
-            elif self._config.reduction_method == 'sum':
+            elif self._config.reduction_method == "sum":
                 v_loss = self._config.v_loss_scalar * NF.sum(v_loss)
             else:
                 raise RuntimeError
@@ -120,15 +128,13 @@ class VFunctionTrainer(ModelTrainer):
         return loss
 
     @abstractmethod
-    def _compute_loss(self,
-                      v_function: VFunction,
-                      target_v: nn.Variable,
-                      traininge_variables: TrainingVariables) -> nn.Variable:
+    def _compute_loss(
+        self, v_function: VFunction, target_v: nn.Variable, traininge_variables: TrainingVariables
+    ) -> nn.Variable:
         raise NotImplementedError
 
     @abstractmethod
-    def _compute_target(self,
-                        training_variables: TrainingVariables) -> nn.Variable:
+    def _compute_target(self, training_variables: TrainingVariables) -> nn.Variable:
         raise NotImplementedError
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
@@ -143,10 +149,9 @@ class VFunctionTrainer(ModelTrainer):
                 rnn_state_variables = create_variables(batch_size, model.internal_state_shapes())
                 rnn_states[model.scope_name] = rnn_state_variables
 
-        training_variables = TrainingVariables(batch_size=batch_size,
-                                               s_current=s_current_var,
-                                               non_terminal=non_terminal_var,
-                                               rnn_states=rnn_states)
+        training_variables = TrainingVariables(
+            batch_size=batch_size, s_current=s_current_var, non_terminal=non_terminal_var, rnn_states=rnn_states
+        )
         return training_variables
 
     @property

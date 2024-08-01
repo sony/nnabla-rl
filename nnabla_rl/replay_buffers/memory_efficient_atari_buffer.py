@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ from typing import Optional, Sequence, Tuple, cast
 import numpy as np
 
 from nnabla_rl.replay_buffer import ReplayBuffer
-from nnabla_rl.replay_buffers.prioritized_replay_buffer import (ProportionalPrioritizedReplayBuffer,
-                                                                RankBasedPrioritizedReplayBuffer)
+from nnabla_rl.replay_buffers.prioritized_replay_buffer import (
+    ProportionalPrioritizedReplayBuffer,
+    RankBasedPrioritizedReplayBuffer,
+)
 from nnabla_rl.replay_buffers.trajectory_replay_buffer import TrajectoryReplayBuffer
 from nnabla_rl.typing import Trajectory
 from nnabla_rl.utils.data import RingBuffer
@@ -42,6 +44,7 @@ class MemoryEfficientAtariBuffer(ReplayBuffer):
     consists of "stacked_frames" number of concatenated grayscaled
     frames and its values are normalized between 0 and 1)
     """
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -52,7 +55,7 @@ class MemoryEfficientAtariBuffer(ReplayBuffer):
         super(MemoryEfficientAtariBuffer, self).__init__(capacity=capacity)
         self._reset = True
         self._buffer = RingBuffer(maxlen=capacity)
-        self._sub_buffer = deque(maxlen=stacked_frames-1)
+        self._sub_buffer = deque(maxlen=stacked_frames - 1)
         self._stacked_frames = stacked_frames
 
     def append(self, experience):
@@ -75,7 +78,7 @@ class _LazyAtariTrajectory(object):
         elif isinstance(key, int):
             return self._buffer[key]
         else:
-            raise TypeError('Invalid key type')
+            raise TypeError("Invalid key type")
 
 
 class MemoryEfficientAtariTrajectoryBuffer(TrajectoryReplayBuffer):
@@ -125,29 +128,34 @@ class ProportionalPrioritizedAtariBuffer(ProportionalPrioritizedReplayBuffer):
     concatenated grayscaled frames and its values are normalized between
     0 and 1)
     """
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _sub_buffer: deque
 
-    def __init__(self,
-                 capacity: int,
-                 alpha: float = 0.6,
-                 beta: float = 0.4,
-                 betasteps: int = 50000000,
-                 error_clip: Optional[Tuple[float, float]] = (-1, 1),
-                 epsilon: float = 1e-8,
-                 normalization_method: str = "buffer_max",
-                 stacked_frames: int = 4):
-        super(ProportionalPrioritizedAtariBuffer, self).__init__(capacity=capacity,
-                                                                 alpha=alpha,
-                                                                 beta=beta,
-                                                                 betasteps=betasteps,
-                                                                 error_clip=error_clip,
-                                                                 epsilon=epsilon,
-                                                                 normalization_method=normalization_method)
+    def __init__(
+        self,
+        capacity: int,
+        alpha: float = 0.6,
+        beta: float = 0.4,
+        betasteps: int = 50000000,
+        error_clip: Optional[Tuple[float, float]] = (-1, 1),
+        epsilon: float = 1e-8,
+        normalization_method: str = "buffer_max",
+        stacked_frames: int = 4,
+    ):
+        super(ProportionalPrioritizedAtariBuffer, self).__init__(
+            capacity=capacity,
+            alpha=alpha,
+            beta=beta,
+            betasteps=betasteps,
+            error_clip=error_clip,
+            epsilon=epsilon,
+            normalization_method=normalization_method,
+        )
         self._reset = True
-        self._sub_buffer = deque(maxlen=stacked_frames-1)
+        self._sub_buffer = deque(maxlen=stacked_frames - 1)
         self._stacked_frames = stacked_frames
 
     def append(self, experience):
@@ -167,29 +175,34 @@ class RankBasedPrioritizedAtariBuffer(RankBasedPrioritizedReplayBuffer):
     concatenated grayscaled frames and its values are normalized between
     0 and 1)
     """
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _sub_buffer: deque
 
-    def __init__(self,
-                 capacity: int,
-                 alpha: float = 0.7,
-                 beta: float = 0.5,
-                 betasteps: int = 50000000,
-                 error_clip: Optional[Tuple[float, float]] = (-1, 1),
-                 reset_segment_interval: int = 1000,
-                 sort_interval: int = 1000000,
-                 stacked_frames: int = 4):
-        super(RankBasedPrioritizedAtariBuffer, self).__init__(capacity=capacity,
-                                                              alpha=alpha,
-                                                              beta=beta,
-                                                              betasteps=betasteps,
-                                                              error_clip=error_clip,
-                                                              reset_segment_interval=reset_segment_interval,
-                                                              sort_interval=sort_interval)
+    def __init__(
+        self,
+        capacity: int,
+        alpha: float = 0.7,
+        beta: float = 0.5,
+        betasteps: int = 50000000,
+        error_clip: Optional[Tuple[float, float]] = (-1, 1),
+        reset_segment_interval: int = 1000,
+        sort_interval: int = 1000000,
+        stacked_frames: int = 4,
+    ):
+        super(RankBasedPrioritizedAtariBuffer, self).__init__(
+            capacity=capacity,
+            alpha=alpha,
+            beta=beta,
+            betasteps=betasteps,
+            error_clip=error_clip,
+            reset_segment_interval=reset_segment_interval,
+            sort_interval=sort_interval,
+        )
         self._reset = True
-        self._sub_buffer = deque(maxlen=stacked_frames-1)
+        self._sub_buffer = deque(maxlen=stacked_frames - 1)
         self._stacked_frames = stacked_frames
 
     def append(self, experience):
@@ -228,7 +241,7 @@ def _append_to_buffer(experience, buffer, sub_buffer, reset_flag):
     removed = buffer.append_with_removed_item_check(experience)
     if removed is not None:
         sub_buffer.append(removed)
-    return (0 == non_terminal)
+    return 0 == non_terminal
 
 
 def _getitem_from_buffer(index, buffer, sub_buffer, stacked_frames):
@@ -241,12 +254,12 @@ def _getitem_from_buffer(index, buffer, sub_buffer, stacked_frames):
         else:
             (s, _, _, _, _, _, reset) = sub_buffer[buffer_index]
         assert s.shape == (84, 84)
-        tail_index = stacked_frames-i
+        tail_index = stacked_frames - i
         if reset:
             states[0:tail_index] = s
             break
         else:
-            states[tail_index-1] = s
+            states[tail_index - 1] = s
     s = _normalize_state(states)
     assert s.shape == (stacked_frames, 84, 84)
 

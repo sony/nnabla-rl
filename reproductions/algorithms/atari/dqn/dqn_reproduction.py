@@ -34,14 +34,15 @@ class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
 
 
 def run_training(args):
-    outdir = f'{args.env}_results/seed-{args.seed}'
+    outdir = f"{args.env}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     writer = FileWriter(outdir, "evaluation_result")
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render,
-                               use_gymnasium=args.use_gymnasium)
+    eval_env = build_atari_env(
+        args.env, test=True, seed=args.seed + 100, render=args.render, use_gymnasium=args.use_gymnasium
+    )
     evaluator = TimestepEvaluator(num_timesteps=125000)
     evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=args.eval_timing, writer=writer)
 
@@ -51,9 +52,7 @@ def run_training(args):
     train_env = build_atari_env(args.env, seed=args.seed, use_gymnasium=args.use_gymnasium)
 
     config = A.DQNConfig(gpu_id=args.gpu)
-    dqn = A.DQN(train_env,
-                config=config,
-                replay_buffer_builder=MemoryEfficientBufferBuilder())
+    dqn = A.DQN(train_env, config=config, replay_buffer_builder=MemoryEfficientBufferBuilder())
     dqn.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
 
     dqn.train(train_env, total_iterations=args.total_iterations)
@@ -64,38 +63,37 @@ def run_training(args):
 
 def run_showcase(args):
     if args.snapshot_dir is None:
-        raise ValueError(
-            'Please specify the snapshot dir for showcasing')
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render,
-                               use_gymnasium=args.use_gymnasium)
+        raise ValueError("Please specify the snapshot dir for showcasing")
+    eval_env = build_atari_env(
+        args.env, test=True, seed=args.seed + 200, render=args.render, use_gymnasium=args.use_gymnasium
+    )
     config = A.DQNConfig(gpu_id=args.gpu)
     dqn = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(dqn, A.DQN):
-        raise ValueError('Loaded snapshot is not trained with DQN!')
+        raise ValueError("Loaded snapshot is not trained with DQN!")
 
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     returns = evaluator(dqn, eval_env)
     mean = np.mean(returns)
     std_dev = np.std(returns)
     median = np.median(returns)
-    logger.info('Evaluation results. mean: {} +/- std: {}, median: {}'.format(mean, std_dev, median))
+    logger.info("Evaluation results. mean: {} +/- std: {}, median: {}".format(mean, std_dev, median))
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str,
-                        default='BreakoutNoFrameskip-v4')
-    parser.add_argument('--save-dir', type=str, default="")
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--showcase', action='store_true')
-    parser.add_argument('--snapshot-dir', type=str, default=None)
-    parser.add_argument('--total_iterations', type=int, default=50000000)
-    parser.add_argument('--save_timing', type=int, default=250000)
-    parser.add_argument('--eval_timing', type=int, default=250000)
-    parser.add_argument('--showcase_runs', type=int, default=10)
-    parser.add_argument('--use-gymnasium', action='store_true')
+    parser.add_argument("--env", type=str, default="BreakoutNoFrameskip-v4")
+    parser.add_argument("--save-dir", type=str, default="")
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--showcase", action="store_true")
+    parser.add_argument("--snapshot-dir", type=str, default=None)
+    parser.add_argument("--total_iterations", type=int, default=50000000)
+    parser.add_argument("--save_timing", type=int, default=250000)
+    parser.add_argument("--eval_timing", type=int, default=250000)
+    parser.add_argument("--showcase_runs", type=int, default=10)
+    parser.add_argument("--use-gymnasium", action="store_true")
 
     args = parser.parse_args()
 
@@ -105,5 +103,5 @@ def main():
         run_training(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

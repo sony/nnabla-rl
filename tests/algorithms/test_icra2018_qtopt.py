@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 
 class DummyQFunction(ContinuousQFunction):
     def __init__(self, action_high: np.ndarray, action_low: np.ndarray):
-        super(DummyQFunction, self).__init__('dummy')
+        super(DummyQFunction, self).__init__("dummy")
         self._random_sample_size = 16
         self._action_high = action_high
         self._action_low = action_low
@@ -37,28 +37,28 @@ class DummyQFunction(ContinuousQFunction):
         batch_size = s.shape[0]
 
         with nn.parameter_scope(self.scope_name):
-            with nn.parameter_scope('state_conv1'):
+            with nn.parameter_scope("state_conv1"):
                 h = NF.relu(NPF.convolution(s, 32, (3, 3), stride=(2, 2)))
 
-            with nn.parameter_scope('state_conv2'):
+            with nn.parameter_scope("state_conv2"):
                 h = NF.relu(NPF.convolution(h, 32, (3, 3), stride=(2, 2)))
 
-            with nn.parameter_scope('state_conv3'):
+            with nn.parameter_scope("state_conv3"):
                 encoded_state = NF.relu(NPF.convolution(h, 32, (3, 3), stride=(2, 2)))
 
-            with nn.parameter_scope('action_affine1'):
+            with nn.parameter_scope("action_affine1"):
                 encoded_action = NF.relu(NPF.affine(a, 32))
                 encoded_action = NF.reshape(encoded_action, (batch_size, 32, 1, 1))
 
             h = encoded_state + encoded_action
 
-            with nn.parameter_scope('affine1'):
+            with nn.parameter_scope("affine1"):
                 h = NF.relu(NPF.affine(h, 32))
 
-            with nn.parameter_scope('affine2'):
+            with nn.parameter_scope("affine2"):
                 h = NF.relu(NPF.affine(h, 32))
 
-            with nn.parameter_scope('affine3'):
+            with nn.parameter_scope("affine3"):
                 q_value = NPF.affine(h, 1)
 
         return q_value
@@ -73,7 +73,7 @@ class DummyQFunction(ContinuousQFunction):
 
         def objective_function(a):
             batch_size, sample_size, action_dim = a.shape
-            a = a.reshape((batch_size*sample_size, action_dim))
+            a = a.reshape((batch_size * sample_size, action_dim))
             q_value = self.q(tiled_s, a)
             q_value = q_value.reshape((batch_size, sample_size, 1))
             return q_value
@@ -81,18 +81,24 @@ class DummyQFunction(ContinuousQFunction):
         upper_bound = np.tile(self._action_high, (batch_size, 1))
         lower_bound = np.tile(self._action_low, (batch_size, 1))
         optimized_action = RF.random_shooting_method(
-            objective_function,
-            upper_bound=upper_bound,
-            lower_bound=lower_bound,
-            sample_size=self._random_sample_size
+            objective_function, upper_bound=upper_bound, lower_bound=lower_bound, sample_size=self._random_sample_size
         )
 
         return optimized_action
 
     def _tile_state(self, s, tile_size):
-        tile_reps = [tile_size, ] + [1, ] * len(s.shape)
+        tile_reps = [
+            tile_size,
+        ] + [
+            1,
+        ] * len(s.shape)
         s = NF.tile(s, tile_reps)
-        transpose_reps = [1, 0, ] + list(range(len(s.shape)))[2:]
+        transpose_reps = [
+            1,
+            0,
+        ] + list(
+            range(len(s.shape))
+        )[2:]
         s = NF.transpose(s, transpose_reps)
         s = NF.reshape(s, (-1, *s.shape[2:]))
         return s
@@ -111,7 +117,7 @@ class TestICRA2018QtOpt(object):
         dummy_env = E.DummyContinuousImg(image_shape=(3, 64, 64))
         qtopt = A.ICRA2018QtOpt(dummy_env, q_func_builder=DummyQFunctionBuilder())
 
-        assert qtopt.__name__ == 'ICRA2018QtOpt'
+        assert qtopt.__name__ == "ICRA2018QtOpt"
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
@@ -214,17 +220,18 @@ class TestICRA2018QtOpt(object):
         dummy_env = E.DummyContinuousImg()
         dqn = A.ICRA2018QtOpt(dummy_env, q_func_builder=DummyQFunctionBuilder())
 
-        dqn._q_function_trainer_state = {'q_loss': 0., 'td_errors': np.array([0., 1.])}
+        dqn._q_function_trainer_state = {"q_loss": 0.0, "td_errors": np.array([0.0, 1.0])}
 
         latest_iteration_state = dqn.latest_iteration_state
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert 'td_errors' in latest_iteration_state['histogram']
-        assert latest_iteration_state['scalar']['q_loss'] == 0.
-        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert "td_errors" in latest_iteration_state["histogram"]
+        assert latest_iteration_state["scalar"]["q_loss"] == 0.0
+        assert np.allclose(latest_iteration_state["histogram"]["td_errors"], np.array([0.0, 1.0]))
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

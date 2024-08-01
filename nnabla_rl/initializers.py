@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import numpy as np
 import nnabla.initializer as NI
 
 
-def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
+def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode="fan_in"):
     """Create Weight initializer proposed by He et al. (Normal distribution
     version)
 
@@ -34,19 +34,17 @@ def HeNormal(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in'):
     Raises:
         NotImplementedError: mode other than 'fan_in' or 'fan_out' is given
     """
-    if mode == 'fan_in':
-        s = calc_normal_std_he_forward(
-            inmaps, outmaps, kernel, factor)
-    elif mode == 'fan_out':
-        s = calc_normal_std_he_backward(
-            inmaps, outmaps, kernel, factor)
+    if mode == "fan_in":
+        s = calc_normal_std_he_forward(inmaps, outmaps, kernel, factor)
+    elif mode == "fan_out":
+        s = calc_normal_std_he_backward(inmaps, outmaps, kernel, factor)
     else:
-        raise NotImplementedError('Unknown init mode: {}'.format(mode))
+        raise NotImplementedError("Unknown init mode: {}".format(mode))
 
     return NI.NormalInitializer(s)
 
 
-def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
+def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode="fan_in"):
     """Create Weight initializer proposed in LeCun 98, Efficient Backprop
     (Normal distribution version)
 
@@ -62,15 +60,15 @@ def LeCunNormal(inmaps, outmaps, kernel=(1, 1), factor=1.0, mode='fan_in'):
     Raises:
         NotImplementedError: mode other than 'fan_in' is given
     """
-    if mode == 'fan_in':
+    if mode == "fan_in":
         s = calc_normal_std_he_forward(inmaps, outmaps, kernel, factor)
     else:
-        raise NotImplementedError('Unknown init mode: {}'.format(mode))
+        raise NotImplementedError("Unknown init mode: {}".format(mode))
 
     return NI.NormalInitializer(s)
 
 
-def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in', rng=None):
+def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode="fan_in", rng=None):
     """Create Weight initializer proposed by He et al. (Uniform distribution
     version)
 
@@ -86,12 +84,12 @@ def HeUniform(inmaps, outmaps, kernel=(1, 1), factor=2.0, mode='fan_in', rng=Non
     Raises:
         NotImplementedError: mode other than 'fan_in' or 'fan_out' is given
     """
-    if mode == 'fan_in':
+    if mode == "fan_in":
         lim = calc_uniform_lim_he_forward(inmaps, outmaps, kernel, factor)
-    elif mode == 'fan_out':
+    elif mode == "fan_out":
         lim = calc_uniform_lim_he_backward(inmaps, outmaps, kernel, factor)
     else:
-        raise NotImplementedError('Unknown init mode: {}'.format(mode))
+        raise NotImplementedError("Unknown init mode: {}".format(mode))
 
     return NI.UniformInitializer(lim=(-lim, lim), rng=rng)
 
@@ -102,7 +100,7 @@ def GlorotUniform(inmaps, outmaps, kernel=(1, 1), rng=None):
 
 
 class NormcInitializer(NI.BaseInitializer):
-    ''' Create Normc initializer
+    """Create Normc initializer
     See: https://github.com/openai/baselines/blob/master/baselines/common/tf_util.py
     Initializes the parameter which normalized along 'axis' dimension.
 
@@ -114,7 +112,7 @@ class NormcInitializer(NI.BaseInitializer):
             When None, nnabla's default random nunmber generator will be used.
     Returns:
         NormcInitializer : weight initialzier
-    '''
+    """
 
     def __init__(self, std=1.0, axis=0, rng=None):
         if rng is None:

@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,14 +21,9 @@ class SparseHopperEnv(HopperEnv):
         self.do_simulation(a, self.frame_skip)
         posafter, height, ang = self.sim.data.qpos[0:3]
 
-        reward = 1.0 if posafter - self.init_qpos[0] > 1. else 0.0
+        reward = 1.0 if posafter - self.init_qpos[0] > 1.0 else 0.0
 
         s = self.state_vector()
-        done = not (
-            np.isfinite(s).all()
-            and (np.abs(s[2:]) < 100).all()
-            and (height > 0.7)
-            and (abs(ang) < 0.2)
-        )
+        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (height > 0.7) and (abs(ang) < 0.2))
         ob = self._get_obs()
         return ob, reward, done, {}

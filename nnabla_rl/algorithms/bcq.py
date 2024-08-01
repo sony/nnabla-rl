@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,8 +27,15 @@ from nnabla_rl.algorithms.common_utils import has_batch_dimension
 from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
-from nnabla_rl.models import (BCQPerturbator, BCQVariationalAutoEncoder, DeterministicPolicy, Perturbator, QFunction,
-                              TD3QFunction, VariationalAutoEncoder)
+from nnabla_rl.models import (
+    BCQPerturbator,
+    BCQVariationalAutoEncoder,
+    DeterministicPolicy,
+    Perturbator,
+    QFunction,
+    TD3QFunction,
+    VariationalAutoEncoder,
+)
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable, sync_model
@@ -53,8 +60,9 @@ class BCQConfig(AlgorithmConfig):
         num_q_ensembles (int): number of q function ensembles . Defaults to 2.
         num_action_samples (int): number of actions to sample for computing target q values. Defaults to 10.
     """
+
     gamma: float = 0.99
-    learning_rate: float = 1.0*1e-3
+    learning_rate: float = 1.0 * 1e-3
     batch_size: int = 100
     tau: float = 0.005
     lmb: float = 0.75
@@ -67,56 +75,54 @@ class BCQConfig(AlgorithmConfig):
 
         Check set values are in valid range.
         """
-        self._assert_between(self.tau, 0.0, 1.0, 'tau')
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.lmb, 'lmb')
-        self._assert_positive(self.phi, 'phi')
-        self._assert_positive(self.num_q_ensembles, 'num_q_ensembles')
-        self._assert_positive(self.num_action_samples, 'num_action_samples')
-        self._assert_positive(self.batch_size, 'batch_size')
+        self._assert_between(self.tau, 0.0, 1.0, "tau")
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_positive(self.lmb, "lmb")
+        self._assert_positive(self.phi, "phi")
+        self._assert_positive(self.num_q_ensembles, "num_q_ensembles")
+        self._assert_positive(self.num_action_samples, "num_action_samples")
+        self._assert_positive(self.batch_size, "batch_size")
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: BCQConfig,
-                    **kwargs) -> QFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: BCQConfig,
+        **kwargs,
+    ) -> QFunction:
         return TD3QFunction(scope_name)
 
 
 class DefaultVAEBuilder(ModelBuilder[VariationalAutoEncoder]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: BCQConfig,
-                    **kwargs) -> VariationalAutoEncoder:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: BCQConfig,
+        **kwargs,
+    ) -> VariationalAutoEncoder:
         max_action_value = float(env_info.action_high[0])
-        return BCQVariationalAutoEncoder(scope_name,
-                                         env_info.state_dim,
-                                         env_info.action_dim,
-                                         env_info.action_dim*2,
-                                         max_action_value)
+        return BCQVariationalAutoEncoder(
+            scope_name, env_info.state_dim, env_info.action_dim, env_info.action_dim * 2, max_action_value
+        )
 
 
 class DefaultPerturbatorBuilder(ModelBuilder[Perturbator]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: BCQConfig,
-                    **kwargs) -> Perturbator:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: BCQConfig,
+        **kwargs,
+    ) -> Perturbator:
         max_action_value = float(env_info.action_high[0])
-        return BCQPerturbator(scope_name,
-                              env_info.state_dim,
-                              env_info.action_dim,
-                              max_action_value)
+        return BCQPerturbator(scope_name, env_info.state_dim, env_info.action_dim, max_action_value)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: BCQConfig,
-                     **kwargs):
+    def build_solver(self, env_info: EnvironmentInfo, algorithm_config: BCQConfig, **kwargs):  # type: ignore[override]
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
@@ -173,15 +179,17 @@ class BCQ(Algorithm):
     _q_function_trainer_state: Dict[str, Any]
     _perturbator_trainer_state: Dict[str, Any]
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: BCQConfig = BCQConfig(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 vae_builder: ModelBuilder[VariationalAutoEncoder] = DefaultVAEBuilder(),
-                 vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 perturbator_builder: ModelBuilder[Perturbator] = DefaultPerturbatorBuilder(),
-                 perturbator_solver_builder: SolverBuilder = DefaultSolverBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: BCQConfig = BCQConfig(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        vae_builder: ModelBuilder[VariationalAutoEncoder] = DefaultVAEBuilder(),
+        vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        perturbator_builder: ModelBuilder[Perturbator] = DefaultPerturbatorBuilder(),
+        perturbator_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+    ):
         super(BCQ, self).__init__(env_or_env_info, config=config)
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
@@ -190,10 +198,8 @@ class BCQ(Algorithm):
             self._target_q_ensembles = []
 
             for i in range(self._config.num_q_ensembles):
-                q = q_function_builder(scope_name=f"q{i}",
-                                       env_info=self._env_info,
-                                       algorithm_config=self._config)
-                target_q = q.deepcopy(f'target_q{i}')
+                q = q_function_builder(scope_name=f"q{i}", env_info=self._env_info, algorithm_config=self._config)
+                target_q = q.deepcopy(f"target_q{i}")
                 assert isinstance(target_q, QFunction)
                 self._q_ensembles.append(q)
                 self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
@@ -205,20 +211,20 @@ class BCQ(Algorithm):
             self._xi = perturbator_builder(scope_name="xi", env_info=self._env_info, algorithm_config=self._config)
             self._xi_solver = perturbator_solver_builder(env_info=self._env_info, algorithm_config=self._config)
             self._target_xi = perturbator_builder(
-                scope_name="target_xi", env_info=self._env_info, algorithm_config=self._config)
+                scope_name="target_xi", env_info=self._env_info, algorithm_config=self._config
+            )
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
         if has_batch_dimension(state, self._env_info):
-            raise RuntimeError(f'{self.__name__} does not support batched state!')
+            raise RuntimeError(f"{self.__name__} does not support batched state!")
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             state = add_batch_dimension(state)
-            if not hasattr(self, '_eval_state_var'):
+            if not hasattr(self, "_eval_state_var"):
                 repeat_num = 100
                 self._eval_state_var = create_variable(1, self._env_info.state_shape)
                 if isinstance(self._eval_state_var, tuple):
-                    state_var = tuple(RF.repeat(x=s_var, repeats=repeat_num, axis=0)
-                                      for s_var in self._eval_state_var)
+                    state_var = tuple(RF.repeat(x=s_var, repeats=repeat_num, axis=0) for s_var in self._eval_state_var)
                 else:
                     state_var = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
                     assert state_var.shape == (repeat_num, self._eval_state_var.shape[1])
@@ -247,13 +253,14 @@ class BCQ(Algorithm):
             models=self._vae,
             solvers={self._vae.scope_name: self._vae_solver},
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
         return encoder_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value.BCQQTrainerConfig(reduction_method='mean',
-                                                      num_action_samples=self._config.num_action_samples,
-                                                      lmb=self._config.lmb)
+        trainer_config = MT.q_value.BCQQTrainerConfig(
+            reduction_method="mean", num_action_samples=self._config.num_action_samples, lmb=self._config.lmb
+        )
 
         # This is a wrapper class which outputs the target action for next state in q function training
         class PerturbedPolicy(DeterministicPolicy):
@@ -266,6 +273,7 @@ class BCQ(Algorithm):
                 a = self._vae.decode(z=None, state=s)
                 noise = self._perturbator.generate_noise(s, a, phi=self._phi)
                 return a + noise
+
         target_policy = PerturbedPolicy(self._vae, self._target_xi, self._config.phi)
         q_function_trainer = MT.q_value.BCQQTrainer(
             train_functions=self._q_ensembles,
@@ -273,15 +281,14 @@ class BCQ(Algorithm):
             target_functions=self._target_q_ensembles,
             target_policy=target_policy,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
             sync_model(q, target_q, 1.0)
         return q_function_trainer
 
     def _setup_perturbator_training(self, env_or_buffer):
-        trainer_config = MT.perturbator_trainers.BCQPerturbatorTrainerConfig(
-            phi=self._config.phi
-        )
+        trainer_config = MT.perturbator_trainers.BCQPerturbatorTrainerConfig(phi=self._config.phi)
 
         perturbator_trainer = MT.perturbator.BCQPerturbatorTrainer(
             models=self._xi,
@@ -289,12 +296,13 @@ class BCQ(Algorithm):
             q_function=self._q_ensembles[0],
             vae=self._vae,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
         sync_model(self._xi, self._target_xi, 1.0)
         return perturbator_trainer
 
     def _run_online_training_iteration(self, env):
-        raise NotImplementedError('BCQ does not support online training')
+        raise NotImplementedError("BCQ does not support online training")
 
     def _run_offline_training_iteration(self, buffer):
         self._bcq_training(buffer)
@@ -302,14 +310,16 @@ class BCQ(Algorithm):
     def _bcq_training(self, replay_buffer):
         experiences, info = replay_buffer.sample(self._config.batch_size)
         (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        batch = TrainingBatch(
+            batch_size=self._config.batch_size,
+            s_current=s,
+            a_current=a,
+            gamma=self._config.gamma,
+            reward=r,
+            non_terminal=non_terminal,
+            s_next=s_next,
+            weight=info["weights"],
+        )
 
         # Train vae
         self._encoder_trainer_state = self._encoder_trainer.train(batch)
@@ -317,7 +327,7 @@ class BCQ(Algorithm):
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
             sync_model(q, target_q, tau=self._config.tau)
-        td_errors = self._q_function_trainer_state['td_errors']
+        td_errors = self._q_function_trainer_state["td_errors"]
         replay_buffer.update_priorities(td_errors)
 
         self._perturbator_trainer.train(batch)
@@ -326,8 +336,7 @@ class BCQ(Algorithm):
         self._perturbator_trainer_state = self._perturbator_trainer.train(batch)
 
     def _models(self):
-        models = [*self._q_ensembles, *self._target_q_ensembles,
-                  self._vae, self._xi, self._target_xi]
+        models = [*self._q_ensembles, *self._target_q_ensembles, self._vae, self._xi, self._target_xi]
         return {model.scope_name: model for model in models}
 
     def _solvers(self):
@@ -339,23 +348,27 @@ class BCQ(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(BCQ, self).latest_iteration_state
-        if hasattr(self, '_encoder_trainer_state'):
-            latest_iteration_state['scalar'].update(
-                {'encoder_loss': float(self._encoder_trainer_state['encoder_loss'])})
-        if hasattr(self, '_perturbator_trainer_state'):
-            latest_iteration_state['scalar'].update(
-                {'perturbator_loss': float(self._perturbator_trainer_state['perturbator_loss'])})
-        if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
-            latest_iteration_state['histogram'].update(
-                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
+        if hasattr(self, "_encoder_trainer_state"):
+            latest_iteration_state["scalar"].update(
+                {"encoder_loss": float(self._encoder_trainer_state["encoder_loss"])}
+            )
+        if hasattr(self, "_perturbator_trainer_state"):
+            latest_iteration_state["scalar"].update(
+                {"perturbator_loss": float(self._perturbator_trainer_state["perturbator_loss"])}
+            )
+        if hasattr(self, "_q_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"q_loss": float(self._q_function_trainer_state["q_loss"])})
+            latest_iteration_state["histogram"].update(
+                {"td_errors": self._q_function_trainer_state["td_errors"].flatten()}
+            )
         return latest_iteration_state
 
     @property
@@ -369,5 +382,6 @@ class BCQ(Algorithm):
 
 if __name__ == "__main__":
     import nnabla_rl.environments as E
+
     env = E.DummyContinuous()
     bcq = BCQ(env)

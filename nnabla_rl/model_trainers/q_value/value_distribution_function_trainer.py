@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ from nnabla_rl.utils.misc import create_variable, create_variables
 
 @dataclass
 class ValueDistributionFunctionTrainerConfig(MultiStepTrainerConfig):
-    reduction_method: str = 'mean'
+    reduction_method: str = "mean"
     v_min: float = -10.0
     v_max: float = 10.0
     num_atoms: int = 51
 
     def __post_init__(self):
-        self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
+        self._assert_one_of(self.reduction_method, ["sum", "mean"], "reduction_method")
         return super().__post_init__()
 
 
@@ -50,20 +50,24 @@ class ValueDistributionFunctionTrainer(MultiStepTrainer):
     _cross_entropy_loss: nn.Variable
     _prev_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 models: Union[ValueDistributionFunction, Sequence[ValueDistributionFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: ValueDistributionFunctionTrainerConfig):
+    def __init__(
+        self,
+        models: Union[ValueDistributionFunction, Sequence[ValueDistributionFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: ValueDistributionFunctionTrainerConfig,
+    ):
         self._prev_rnn_states = {}
         super(ValueDistributionFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -96,13 +100,11 @@ class ValueDistributionFunctionTrainer(MultiStepTrainer):
         # Kullbuck Leibler divergence is not actually the td_error itself
         # but is used for prioritizing the replay buffer and we save it as 'td_error' for convenience
         # See: https://arxiv.org/pdf/1710.02298.pdf
-        trainer_state['td_errors'] = self._kl_loss.d.copy()
-        trainer_state['cross_entropy_loss'] = float(self._cross_entropy_loss.d.copy())
+        trainer_state["td_errors"] = self._kl_loss.d.copy()
+        trainer_state["cross_entropy_loss"] = float(self._cross_entropy_loss.d.copy())
         return trainer_state
 
-    def _build_training_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables):
+    def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         self._cross_entropy_loss = 0
         ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
         for step_index, variables in enumerate(training_variables):
@@ -111,10 +113,7 @@ class ValueDistributionFunctionTrainer(MultiStepTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         models = cast(Sequence[ValueDistributionFunction], models)
 
         # Computing the target probabilities
@@ -131,17 +130,16 @@ class ValueDistributionFunctionTrainer(MultiStepTrainer):
         # for prioritized experience replay
         # See: https://arxiv.org/pdf/1710.02298.pdf
         # keep kl_loss only for the last model for prioritized replay
-        kl_loss = extra_info['kl_loss']
+        kl_loss = extra_info["kl_loss"]
         self._kl_loss = kl_loss
         self._kl_loss.persistent = True
 
     def _compute_target(self, training_variables: TrainingVariables) -> nn.Variable:
         raise NotImplementedError
 
-    def _compute_loss(self,
-                      model: ValueDistributionFunction,
-                      target: nn.Variable,
-                      training_variables: TrainingVariables) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
+    def _compute_loss(
+        self, model: ValueDistributionFunction, target: nn.Variable, training_variables: TrainingVariables
+    ) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
         batch_size = training_variables.batch_size
         atom_probabilities = model.probs(training_variables.s_current, training_variables.a_current)
         atom_probabilities = NF.clip_by_value(atom_probabilities, 1e-10, 1.0)
@@ -149,13 +147,13 @@ class ValueDistributionFunctionTrainer(MultiStepTrainer):
         assert cross_entropy.shape == (batch_size, self._config.num_atoms)
 
         kl_loss = -NF.sum(cross_entropy, axis=1, keepdims=True)
-        if self._config.reduction_method == 'mean':
+        if self._config.reduction_method == "mean":
             loss = NF.mean(kl_loss * training_variables.weight)
-        elif self._config.reduction_method == 'sum':
+        elif self._config.reduction_method == "sum":
             loss = NF.sum(kl_loss * training_variables.weight)
         else:
             raise RuntimeError
-        extra = {'kl_loss': kl_loss}
+        extra = {"kl_loss": kl_loss}
         return loss, extra
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
@@ -174,15 +172,17 @@ class ValueDistributionFunctionTrainer(MultiStepTrainer):
                 rnn_state_variables = create_variables(batch_size, model.internal_state_shapes())
                 rnn_states[model.scope_name] = rnn_state_variables
 
-        training_variables = TrainingVariables(batch_size=batch_size,
-                                               s_current=s_current_var,
-                                               a_current=a_current_var,
-                                               reward=reward_var,
-                                               gamma=gamma_var,
-                                               non_terminal=non_terminal_var,
-                                               s_next=s_next_var,
-                                               weight=weight_var,
-                                               rnn_states=rnn_states)
+        training_variables = TrainingVariables(
+            batch_size=batch_size,
+            s_current=s_current_var,
+            a_current=a_current_var,
+            reward=reward_var,
+            gamma=gamma_var,
+            non_terminal=non_terminal_var,
+            s_next=s_next_var,
+            weight=weight_var,
+            rnn_states=rnn_states,
+        )
         return training_variables
 
     @property

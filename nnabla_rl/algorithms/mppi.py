@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,7 +69,8 @@ class MPPIConfig(AlgorithmConfig):
         dt (float): Time interval between states. Defaults to 0.05 [s].
             We strongly recommended to adjust this interval considering the sensor frequency.
     """
-    learning_rate: float = 1.0*1e-3
+
+    learning_rate: float = 1.0 * 1e-3
     batch_size: int = 100
     replay_buffer_size: int = 1000000
     training_iterations: int = 500
@@ -87,36 +88,36 @@ class MPPIConfig(AlgorithmConfig):
     def __post_init__(self):
         super().__post_init__()
 
-        self._assert_positive(self.lmb, 'lmb')
-        self._assert_positive(self.M, 'M')
-        self._assert_positive(self.K, 'K')
-        self._assert_positive(self.T, 'T')
-        self._assert_positive(self.dt, 'dt')
+        self._assert_positive(self.lmb, "lmb")
+        self._assert_positive(self.M, "M")
+        self._assert_positive(self.K, "K")
+        self._assert_positive(self.T, "T")
+        self._assert_positive(self.dt, "dt")
 
 
 class DefaultDynamicsBuilder(ModelBuilder[DeterministicDynamics]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: MPPIConfig,
-                    **kwargs) -> DeterministicDynamics:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: MPPIConfig,
+        **kwargs,
+    ) -> DeterministicDynamics:
         return MPPIDeterministicDynamics(scope_name, dt=algorithm_config.dt)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: MPPIConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: MPPIConfig, **kwargs
+    ) -> nn.solver.Solver:
         # return NS.RMSprop(lr=algorithm_config.learning_rate)
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: MPPIConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: MPPIConfig, **kwargs
+    ) -> ReplayBuffer:
         return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
@@ -161,22 +162,25 @@ class MPPI(Algorithm):
             builder of replay_buffer. If you have bootstrap data, override the default builder
             and return a replay buffer with bootstrap data.
     """
+
     _config: MPPIConfig
     _evaluation_dynamics: _DeterministicStatePredictor
 
-    def __init__(self,
-                 env_or_env_info,
-                 cost_function: CostFunction,
-                 known_dynamics: Optional[Dynamics] = None,
-                 state_normalizer: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-                 config: MPPIConfig = MPPIConfig(),
-                 dynamics_builder: ModelBuilder[DeterministicDynamics] = DefaultDynamicsBuilder(),
-                 dynamics_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
+    def __init__(
+        self,
+        env_or_env_info,
+        cost_function: CostFunction,
+        known_dynamics: Optional[Dynamics] = None,
+        state_normalizer: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        config: MPPIConfig = MPPIConfig(),
+        dynamics_builder: ModelBuilder[DeterministicDynamics] = DefaultDynamicsBuilder(),
+        dynamics_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+    ):
         super(MPPI, self).__init__(env_or_env_info, config=config)
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._known_dynamics = known_dynamics
-            self._dynamics = dynamics_builder('dynamics', env_info=self._env_info, algorithm_config=self._config)
+            self._dynamics = dynamics_builder("dynamics", env_info=self._env_info, algorithm_config=self._config)
             self._dynamics_solver = dynamics_solver_builder(env_info=self._env_info, algorithm_config=self._config)
             self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
@@ -196,9 +200,9 @@ class MPPI(Algorithm):
         return control_inputs[0]
 
     @eval_api
-    def compute_trajectory(self,
-                           initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]) \
-            -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
+    def compute_trajectory(
+        self, initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]
+    ) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
         assert len(initial_trajectory) == self._config.T
         x, u = unzip(initial_trajectory)
 
@@ -225,13 +229,15 @@ class MPPI(Algorithm):
             unroll_steps=self._config.unroll_steps,
             burn_in_steps=self._config.burn_in_steps,
             reset_on_terminal=self._config.reset_rnn_on_terminal,
-            dt=self._config.dt)
+            dt=self._config.dt,
+        )
 
         dynamics_trainer = MT.dynamics_trainers.MPPIDynamicsTrainer(
             models=self._dynamics,
             solvers={self._dynamics.scope_name: self._dynamics_solver},
             env_info=self._env_info,
-            config=dynamics_trainer_config)
+            config=dynamics_trainer_config,
+        )
         return dynamics_trainer
 
     def _run_online_training_iteration(self, env):
@@ -243,26 +249,28 @@ class MPPI(Algorithm):
             self._replay_buffer.append_all(experiences)  # D U Dj
 
     def _run_offline_training_iteration(self, buffer):
-        raise NotImplementedError('You can not train MPPI only with buffer. Try online training.')
+        raise NotImplementedError("You can not train MPPI only with buffer. Try online training.")
 
     def _mppi_training(self, replay_buffer):
         # train the dynamics model
         num_steps = self._config.burn_in_steps + self._config.unroll_steps
         experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = (experiences_tuple, )
+            experiences_tuple = (experiences_tuple,)
         assert len(experiences_tuple) == num_steps
         batch = None
         for experiences in reversed(experiences_tuple):
             (s, a, _, non_terminal, s_next, *_) = marshal_experiences(experiences)
-            batch = TrainingBatch(batch_size=self._config.batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  s_next=s_next,
-                                  non_terminal=non_terminal,
-                                  weight=info['weights'],
-                                  next_step_batch=batch,
-                                  rnn_states={})
+            batch = TrainingBatch(
+                batch_size=self._config.batch_size,
+                s_current=s,
+                a_current=a,
+                s_next=s_next,
+                non_terminal=non_terminal,
+                weight=info["weights"],
+                next_step_batch=batch,
+                rnn_states={},
+            )
 
         self._dynamics_trainer_state = self._dynamics_trainer.train(batch)
 
@@ -291,7 +299,7 @@ class MPPI(Algorithm):
         dummy_states = []
         improved_inputs = control_inputs.copy()
         control_inputs = np.broadcast_to(control_inputs, shape=(self._config.K, *control_inputs.shape))
-        mean = np.zeros(shape=(self._env_info.action_dim, ))
+        mean = np.zeros(shape=(self._env_info.action_dim,))
         cov = np.eye(N=self._env_info.action_dim)
         if self._config.covariance is not None:
             assert cov.shape == self._config.covariance.shape
@@ -323,8 +331,8 @@ class MPPI(Algorithm):
             for k in range(self._config.K):
                 S[k] += self._cost_function.evaluate(x[k], zero_control, self._config.T, final_state=True)
         beta = np.min(S)
-        eta = np.sum(np.exp(-(S - beta)/self._config.lmb))
-        weights = np.exp(-(S - beta)/self._config.lmb) / eta
+        eta = np.sum(np.exp(-(S - beta) / self._config.lmb))
+        weights = np.exp(-(S - beta) / self._config.lmb) / eta
 
         du = np.sum(weights[:, np.newaxis, :] * input_noise, axis=0)
         improved_inputs += du
@@ -363,17 +371,19 @@ class MPPI(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(MPPI, self).latest_iteration_state
-        if hasattr(self, '_dynamics_trainer_state'):
-            print('latest iteration state')
-            latest_iteration_state['scalar'].update(
-                {'dynamics_loss': float(self._dynamics_trainer_state['dynamics_loss'])})
+        if hasattr(self, "_dynamics_trainer_state"):
+            print("latest iteration state")
+            latest_iteration_state["scalar"].update(
+                {"dynamics_loss": float(self._dynamics_trainer_state["dynamics_loss"])}
+            )
         return latest_iteration_state
 
     @classmethod

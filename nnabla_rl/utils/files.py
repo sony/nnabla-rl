@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ def create_dir_if_not_exist(outdir):
     """
     if file_exists(outdir):
         if not os.path.isdir(outdir):
-            raise RuntimeError('{} is not a directory'.format(outdir))
+            raise RuntimeError("{} is not a directory".format(outdir))
         else:
             return
     os.makedirs(outdir)
@@ -51,7 +51,7 @@ def read_text_from_file(file_path):
     Returns:
         data (str): Text read from the file
     """
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         return f.read()
 
 
@@ -62,5 +62,5 @@ def write_text_to_file(file_path, data):
         file_path (str or pathlib.Path): Path of the file to write data
         data (str): Text to write to the file
     """
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         f.write(data)

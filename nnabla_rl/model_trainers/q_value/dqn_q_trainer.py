@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,10 @@ from typing import Dict, Sequence, Union
 import nnabla as nn
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
-from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (SquaredTDQFunctionTrainer,
-                                                                            SquaredTDQFunctionTrainerConfig)
+from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (
+    SquaredTDQFunctionTrainer,
+    SquaredTDQFunctionTrainerConfig,
+)
 from nnabla_rl.models import QFunction
 from nnabla_rl.utils.misc import create_variables
 
@@ -36,12 +38,14 @@ class DQNQTrainer(SquaredTDQFunctionTrainer):
     _target_function: QFunction
     _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_functions: Union[QFunction, Sequence[QFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_function: QFunction,
-                 env_info: EnvironmentInfo,
-                 config: DQNQTrainerConfig = DQNQTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[QFunction, Sequence[QFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_function: QFunction,
+        env_info: EnvironmentInfo,
+        config: DQNQTrainerConfig = DQNQTrainerConfig(),
+    ):
         self._target_function = target_function
         self._prev_target_rnn_states = {}
         super(DQNQTrainer, self).__init__(train_functions, solvers, env_info, config)

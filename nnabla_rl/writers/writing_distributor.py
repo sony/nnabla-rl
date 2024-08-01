@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,5 +36,5 @@ class WritingDistributor(Writer):
             writer.write_image(iteration_num, image)
 
     def _write_file_header(self, filepath, keys):
-        with open(filepath, 'w+') as f:
-            np.savetxt(f, [list(keys)], fmt='%s', delimiter='\t')
+        with open(filepath, "w+") as f:
+            np.savetxt(f, [list(keys)], fmt="%s", delimiter="\t")

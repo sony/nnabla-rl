@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,10 +20,14 @@ import nnabla.functions as NF
 import nnabla_rl.functions as RF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
-from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (SquaredTDQFunctionTrainer,
-                                                                            SquaredTDQFunctionTrainerConfig)
+from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (
+    SquaredTDQFunctionTrainer,
+    SquaredTDQFunctionTrainerConfig,
+)
 from nnabla_rl.model_trainers.q_value.state_action_quantile_function_trainer import (
-    StateActionQuantileFunctionTrainer, StateActionQuantileFunctionTrainerConfig)
+    StateActionQuantileFunctionTrainer,
+    StateActionQuantileFunctionTrainerConfig,
+)
 from nnabla_rl.models import QFunction, StateActionQuantileFunction
 from nnabla_rl.utils.misc import create_variables
 
@@ -33,14 +37,12 @@ def _pi(q_values: nn.Variable, max_q: nn.Variable, tau: float):
 
 
 def _all_tau_log_pi(q_values: nn.Variable, max_q: nn.Variable, tau: float):
-    logsumexp = tau * NF.log(NF.sum(x=NF.exp((q_values - max_q) / tau),
-                                    axis=(q_values.ndim - 1), keepdims=True))
+    logsumexp = tau * NF.log(NF.sum(x=NF.exp((q_values - max_q) / tau), axis=(q_values.ndim - 1), keepdims=True))
     return q_values - max_q - logsumexp
 
 
 def _tau_log_pi(q_k: nn.Variable, q_values: nn.Variable, max_q: nn.Variable, tau: float):
-    logsumexp = tau * NF.log(NF.sum(x=NF.exp((q_values - max_q) / tau),
-                                    axis=(q_values.ndim - 1), keepdims=True))
+    logsumexp = tau * NF.log(NF.sum(x=NF.exp((q_values - max_q) / tau), axis=(q_values.ndim - 1), keepdims=True))
     return q_k - max_q - logsumexp
 
 
@@ -64,12 +66,14 @@ class MunchausenDQNQTrainer(SquaredTDQFunctionTrainer):
     _prev_all_current_q_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _prev_max_current_q_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_functions: Union[QFunction, Sequence[QFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_function: QFunction,
-                 env_info: EnvironmentInfo,
-                 config: MunchausenDQNQTrainerConfig = MunchausenDQNQTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[QFunction, Sequence[QFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_function: QFunction,
+        env_info: EnvironmentInfo,
+        config: MunchausenDQNQTrainerConfig = MunchausenDQNQTrainerConfig(),
+    ):
         self._target_function = target_function
         self._prev_all_next_q_rnn_states = {}
         self._prev_max_next_q_rnn_states = {}
@@ -103,7 +107,7 @@ class MunchausenDQNQTrainer(SquaredTDQFunctionTrainer):
         all_tau_log_pi = _all_tau_log_pi(all_next_q, max_next_q, self._config.tau)
         assert pi.shape == all_next_q.shape
         assert pi.shape == all_tau_log_pi.shape
-        soft_q_target = NF.sum(pi * (all_next_q - all_tau_log_pi), axis=(pi.ndim - 1),  keepdims=True)
+        soft_q_target = NF.sum(pi * (all_next_q - all_tau_log_pi), axis=(pi.ndim - 1), keepdims=True)
 
         prev_rnn_states = self._prev_current_q_rnn_states
         with rnn_support(self._target_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
@@ -151,12 +155,14 @@ class MunchausenIQNQTrainer(StateActionQuantileFunctionTrainer):
     _prev_next_quantile_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _prev_current_quantile_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_functions: Union[StateActionQuantileFunction, Sequence[StateActionQuantileFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_function: StateActionQuantileFunction,
-                 env_info: EnvironmentInfo,
-                 config: MunchausenIQNQTrainerConfig = MunchausenIQNQTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[StateActionQuantileFunction, Sequence[StateActionQuantileFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_function: StateActionQuantileFunction,
+        env_info: EnvironmentInfo,
+        config: MunchausenIQNQTrainerConfig = MunchausenIQNQTrainerConfig(),
+    ):
         self._target_function = target_function
         self._prev_next_quantile_rnn_states = {}
         self._prev_current_quantile_rnn_states = {}

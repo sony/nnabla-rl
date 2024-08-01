@@ -20,8 +20,15 @@ import gym
 
 import nnabla as nn
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.algorithms.sac import (SAC, DefaultExplorerBuilder, DefaultPolicyBuilder, DefaultQFunctionBuilder,
-                                      DefaultReplayBufferBuilder, DefaultSolverBuilder, SACConfig)
+from nnabla_rl.algorithms.sac import (
+    SAC,
+    DefaultExplorerBuilder,
+    DefaultPolicyBuilder,
+    DefaultQFunctionBuilder,
+    DefaultReplayBufferBuilder,
+    DefaultSolverBuilder,
+    SACConfig,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
@@ -80,8 +87,8 @@ class SRSACConfig(SACConfig):
 
     def __post_init__(self):
         super().__post_init__()
-        self._assert_positive(self.replay_ratio, 'replay_ratio')
-        self._assert_positive(self.reset_interval, 'reset_interval')
+        self._assert_positive(self.replay_ratio, "replay_ratio")
+        self._assert_positive(self.reset_interval, "reset_interval")
 
 
 class SRSAC(SAC):
@@ -119,16 +126,18 @@ class SRSAC(SAC):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: SRSACConfig
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: SRSACConfig = SRSACConfig(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: SRSACConfig = SRSACConfig(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(SRSAC, self).__init__(
             env_or_env_info=env_or_env_info,
             config=config,
@@ -212,6 +221,7 @@ class EfficientSRSACConfig(SRSACConfig):
         replay_ratio (int): Number of updates per environment step.
         reset_interval (int): Paramerters will be reset every this number of updates.
     """
+
     actor_reset_rnn_on_terminal: bool = False
     critic_reset_rnn_on_terminal: bool = False
 
@@ -219,23 +229,25 @@ class EfficientSRSACConfig(SRSACConfig):
         super().__post_init__()
 
         def fill_warning_message(config_name, config_value, expected_value):
-            return f'''{config_name} is set to {config_value}(!={expected_value})
-                        but this value does not take any effect on EfficentSRSAC.'''
+            return f"""{config_name} is set to {config_value}(!={expected_value})
+                        but this value does not take any effect on EfficentSRSAC."""
+
         if 1 != self.num_steps:
-            warnings.warn(fill_warning_message('num_steps', self.num_steps, 1))
+            warnings.warn(fill_warning_message("num_steps", self.num_steps, 1))
         if 0 != self.actor_burn_in_steps:
-            warnings.warn(fill_warning_message('actor_burn_in_steps', self.actor_burn_in_steps, 0))
+            warnings.warn(fill_warning_message("actor_burn_in_steps", self.actor_burn_in_steps, 0))
         if 1 != self.actor_unroll_steps:
-            warnings.warn(fill_warning_message('actor_unroll_steps', self.actor_unroll_steps, 1))
+            warnings.warn(fill_warning_message("actor_unroll_steps", self.actor_unroll_steps, 1))
         if self.actor_reset_rnn_on_terminal:
-            warnings.warn(fill_warning_message('actor_reset_rnn_on_terminal', self.actor_reset_rnn_on_terminal, False))
+            warnings.warn(fill_warning_message("actor_reset_rnn_on_terminal", self.actor_reset_rnn_on_terminal, False))
         if 0 != self.critic_burn_in_steps:
-            warnings.warn(fill_warning_message('critic_burn_in_steps', self.critic_burn_in_steps, 0))
+            warnings.warn(fill_warning_message("critic_burn_in_steps", self.critic_burn_in_steps, 0))
         if 1 != self.critic_unroll_steps:
-            warnings.warn(fill_warning_message('critic_unroll_steps', self.critic_unroll_steps, 1))
+            warnings.warn(fill_warning_message("critic_unroll_steps", self.critic_unroll_steps, 1))
         if self.critic_reset_rnn_on_terminal:
-            warnings.warn(fill_warning_message('critic_reset_rnn_on_terminal',
-                          self.critic_reset_rnn_on_terminal, False))
+            warnings.warn(
+                fill_warning_message("critic_reset_rnn_on_terminal", self.critic_reset_rnn_on_terminal, False)
+            )
 
 
 class EfficientSRSAC(SRSAC):
@@ -276,25 +288,29 @@ class EfficientSRSAC(SRSAC):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: EfficientSRSACConfig
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: EfficientSRSACConfig = EfficientSRSACConfig(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super().__init__(env_or_env_info=env_or_env_info,
-                         config=config,
-                         q_function_builder=q_function_builder,
-                         q_solver_builder=q_solver_builder,
-                         policy_builder=policy_builder,
-                         policy_solver_builder=policy_solver_builder,
-                         temperature_solver_builder=temperature_solver_builder,
-                         replay_buffer_builder=replay_buffer_builder,
-                         explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: EfficientSRSACConfig = EfficientSRSACConfig(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super().__init__(
+            env_or_env_info=env_or_env_info,
+            config=config,
+            q_function_builder=q_function_builder,
+            q_solver_builder=q_solver_builder,
+            policy_builder=policy_builder,
+            policy_solver_builder=policy_solver_builder,
+            temperature_solver_builder=temperature_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     @classmethod
     def is_rnn_supported(cls):
@@ -314,7 +330,8 @@ class EfficientSRSAC(SRSAC):
             fixed_temperature=self._config.fix_temperature,
             target_entropy=self._config.target_entropy,
             replay_ratio=self._config.replay_ratio,
-            tau=self._config.tau)
+            tau=self._config.tau,
+        )
         actor_critic_trainer = MT.hybrid_trainers.SRSACActorCriticTrainer(
             pi=self._pi,
             pi_solvers={self._pi.scope_name: self._pi_solver},
@@ -324,7 +341,8 @@ class EfficientSRSAC(SRSAC):
             temperature=self._temperature,
             temperature_solver=self._temperature_solver,
             env_info=self._env_info,
-            config=actor_critic_trainer_config)
+            config=actor_critic_trainer_config,
+        )
         return actor_critic_trainer
 
     def _run_gradient_step(self, replay_buffer):
@@ -350,21 +368,23 @@ class EfficientSRSAC(SRSAC):
         batch = None
         for experiences, info in zip(experiences_tuple, info_tuple):
             (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
-            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
-            batch = TrainingBatch(batch_size=self._config.batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  gamma=self._config.gamma,
-                                  reward=r,
-                                  non_terminal=non_terminal,
-                                  s_next=s_next,
-                                  weight=info['weights'],
-                                  next_step_batch=batch,
-                                  rnn_states=rnn_states)
+            rnn_states = rnn_states_dict["rnn_states"] if "rnn_states" in rnn_states_dict else {}
+            batch = TrainingBatch(
+                batch_size=self._config.batch_size,
+                s_current=s,
+                a_current=a,
+                gamma=self._config.gamma,
+                reward=r,
+                non_terminal=non_terminal,
+                s_next=s_next,
+                weight=info["weights"],
+                next_step_batch=batch,
+                rnn_states=rnn_states,
+            )
 
         self._actor_critic_trainer_state = self._actor_critic_trainer.train(batch)
 
-        td_errors = self._actor_critic_trainer_state['td_errors']
+        td_errors = self._actor_critic_trainer_state["td_errors"]
         replay_buffer.update_priorities(td_errors)
 
     def _reconstruct_training_graphs(self):
@@ -374,10 +394,11 @@ class EfficientSRSAC(SRSAC):
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(SAC, self).latest_iteration_state
-        if hasattr(self, '_actor_critic_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': float(self._actor_critic_trainer_state['pi_loss'])})
-        if hasattr(self, '_actor_critic_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': float(self._actor_critic_trainer_state['q_loss'])})
-            latest_iteration_state['histogram'].update(
-                {'td_errors': self._actor_critic_trainer_state['td_errors'].flatten()})
+        if hasattr(self, "_actor_critic_trainer_state"):
+            latest_iteration_state["scalar"].update({"pi_loss": float(self._actor_critic_trainer_state["pi_loss"])})
+        if hasattr(self, "_actor_critic_trainer_state"):
+            latest_iteration_state["scalar"].update({"q_loss": float(self._actor_critic_trainer_state["q_loss"])})
+            latest_iteration_state["histogram"].update(
+                {"td_errors": self._actor_critic_trainer_state["td_errors"].flatten()}
+            )
         return latest_iteration_state

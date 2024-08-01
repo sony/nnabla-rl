@@ -24,7 +24,7 @@ from nnabla_rl.environments.wrappers.common import FlattenNestedTupleStateWrappe
 class DummyNestedTupleStateEnv(gym.Env):
     def __init__(self, observation_space) -> None:
         super().__init__()
-        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4, ))
+        self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4,))
         self.observation_space = observation_space
 
     def reset(self):
@@ -132,11 +132,11 @@ class TestCommon(object):
         assert next_state[1] == 2
 
     def test_flatten_nested_tuple_state(self):
-        box_space_list = [gym.spaces.Box(low=0.0, high=1.0, shape=(i, )) for i in range(5)]
+        box_space_list = [gym.spaces.Box(low=0.0, high=1.0, shape=(i,)) for i in range(5)]
 
         observation_space = gym.spaces.Tuple(
-            [gym.spaces.Tuple(box_space_list[0:3]),
-             gym.spaces.Tuple(box_space_list[3:])])
+            [gym.spaces.Tuple(box_space_list[0:3]), gym.spaces.Tuple(box_space_list[3:])]
+        )
 
         env = DummyNestedTupleStateEnv(observation_space)
         env = FlattenNestedTupleStateWrapper(env)

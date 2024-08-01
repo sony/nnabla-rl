@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, Optional, Sequence, Tuple, TypeVar, Unio
 
 import numpy as np
 
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 State = Union[np.ndarray, Tuple[np.ndarray, ...]]
@@ -76,6 +76,7 @@ def accepted_shapes(**shape_kwargs: Dict[str, Optional[Tuple[int]]]) -> Callable
             def dummy_function(x, y, z, non_shape_args=False):
                 pass
     """
+
     def accepted_shapes_wrapper(f: F) -> F:
         signature_f = signature(f)
 
@@ -85,14 +86,14 @@ def accepted_shapes(**shape_kwargs: Dict[str, Optional[Tuple[int]]]) -> Callable
             return f(*args, **kwargs)
 
         return cast(F, wrapped_with_accepted_shapes)
+
     return accepted_shapes_wrapper
 
 
 def _is_same_shape(actual_shape: Tuple[int], expected_shape: Tuple[int]) -> bool:
     if len(actual_shape) != len(expected_shape):
         return False
-    return all([actual == expected or expected is None
-                for actual, expected in zip(actual_shape, expected_shape)])
+    return all([actual == expected or expected is None for actual, expected in zip(actual_shape, expected_shape)])
 
 
 def _check_kwargs_shape(kwargs, expected_kwargs_shapes):

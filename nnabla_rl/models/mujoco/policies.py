@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,20 +48,14 @@ class TD3Policy(DeterministicPolicy):
 
     def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
-            linear1_init = RI.HeUniform(
-                inmaps=s.shape[1], outmaps=400, factor=1/3)
-            h = NPF.affine(s, n_outmaps=400, name="linear1",
-                           w_init=linear1_init, b_init=linear1_init)
+            linear1_init = RI.HeUniform(inmaps=s.shape[1], outmaps=400, factor=1 / 3)
+            h = NPF.affine(s, n_outmaps=400, name="linear1", w_init=linear1_init, b_init=linear1_init)
             h = NF.relu(x=h)
-            linear2_init = RI.HeUniform(
-                inmaps=400, outmaps=300, factor=1/3)
-            h = NPF.affine(h, n_outmaps=300, name="linear2",
-                           w_init=linear2_init, b_init=linear2_init)
+            linear2_init = RI.HeUniform(inmaps=400, outmaps=300, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=300, name="linear2", w_init=linear2_init, b_init=linear2_init)
             h = NF.relu(x=h)
-            linear3_init = RI.HeUniform(
-                inmaps=300, outmaps=self._action_dim, factor=1/3)
-            h = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                           w_init=linear3_init, b_init=linear3_init)
+            linear3_init = RI.HeUniform(inmaps=300, outmaps=self._action_dim, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=self._action_dim, name="linear3", w_init=linear3_init, b_init=linear3_init)
         return NF.tanh(h) * self._max_action_value
 
 
@@ -80,12 +74,14 @@ class SACPolicy(StochasticPolicy):
     _min_log_sigma: float
     _max_log_sigma: float
 
-    def __init__(self,
-                 scope_name: str,
-                 action_dim: int,
-                 clip_log_sigma: bool = True,
-                 min_log_sigma: float = -20.0,
-                 max_log_sigma: float = 2.0):
+    def __init__(
+        self,
+        scope_name: str,
+        action_dim: int,
+        clip_log_sigma: bool = True,
+        min_log_sigma: float = -20.0,
+        max_log_sigma: float = 2.0,
+    ):
         super(SACPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
         self._clip_log_sigma = clip_log_sigma
@@ -98,14 +94,13 @@ class SACPolicy(StochasticPolicy):
             h = NF.relu(x=h)
             h = NPF.affine(h, n_outmaps=256, name="linear2")
             h = NF.relu(x=h)
-            h = NPF.affine(h, n_outmaps=self._action_dim*2, name="linear3")
+            h = NPF.affine(h, n_outmaps=self._action_dim * 2, name="linear3")
             reshaped = NF.reshape(h, shape=(-1, 2, self._action_dim))
             mean, ln_sigma = NF.split(reshaped, axis=1)
             assert mean.shape == ln_sigma.shape
             assert mean.shape == (s.shape[0], self._action_dim)
             if self._clip_log_sigma:
-                ln_sigma = NF.clip_by_value(
-                    ln_sigma, min=self._min_log_sigma, max=self._max_log_sigma)
+                ln_sigma = NF.clip_by_value(ln_sigma, min=self._min_log_sigma, max=self._max_log_sigma)
             ln_var = ln_sigma * 2.0
         return D.SquashedGaussian(mean=mean, ln_var=ln_var)
 
@@ -128,20 +123,14 @@ class BEARPolicy(StochasticPolicy):
 
     def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
-            linear1_init = RI.HeUniform(
-                inmaps=s.shape[1], outmaps=400, factor=1/3)
-            h = NPF.affine(s, n_outmaps=400, name="linear1",
-                           w_init=linear1_init, b_init=linear1_init)
+            linear1_init = RI.HeUniform(inmaps=s.shape[1], outmaps=400, factor=1 / 3)
+            h = NPF.affine(s, n_outmaps=400, name="linear1", w_init=linear1_init, b_init=linear1_init)
             h = NF.relu(x=h)
-            linear2_init = RI.HeUniform(
-                inmaps=400, outmaps=300, factor=1/3)
-            h = NPF.affine(h, n_outmaps=300, name="linear2",
-                           w_init=linear2_init, b_init=linear2_init)
+            linear2_init = RI.HeUniform(inmaps=400, outmaps=300, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=300, name="linear2", w_init=linear2_init, b_init=linear2_init)
             h = NF.relu(x=h)
-            linear3_init = RI.HeUniform(
-                inmaps=300, outmaps=self._action_dim*2, factor=1/3)
-            h = NPF.affine(h, n_outmaps=self._action_dim*2, name="linear3",
-                           w_init=linear3_init, b_init=linear3_init)
+            linear3_init = RI.HeUniform(inmaps=300, outmaps=self._action_dim * 2, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=self._action_dim * 2, name="linear3", w_init=linear3_init, b_init=linear3_init)
             reshaped = NF.reshape(h, shape=(-1, 2, self._action_dim))
             mean, ln_var = NF.split(reshaped, axis=1)
             assert mean.shape == ln_var.shape
@@ -168,18 +157,15 @@ class PPOPolicy(StochasticPolicy):
 
     def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=64, name="linear1",
-                           w_init=RI.NormcInitializer(std=1.0))
+            h = NPF.affine(s, n_outmaps=64, name="linear1", w_init=RI.NormcInitializer(std=1.0))
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=64, name="linear2",
-                           w_init=RI.NormcInitializer(std=1.0))
+            h = NPF.affine(h, n_outmaps=64, name="linear2", w_init=RI.NormcInitializer(std=1.0))
             h = NF.tanh(x=h)
-            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                              w_init=RI.NormcInitializer(std=0.01))
+            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3", w_init=RI.NormcInitializer(std=0.01))
             ln_sigma = nn.parameter.get_parameter_or_create(
-                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.))
-            ln_var = NF.broadcast(
-                ln_sigma, (s.shape[0], self._action_dim)) * 2.0
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.0)
+            )
+            ln_var = NF.broadcast(ln_sigma, (s.shape[0], self._action_dim)) * 2.0
             assert mean.shape == ln_var.shape
             assert mean.shape == (s.shape[0], self._action_dim)
         return D.Gaussian(mean=mean, ln_var=ln_var)
@@ -205,9 +191,8 @@ class ICML2015TRPOPolicy(StochasticPolicy):
         with nn.parameter_scope(self.scope_name):
             h = NPF.affine(s, n_outmaps=30, name="linear1")
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=self._action_dim*2, name="linear2")
-            reshaped = NF.reshape(
-                h, shape=(-1, 2, self._action_dim), inplace=False)
+            h = NPF.affine(h, n_outmaps=self._action_dim * 2, name="linear2")
+            reshaped = NF.reshape(h, shape=(-1, 2, self._action_dim), inplace=False)
             mean, ln_sigma = NF.split(reshaped, axis=1)
             assert mean.shape == ln_sigma.shape
             assert mean.shape == (s.shape[0], self._action_dim)
@@ -233,20 +218,19 @@ class TRPOPolicy(StochasticPolicy):
 
     def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=64, name="linear1",
-                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NPF.affine(s, n_outmaps=64, name="linear1", w_init=NI.OrthogonalInitializer(np.sqrt(2.0)))
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=64, name="linear2",
-                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NPF.affine(h, n_outmaps=64, name="linear2", w_init=NI.OrthogonalInitializer(np.sqrt(2.0)))
             h = NF.tanh(x=h)
-            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                              w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            mean = NPF.affine(
+                h, n_outmaps=self._action_dim, name="linear3", w_init=NI.OrthogonalInitializer(np.sqrt(2.0))
+            )
             assert mean.shape == (s.shape[0], self._action_dim)
 
             ln_sigma = get_parameter_or_create(
-                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.))
-            ln_var = NF.broadcast(
-                ln_sigma, (s.shape[0], self._action_dim)) * 2.0
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.0)
+            )
+            ln_var = NF.broadcast(ln_sigma, (s.shape[0], self._action_dim)) * 2.0
         return D.Gaussian(mean, ln_var)
 
 
@@ -268,23 +252,35 @@ class ATRPOPolicy(StochasticPolicy):
 
     def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=64, name="linear1",
-                           w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.),
-                           b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.))
+            h = NPF.affine(
+                s,
+                n_outmaps=64,
+                name="linear1",
+                w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1.0 / 3.0),
+                b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1.0 / 3.0),
+            )
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=64, name="linear2",
-                           w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.),
-                           b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.))
+            h = NPF.affine(
+                h,
+                n_outmaps=64,
+                name="linear2",
+                w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1.0 / 3.0),
+                b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1.0 / 3.0),
+            )
             h = NF.tanh(x=h)
-            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                              w_init=RI.HeUniform(inmaps=64, outmaps=self._action_dim, factor=0.01/3.),
-                              b_init=NI.ConstantInitializer(0.))
+            mean = NPF.affine(
+                h,
+                n_outmaps=self._action_dim,
+                name="linear3",
+                w_init=RI.HeUniform(inmaps=64, outmaps=self._action_dim, factor=0.01 / 3.0),
+                b_init=NI.ConstantInitializer(0.0),
+            )
             assert mean.shape == (s.shape[0], self._action_dim)
 
             ln_sigma = get_parameter_or_create(
-                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(-0.5))
-            ln_var = NF.broadcast(
-                ln_sigma, (s.shape[0], self._action_dim)) * 2.0
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(-0.5)
+            )
+            ln_var = NF.broadcast(ln_sigma, (s.shape[0], self._action_dim)) * 2.0
         return D.Gaussian(mean, ln_var)
 
 
@@ -300,20 +296,17 @@ class GAILPolicy(StochasticPolicy):
 
     def pi(self, s: nn.Variable) -> Distribution:
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=100, name="linear1",
-                           w_init=RI.NormcInitializer(std=1.0))
+            h = NPF.affine(s, n_outmaps=100, name="linear1", w_init=RI.NormcInitializer(std=1.0))
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=100, name="linear2",
-                           w_init=RI.NormcInitializer(std=1.0))
+            h = NPF.affine(h, n_outmaps=100, name="linear2", w_init=RI.NormcInitializer(std=1.0))
             h = NF.tanh(x=h)
-            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3",
-                              w_init=RI.NormcInitializer(std=0.01))
+            mean = NPF.affine(h, n_outmaps=self._action_dim, name="linear3", w_init=RI.NormcInitializer(std=0.01))
             assert mean.shape == (s.shape[0], self._action_dim)
 
             ln_sigma = get_parameter_or_create(
-                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.))
-            ln_var = NF.broadcast(
-                ln_sigma, (s.shape[0], self._action_dim)) * 2.0
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.0)
+            )
+            ln_var = NF.broadcast(ln_sigma, (s.shape[0], self._action_dim)) * 2.0
         return D.Gaussian(mean, ln_var)
 
 
@@ -329,16 +322,16 @@ class HERPolicy(DeterministicPolicy):
         with nn.parameter_scope(self.scope_name):
             h = NF.concatenate(obs, goal, axis=1)
             linear1_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
-            h = NPF.affine(h, n_outmaps=64, name='linear1', w_init=linear1_init)
+            h = NPF.affine(h, n_outmaps=64, name="linear1", w_init=linear1_init)
             h = NF.relu(h)
             linear2_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
-            h = NPF.affine(h, n_outmaps=64, name='linear2', w_init=linear2_init)
+            h = NPF.affine(h, n_outmaps=64, name="linear2", w_init=linear2_init)
             h = NF.relu(h)
             linear3_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
-            h = NPF.affine(h, n_outmaps=64, name='linear3', w_init=linear3_init)
+            h = NPF.affine(h, n_outmaps=64, name="linear3", w_init=linear3_init)
             h = NF.relu(h)
             action_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=self._action_dim)
-            h = NPF.affine(h, n_outmaps=self._action_dim, name='action', w_init=action_init)
+            h = NPF.affine(h, n_outmaps=self._action_dim, name="action", w_init=action_init)
         return NF.tanh(h) * self._max_action_value
 
 
@@ -357,12 +350,14 @@ class XQLPolicy(StochasticPolicy):
     _min_log_sigma: float
     _max_log_sigma: float
 
-    def __init__(self,
-                 scope_name: str,
-                 action_dim: int,
-                 clip_log_sigma: bool = True,
-                 min_log_sigma: float = -5.0,
-                 max_log_sigma: float = 2.0):
+    def __init__(
+        self,
+        scope_name: str,
+        action_dim: int,
+        clip_log_sigma: bool = True,
+        min_log_sigma: float = -5.0,
+        max_log_sigma: float = 2.0,
+    ):
         super(XQLPolicy, self).__init__(scope_name)
         self._action_dim = action_dim
         self._clip_log_sigma = clip_log_sigma
@@ -380,8 +375,9 @@ class XQLPolicy(StochasticPolicy):
             mean = NF.tanh(h)
             # create parameter with shape (1, self._action_dim)
             # because these parameters should be independent from states (and from batches also)
-            ln_sigma = get_parameter_or_create("ln_sigma", shape=(1, self._action_dim),
-                                               initializer=NI.ConstantInitializer(0.))
+            ln_sigma = get_parameter_or_create(
+                "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.0)
+            )
             ln_sigma = NF.broadcast(ln_sigma, (s.shape[0], self._action_dim))
             assert mean.shape == ln_sigma.shape
             assert mean.shape == (s.shape[0], self._action_dim)

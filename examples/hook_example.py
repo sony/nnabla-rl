@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ class PrintHello(Hook):
         super().__init__(timing=1)
 
     def on_hook_called(self, algorithm):
-        print('hello!!')
+        print("hello!!")
 
 
 class PrintOnlyEvenIteraion(Hook):
@@ -32,7 +32,7 @@ class PrintOnlyEvenIteraion(Hook):
         super().__init__(timing=2)
 
     def on_hook_called(self, algorithm):
-        print('even iteration -> {}'.format(algorithm.iteration_num))
+        print("even iteration -> {}".format(algorithm.iteration_num))
 
 
 def main():

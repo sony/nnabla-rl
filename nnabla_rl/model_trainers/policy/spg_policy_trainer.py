@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,8 +20,13 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+)
 from nnabla_rl.models import Model, StochasticPolicy
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
@@ -36,25 +41,30 @@ class SPGPolicyTrainerConfig(TrainerConfig):
 class SPGPolicyTrainer(ModelTrainer):
     """Stochastic Policy Gradient (SPG) style Policy Trainer Stochastic Policy
     Gradient is widely known as 'Policy Gradient algorithm'."""
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: SPGPolicyTrainerConfig
     _pi_loss: nn.Variable
 
-    def __init__(self,
-                 models: Union[StochasticPolicy, Sequence[StochasticPolicy]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: SPGPolicyTrainerConfig = SPGPolicyTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[StochasticPolicy, Sequence[StochasticPolicy]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: SPGPolicyTrainerConfig = SPGPolicyTrainerConfig(),
+    ):
         super(SPGPolicyTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -71,7 +81,7 @@ class SPGPolicyTrainer(ModelTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['pi_loss'] = self._pi_loss.d.copy()
+        trainer_state["pi_loss"] = self._pi_loss.d.copy()
         return trainer_state
 
     def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
@@ -84,10 +94,7 @@ class SPGPolicyTrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         models = cast(Sequence[StochasticPolicy], models)
         # Actor optimization graph
         target_value = self._compute_target(training_variables)
@@ -96,10 +103,9 @@ class SPGPolicyTrainer(ModelTrainer):
         for policy in models:
             self._pi_loss += 0.0 if ignore_loss else self._compute_loss(policy, target_value, training_variables)
 
-    def _compute_loss(self,
-                      model: StochasticPolicy,
-                      target_value: nn.Variable,
-                      training_variables: TrainingVariables) -> nn.Variable:
+    def _compute_loss(
+        self, model: StochasticPolicy, target_value: nn.Variable, training_variables: TrainingVariables
+    ) -> nn.Variable:
         distribution = model.pi(training_variables.s_current)
         log_prob = distribution.log_prob(training_variables.a_current)
         return NF.sum(-log_prob * target_value) * self._config.pi_loss_scalar
@@ -111,9 +117,7 @@ class SPGPolicyTrainer(ModelTrainer):
         # Training input variables
         s_current_var = create_variable(batch_size, self._env_info.state_shape)
         a_current_var = create_variable(batch_size, self._env_info.action_shape)
-        return TrainingVariables(batch_size,
-                                 s_current_var,
-                                 a_current_var)
+        return TrainingVariables(batch_size, s_current_var, a_current_var)
 
     @property
     def loss_variables(self) -> Dict[str, nn.Variable]:

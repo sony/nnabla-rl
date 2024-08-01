@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,15 +20,15 @@ class TemplateEnv(gym.Env):
         # max_episode_steps is the maximum possible steps that the rl agent interacts with this environment.
         # You can set this value to None if the is no limits.
         # The first argument is the name of this environment used when registering this environment to gym.
-        self.spec = EnvSpec('template-v0', max_episode_steps=max_episode_steps)
+        self.spec = EnvSpec("template-v0", max_episode_steps=max_episode_steps)
         self._episode_steps = 0
 
         # Use gym's spaces to define the shapes and ranges of states and actions.
         # observation_space: definition of states's shape and its ranges
         # action_space: definition of actions's shape and its ranges
-        observation_shape = (10, )  # Example 10 dimensional state with range of [0.0, 1.0] each.
+        observation_shape = (10,)  # Example 10 dimensional state with range of [0.0, 1.0] each.
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=observation_shape)
-        action_shape = (1, )  # 1 dimensional continuous action with range of [0.0, 1.0].
+        action_shape = (1,)  # 1 dimensional continuous action with range of [0.0, 1.0].
         self.action_space = gym.spaces.Box(low=0.0, high=1.0, shape=action_shape)
 
     def reset(self):

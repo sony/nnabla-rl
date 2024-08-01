@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ class OneHotSoftmax(Softmax):
 
     def sample(self, noise_clip=None):
         sample = NF.random_choice(self._actions, w=self._distribution)
-        one_hot = NF.one_hot(sample, shape=(self._num_class, ))
+        one_hot = NF.one_hot(sample, shape=(self._num_class,))
         one_hot.need_grad = False
         # straight through biased gradient estimator
         assert one_hot.shape == self._distribution.shape
@@ -47,7 +47,7 @@ class OneHotSoftmax(Softmax):
     def sample_and_compute_log_prob(self, noise_clip=None):
         sample = NF.random_choice(self._actions, w=self._distribution)
         log_prob = self.log_prob(sample)
-        one_hot = NF.one_hot(sample, shape=(self._num_class, ))
+        one_hot = NF.one_hot(sample, shape=(self._num_class,))
         one_hot.need_grad = False
         # straight through biased gradient estimator
         assert one_hot.shape == self._distribution.shape
@@ -56,7 +56,7 @@ class OneHotSoftmax(Softmax):
 
     def choose_probable(self):
         class_index = RF.argmax(self._distribution, axis=len(self._distribution.shape) - 1, keepdims=True)
-        one_hot = NF.one_hot(class_index, shape=(self._num_class, ))
+        one_hot = NF.one_hot(class_index, shape=(self._num_class,))
         one_hot.need_grad = False
         # straight through biased gradient estimator
         assert one_hot.shape == self._distribution.shape

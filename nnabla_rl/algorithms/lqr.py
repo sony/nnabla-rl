@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,12 +31,13 @@ class LQRConfig(AlgorithmConfig):
     Args:
         T_max (int): Planning time step length. Defaults to 50.
     """
+
     T_max: int = 50
 
     def __post_init__(self):
         super().__post_init__()
 
-        self._assert_positive(self.T_max, 'T_max')
+        self._assert_positive(self.T_max, "T_max")
 
 
 class LQR(Algorithm):
@@ -53,13 +54,10 @@ class LQR(Algorithm):
         config (:py:class:`LQRConfig <nnabla_rl.algorithmss.lqr.LQRConfig>`):
             the parameter for LQR controller
     """
+
     _config: LQRConfig
 
-    def __init__(self,
-                 env_or_env_info,
-                 dynamics: Dynamics,
-                 cost_function: CostFunction,
-                 config=LQRConfig()):
+    def __init__(self, env_or_env_info, dynamics: Dynamics, cost_function: CostFunction, config=LQRConfig()):
         super(LQR, self).__init__(env_or_env_info, config=config)
         self._dynamics = dynamics
         self._cost_function = cost_function
@@ -76,9 +74,9 @@ class LQR(Algorithm):
         return improved_trajectory[0][1]
 
     @eval_api
-    def compute_trajectory(self,
-                           initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]) \
-            -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
+    def compute_trajectory(
+        self, initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]
+    ) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
         assert len(initial_trajectory) == self._config.T_max
         dynamics = self._dynamics
         cost_function = self._cost_function
@@ -93,12 +91,13 @@ class LQR(Algorithm):
         trajectory.append((x, None))
         return trajectory
 
-    def _optimize(self,
-                  initial_state: Union[np.ndarray, Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]],
-                  dynamics: Dynamics,
-                  cost_function: CostFunction,
-                  **kwargs) \
-            -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
+    def _optimize(
+        self,
+        initial_state: Union[np.ndarray, Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]],
+        dynamics: Dynamics,
+        cost_function: CostFunction,
+        **kwargs,
+    ) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
         assert len(initial_state) == self._config.T_max
         initial_state = cast(Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], initial_state)
         x_last, u_last = initial_state[-1]
@@ -114,7 +113,7 @@ class LQR(Algorithm):
             assert F is not None
             assert R is not None
             C = np.linalg.inv(R + (B.T.dot(Sk).dot(B)))
-            D = (F.T + B.T.dot(Sk).dot(A))
+            D = F.T + B.T.dot(Sk).dot(A)
             Sk = Q + A.T.dot(Sk).dot(A) - D.T.dot(C).dot(D)
             matrices.append((Sk, A, B, R, F))
 
@@ -125,7 +124,7 @@ class LQR(Algorithm):
             u = self._compute_optimal_input(x, S, A, B, R, F)
             trajectory.append((x, u))
             # Save quadratic cost coefficient R as Quu and R^-1 as Quu_inv
-            trajectory_info.append({'Quu': R, 'Quu_inv': np.linalg.inv(R)})
+            trajectory_info.append({"Quu": R, "Quu_inv": np.linalg.inv(R)})
             x, _ = dynamics.next_state(x, u, t)
 
         trajectory.append((x, None))  # final timestep input is None
@@ -134,20 +133,20 @@ class LQR(Algorithm):
 
     def _compute_optimal_input(self, x, S, A, B, R, F) -> np.ndarray:
         C = np.linalg.inv(R + (B.T.dot(S).dot(B)))
-        D = (F.T + B.T.dot(S).dot(A))
+        D = F.T + B.T.dot(S).dot(A)
         return cast(np.ndarray, -C.dot(D).dot(x))
 
     def _before_training_start(self, env_or_buffer):
-        raise NotImplementedError('You do not need training to use this algorithm.')
+        raise NotImplementedError("You do not need training to use this algorithm.")
 
     def _run_online_training_iteration(self, env):
-        raise NotImplementedError('You do not need training to use this algorithm.')
+        raise NotImplementedError("You do not need training to use this algorithm.")
 
     def _run_offline_training_iteration(self, buffer):
-        raise NotImplementedError('You do not need training to use this algorithm.')
+        raise NotImplementedError("You do not need training to use this algorithm.")
 
     def _after_training_finish(self, env_or_buffer):
-        raise NotImplementedError('You do not need training to use this algorithm.')
+        raise NotImplementedError("You do not need training to use this algorithm.")
 
     def _models(self):
         return {}
@@ -157,8 +156,9 @@ class LQR(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property

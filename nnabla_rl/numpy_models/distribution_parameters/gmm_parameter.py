@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,19 +24,17 @@ class GMMParameter(DistributionParameter):
     _covarinces: np.ndarray
     _mixing_coefficients: np.ndarray
 
-    def __init__(self, means: np.ndarray,
-                 covariances: np.ndarray,
-                 mixing_coefficients: np.ndarray) -> None:
+    def __init__(self, means: np.ndarray, covariances: np.ndarray, mixing_coefficients: np.ndarray) -> None:
         super().__init__()
         self._num_classes, self._dim = means.shape
         assert (self._num_classes, self._dim, self._dim) == covariances.shape
-        assert (self._num_classes, ) == mixing_coefficients.shape
+        assert (self._num_classes,) == mixing_coefficients.shape
         self._means = means
         self._covariances = covariances
         self._mixing_coefficients = mixing_coefficients
 
     @staticmethod
-    def from_data(data: np.ndarray, num_classes: int) -> 'GMMParameter':
+    def from_data(data: np.ndarray, num_classes: int) -> "GMMParameter":
         """Create GMM from data by random class assignnment.
 
         Args:
@@ -66,10 +64,9 @@ class GMMParameter(DistributionParameter):
 
         return GMMParameter(means, covariances, mixing_coefficients)
 
-    def update_parameter(self,  # type: ignore
-                         new_means: np.ndarray,
-                         new_covariances: np.ndarray,
-                         new_mixing_coefficients: np.ndarray) -> None:
+    def update_parameter(  # type: ignore
+        self, new_means: np.ndarray, new_covariances: np.ndarray, new_mixing_coefficients: np.ndarray
+    ) -> None:
         self._means = new_means
         self._covariances = new_covariances
         self._mixing_coefficients = new_mixing_coefficients

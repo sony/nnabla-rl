@@ -39,7 +39,7 @@ class DummyAMPEnv(AMPEnv):
         return self._dummy_expert_experience
 
 
-class TestAMPEnv():
+class TestAMPEnv:
     def test_step(self):
         state = np.array([1.1])
         reward = 5.0
@@ -55,8 +55,14 @@ class TestAMPEnv():
         expert_reward = 0.5
         expert_non_terminal = 1.0
         expert_info = {}
-        dummy_expert_experience = (expert_state, expert_action, expert_reward,
-                                   expert_non_terminal, expert_next_state, expert_info)
+        dummy_expert_experience = (
+            expert_state,
+            expert_action,
+            expert_reward,
+            expert_non_terminal,
+            expert_next_state,
+            expert_info,
+        )
 
         env = DummyAMPEnv(dummy_transition, dummy_task_result, dummy_is_valid_episode, dummy_expert_experience)
         env.reset()
@@ -101,7 +107,7 @@ class DummyAMPGoalEnv(AMPGoalEnv):
         return self._dummy_expert_experience
 
 
-class TestAMPGoalEnv():
+class TestAMPGoalEnv:
     def test_step(self):
         state = np.array([1.1])
         reward = 5.0
@@ -117,8 +123,14 @@ class TestAMPGoalEnv():
         expert_reward = 0.5
         expert_non_terminal = 1.0
         expert_info = {}
-        dummy_expert_experience = (expert_state, expert_action, expert_reward,
-                                   expert_non_terminal, expert_next_state, expert_info)
+        dummy_expert_experience = (
+            expert_state,
+            expert_action,
+            expert_reward,
+            expert_non_terminal,
+            expert_next_state,
+            expert_info,
+        )
 
         env = DummyAMPEnv(dummy_transition, dummy_task_result, dummy_is_valid_episode, dummy_expert_experience)
         env.reset()

@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ class TestCategoricalDDQN(object):
         dummy_env = E.DummyDiscreteImg()
         categorical_dqn = A.CategoricalDDQN(dummy_env)
 
-        assert categorical_dqn.__name__ == 'CategoricalDDQN'
+        assert categorical_dqn.__name__ == "CategoricalDDQN"
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
@@ -70,7 +70,7 @@ class TestCategoricalDDQN(object):
         state = np.float32(state)
         action = categorical_dqn.compute_eval_action(state)
 
-        assert action.shape == (1, )
+        assert action.shape == (1,)
 
     def test_latest_iteration_state(self):
         """Check that latest iteration state has the keys and values we
@@ -79,17 +79,18 @@ class TestCategoricalDDQN(object):
         dummy_env = E.DummyDiscreteImg()
         categorical_dqn = A.CategoricalDDQN(dummy_env)
 
-        categorical_dqn._model_trainer_state = {'cross_entropy_loss': 0., 'td_errors': np.array([0., 1.])}
+        categorical_dqn._model_trainer_state = {"cross_entropy_loss": 0.0, "td_errors": np.array([0.0, 1.0])}
 
         latest_iteration_state = categorical_dqn.latest_iteration_state
-        assert 'cross_entropy_loss' in latest_iteration_state['scalar']
-        assert 'td_errors' in latest_iteration_state['histogram']
-        assert latest_iteration_state['scalar']['cross_entropy_loss'] == 0.
-        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+        assert "cross_entropy_loss" in latest_iteration_state["scalar"]
+        assert "td_errors" in latest_iteration_state["histogram"]
+        assert latest_iteration_state["scalar"]["cross_entropy_loss"] == 0.0
+        assert np.allclose(latest_iteration_state["histogram"]["td_errors"], np.array([0.0, 1.0]))
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

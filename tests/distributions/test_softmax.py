@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,10 +25,7 @@ class TestSoftmax(object):
         nn.clear_parameters()
 
     def test_sample(self):
-        z = np.array([[0, 0, 1000, 0],
-                      [0, 1000, 0, 0],
-                      [1000, 0, 0, 0],
-                      [0, 0, 0, 1000]])
+        z = np.array([[0, 0, 1000, 0], [0, 1000, 0, 0], [1000, 0, 0, 0], [0, 0, 0, 1000]])
 
         batch_size = z.shape[0]
         distribution = D.Softmax(z=z)
@@ -39,14 +36,12 @@ class TestSoftmax(object):
         assert np.all(sampled.d == np.array([[2], [1], [0], [3]]))
 
     def test_sample_multi_dimensional(self):
-        z = np.array([[[1000, 0, 0, 0],
-                       [0, 0, 0, 1000],
-                       [0, 1000, 0, 0],
-                       [0, 0, 1000, 0]],
-                      [[0, 0, 1000, 0],
-                       [0, 1000, 0, 0],
-                       [1000, 0, 0, 0],
-                       [0, 0, 0, 1000]]])
+        z = np.array(
+            [
+                [[1000, 0, 0, 0], [0, 0, 0, 1000], [0, 1000, 0, 0], [0, 0, 1000, 0]],
+                [[0, 0, 1000, 0], [0, 1000, 0, 0], [1000, 0, 0, 0], [0, 0, 0, 1000]],
+            ]
+        )
         assert z.shape == (2, 4, 4)
         batch_size = z.shape[0]
         category_size = z.shape[1]
@@ -58,28 +53,23 @@ class TestSoftmax(object):
         assert np.all(sampled.d == np.array([[[0], [3], [1], [2]], [[2], [1], [0], [3]]]))
 
     def test_choose_probable(self):
-        z = np.array([[1.0, 2.0, 3.0, 4.0],
-                      [2.0, 3.0, 1.0, -1.0],
-                      [-5.1, 11.2, 0.8, 0.7],
-                      [-3.0, -2.1, -7.6, -5.4]])
+        z = np.array([[1.0, 2.0, 3.0, 4.0], [2.0, 3.0, 1.0, -1.0], [-5.1, 11.2, 0.8, 0.7], [-3.0, -2.1, -7.6, -5.4]])
         assert z.shape == (4, 4)
         batch_size = z.shape[0]
         distribution = D.Softmax(z=z)
         probable = distribution.choose_probable()
 
         probable.forward()
-        assert probable.shape == (batch_size, )
+        assert probable.shape == (batch_size,)
         assert np.all(probable.d == np.array([3, 1, 1, 1]))
 
     def test_choose_probable_multi_dimensional(self):
-        z = np.array([[[1.0, 2.0, 3.0, 4.0],
-                       [2.0, 3.0, 1.0, -1.0],
-                       [-5.1, 11.2, 0.8, 0.7],
-                       [-3.0, -2.1, -7.6, -5.4]],
-                      [[0.9, 0.8, -7.1, 3.2],
-                       [0.1, 0.2, 0.3, 0.4],
-                       [-1.2, -2.7, -3.1, -4.3],
-                       [1.0, 1.2, 1.3, -4.3]]])
+        z = np.array(
+            [
+                [[1.0, 2.0, 3.0, 4.0], [2.0, 3.0, 1.0, -1.0], [-5.1, 11.2, 0.8, 0.7], [-3.0, -2.1, -7.6, -5.4]],
+                [[0.9, 0.8, -7.1, 3.2], [0.1, 0.2, 0.3, 0.4], [-1.2, -2.7, -3.1, -4.3], [1.0, 1.2, 1.3, -4.3]],
+            ]
+        )
         assert z.shape == (2, 4, 4)
         batch_size = z.shape[0]
         category_size = z.shape[1]
@@ -103,7 +93,7 @@ class TestSoftmax(object):
 
         probabilities = np.exp(z) / np.sum(np.exp(z), axis=1, keepdims=True)
         log_probabilities = np.log(probabilities)
-        indices = np.reshape(actions, newshape=(batch_size, ))
+        indices = np.reshape(actions, newshape=(batch_size,))
         one_hot_action = self._to_one_hot_action(indices, action_num=action_num)
         expected = np.sum(log_probabilities * one_hot_action, axis=1, keepdims=True)
 
@@ -125,7 +115,13 @@ class TestSoftmax(object):
 
         probabilities = np.exp(z) / np.sum(np.exp(z), axis=len(z.shape) - 1, keepdims=True)
         log_probabilities = np.log(probabilities)
-        indices = np.reshape(actions, newshape=(batch_size, category_num, ))
+        indices = np.reshape(
+            actions,
+            newshape=(
+                batch_size,
+                category_num,
+            ),
+        )
         one_hot_action = self._to_one_hot_action(indices, action_num=action_num)
         expected = np.sum(log_probabilities * one_hot_action, axis=len(z.shape) - 1, keepdims=True)
 
@@ -178,8 +174,9 @@ class TestSoftmax(object):
 
         assert actual.shape == (batch_size, 1)
 
-        expected = z_p_dist[0, 0] * np.log(z_p_dist[0, 0] / z_q_dist[0, 0]) + \
-            z_p_dist[0, 1] * np.log(z_p_dist[0, 1] / z_q_dist[0, 1])
+        expected = z_p_dist[0, 0] * np.log(z_p_dist[0, 0] / z_q_dist[0, 0]) + z_p_dist[0, 1] * np.log(
+            z_p_dist[0, 1] / z_q_dist[0, 1]
+        )
 
         assert expected == pytest.approx(actual.d.flatten()[0], abs=1e-5)
 
@@ -200,8 +197,9 @@ class TestSoftmax(object):
         assert actual.shape == (batch_size, category_num, 1)
 
         for category in range(category_num):
-            expected = z_p_dist[0, category, 0] * np.log(z_p_dist[0, category, 0] / z_q_dist[0, category, 0]) + \
-                z_p_dist[0, category, 1] * np.log(z_p_dist[0, category, 1] / z_q_dist[0, category, 1])
+            expected = z_p_dist[0, category, 0] * np.log(
+                z_p_dist[0, category, 0] / z_q_dist[0, category, 0]
+            ) + z_p_dist[0, category, 1] * np.log(z_p_dist[0, category, 1] / z_q_dist[0, category, 1])
             assert expected == pytest.approx(actual.d.flatten()[category], abs=1e-5)
 
     def _to_one_hot_action(self, a, action_num):

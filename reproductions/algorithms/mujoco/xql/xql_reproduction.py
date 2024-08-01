@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,17 +53,17 @@ class CosineDecayPolicySolverBuilder(SolverBuilder):
 def clip_actions_in_dataset(dataset):
     eps = 1e-5
     lim = 1.0 - eps
-    dataset['actions'] = np.clip(dataset['actions'], -lim,  lim)
+    dataset["actions"] = np.clip(dataset["actions"], -lim, lim)
     return dataset
 
 
 def normalize_dataset_score(dataset):
     def dataset_to_trajectories(dataset):
-        states = dataset['observations']
-        actions = dataset['actions']
-        rewards = dataset['rewards']
-        terminals = dataset['terminals']
-        timeouts = dataset['timeouts']
+        states = dataset["observations"]
+        actions = dataset["actions"]
+        rewards = dataset["rewards"]
+        terminals = dataset["terminals"]
+        timeouts = dataset["timeouts"]
 
         trajectories = []
         trajectory = []
@@ -89,11 +89,11 @@ def normalize_dataset_score(dataset):
 
     trajectories = dataset_to_trajectories(dataset)
     max_return, min_return = max_min_returns(trajectories)
-    print(f'len trajectories: {len(trajectories)}')
-    print(f'max return: {max_return}, min return: {min_return}')
+    print(f"len trajectories: {len(trajectories)}")
+    print(f"max return: {max_return}, min return: {min_return}")
 
-    dataset['rewards'] /= (max_return - min_return)
-    dataset['rewards'] *= 1000.0
+    dataset["rewards"] /= max_return - min_return
+    dataset["rewards"] *= 1000.0
 
     return dataset
 
@@ -107,7 +107,7 @@ def build_env_and_dataset(env_name, seed=None):
 
 
 def run_training(args):
-    outdir = f'{args.env}_results/seed-{args.seed}'
+    outdir = f"{args.env}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
 
@@ -126,10 +126,7 @@ def run_training(args):
 
     # Author's code sets different temperature for value/policy training.
     # If we set policy_temperature=value_temperature, the performace have slightly decreased.
-    config = A.XQLConfig(gpu_id=args.gpu,
-                         batch_size=args.batch_size,
-                         value_temperature=2.0,
-                         policy_temperature=1/3.0)
+    config = A.XQLConfig(gpu_id=args.gpu, batch_size=args.batch_size, value_temperature=2.0, policy_temperature=1 / 3.0)
     env_info = EnvironmentInfo.from_env(eval_env)
     xql = A.XQL(env_info, config=config, policy_solver_builder=CosineDecayPolicySolverBuilder(args.total_iterations))
     xql.set_hooks(hooks=[iteration_num_hook, save_snapshot_hook, evaluation_hook])
@@ -141,12 +138,12 @@ def run_training(args):
 
 def run_showcase(args):
     if args.snapshot_dir is None:
-        raise ValueError('Please specify the snapshot dir for showcasing')
+        raise ValueError("Please specify the snapshot dir for showcasing")
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.XQLConfig(gpu_id=args.gpu)
     xql = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(xql, A.XQL):
-        raise ValueError('Loaded snapshot is not trained with XQL!')
+        raise ValueError("Loaded snapshot is not trained with XQL!")
 
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(xql, eval_env)
@@ -154,18 +151,18 @@ def run_showcase(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='halfcheetah-expert-v2')
-    parser.add_argument('--save-dir', type=str, default="")
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--showcase', action='store_true')
-    parser.add_argument('--snapshot-dir', type=str, default=None)
-    parser.add_argument('--total_iterations', type=int, default=1000000)
-    parser.add_argument('--batch-size', type=int, default=256)
-    parser.add_argument('--save_timing', type=int, default=5000)
-    parser.add_argument('--eval_timing', type=int, default=5000)
-    parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument("--env", type=str, default="halfcheetah-expert-v2")
+    parser.add_argument("--save-dir", type=str, default="")
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--showcase", action="store_true")
+    parser.add_argument("--snapshot-dir", type=str, default=None)
+    parser.add_argument("--total_iterations", type=int, default=1000000)
+    parser.add_argument("--batch-size", type=int, default=256)
+    parser.add_argument("--save_timing", type=int, default=5000)
+    parser.add_argument("--eval_timing", type=int, default=5000)
+    parser.add_argument("--showcase_runs", type=int, default=10)
 
     args = parser.parse_args()
 
@@ -175,5 +172,5 @@ def main():
         run_training(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

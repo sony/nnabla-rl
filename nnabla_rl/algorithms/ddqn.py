@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,14 @@ from typing import Union
 import gym
 
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.algorithms.dqn import (DQN, DefaultExplorerBuilder, DefaultQFunctionBuilder, DefaultReplayBufferBuilder,
-                                      DefaultSolverBuilder, DQNConfig)
+from nnabla_rl.algorithms.dqn import (
+    DQN,
+    DefaultExplorerBuilder,
+    DefaultQFunctionBuilder,
+    DefaultReplayBufferBuilder,
+    DefaultSolverBuilder,
+    DQNConfig,
+)
 from nnabla_rl.builders import ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.builders.explorer_builder import ExplorerBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
@@ -55,6 +61,7 @@ class DDQNConfig(DQNConfig):
         test_epsilon (float): the epsilon value on testing. Defaults to 0.05.
         grad_clip (Optional[Tuple[float, float]]): Clip the gradient of final layer. Defaults to (-1.0, 1.0).
     """
+
     pass
 
 
@@ -87,31 +94,40 @@ class DDQN(DQN):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: DDQNConfig
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: DDQNConfig = DDQNConfig(),
-                 q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super(DDQN, self).__init__(env_or_env_info=env_or_env_info,
-                                   config=config,
-                                   q_func_builder=q_func_builder,
-                                   q_solver_builder=q_solver_builder,
-                                   replay_buffer_builder=replay_buffer_builder,
-                                   explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: DDQNConfig = DDQNConfig(),
+        q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super(DDQN, self).__init__(
+            env_or_env_info=env_or_env_info,
+            config=config,
+            q_func_builder=q_func_builder,
+            q_solver_builder=q_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.DDQNQTrainerConfig(num_steps=self._config.num_steps,
-                                                                reduction_method='sum',
-                                                                grad_clip=self._config.grad_clip,
-                                                                unroll_steps=self._config.unroll_steps,
-                                                                burn_in_steps=self._config.burn_in_steps,
-                                                                reset_on_terminal=self._config.reset_rnn_on_terminal)
+        trainer_config = MT.q_value_trainers.DDQNQTrainerConfig(
+            num_steps=self._config.num_steps,
+            reduction_method="sum",
+            grad_clip=self._config.grad_clip,
+            unroll_steps=self._config.unroll_steps,
+            burn_in_steps=self._config.burn_in_steps,
+            reset_on_terminal=self._config.reset_rnn_on_terminal,
+        )
 
-        q_function_trainer = MT.q_value_trainers.DDQNQTrainer(train_function=self._q,
-                                                              solvers={self._q.scope_name: self._q_solver},
-                                                              target_function=self._target_q,
-                                                              env_info=self._env_info,
-                                                              config=trainer_config)
+        q_function_trainer = MT.q_value_trainers.DDQNQTrainer(
+            train_function=self._q,
+            solvers={self._q.scope_name: self._q_solver},
+            target_function=self._target_q,
+            env_info=self._env_info,
+            config=trainer_config,
+        )
         sync_model(self._q, self._target_q)
         return q_function_trainer

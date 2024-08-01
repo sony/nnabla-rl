@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,10 +32,12 @@ class TestCommonUtils(object):
         ln_var = np.random.randn(1, 4) * 5.0
         var = np.exp(ln_var)
 
-        actual = common_utils.gaussian_log_prob(nn.Variable.from_numpy_array(x),
-                                                nn.Variable.from_numpy_array(mean),
-                                                nn.Variable.from_numpy_array(var),
-                                                nn.Variable.from_numpy_array(ln_var))
+        actual = common_utils.gaussian_log_prob(
+            nn.Variable.from_numpy_array(x),
+            nn.Variable.from_numpy_array(mean),
+            nn.Variable.from_numpy_array(var),
+            nn.Variable.from_numpy_array(ln_var),
+        )
         actual.forward()
         actual = actual.d
 

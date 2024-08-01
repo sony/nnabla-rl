@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,8 +65,8 @@ class QFunctionWithRNN(DiscreteQFunction):
         shapes: Dict[str, nn.Variable] = {}
         # You can use arbitral (but distinguishable) key as name
         # Use same key for same state
-        shapes['my_lstm_h'] = (self._lstm_state_size, )
-        shapes['my_lstm_c'] = (self._lstm_state_size, )
+        shapes["my_lstm_h"] = (self._lstm_state_size,)
+        shapes["my_lstm_c"] = (self._lstm_state_size,)
         return shapes
 
     def get_internal_states(self) -> Dict[str, nn.Variable]:
@@ -74,8 +74,8 @@ class QFunctionWithRNN(DiscreteQFunction):
         states: Dict[str, nn.Variable] = {}
         # You can use arbitral (but distinguishable) key as name
         # Use same key for same state.
-        states['my_lstm_h'] = self._h
-        states['my_lstm_c'] = self._c
+        states["my_lstm_h"] = self._h
+        states["my_lstm_c"] = self._c
         return states
 
     def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
@@ -88,8 +88,8 @@ class QFunctionWithRNN(DiscreteQFunction):
         else:
             # Otherwise, set given states
             # Use the key defined in internal_state_shapes() for getting the states
-            self._h = states['my_lstm_h']
-            self._c = states['my_lstm_c']
+            self._h = states["my_lstm_h"]
+            self._c = states["my_lstm_c"]
 
     def _create_internal_states(self, batch_size):
         self._h = nn.Variable((batch_size, self._lstm_state_size))
@@ -103,11 +103,9 @@ class QFunctionWithRNN(DiscreteQFunction):
 
 
 class QFunctionWithRNNBuilder(ModelBuilder[QFunction]):
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> QFunction:
+    def build_model(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs
+    ) -> QFunction:
         action_num = env_info.action_dim
         return QFunctionWithRNN(scope_name, action_num)
 
@@ -118,7 +116,7 @@ class AdamSolverBuilder(SolverBuilder):
 
 
 def build_env(seed=None):
-    env = gym.make('MountainCar-v0')
+    env = gym.make("MountainCar-v0")
     env = NumpyFloat32Env(env)
     env = ScreenRenderEnv(env)
     env.seed(seed)
@@ -133,30 +131,32 @@ def main():
     # Here, we use DRQN algorithm
     # For the list of algorithms that support RNN layers see
     # https://github.com/sony/nnabla-rl/tree/master/nnabla_rl/algorithms
-    config = A.DRQNConfig(gpu_id=0,
-                          learning_rate=1e-2,
-                          gamma=0.9,
-                          learner_update_frequency=1,
-                          target_update_frequency=200,
-                          start_timesteps=200,
-                          replay_buffer_size=10000,
-                          max_explore_steps=10000,
-                          initial_epsilon=1.0,
-                          final_epsilon=0.001,
-                          test_epsilon=0.001,
-                          grad_clip=None,
-                          unroll_steps=2)  # Unroll only for 2 timesteps for fast iteration. Because this is an example
-    drqn = A.DRQN(train_env,
-                  config=config,
-                  q_func_builder=QFunctionWithRNNBuilder(),
-                  q_solver_builder=AdamSolverBuilder())
+    config = A.DRQNConfig(
+        gpu_id=0,
+        learning_rate=1e-2,
+        gamma=0.9,
+        learner_update_frequency=1,
+        target_update_frequency=200,
+        start_timesteps=200,
+        replay_buffer_size=10000,
+        max_explore_steps=10000,
+        initial_epsilon=1.0,
+        final_epsilon=0.001,
+        test_epsilon=0.001,
+        grad_clip=None,
+        unroll_steps=2,
+    )  # Unroll only for 2 timesteps for fast iteration. Because this is an example
+    drqn = A.DRQN(
+        train_env, config=config, q_func_builder=QFunctionWithRNNBuilder(), q_solver_builder=AdamSolverBuilder()
+    )
 
     # Optional: Add hooks to check the training progress
     eval_env = build_env(seed=100)
     evaluation_hook = H.EvaluationHook(
         eval_env,
         timing=1000,
-        writer=W.FileWriter(outdir='./mountain_car_v0_drqn_results', file_prefix='evaluation_result'))
+        writer=W.FileWriter(outdir="./mountain_car_v0_drqn_results", file_prefix="evaluation_result"),
+    )
     iteration_num_hook = H.IterationNumHook(timing=100)
     drqn.set_hooks(hooks=[iteration_num_hook, evaluation_hook])
 

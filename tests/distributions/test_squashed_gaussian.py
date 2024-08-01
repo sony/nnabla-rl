@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,12 +81,9 @@ class TestSquashedGaussian(object):
         ln_var = np.array(np.log(var)).reshape((1, 1))
         distribution = D.SquashedGaussian(mean=mean, ln_var=ln_var)
         ln_var = np.log(var)
-        gaussian_log_prob = -0.5 * \
-            np.log(2.0 * np.pi) - 0.5 * ln_var - \
-            (x - mean) ** 2 / (2.0 * var)
+        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - (x - mean) ** 2 / (2.0 * var)
         log_det_jacobian = np.log(1 - np.tanh(x) ** 2)
-        expected = np.sum(gaussian_log_prob -
-                          log_det_jacobian, axis=-1, keepdims=True)
+        expected = np.sum(gaussian_log_prob - log_det_jacobian, axis=-1, keepdims=True)
 
         x_var = nn.Variable((1, 1))
         x_var.d = np.tanh(x)
@@ -110,9 +107,7 @@ class TestSquashedGaussian(object):
         nn.forward_all([sample, actual])
 
         x = np.arctanh(sample.data.data, dtype=np.float64)
-        gaussian_log_prob = -0.5 * \
-            np.log(2.0 * np.pi) - 0.5 * ln_var - \
-            (x - mean) ** 2 / (2.0 * var)
+        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - (x - mean) ** 2 / (2.0 * var)
         log_det_jacobian = np.log(1 - np.tanh(x) ** 2)
         expected = np.sum(gaussian_log_prob - log_det_jacobian, axis=-1, keepdims=True)
 
@@ -147,8 +142,7 @@ class TestSquashedGaussian(object):
 
         distribution = D.SquashedGaussian(mean=mu, ln_var=ln_var)
         num_samples = 10
-        samples, log_probs = distribution.sample_multiple_and_compute_log_prob(
-            num_samples=num_samples)
+        samples, log_probs = distribution.sample_multiple_and_compute_log_prob(num_samples=num_samples)
         # FIXME: if you enable clear_no_need_grad seems to compute something different
         # Do NOT use forward_all and no_need_grad flag at same time
         # nnabla's bug?
@@ -160,12 +154,9 @@ class TestSquashedGaussian(object):
         # Check the first sample independently
         x = np.arctanh(samples.d[:, 0, :], dtype=np.float64)
         assert x.shape == (batch_size, output_dim)
-        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - \
-            (x - mu) ** 2 / (2.0 * var)
+        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - (x - mu) ** 2 / (2.0 * var)
         log_det_jacobian = np.log(1 - np.tanh(x) ** 2)
-        expected = np.sum(gaussian_log_prob - log_det_jacobian,
-                          axis=-1,
-                          keepdims=True)
+        expected = np.sum(gaussian_log_prob - log_det_jacobian, axis=-1, keepdims=True)
         actual = log_probs.d
         assert expected.shape == (batch_size, 1)
         assert np.allclose(expected, actual[:, 0, :], atol=1e-3, rtol=1e-2)
@@ -175,12 +166,9 @@ class TestSquashedGaussian(object):
         ln_var = np.reshape(ln_var, newshape=(batch_size, 1, output_dim))
 
         x = np.arctanh(samples.d, dtype=np.float64)
-        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - \
-            (x - mu) ** 2 / (2.0 * var)
+        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - (x - mu) ** 2 / (2.0 * var)
         log_det_jacobian = np.log(1 - np.tanh(x) ** 2)
-        expected = np.sum(gaussian_log_prob - log_det_jacobian,
-                          axis=-1,
-                          keepdims=True)
+        expected = np.sum(gaussian_log_prob - log_det_jacobian, axis=-1, keepdims=True)
         actual = log_probs.d
         assert np.allclose(expected, actual, atol=1e-3, rtol=1e-2)
 
@@ -190,13 +178,12 @@ class TestSquashedGaussian(object):
 
         input_shape = (batch_size, output_dim)
         mean = np.zeros(shape=input_shape)
-        sigma = np.ones(shape=input_shape) * 5.
-        ln_var = np.log(sigma) * 2.
+        sigma = np.ones(shape=input_shape) * 5.0
+        ln_var = np.log(sigma) * 2.0
 
         distribution = D.SquashedGaussian(mean=mean, ln_var=ln_var)
         num_samples = 10
-        samples, log_probs = distribution.sample_multiple_and_compute_log_prob(
-            num_samples=num_samples)
+        samples, log_probs = distribution.sample_multiple_and_compute_log_prob(num_samples=num_samples)
         nn.forward_all([samples, log_probs])
 
         assert samples.shape == (batch_size, num_samples, output_dim)
@@ -214,17 +201,13 @@ class TestSquashedGaussian(object):
         distribution = D.SquashedGaussian(mean=dummy_mean, ln_var=dummy_ln_var)
 
         ln_var = np.log(var)
-        gaussian_log_prob = -0.5 * \
-            np.log(2.0 * np.pi) - 0.5 * ln_var - \
-            (x - mean) ** 2 / (2.0 * var)
+        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - (x - mean) ** 2 / (2.0 * var)
         log_det_jacobian = np.log(1 - np.tanh(x) ** 2)
-        expected = np.sum(gaussian_log_prob -
-                          log_det_jacobian, axis=-1, keepdims=True)
+        expected = np.sum(gaussian_log_prob - log_det_jacobian, axis=-1, keepdims=True)
 
         x_var = nn.Variable((1, 1))
         x_var.d = x
-        actual = distribution._log_prob_internal(
-            x_var, mean=mean, var=var, ln_var=ln_var)
+        actual = distribution._log_prob_internal(x_var, mean=mean, var=var, ln_var=ln_var)
         actual.forward(clear_no_need_grad=True)
         actual = actual.d
         assert np.isclose(expected, actual)

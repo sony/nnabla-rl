@@ -20,8 +20,13 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+)
 from nnabla_rl.models import Model, RewardFunction
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 from nnabla_rl.utils.data import convert_to_list_if_not_list, set_data_to_variable
@@ -50,21 +55,25 @@ class AMPRewardFunctionTrainer(ModelTrainer):
     _grad_penalty_loss: nn.Variable
     _regularization_loss: nn.Variable
 
-    def __init__(self,
-                 models: Union[RewardFunction, Sequence[RewardFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 state_preprocessor: Optional[Preprocessor] = None,
-                 config: AMPRewardFunctionTrainerConfig = AMPRewardFunctionTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[RewardFunction, Sequence[RewardFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        state_preprocessor: Optional[Preprocessor] = None,
+        config: AMPRewardFunctionTrainerConfig = AMPRewardFunctionTrainerConfig(),
+    ):
         self._state_preprocessor = state_preprocessor
         super(AMPRewardFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Iterable[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Iterable[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             for key in batch.extra.keys():
                 set_data_to_variable(t.extra[key], b.extra[key])
@@ -107,10 +116,12 @@ class AMPRewardFunctionTrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-        self._total_reward_loss = (self._binary_regression_loss
-                                   + self._grad_penalty_loss
-                                   + self._regularization_loss
-                                   + self._extra_regularization_loss)
+        self._total_reward_loss = (
+            self._binary_regression_loss
+            + self._grad_penalty_loss
+            + self._regularization_loss
+            + self._extra_regularization_loss
+        )
 
         # To check all loss is built
         assert isinstance(self._binary_regression_loss, nn.Variable)
@@ -154,12 +165,14 @@ class AMPRewardFunctionTrainer(ModelTrainer):
         a_current_agent_var = create_variable(batch_size, self._env_info.action_shape)
         a_current_expert_var = create_variable(batch_size, self._env_info.action_shape)
 
-        variables = {"s_current_expert": s_current_expert_var,
-                     "a_current_expert": a_current_expert_var,
-                     "s_next_expert": s_next_expert_var,
-                     "s_current_agent": s_current_agent_var,
-                     "a_current_agent": a_current_agent_var,
-                     "s_next_agent": s_next_agent_var}
+        variables = {
+            "s_current_expert": s_current_expert_var,
+            "a_current_expert": a_current_expert_var,
+            "s_next_expert": s_next_expert_var,
+            "s_current_agent": s_current_agent_var,
+            "a_current_agent": a_current_agent_var,
+            "s_next_agent": s_next_agent_var,
+        }
 
         training_variables = TrainingVariables(batch_size, extra=variables)
 
@@ -172,8 +185,13 @@ class AMPRewardFunctionTrainer(ModelTrainer):
         _apply_need_grad_true(s_n_expert)
 
         logits_real, logits_fake = self._compute_logits(
-            model, s_expert, training_variables.extra["a_current_expert"], s_n_expert,
-            s_agent, training_variables.extra["a_current_agent"], s_n_agent,
+            model,
+            s_expert,
+            training_variables.extra["a_current_expert"],
+            s_n_expert,
+            s_agent,
+            training_variables.extra["a_current_agent"],
+            s_n_agent,
         )
         real_loss = 0.5 * NF.mean((logits_real - 1.0) ** 2)
         fake_loss = 0.5 * NF.mean((logits_fake + 1.0) ** 2)
@@ -186,8 +204,9 @@ class AMPRewardFunctionTrainer(ModelTrainer):
         next_state_grads = self._compute_gradient_wrt_state(logits_real, s_n_expert)
         next_state_grad_penalty = self._compute_gradient_penalty(next_state_grads)
 
-        grad_penalty_loss = self._config.gradient_penelty_coefficient * \
-            (current_state_grad_penalty + next_state_grad_penalty)
+        grad_penalty_loss = self._config.gradient_penelty_coefficient * (
+            current_state_grad_penalty + next_state_grad_penalty
+        )
 
         return binary_regression_loss, grad_penalty_loss
 
@@ -228,8 +247,9 @@ class AMPRewardFunctionTrainer(ModelTrainer):
         extra_regularization_loss = 0.0
         model_params = model.get_parameters()
         for variable_name in self._config.extra_regularization_variable_names:
-            extra_regularization_loss += self._config.extra_regularization_coefficient * \
-                0.5 * NF.sum(model_params[variable_name] ** 2)
+            extra_regularization_loss += (
+                self._config.extra_regularization_coefficient * 0.5 * NF.sum(model_params[variable_name] ** 2)
+            )
         return extra_regularization_loss
 
     def _compute_gradient_wrt_state(

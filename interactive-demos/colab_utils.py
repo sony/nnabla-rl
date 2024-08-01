@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,12 +33,12 @@ class RenderHook(Hook):
     def on_hook_called(self, algorithm):
         display.clear_output(wait=True)
         if self._image is None:
-            self._image = plt.imshow(self._env.render('rgb_array'))
+            self._image = plt.imshow(self._env.render("rgb_array"))
         else:
-            self._image.set_data(self._env.render('rgb_array'))
+            self._image.set_data(self._env.render("rgb_array"))
         plt.suptitle(f"iteration num : {self._iteration_num}")
         self._iteration_num += 1
-        plt.axis('off')
+        plt.axis("off")
         display.display(plt.gcf())
 
     def reset(self):

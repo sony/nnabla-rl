@@ -22,8 +22,14 @@ from gym import spaces
 
 import nnabla_rl as rl
 from nnabla_rl.environments.wrappers.gymnasium import Gymnasium2GymWrapper
-from nnabla_rl.external.atari_wrappers import (ClipRewardEnv, EpisodicLifeEnv, FireResetEnv, MaxAndSkipEnv,
-                                               NoopResetEnv, ScaledFloatFrame)
+from nnabla_rl.external.atari_wrappers import (
+    ClipRewardEnv,
+    EpisodicLifeEnv,
+    FireResetEnv,
+    MaxAndSkipEnv,
+    NoopResetEnv,
+    ScaledFloatFrame,
+)
 
 cv2.ocl.setUseOpenCL(False)
 
@@ -49,14 +55,11 @@ class CHWWarpFrame(gym.ObservationWrapper):
         self.width = 84
         self.height = 84
         obs_shape = (1, self.height, self.width)  # 'chw' order
-        self.observation_space = spaces.Box(
-            low=0, high=255,
-            shape=obs_shape, dtype=np.uint8)
+        self.observation_space = spaces.Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
 
     def observation(self, frame):
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        frame = cv2.resize(frame, (self.width, self.height),
-                           interpolation=cv2.INTER_AREA)
+        frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         return frame.reshape(self.observation_space.low.shape)
 
 
@@ -69,8 +72,7 @@ class CHWFrameStack(gym.Wrapper):
         orig_obs_space = env.observation_space
         low = np.repeat(orig_obs_space.low, k, axis=stack_axis)
         high = np.repeat(orig_obs_space.high, k, axis=stack_axis)
-        self.observation_space = spaces.Box(
-            low=low, high=high, dtype=orig_obs_space.dtype)
+        self.observation_space = spaces.Box(low=low, high=high, dtype=orig_obs_space.dtype)
 
     def reset(self):
         ob = self.env.reset()
@@ -110,24 +112,26 @@ def make_atari(env_id, max_frames_per_episode=None, use_gymnasium=False):
     if max_frames_per_episode is not None:
         env = env.unwrapped
         env = gym.wrappers.TimeLimit(env, max_episode_steps=max_frames_per_episode)
-    assert 'NoFrameskip' in env.spec.id
+    assert "NoFrameskip" in env.spec.id
     assert isinstance(env, gym.wrappers.TimeLimit)
     env = NoopResetEnv(env, noop_max=30)
     env = MaxAndSkipEnv(env, skip=4)
     return env
 
 
-def wrap_deepmind(env,
-                  episode_life=True,
-                  clip_rewards=True,
-                  normalize=True,
-                  frame_stack=True,
-                  fire_reset=False,
-                  flicker_probability=0.0):
+def wrap_deepmind(
+    env,
+    episode_life=True,
+    clip_rewards=True,
+    normalize=True,
+    frame_stack=True,
+    fire_reset=False,
+    flicker_probability=0.0,
+):
     """Configure environment for DeepMind-style Atari."""
     if episode_life:
         env = EpisodicLifeEnv(env)
-    if fire_reset and 'FIRE' in env.unwrapped.get_action_meanings():
+    if fire_reset and "FIRE" in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     env = CHWWarpFrame(env)
     if 0.0 < flicker_probability:

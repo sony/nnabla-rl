@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,10 +27,7 @@ class TestOneHotSoftmax(object):
         nn.clear_parameters()
 
     def test_sample(self):
-        z = np.array([[0, 0, 1000, 0],
-                      [0, 1000, 0, 0],
-                      [1000, 0, 0, 0],
-                      [0, 0, 0, 1000]])
+        z = np.array([[0, 0, 1000, 0], [0, 1000, 0, 0], [1000, 0, 0, 0], [0, 0, 0, 1000]])
 
         batch_size = z.shape[0]
         distribution = D.OneHotSoftmax(z=z)
@@ -41,14 +38,12 @@ class TestOneHotSoftmax(object):
         assert np.all(sampled.d == np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]))
 
     def test_sample_multi_dimensional(self):
-        z = np.array([[[1000, 0, 0, 0],
-                       [0, 0, 0, 1000],
-                       [0, 1000, 0, 0],
-                       [0, 0, 1000, 0]],
-                      [[0, 0, 1000, 0],
-                       [0, 1000, 0, 0],
-                       [1000, 0, 0, 0],
-                       [0, 0, 0, 1000]]])
+        z = np.array(
+            [
+                [[1000, 0, 0, 0], [0, 0, 0, 1000], [0, 1000, 0, 0], [0, 0, 1000, 0]],
+                [[0, 0, 1000, 0], [0, 1000, 0, 0], [1000, 0, 0, 0], [0, 0, 0, 1000]],
+            ]
+        )
         assert z.shape == (2, 4, 4)
         batch_size = z.shape[0]
         category_size = z.shape[1]
@@ -57,18 +52,23 @@ class TestOneHotSoftmax(object):
 
         sampled.forward()
         assert sampled.shape == (batch_size, category_size, 4)
-        assert np.all(sampled.d == np.array([[[1, 0, 0, 0], [0, 0, 0, 1], [0, 1, 0, 0], [0, 0, 1, 0]],
-                                             [[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]]))
+        assert np.all(
+            sampled.d
+            == np.array(
+                [
+                    [[1, 0, 0, 0], [0, 0, 0, 1], [0, 1, 0, 0], [0, 0, 1, 0]],
+                    [[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]],
+                ]
+            )
+        )
 
     def test_choose_probable(self):
-        z = np.array([[[1.0, 2.0, 3.0, 4.0],
-                       [2.0, 3.0, 1.0, -1.0],
-                       [-5.1, 11.2, 0.8, 0.7],
-                       [-3.0, -2.1, -7.6, -5.4]],
-                      [[0, 0, 1000, 0],
-                       [0, 1000, 0, 0],
-                       [1000, 0, 0, 0],
-                       [0, 0, 0, 1000]]])
+        z = np.array(
+            [
+                [[1.0, 2.0, 3.0, 4.0], [2.0, 3.0, 1.0, -1.0], [-5.1, 11.2, 0.8, 0.7], [-3.0, -2.1, -7.6, -5.4]],
+                [[0, 0, 1000, 0], [0, 1000, 0, 0], [1000, 0, 0, 0], [0, 0, 0, 1000]],
+            ]
+        )
         assert z.shape == (2, 4, 4)
         batch_size = z.shape[0]
         category_size = z.shape[1]
@@ -77,8 +77,15 @@ class TestOneHotSoftmax(object):
 
         probable.forward()
         assert probable.shape == (batch_size, category_size, 4)
-        assert np.all(probable.d == np.array([[[0, 0, 0, 1], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]],
-                                             [[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]]]))
+        assert np.all(
+            probable.d
+            == np.array(
+                [
+                    [[0, 0, 0, 1], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]],
+                    [[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]],
+                ]
+            )
+        )
 
     def test_backprop(self):
         class TestModel(StochasticPolicy):
@@ -86,7 +93,8 @@ class TestOneHotSoftmax(object):
                 with nn.parameter_scope(self.scope_name):
                     z = NPF.affine(s, n_outmaps=5)
                 return D.OneHotSoftmax(z=z)
-        model = TestModel('test')
+
+        model = TestModel("test")
 
         batch_size = 5
         data_dim = 10

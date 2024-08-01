@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,39 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.model_trainers.q_value.bcq_q_trainer import (  # noqa
-    BCQQTrainer, BCQQTrainerConfig)
+from nnabla_rl.model_trainers.q_value.bcq_q_trainer import BCQQTrainer, BCQQTrainerConfig  # noqa
 from nnabla_rl.model_trainers.q_value.categorical_dqn_q_trainer import (  # noqa
-    CategoricalDQNQTrainer, CategoricalDQNQTrainerConfig)
+    CategoricalDQNQTrainer,
+    CategoricalDQNQTrainerConfig,
+)
 from nnabla_rl.model_trainers.q_value.categorical_ddqn_q_trainer import (  # noqa
-    CategoricalDDQNQTrainer, CategoricalDDQNQTrainerConfig)
+    CategoricalDDQNQTrainer,
+    CategoricalDDQNQTrainerConfig,
+)
 from nnabla_rl.model_trainers.q_value.clipped_double_q_trainer import (  # noqa
-    ClippedDoubleQTrainer, ClippedDoubleQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.ddpg_q_trainer import (  # noqa
-    DDPGQTrainer, DDPGQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.ddqn_q_trainer import (  # noqa
-    DDQNQTrainer, DDQNQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.dqn_q_trainer import (  # noqa
-    DQNQTrainer, DQNQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.her_q_trainer import (  # noqa
-    HERQTrainer, HERQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.hyar_q_trainer import (  # noqa
-    HyARQTrainer, HyARQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.iqn_q_trainer import (  # noqa
-    IQNQTrainer, IQNQTrainerConfig)
+    ClippedDoubleQTrainer,
+    ClippedDoubleQTrainerConfig,
+)
+from nnabla_rl.model_trainers.q_value.ddpg_q_trainer import DDPGQTrainer, DDPGQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.ddqn_q_trainer import DDQNQTrainer, DDQNQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.dqn_q_trainer import DQNQTrainer, DQNQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.her_q_trainer import HERQTrainer, HERQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.hyar_q_trainer import HyARQTrainer, HyARQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.iqn_q_trainer import IQNQTrainer, IQNQTrainerConfig  # noqa
 from nnabla_rl.model_trainers.q_value.munchausen_rl_q_trainer import (  # noqa
-    MunchausenIQNQTrainer, MunchausenIQNQTrainerConfig, MunchausenDQNQTrainer, MunchausenDQNQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.qrdqn_q_trainer import (  # noqa
-    QRDQNQTrainer, QRDQNQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.qrsac_q_trainer import (  # noqa
-    QRSACQTrainer, QRSACQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.redq_q_trainer import (  # noqa
-    REDQQTrainer, REDQQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.soft_q_trainer import (  # noqa
-    SoftQTrainer, SoftQTrainerConfig)
-from nnabla_rl.model_trainers.q_value.soft_q_decomposition_trainer import (  # noqa
-    SoftQDTrainer, SoftQDTrainerConfig)
-from nnabla_rl.model_trainers.q_value.td3_q_trainer import (  # noqa
-    TD3QTrainer, TD3QTrainerConfig)
-from nnabla_rl.model_trainers.q_value.v_targeted_q_trainer import (  # noqa
-    VTargetedQTrainer, VTargetedQTrainerConfig)
+    MunchausenIQNQTrainer,
+    MunchausenIQNQTrainerConfig,
+    MunchausenDQNQTrainer,
+    MunchausenDQNQTrainerConfig,
+)
+from nnabla_rl.model_trainers.q_value.qrdqn_q_trainer import QRDQNQTrainer, QRDQNQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.qrsac_q_trainer import QRSACQTrainer, QRSACQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.redq_q_trainer import REDQQTrainer, REDQQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.soft_q_trainer import SoftQTrainer, SoftQTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.soft_q_decomposition_trainer import SoftQDTrainer, SoftQDTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.td3_q_trainer import TD3QTrainer, TD3QTrainerConfig  # noqa
+from nnabla_rl.model_trainers.q_value.v_targeted_q_trainer import VTargetedQTrainer, VTargetedQTrainerConfig  # noqa

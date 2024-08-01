@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,13 +31,14 @@ from nnabla_rl.logger import logger
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer
 from nnabla_rl.replay_buffer import ReplayBuffer
 
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def eval_api(f: F) -> F:
     def wrapped_with_eval_scope(*args, **kwargs):
         with rl.eval_scope():
             return f(*args, **kwargs)
+
     return cast(F, wrapped_with_eval_scope)
 
 
@@ -48,6 +49,7 @@ class AlgorithmConfig(Configuration):
     Args:
         gpu_id (int): id of the gpu to use. If negative, the training will run on cpu. Defaults to -1.
     """
+
     gpu_id: int = -1
 
 
@@ -83,14 +85,18 @@ class Algorithm(metaclass=ABCMeta):
         self._hooks = []
 
         if not self.is_supported_env(env_info):
-            raise UnsupportedEnvironmentException("{} does not support the enviroment. \
+            raise UnsupportedEnvironmentException(
+                "{} does not support the enviroment. \
                 See the algorithm catalog (https://github.com/sony/nnabla-rl/tree/master/nnabla_rl/algorithms) \
-                and confirm what kinds of enviroments are supported".format(self.__name__))
+                and confirm what kinds of enviroments are supported".format(
+                    self.__name__
+                )
+            )
 
         if self._config.gpu_id < 0:
-            logger.info('algorithm will run on cpu.')
+            logger.info("algorithm will run on cpu.")
         else:
-            logger.info('algorithm will run on gpu: {}'.format(self._config.gpu_id))
+            logger.info("algorithm will run on gpu: {}".format(self._config.gpu_id))
 
     @property
     def __name__(self):
@@ -107,9 +113,9 @@ class Algorithm(metaclass=ABCMeta):
             Dict[str, Any]: Dictionary with items of training process state.
         """
         latest_iteration_state: Dict[str, Any] = {}
-        latest_iteration_state['scalar'] = {}
-        latest_iteration_state['histogram'] = {}
-        latest_iteration_state['image'] = {}
+        latest_iteration_state["scalar"] = {}
+        latest_iteration_state["histogram"] = {}
+        latest_iteration_state["image"] = {}
         return latest_iteration_state
 
     @property
@@ -223,9 +229,9 @@ class Algorithm(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def compute_trajectory(self,
-                           initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]) \
-            -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
+    def compute_trajectory(
+        self, initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]
+    ) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
         """Compute trajectory (sequence of state and action tuples) from given
         initial trajectory using current policy. Most of the reinforcement
         learning algorithms does not implement this method. Only the optimal
@@ -289,7 +295,7 @@ class Algorithm(metaclass=ABCMeta):
 
     def _assert_rnn_is_supported(self):
         if not self.is_rnn_supported():
-            raise RuntimeError(f'{self.__name__} does not support rnn models but rnn models where given!')
+            raise RuntimeError(f"{self.__name__} does not support rnn models but rnn models where given!")
 
     @classmethod
     @abstractmethod

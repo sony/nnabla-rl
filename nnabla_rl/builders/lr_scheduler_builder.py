@@ -1,5 +1,4 @@
-
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,20 +18,15 @@ from nnabla_rl.algorithm import AlgorithmConfig
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 
-class LearningRateSchedulerBuilder():
-    """Learning rate scheduler builder interface class
-    """
+class LearningRateSchedulerBuilder:
+    """Learning rate scheduler builder interface class"""
 
-    def __call__(self,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> nn.solver.Solver:
+    def __call__(self, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs) -> nn.solver.Solver:
         return self.build_scheduler(env_info, algorithm_config, **kwargs)
 
-    def build_scheduler(self,
-                        env_info: EnvironmentInfo,
-                        algorithm_config: AlgorithmConfig,
-                        **kwargs) -> BaseLearningRateScheduler:
+    def build_scheduler(
+        self, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs
+    ) -> BaseLearningRateScheduler:
         """Build learning rate scheduler function
 
         Args:

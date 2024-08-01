@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,10 +19,12 @@ import pytest
 
 from nnabla_rl.environments.dummy import DummyAtariEnv
 from nnabla_rl.environments.wrappers.atari import MaxAndSkipEnv, NoopResetEnv
-from nnabla_rl.replay_buffers.memory_efficient_atari_buffer import (MemoryEfficientAtariBuffer,
-                                                                    MemoryEfficientAtariTrajectoryBuffer,
-                                                                    ProportionalPrioritizedAtariBuffer,
-                                                                    RankBasedPrioritizedAtariBuffer)
+from nnabla_rl.replay_buffers.memory_efficient_atari_buffer import (
+    MemoryEfficientAtariBuffer,
+    MemoryEfficientAtariTrajectoryBuffer,
+    ProportionalPrioritizedAtariBuffer,
+    RankBasedPrioritizedAtariBuffer,
+)
 from nnabla_rl.utils.reproductions import build_atari_env
 
 
@@ -34,13 +36,11 @@ class TestMemoryEfficientAtariBuffer(object):
         buffer = MemoryEfficientAtariBuffer(capacity=capacity)
         buffer.append(experience)
 
-        s, _, _, _, s_next, *_ = buffer._buffer[len(buffer._buffer)-1]
+        s, _, _, _, s_next, *_ = buffer._buffer[len(buffer._buffer) - 1]
         assert s.dtype == np.uint8
         assert s_next.dtype == np.uint8
-        assert np.alltrue(
-            (experience[0][-1] * 255.0).astype(np.uint8) == s)
-        assert np.alltrue(
-            (experience[4][-1] * 255.0).astype(np.uint8) == s_next)
+        assert np.alltrue((experience[0][-1] * 255.0).astype(np.uint8) == s)
+        assert np.alltrue((experience[4][-1] * 255.0).astype(np.uint8) == s_next)
 
     def test_unstacked_frame(self):
         experiences = _generate_atari_experience_mock(num_mocks=10, frame_stack=False)
@@ -78,8 +78,7 @@ class TestMemoryEfficientAtariBuffer(object):
 
     def test_full_buffer_getitem(self):
         capacity = 10
-        experiences = _generate_atari_experience_mock(
-            num_mocks=(capacity + 5))
+        experiences = _generate_atari_experience_mock(num_mocks=(capacity + 5))
         buffer = MemoryEfficientAtariBuffer(capacity=capacity)
 
         for i in range(capacity):
@@ -222,13 +221,11 @@ class TestProportionalPrioritizedAtariBuffer(object):
         buffer = ProportionalPrioritizedAtariBuffer(capacity=capacity)
         buffer.append(experience)
 
-        s, _, _, _, s_next, *_ = buffer._buffer[len(buffer._buffer)-1]
+        s, _, _, _, s_next, *_ = buffer._buffer[len(buffer._buffer) - 1]
         assert s.dtype == np.uint8
         assert s_next.dtype == np.uint8
-        assert np.alltrue(
-            (experience[0][-1] * 255.0).astype(np.uint8) == s)
-        assert np.alltrue(
-            (experience[4][-1] * 255.0).astype(np.uint8) == s_next)
+        assert np.alltrue((experience[0][-1] * 255.0).astype(np.uint8) == s)
+        assert np.alltrue((experience[4][-1] * 255.0).astype(np.uint8) == s_next)
 
     def test_unstacked_frame(self):
         experiences = _generate_atari_experience_mock(num_mocks=10, frame_stack=False)
@@ -266,8 +263,7 @@ class TestProportionalPrioritizedAtariBuffer(object):
 
     def test_full_buffer_getitem(self):
         capacity = 10
-        experiences = _generate_atari_experience_mock(
-            num_mocks=(capacity + 5))
+        experiences = _generate_atari_experience_mock(num_mocks=(capacity + 5))
         buffer = ProportionalPrioritizedAtariBuffer(capacity=capacity)
 
         for i in range(capacity):
@@ -333,13 +329,11 @@ class TestRankBasedPrioritizedAtariBuffer(object):
         buffer = RankBasedPrioritizedAtariBuffer(capacity=capacity)
         buffer.append(experience)
 
-        s, _, _, _, s_next, *_ = buffer._buffer[len(buffer._buffer)-1]
+        s, _, _, _, s_next, *_ = buffer._buffer[len(buffer._buffer) - 1]
         assert s.dtype == np.uint8
         assert s_next.dtype == np.uint8
-        assert np.alltrue(
-            (experience[0][-1] * 255.0).astype(np.uint8) == s)
-        assert np.alltrue(
-            (experience[4][-1] * 255.0).astype(np.uint8) == s_next)
+        assert np.alltrue((experience[0][-1] * 255.0).astype(np.uint8) == s)
+        assert np.alltrue((experience[4][-1] * 255.0).astype(np.uint8) == s_next)
 
     def test_unstacked_frame(self):
         experiences = _generate_atari_experience_mock(num_mocks=10, frame_stack=False)
@@ -377,8 +371,7 @@ class TestRankBasedPrioritizedAtariBuffer(object):
 
     def test_full_buffer_getitem(self):
         capacity = 10
-        experiences = _generate_atari_experience_mock(
-            num_mocks=(capacity + 5))
+        experiences = _generate_atari_experience_mock(num_mocks=(capacity + 5))
         buffer = RankBasedPrioritizedAtariBuffer(capacity=capacity)
 
         for i in range(capacity):

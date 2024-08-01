@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,13 @@ import nnabla.functions as NF
 import nnabla_rl.functions as RNF
 from nnabla_rl.distributions import Gaussian
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+)
 from nnabla_rl.models import Model, VariationalAutoEncoder
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
@@ -41,19 +46,23 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
     _config: KLDVariationalAutoEncoderTrainerConfig
     _encoder_loss: nn.Variable  # Training loss/output
 
-    def __init__(self,
-                 models: Union[VariationalAutoEncoder, Sequence[VariationalAutoEncoder]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: KLDVariationalAutoEncoderTrainerConfig = KLDVariationalAutoEncoderTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[VariationalAutoEncoder, Sequence[VariationalAutoEncoder]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: KLDVariationalAutoEncoderTrainerConfig = KLDVariationalAutoEncoderTrainerConfig(),
+    ):
         super(KLDVariationalAutoEncoderTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Iterable[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Iterable[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -67,7 +76,7 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['encoder_loss'] = self._encoder_loss.d.copy()
+        trainer_state["encoder_loss"] = self._encoder_loss.d.copy()
         return trainer_state
 
     def _build_training_graph(self, models: Union[Model, Sequence[Model]], training_variables: TrainingVariables):
@@ -80,21 +89,19 @@ class KLDVariationalAutoEncoderTrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         batch_size = training_variables.batch_size
 
         models = cast(Sequence[VariationalAutoEncoder], models)
         for vae in models:
-            latent_distribution, reconstructed_action = vae.encode_and_decode(training_variables.s_current,
-                                                                              action=training_variables.a_current)
+            latent_distribution, reconstructed_action = vae.encode_and_decode(
+                training_variables.s_current, action=training_variables.a_current
+            )
 
             latent_shape = (batch_size, latent_distribution.ndim)
             target_latent_distribution = Gaussian(
                 mean=nn.Variable.from_numpy_array(np.zeros(shape=latent_shape, dtype=np.float32)),
-                ln_var=nn.Variable.from_numpy_array(np.zeros(shape=latent_shape, dtype=np.float32))
+                ln_var=nn.Variable.from_numpy_array(np.zeros(shape=latent_shape, dtype=np.float32)),
             )
 
             reconstruction_loss = RNF.mean_squared_error(training_variables.a_current, reconstructed_action)

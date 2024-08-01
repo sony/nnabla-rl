@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ class TestBCQ(object):
         dummy_env = E.DummyContinuous()
         bcq = A.BCQ(dummy_env)
 
-        assert bcq.__name__ == 'BCQ'
+        assert bcq.__name__ == "BCQ"
 
     def test_run_online_training(self):
         """Check that error occurs when calling online training."""
@@ -94,23 +94,24 @@ class TestBCQ(object):
         dummy_env = E.DummyContinuous()
         bcq = A.BCQ(dummy_env)
 
-        bcq._encoder_trainer_state = {'encoder_loss': 0.}
-        bcq._q_function_trainer_state = {'q_loss': 1., 'td_errors': np.array([0., 1.])}
-        bcq._perturbator_trainer_state = {'perturbator_loss': 2.}
+        bcq._encoder_trainer_state = {"encoder_loss": 0.0}
+        bcq._q_function_trainer_state = {"q_loss": 1.0, "td_errors": np.array([0.0, 1.0])}
+        bcq._perturbator_trainer_state = {"perturbator_loss": 2.0}
 
         latest_iteration_state = bcq.latest_iteration_state
-        assert 'encoder_loss' in latest_iteration_state['scalar']
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert 'perturbator_loss' in latest_iteration_state['scalar']
-        assert 'td_errors' in latest_iteration_state['histogram']
-        assert latest_iteration_state['scalar']['encoder_loss'] == 0.
-        assert latest_iteration_state['scalar']['q_loss'] == 1.
-        assert latest_iteration_state['scalar']['perturbator_loss'] == 2.
-        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+        assert "encoder_loss" in latest_iteration_state["scalar"]
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert "perturbator_loss" in latest_iteration_state["scalar"]
+        assert "td_errors" in latest_iteration_state["histogram"]
+        assert latest_iteration_state["scalar"]["encoder_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["q_loss"] == 1.0
+        assert latest_iteration_state["scalar"]["perturbator_loss"] == 2.0
+        assert np.allclose(latest_iteration_state["histogram"]["td_errors"], np.array([0.0, 1.0]))
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,8 +49,7 @@ class TestTimestepEvaluator(object):
     def test_evaluation(self):
         num_timesteps = 100
         max_episode_length = 10
-        dummy_env = E.DummyAtariEnv(
-            done_at_random=False, max_episode_length=max_episode_length)
+        dummy_env = E.DummyAtariEnv(done_at_random=False, max_episode_length=max_episode_length)
         evaluator = TimestepEvaluator(num_timesteps=num_timesteps)
 
         dummy_algorithm = A.Dummy(dummy_env)
@@ -64,8 +63,7 @@ class TestTimestepEvaluator(object):
     def test_timestep_limit(self):
         num_timesteps = 113
         max_episode_length = 10
-        dummy_env = E.DummyAtariEnv(
-            done_at_random=False, max_episode_length=max_episode_length)
+        dummy_env = E.DummyAtariEnv(done_at_random=False, max_episode_length=max_episode_length)
         evaluator = TimestepEvaluator(num_timesteps=num_timesteps)
 
         dummy_algorithm = A.Dummy(dummy_env)
@@ -77,5 +75,5 @@ class TestTimestepEvaluator(object):
         assert dummy_algorithm.compute_eval_action.call_count == num_timesteps + 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

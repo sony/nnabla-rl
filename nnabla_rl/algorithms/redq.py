@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,15 @@ from typing import Union
 import gym
 
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.algorithms.sac import (SAC, DefaultExplorerBuilder, DefaultPolicyBuilder, DefaultQFunctionBuilder,
-                                      DefaultReplayBufferBuilder, DefaultSolverBuilder, SACConfig)
+from nnabla_rl.algorithms.sac import (
+    SAC,
+    DefaultExplorerBuilder,
+    DefaultPolicyBuilder,
+    DefaultQFunctionBuilder,
+    DefaultReplayBufferBuilder,
+    DefaultSolverBuilder,
+    SACConfig,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
@@ -37,6 +44,7 @@ class REDQConfig(SACConfig):
         M (int): Size of subset M. Defaults to 2.
         N (int): Number of q functions of an ensemble. Defaults to 10.
     """
+
     # override timesteps
     start_timesteps: int = 5000
 
@@ -48,9 +56,9 @@ class REDQConfig(SACConfig):
     def __post_init__(self):
         """__post_init__ Check set values are in valid range."""
         super().__post_init__()
-        self._assert_positive(self.G, 'G')
-        self._assert_positive(self.N, 'N')
-        self._assert_positive(self.M, 'M')
+        self._assert_positive(self.G, "G")
+        self._assert_positive(self.N, "N")
+        self._assert_positive(self.M, "M")
 
 
 class REDQ(SAC):
@@ -87,35 +95,40 @@ class REDQ(SAC):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: REDQConfig
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: REDQConfig = REDQConfig(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super().__init__(env_or_env_info,
-                         config=config,
-                         q_function_builder=q_function_builder,
-                         q_solver_builder=q_solver_builder,
-                         policy_builder=policy_builder,
-                         policy_solver_builder=policy_solver_builder,
-                         temperature_solver_builder=temperature_solver_builder,
-                         replay_buffer_builder=replay_buffer_builder,
-                         explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: REDQConfig = REDQConfig(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super().__init__(
+            env_or_env_info,
+            config=config,
+            q_function_builder=q_function_builder,
+            q_solver_builder=q_solver_builder,
+            policy_builder=policy_builder,
+            policy_solver_builder=policy_solver_builder,
+            temperature_solver_builder=temperature_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_q_function_training(self, env_or_buffer):
         q_function_trainer_config = MT.q_value_trainers.REDQQTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             grad_clip=None,
             M=self._config.M,
             num_steps=self._config.num_steps,
             unroll_steps=self._config.critic_unroll_steps,
             burn_in_steps=self._config.critic_burn_in_steps,
-            reset_on_terminal=self._config.critic_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.critic_reset_rnn_on_terminal,
+        )
 
         q_function_trainer = MT.q_value_trainers.REDQQTrainer(
             train_functions=self._train_q_functions,
@@ -124,7 +137,8 @@ class REDQ(SAC):
             target_policy=self._pi,
             temperature=self._policy_trainer.get_temperature(),
             env_info=self._env_info,
-            config=q_function_trainer_config)
+            config=q_function_trainer_config,
+        )
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
             sync_model(q, target_q)
         return q_function_trainer
@@ -154,28 +168,30 @@ class REDQ(SAC):
         for _ in range(self._config.G):
             experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
             if num_steps == 1:
-                experiences_tuple = (experiences_tuple, )
+                experiences_tuple = (experiences_tuple,)
             assert len(experiences_tuple) == num_steps
 
             batch = None
             for experiences in reversed(experiences_tuple):
                 (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
-                rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
-                batch = TrainingBatch(batch_size=self._config.batch_size,
-                                      s_current=s,
-                                      a_current=a,
-                                      gamma=self._config.gamma,
-                                      reward=r,
-                                      non_terminal=non_terminal,
-                                      s_next=s_next,
-                                      weight=info['weights'],
-                                      next_step_batch=batch,
-                                      rnn_states=rnn_states)
+                rnn_states = rnn_states_dict["rnn_states"] if "rnn_states" in rnn_states_dict else {}
+                batch = TrainingBatch(
+                    batch_size=self._config.batch_size,
+                    s_current=s,
+                    a_current=a,
+                    gamma=self._config.gamma,
+                    reward=r,
+                    non_terminal=non_terminal,
+                    s_next=s_next,
+                    weight=info["weights"],
+                    next_step_batch=batch,
+                    rnn_states=rnn_states,
+                )
 
             self._q_function_trainer_state = self._q_function_trainer.train(batch)
             for q, target_q in zip(self._train_q_functions, self._target_q_functions):
                 sync_model(q, target_q, tau=self._config.tau)
-            td_errors = self._q_function_trainer_state['td_errors']
+            td_errors = self._q_function_trainer_state["td_errors"]
             replay_buffer.update_priorities(td_errors)
 
         self._policy_trainer_state = self._policy_trainer.train(batch)

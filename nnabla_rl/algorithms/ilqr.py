@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,13 +46,10 @@ class iLQR(DDP):
         config (:py:class:`iLQRConfig <nnabla_rl.algorithmss.ilqr.iLQRConfig>`):
             the parameter for iLQR controller
     """
+
     _config: iLQRConfig
 
-    def __init__(self,
-                 env_or_env_info,
-                 dynamics: Dynamics,
-                 cost_function: CostFunction,
-                 config=iLQRConfig()):
+    def __init__(self, env_or_env_info, dynamics: Dynamics, cost_function: CostFunction, config=iLQRConfig()):
         super(iLQR, self).__init__(env_or_env_info, dynamics, cost_function, config=config)
 
     def _backward_pass(self, trajectory, dynamics, cost_function, mu):

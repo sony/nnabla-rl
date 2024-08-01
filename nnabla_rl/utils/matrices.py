@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,14 +32,12 @@ def compute_hessian(y, x):
         param.grad.zero()
     grads = nn.grad([y], x)
     if len(grads) > 1:
-        flat_grads = NF.concatenate(
-            *[NF.reshape(grad, (-1,), inplace=False) for grad in grads])
+        flat_grads = NF.concatenate(*[NF.reshape(grad, (-1,), inplace=False) for grad in grads])
     else:
         flat_grads = NF.reshape(grads[0], (-1,), inplace=False)
     flat_grads.need_grad = True
 
-    hessian = np.zeros(
-        (flat_grads.shape[0], flat_grads.shape[0]), dtype=np.float32)
+    hessian = np.zeros((flat_grads.shape[0], flat_grads.shape[0]), dtype=np.float32)
 
     for i in range(flat_grads.shape[0]):
         flat_grads[i].forward()
@@ -50,7 +48,7 @@ def compute_hessian(y, x):
         num_index = 0
         for param in x:
             grad = param.g.flatten()  # grad of grad so this is hessian
-            hessian[i, num_index:num_index+len(grad)] = grad
+            hessian[i, num_index : num_index + len(grad)] = grad
             num_index += len(grad)
 
     return hessian

@@ -18,9 +18,11 @@ from unittest import mock
 import numpy as np
 import pytest
 
-from nnabla_rl.environment_explorers.epsilon_greedy_explorer import (LinearDecayEpsilonGreedyExplorer,
-                                                                     LinearDecayEpsilonGreedyExplorerConfig,
-                                                                     epsilon_greedy_action_selection)
+from nnabla_rl.environment_explorers.epsilon_greedy_explorer import (
+    LinearDecayEpsilonGreedyExplorer,
+    LinearDecayEpsilonGreedyExplorerConfig,
+    epsilon_greedy_action_selection,
+)
 
 
 class TestEpsilonGreedyActionStrategy(object):
@@ -28,12 +30,10 @@ class TestEpsilonGreedyActionStrategy(object):
         greedy_selector_mock = mock.MagicMock(return_value=(1, {}))
         random_selector_mock = mock.MagicMock(return_value=(2, {}))
 
-        state = 'test'
+        state = "test"
         (should_be_greedy, _), is_greedy = epsilon_greedy_action_selection(
-            state,
-            greedy_selector_mock,
-            random_selector_mock,
-            epsilon=0.0)
+            state, greedy_selector_mock, random_selector_mock, epsilon=0.0
+        )
         assert should_be_greedy == 1
         assert is_greedy is True
         greedy_selector_mock.assert_called_once()
@@ -42,12 +42,10 @@ class TestEpsilonGreedyActionStrategy(object):
         greedy_selector_mock = mock.MagicMock(return_value=(1, {}))
         random_selector_mock = mock.MagicMock(return_value=(2, {}))
 
-        state = 'test'
+        state = "test"
         (should_be_random, _), is_greedy = epsilon_greedy_action_selection(
-            state,
-            greedy_selector_mock,
-            random_selector_mock,
-            epsilon=1.0)
+            state, greedy_selector_mock, random_selector_mock, epsilon=1.0
+        )
         assert should_be_random == 2
         assert is_greedy is False
         random_selector_mock.assert_called_once()
@@ -56,12 +54,10 @@ class TestEpsilonGreedyActionStrategy(object):
         greedy_selector_mock = mock.MagicMock(return_value=(1, {}))
         random_selector_mock = mock.MagicMock(return_value=(2, {}))
 
-        state = 'test'
+        state = "test"
         (action, _), is_greedy = epsilon_greedy_action_selection(
-            state,
-            greedy_selector_mock,
-            random_selector_mock,
-            epsilon=0.5)
+            state, greedy_selector_mock, random_selector_mock, epsilon=0.5
+        )
         if is_greedy:
             assert action == 1
             greedy_selector_mock.assert_called_once()
@@ -75,17 +71,15 @@ class TestEpsilonGreedyActionStrategy(object):
         max_explore_steps = 100
         greedy_selector_mock = mock.MagicMock(return_value=(1, {}))
         random_selector_mock = mock.MagicMock(return_value=(2, {}))
-        config = LinearDecayEpsilonGreedyExplorerConfig(initial_epsilon=initial_epsilon,
-                                                        final_epsilon=final_epsilon,
-                                                        max_explore_steps=max_explore_steps)
-        explorer = LinearDecayEpsilonGreedyExplorer(greedy_selector_mock,
-                                                    random_selector_mock,
-                                                    env_info=None,
-                                                    config=config)
+        config = LinearDecayEpsilonGreedyExplorerConfig(
+            initial_epsilon=initial_epsilon, final_epsilon=final_epsilon, max_explore_steps=max_explore_steps
+        )
+        explorer = LinearDecayEpsilonGreedyExplorer(
+            greedy_selector_mock, random_selector_mock, env_info=None, config=config
+        )
 
         def expected_epsilon(step):
-            epsilon = initial_epsilon - \
-                (initial_epsilon - final_epsilon) / max_explore_steps * step
+            epsilon = initial_epsilon - (initial_epsilon - final_epsilon) / max_explore_steps * step
             return max(epsilon, final_epsilon)
 
         assert np.isclose(explorer._compute_epsilon(1), expected_epsilon(1))
@@ -94,20 +88,23 @@ class TestEpsilonGreedyActionStrategy(object):
         assert np.isclose(explorer._compute_epsilon(100), expected_epsilon(100))
         assert explorer._compute_epsilon(200) == final_epsilon
 
-    def test_return_explorer_info(self, ):
+    def test_return_explorer_info(
+        self,
+    ):
         initial_epsilon = 1.0
         final_epsilon = 0.0
         max_explore_steps = 100
         greedy_selector_mock = mock.MagicMock(return_value=(1, {}))
         random_selector_mock = mock.MagicMock(return_value=(2, {}))
-        config = LinearDecayEpsilonGreedyExplorerConfig(initial_epsilon=initial_epsilon,
-                                                        final_epsilon=final_epsilon,
-                                                        max_explore_steps=max_explore_steps,
-                                                        append_explorer_info=True)
-        explorer = LinearDecayEpsilonGreedyExplorer(greedy_selector_mock,
-                                                    random_selector_mock,
-                                                    env_info=None,
-                                                    config=config)
+        config = LinearDecayEpsilonGreedyExplorerConfig(
+            initial_epsilon=initial_epsilon,
+            final_epsilon=final_epsilon,
+            max_explore_steps=max_explore_steps,
+            append_explorer_info=True,
+        )
+        explorer = LinearDecayEpsilonGreedyExplorer(
+            greedy_selector_mock, random_selector_mock, env_info=None, config=config
+        )
 
         action, action_info = explorer.action(50, np.random.rand(5))
 
@@ -124,5 +121,5 @@ class TestEpsilonGreedyActionStrategy(object):
         assert action_info["explore_rate"] == 0.5
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

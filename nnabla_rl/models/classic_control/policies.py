@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,14 +43,11 @@ class REINFORCEDiscretePolicy(StochasticPolicy):
 
     def pi(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=200, name="linear1",
-                           w_init=RI.HeNormal(s.shape[1], 200))
+            h = NPF.affine(s, n_outmaps=200, name="linear1", w_init=RI.HeNormal(s.shape[1], 200))
             h = NF.leaky_relu(h)
-            h = NPF.affine(h, n_outmaps=200, name="linear2",
-                           w_init=RI.HeNormal(s.shape[1], 200))
+            h = NPF.affine(h, n_outmaps=200, name="linear2", w_init=RI.HeNormal(s.shape[1], 200))
             h = NF.leaky_relu(h)
-            z = NPF.affine(h, n_outmaps=self._action_dim,
-                           name="linear3", w_init=RI.LeCunNormal(s.shape[1], 200))
+            z = NPF.affine(h, n_outmaps=self._action_dim, name="linear3", w_init=RI.LeCunNormal(s.shape[1], 200))
 
         return D.Softmax(z=z)
 
@@ -79,14 +76,11 @@ class REINFORCEContinousPolicy(StochasticPolicy):
     def pi(self, s: nn.Variable) -> nn.Variable:
         batch_size = s.shape[0]
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=200, name="linear1",
-                           w_init=RI.HeNormal(s.shape[1], 200))
+            h = NPF.affine(s, n_outmaps=200, name="linear1", w_init=RI.HeNormal(s.shape[1], 200))
             h = NF.leaky_relu(h)
-            h = NPF.affine(h, n_outmaps=200, name="linear2",
-                           w_init=RI.HeNormal(s.shape[1], 200))
+            h = NPF.affine(h, n_outmaps=200, name="linear2", w_init=RI.HeNormal(s.shape[1], 200))
             h = NF.leaky_relu(h)
-            z = NPF.affine(h, n_outmaps=self._action_dim,
-                           name="linear3", w_init=RI.HeNormal(s.shape[1], 200))
+            z = NPF.affine(h, n_outmaps=self._action_dim, name="linear3", w_init=RI.HeNormal(s.shape[1], 200))
 
         ln_var = nn.Variable.from_numpy_array(np.tile(self._fixed_ln_var, (batch_size, 1)))
         return D.Gaussian(z, ln_var)

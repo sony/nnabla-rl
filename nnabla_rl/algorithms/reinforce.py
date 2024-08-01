@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ class REINFORCEConfig(AlgorithmConfig):
         fixed_ln_var (float): Fixed log variance of the policy.\
             This configuration is only valid when the enviroment is continuous. Defaults to 1.0.
     """
+
     reward_scale: float = 0.01
     num_rollouts_per_train_iteration: int = 10
     learning_rate: float = 1e-3
@@ -63,60 +64,59 @@ class REINFORCEConfig(AlgorithmConfig):
 
         Check the set values are in valid range.
         """
-        self._assert_positive(self.reward_scale, 'reward_scale')
-        self._assert_positive(self.num_rollouts_per_train_iteration, 'num_rollouts_per_train_iteration')
-        self._assert_positive(self.learning_rate, 'learning_rate')
-        self._assert_positive(self.clip_grad_norm, 'clip_grad_norm')
+        self._assert_positive(self.reward_scale, "reward_scale")
+        self._assert_positive(self.num_rollouts_per_train_iteration, "num_rollouts_per_train_iteration")
+        self._assert_positive(self.learning_rate, "learning_rate")
+        self._assert_positive(self.clip_grad_norm, "clip_grad_norm")
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: REINFORCEConfig,
-                    **kwargs) -> StochasticPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: REINFORCEConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
         if env_info.is_discrete_action_env():
             return self._build_discrete_policy(scope_name, env_info, algorithm_config)
         else:
             return self._build_continuous_policy(scope_name, env_info, algorithm_config)
 
-    def _build_continuous_policy(self,
-                                 scope_name: str,
-                                 env_info: EnvironmentInfo,
-                                 algorithm_config: REINFORCEConfig,
-                                 **kwargs) -> StochasticPolicy:
+    def _build_continuous_policy(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: REINFORCEConfig, **kwargs
+    ) -> StochasticPolicy:
         return REINFORCEContinousPolicy(scope_name, env_info.action_dim, algorithm_config.fixed_ln_var)
 
-    def _build_discrete_policy(self,
-                               scope_name: str,
-                               env_info: EnvironmentInfo,
-                               algorithm_config: REINFORCEConfig,
-                               **kwargs) -> StochasticPolicy:
+    def _build_discrete_policy(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: REINFORCEConfig, **kwargs
+    ) -> StochasticPolicy:
         return REINFORCEDiscretePolicy(scope_name, env_info.action_dim)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: REINFORCEConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: REINFORCEConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: REINFORCEConfig,
-                       algorithm: "REINFORCE",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: REINFORCEConfig,
+        algorithm: "REINFORCE",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.RawPolicyExplorerConfig(
             reward_scalar=algorithm_config.reward_scale,
             initial_step_num=algorithm.iteration_num,
-            timelimit_as_terminal=False
+            timelimit_as_terminal=False,
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
-                                        env_info=env_info,
-                                        config=explorer_config)
+        explorer = EE.RawPolicyExplorer(
+            policy_action_selector=algorithm._exploration_action_selector, env_info=env_info, config=explorer_config
+        )
         return explorer
 
 
@@ -142,6 +142,7 @@ class REINFORCE(Algorithm):
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
     """
+
     _config: REINFORCEConfig
     _policy: StochasticPolicy
     _policy_solver: nn.solver.Solver
@@ -155,12 +156,14 @@ class REINFORCE(Algorithm):
 
     _policy_trainer_state: Dict[str, Any]
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: REINFORCEConfig = REINFORCEConfig(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: REINFORCEConfig = REINFORCEConfig(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(REINFORCE, self).__init__(env_or_env_info, config=config)
 
         self._explorer_builder = explorer_builder
@@ -170,9 +173,11 @@ class REINFORCE(Algorithm):
             self._policy_solver = policy_solver_builder(self._env_info, self._config)
 
         self._evaluation_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._policy.shallowcopy(), deterministic=False)
+            self._env_info, self._policy.shallowcopy(), deterministic=False
+        )
         self._exploration_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._policy.shallowcopy(), deterministic=False)
+            self._env_info, self._policy.shallowcopy(), deterministic=False
+        )
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
@@ -192,12 +197,14 @@ class REINFORCE(Algorithm):
     def _setup_policy_training(self, env_or_buffer):
         policy_trainer_config = MT.policy_trainers.REINFORCEPolicyTrainerConfig(
             pi_loss_scalar=1.0 / self._config.num_rollouts_per_train_iteration,
-            grad_clip_norm=self._config.clip_grad_norm)
+            grad_clip_norm=self._config.clip_grad_norm,
+        )
         policy_trainer = MT.policy_trainers.REINFORCEPolicyTrainer(
             models=self._policy,
             solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
-            config=policy_trainer_config)
+            config=policy_trainer_config,
+        )
         return policy_trainer
 
     def _run_online_training_iteration(self, env):
@@ -218,11 +225,8 @@ class REINFORCE(Algorithm):
         s_batch, a_batch, target_return = self._align_experiences_and_compute_accumulated_reward(experiences)
         batch_size = len(s_batch)
         extra = {}
-        extra['target_return'] = np.reshape(target_return, newshape=(batch_size, 1))
-        batch = TrainingBatch(batch_size,
-                              s_current=s_batch,
-                              a_current=a_batch,
-                              extra=extra)
+        extra["target_return"] = np.reshape(target_return, newshape=(batch_size, 1))
+        batch = TrainingBatch(batch_size, s_current=s_batch, a_current=a_batch, extra=extra)
 
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
@@ -243,8 +247,7 @@ class REINFORCE(Algorithm):
 
             s_batch = np.concatenate((s_batch, s_seq), axis=0)
             a_batch = np.concatenate((a_batch, a_seq), axis=0)
-            accumulated_reward_batch = np.concatenate(
-                (accumulated_reward_batch, accumulated_reward))
+            accumulated_reward_batch = np.concatenate((accumulated_reward_batch, accumulated_reward))
 
         return s_batch, a_batch, accumulated_reward_batch
 
@@ -266,15 +269,16 @@ class REINFORCE(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(REINFORCE, self).latest_iteration_state
-        if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
+        if hasattr(self, "_policy_trainer_state"):
+            latest_iteration_state["scalar"].update({"pi_loss": float(self._policy_trainer_state["pi_loss"])})
         return latest_iteration_state
 
     @property

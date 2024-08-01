@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,19 +29,19 @@ from nnabla_rl.utils.misc import create_variable, create_variables
 
 @dataclass
 class SquaredTDQFunctionTrainerConfig(MultiStepTrainerConfig):
-    loss_type: str = 'squared'
-    reduction_method: str = 'mean'
+    loss_type: str = "squared"
+    reduction_method: str = "mean"
     grad_clip: Optional[tuple] = None
     q_loss_scalar: float = 1.0
     reward_dimension: int = 1
     huber_delta: Optional[float] = None
 
     def __post_init__(self):
-        self._assert_one_of(self.loss_type, ['squared', 'huber'], 'loss_type')
-        self._assert_one_of(self.reduction_method, ['sum', 'mean'], 'reduction_method')
+        self._assert_one_of(self.loss_type, ["squared", "huber"], "loss_type")
+        self._assert_one_of(self.reduction_method, ["sum", "mean"], "reduction_method")
         if self.grad_clip is not None:
-            self._assert_ascending_order(self.grad_clip, 'grad_clip')
-            self._assert_length(self.grad_clip, 2, 'grad_clip')
+            self._assert_ascending_order(self.grad_clip, "grad_clip")
+            self._assert_length(self.grad_clip, 2, "grad_clip")
 
 
 class SquaredTDQFunctionTrainer(MultiStepTrainer):
@@ -51,20 +51,24 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
     _q_loss: nn.Variable
     _prev_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 models: Union[QFunction, Sequence[QFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: SquaredTDQFunctionTrainerConfig = SquaredTDQFunctionTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[QFunction, Sequence[QFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: SquaredTDQFunctionTrainerConfig = SquaredTDQFunctionTrainerConfig(),
+    ):
         self._prev_rnn_states = {}
         super(SquaredTDQFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -96,13 +100,11 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
             q_solver.update()
 
         trainer_state = {}
-        trainer_state['q_loss'] = self._q_loss.d.copy()
-        trainer_state['td_errors'] = self._td_error.d.copy()
+        trainer_state["q_loss"] = self._q_loss.d.copy()
+        trainer_state["td_errors"] = self._td_error.d.copy()
         return trainer_state
 
-    def _build_training_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables):
+    def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         self._q_loss = 0
         ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
         for step_index, variables in enumerate(training_variables):
@@ -111,10 +113,7 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         models = cast(Sequence[QFunction], models)
 
         # NOTE: Target q value depends on underlying implementation
@@ -129,16 +128,15 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
             self._q_loss += 0.0 if ignore_loss else q_loss
 
         # FIXME: using the last q function's td error for prioritized replay. Is this fine?
-        self._td_error = extra['td_error']
+        self._td_error = extra["td_error"]
         self._td_error.persistent = True
 
     def _compute_target(self, training_variables: TrainingVariables) -> nn.Variable:
         raise NotImplementedError
 
-    def _compute_loss(self,
-                      model: QFunction,
-                      target_q: nn.Variable,
-                      training_variables: TrainingVariables) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
+    def _compute_loss(
+        self, model: QFunction, target_q: nn.Variable, training_variables: TrainingVariables
+    ) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
         s_current = training_variables.s_current
         a_current = training_variables.a_current
 
@@ -152,21 +150,21 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
             minimum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_min))
             maximum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_max))
             td_error = NF.clip_grad_by_value(td_error, minimum, maximum)
-        if self._config.loss_type == 'squared':
+        if self._config.loss_type == "squared":
             squared_td_error = training_variables.weight * NF.pow_scalar(td_error, 2.0)
-        elif self._config.loss_type == 'huber':
+        elif self._config.loss_type == "huber":
             zero = nn.Variable.from_numpy_array(np.zeros(shape=td_error.shape))
             squared_td_error = training_variables.weight * NF.huber_loss(td_error, zero, delta=self._config.huber_delta)
         else:
             raise RuntimeError
-        if self._config.reduction_method == 'mean':
+        if self._config.reduction_method == "mean":
             q_loss += self._config.q_loss_scalar * NF.mean(squared_td_error)
-        elif self._config.reduction_method == 'sum':
+        elif self._config.reduction_method == "sum":
             q_loss += self._config.q_loss_scalar * NF.sum(squared_td_error)
         else:
             raise RuntimeError
 
-        extra = {'td_error': td_error}
+        extra = {"td_error": td_error}
         return q_loss, extra
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
@@ -185,15 +183,17 @@ class SquaredTDQFunctionTrainer(MultiStepTrainer):
                 rnn_state_variables = create_variables(batch_size, model.internal_state_shapes())
                 rnn_states[model.scope_name] = rnn_state_variables
 
-        training_variables = TrainingVariables(batch_size=batch_size,
-                                               s_current=s_current_var,
-                                               a_current=a_current_var,
-                                               reward=reward_var,
-                                               gamma=gamma_var,
-                                               non_terminal=non_terminal_var,
-                                               s_next=s_next_var,
-                                               weight=weight_var,
-                                               rnn_states=rnn_states)
+        training_variables = TrainingVariables(
+            batch_size=batch_size,
+            s_current=s_current_var,
+            a_current=a_current_var,
+            reward=reward_var,
+            gamma=gamma_var,
+            non_terminal=non_terminal_var,
+            s_next=s_next_var,
+            weight=weight_var,
+            rnn_states=rnn_states,
+        )
         return training_variables
 
     @property

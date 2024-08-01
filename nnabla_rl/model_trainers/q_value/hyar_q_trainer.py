@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,14 +48,16 @@ class HyARQTrainer(TD3QTrainer):
     _target_policy: DeterministicPolicy
     _config: HyARQTrainerConfig
 
-    def __init__(self,
-                 train_functions: Union[QFunction, Sequence[QFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_functions: Union[QFunction, Sequence[QFunction]],
-                 target_policy: DeterministicPolicy,
-                 vae: HyARVAE,
-                 env_info: EnvironmentInfo,
-                 config: HyARQTrainerConfig = HyARQTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[QFunction, Sequence[QFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_functions: Union[QFunction, Sequence[QFunction]],
+        target_policy: DeterministicPolicy,
+        vae: HyARVAE,
+        env_info: EnvironmentInfo,
+        config: HyARQTrainerConfig = HyARQTrainerConfig(),
+    ):
         self._vae = vae
         super().__init__(train_functions, solvers, target_functions, target_policy, env_info, config)
 
@@ -79,33 +81,36 @@ class HyARQTrainer(TD3QTrainer):
 
     def _compute_noisy_action(self, state):
         a_next_var = self._target_policy.pi(state)
-        epsilon = NF.clip_by_value(NF.randn(sigma=self._config.train_action_noise_sigma, shape=a_next_var.shape),
-                                   min=-self._config.train_action_noise_abs,
-                                   max=self._config.train_action_noise_abs)
+        epsilon = NF.clip_by_value(
+            NF.randn(sigma=self._config.train_action_noise_sigma, shape=a_next_var.shape),
+            min=-self._config.train_action_noise_abs,
+            max=self._config.train_action_noise_abs,
+        )
         a_tilde_var = a_next_var + epsilon
         a_tilde_var = NF.clip_by_value(a_tilde_var, self._config.noisy_action_min, self._config.noisy_action_max)
         return a_tilde_var
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, Any],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs):
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, Any],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ):
         for t, b in zip(training_variables, batch):
-            set_data_to_variable(t.extra['e'], b.extra['e'])
-            set_data_to_variable(t.extra['z'], b.extra['z'])
-            set_data_to_variable(t.extra['c_rate'], b.extra['c_rate'])
-            set_data_to_variable(t.extra['ds_rate'], b.extra['ds_rate'])
+            set_data_to_variable(t.extra["e"], b.extra["e"])
+            set_data_to_variable(t.extra["z"], b.extra["z"])
+            set_data_to_variable(t.extra["c_rate"], b.extra["c_rate"])
+            set_data_to_variable(t.extra["ds_rate"], b.extra["ds_rate"])
         result = super()._update_model(models, solvers, batch, training_variables, **kwargs)
         return result
 
-    def _compute_loss(self,
-                      model: QFunction,
-                      target_q: nn.Variable,
-                      training_variables: TrainingVariables) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
-        e = training_variables.extra['e']
-        z = training_variables.extra['z']
+    def _compute_loss(
+        self, model: QFunction, target_q: nn.Variable, training_variables: TrainingVariables
+    ) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
+        e = training_variables.extra["e"]
+        z = training_variables.extra["z"]
 
         e, z = self._reweight_action(e, z, training_variables)
         latent_action = NF.concatenate(e, z)
@@ -116,38 +121,39 @@ class HyARQTrainer(TD3QTrainer):
         td_error = target_q - q
 
         q_loss = 0
-        if self._config.loss_type == 'squared':
+        if self._config.loss_type == "squared":
             squared_td_error = training_variables.weight * NF.pow_scalar(td_error, 2.0)
         else:
             raise RuntimeError
-        if self._config.reduction_method == 'mean':
+        if self._config.reduction_method == "mean":
             q_loss += self._config.q_loss_scalar * NF.mean(squared_td_error)
         else:
             raise RuntimeError
-        extra = {'td_error': td_error}
+        extra = {"td_error": td_error}
         return q_loss, extra
 
     def _reweight_action(self, e, z, training_variables: TrainingVariables):
-        c_rate = training_variables.extra['c_rate']
-        ds_rate = training_variables.extra['ds_rate']
+        c_rate = training_variables.extra["c_rate"]
+        ds_rate = training_variables.extra["ds_rate"]
 
         s_current = training_variables.s_current
         s_next = training_variables.s_next
         action1, action2 = training_variables.a_current
         action_space = cast(gym.spaces.Tuple, self._env_info.action_space)
-        a_continuous, a_discrete = (action1, action2) if isinstance(
-            action_space[0], gym.spaces.Box) else (action2, action1)
+        a_continuous, a_discrete = (
+            (action1, action2) if isinstance(action_space[0], gym.spaces.Box) else (action2, action1)
+        )
 
         a_discrete_emb = self._vae.encode_discrete_action(a_discrete)
-        a_discrete_emb = NF.clip_by_value(a_discrete_emb,
-                                          self._config.embed_action_min,
-                                          self._config.embed_action_max)
-        noise = NF.clip_by_value(NF.randn(shape=a_discrete_emb.shape) * self._config.embed_action_noise_sigma,
-                                 -self._config.embed_action_noise_abs,
-                                 self._config.embed_action_noise_abs)
-        a_discrete_emb_with_noise = NF.clip_by_value(a_discrete_emb + noise,
-                                                     self._config.embed_action_min,
-                                                     self._config.embed_action_max)
+        a_discrete_emb = NF.clip_by_value(a_discrete_emb, self._config.embed_action_min, self._config.embed_action_max)
+        noise = NF.clip_by_value(
+            NF.randn(shape=a_discrete_emb.shape) * self._config.embed_action_noise_sigma,
+            -self._config.embed_action_noise_abs,
+            self._config.embed_action_noise_abs,
+        )
+        a_discrete_emb_with_noise = NF.clip_by_value(
+            a_discrete_emb + noise, self._config.embed_action_min, self._config.embed_action_max
+        )
 
         a_discrete_new = a_discrete
         a_discrete_old = self._vae.decode_discrete_action(e)
@@ -181,10 +187,10 @@ class HyARQTrainer(TD3QTrainer):
         training_variables = super()._setup_training_variables(batch_size)
 
         extras = {}
-        extras['e'] = create_variable(batch_size, (self._config.embed_dim, ))
-        extras['z'] = create_variable(batch_size, (self._config.latent_dim, ))
-        extras['ds_rate'] = create_variable(1, (1, ))
-        extras['c_rate'] = create_variable(1, ((self._config.latent_dim, ), (self._config.latent_dim, )))
+        extras["e"] = create_variable(batch_size, (self._config.embed_dim,))
+        extras["z"] = create_variable(batch_size, (self._config.latent_dim,))
+        extras["ds_rate"] = create_variable(1, (1,))
+        extras["c_rate"] = create_variable(1, ((self._config.latent_dim,), (self._config.latent_dim,)))
 
         training_variables.extra.update(extras)
         return training_variables

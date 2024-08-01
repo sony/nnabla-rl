@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ class TemplatePolicy(StochasticPolicy):
             h = NF.relu(x=h)
             h = NPF.affine(h, n_outmaps=256, name="linear2")
             h = NF.relu(x=h)
-            h = NPF.affine(h, n_outmaps=self._action_dim*2, name="linear3")
+            h = NPF.affine(h, n_outmaps=self._action_dim * 2, name="linear3")
             reshaped = NF.reshape(h, shape=(-1, 2, self._action_dim))
 
             # Split the output into mean and variance of the Gaussian distribution.

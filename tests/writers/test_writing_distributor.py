@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ import numpy as np
 from nnabla_rl.writers.writing_distributor import WritingDistributor
 
 
-class TestWritingDistributor():
+class TestWritingDistributor:
     def test_write_scalar(self):
         writers = [self._new_mock_writer() for _ in range(10)]
 
         distributor = WritingDistributor(writers)
-        distributor.write_scalar(1, {'test': 100})
+        distributor.write_scalar(1, {"test": 100})
 
         for writer in writers:
             writer.write_scalar.assert_called_once()
@@ -34,7 +34,7 @@ class TestWritingDistributor():
         writers = [self._new_mock_writer() for _ in range(10)]
 
         distributor = WritingDistributor(writers)
-        distributor.write_histogram(1, {'test': [100, 100]})
+        distributor.write_histogram(1, {"test": [100, 100]})
 
         for writer in writers:
             writer.write_histogram.assert_called_once()
@@ -44,7 +44,7 @@ class TestWritingDistributor():
 
         distributor = WritingDistributor(writers)
         image = np.empty(shape=(3, 10, 10))
-        distributor.write_image(1, {'test': image})
+        distributor.write_image(1, {"test": image})
 
         for writer in writers:
             writer.write_image.assert_called_once()

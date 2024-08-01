@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,8 +73,9 @@ class ReplayBuffer(object):
         for experience in experiences:
             self.append(experience)
 
-    def sample(self, num_samples: int = 1, num_steps: int = 1) \
-            -> Tuple[Union[Sequence[Experience], Tuple[Sequence[Experience], ...]], Dict[str, Any]]:
+    def sample(
+        self, num_samples: int = 1, num_steps: int = 1
+    ) -> Tuple[Union[Sequence[Experience], Tuple[Sequence[Experience], ...]], Dict[str, Any]]:
         """Randomly sample num_samples experiences from the replay buffer.
 
         Args:
@@ -96,12 +97,13 @@ class ReplayBuffer(object):
         """
         max_index = len(self) - num_steps + 1
         if num_samples > max_index:
-            raise ValueError(f'num_samples: {num_samples} is greater than the size of buffer: {max_index}')
+            raise ValueError(f"num_samples: {num_samples} is greater than the size of buffer: {max_index}")
         indices = self._random_indices(num_samples=num_samples, max_index=max_index)
         return self.sample_indices(indices, num_steps=num_steps)
 
-    def sample_indices(self, indices: Sequence[int], num_steps: int = 1) \
-            -> Tuple[Union[Sequence[Experience], Tuple[Sequence[Experience], ...]], Dict[str, Any]]:
+    def sample_indices(
+        self, indices: Sequence[int], num_steps: int = 1
+    ) -> Tuple[Union[Sequence[Experience], Tuple[Sequence[Experience], ...]], Dict[str, Any]]:
         """Sample experiences for given indices from the replay buffer.
 
         Args:
@@ -118,14 +120,14 @@ class ReplayBuffer(object):
             ValueError: If indices are empty or num_steps is 0 or negative.
         """
         if len(indices) == 0:
-            raise ValueError('Indices are empty')
+            raise ValueError("Indices are empty")
         if num_steps < 1:
-            raise ValueError(f'num_steps: {num_steps} should be greater than 0!')
+            raise ValueError(f"num_steps: {num_steps} should be greater than 0!")
         experiences: Union[Sequence[Experience], Tuple[Sequence[Experience], ...]]
         if num_steps == 1:
             experiences = [self.__getitem__(index) for index in indices]
         else:
-            experiences = tuple([self.__getitem__(index+i) for index in indices] for i in range(num_steps))
+            experiences = tuple([self.__getitem__(index + i) for index in indices] for i in range(num_steps))
         weights = np.ones([len(indices), 1])
         return experiences, dict(weights=weights)
 

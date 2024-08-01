@@ -30,19 +30,23 @@ from nnabla_rl.utils.misc import retrieve_internal_states
 
 
 @contextlib.contextmanager
-def rnn_support(model: Model,
-                prev_rnn_states: Dict[str, Dict[str, nn.Variable]],
-                train_rnn_states: Dict[str, Dict[str, nn.Variable]],
-                training_variables: 'TrainingVariables',
-                config: 'TrainerConfig'):
+def rnn_support(
+    model: Model,
+    prev_rnn_states: Dict[str, Dict[str, nn.Variable]],
+    train_rnn_states: Dict[str, Dict[str, nn.Variable]],
+    training_variables: "TrainingVariables",
+    config: "TrainerConfig",
+):
     def stop_backprop(rnn_states):
         for value in rnn_states.values():
             value.need_grad = False
+
     try:
         if model.is_recurrent():
             scope_name = model.scope_name
             internal_states = retrieve_internal_states(
-                scope_name, prev_rnn_states, train_rnn_states, training_variables, config.reset_on_terminal)
+                scope_name, prev_rnn_states, train_rnn_states, training_variables, config.reset_on_terminal
+            )
             model.set_internal_states(internal_states)
         yield
     finally:
@@ -54,13 +58,14 @@ def rnn_support(model: Model,
 
 
 class LossIntegration(Enum):
-    ALL_TIMESTEPS = 1, 'Computed loss is summed over all timesteps'
-    LAST_TIMESTEP_ONLY = 2, 'Only the last timestep\'s loss is used.'
+    ALL_TIMESTEPS = 1, "Computed loss is summed over all timesteps"
+    LAST_TIMESTEP_ONLY = 2, "Only the last timestep's loss is used."
 
 
 @dataclass
 class TrainerConfig(Configuration):
     """Configuration class for ModelTrainer."""
+
     unroll_steps: int = 1
     burn_in_steps: int = 0
     reset_on_terminal: bool = True  # Reset internal rnn state to given state if previous state is terminal.
@@ -68,11 +73,11 @@ class TrainerConfig(Configuration):
 
     def __post_init__(self):
         super(TrainerConfig, self).__post_init__()
-        self._assert_positive(self.unroll_steps, 'unroll_steps')
-        self._assert_positive_or_zero(self.burn_in_steps, 'burn_in_steps')
+        self._assert_positive(self.unroll_steps, "unroll_steps")
+        self._assert_positive_or_zero(self.burn_in_steps, "burn_in_steps")
 
 
-class TrainingBatch():
+class TrainingBatch:
     """Mini-Batch class for train.
 
     Args:
@@ -89,6 +94,7 @@ class TrainingBatch():
            the mini-batch for next step (used in n-step learning)
        rnn_states (Dict[str, Dict[str, np.array]]): the rnn internal state values
     """
+
     batch_size: int
     s_current: Union[np.ndarray, Tuple[np.ndarray, ...]]
     a_current: np.ndarray
@@ -99,21 +105,23 @@ class TrainingBatch():
     weight: np.ndarray
     extra: Dict[str, np.ndarray]
     # Used in n-step/rnn learning
-    next_step_batch: Optional['TrainingBatch']
+    next_step_batch: Optional["TrainingBatch"]
     rnn_states: Dict[str, Dict[str, np.ndarray]]
 
-    def __init__(self,
-                 batch_size: int,
-                 s_current: Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]] = None,
-                 a_current: Optional[np.ndarray] = None,
-                 reward: Optional[np.ndarray] = None,
-                 gamma: Optional[float] = None,
-                 non_terminal: Optional[np.ndarray] = None,
-                 s_next: Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]] = None,
-                 weight: Optional[np.ndarray] = None,
-                 extra: Optional[Dict[str, np.ndarray]] = None,
-                 next_step_batch: Optional['TrainingBatch'] = None,
-                 rnn_states: Optional[Dict[str, Dict[str, np.ndarray]]] = None):
+    def __init__(
+        self,
+        batch_size: int,
+        s_current: Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]] = None,
+        a_current: Optional[np.ndarray] = None,
+        reward: Optional[np.ndarray] = None,
+        gamma: Optional[float] = None,
+        non_terminal: Optional[np.ndarray] = None,
+        s_next: Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]] = None,
+        weight: Optional[np.ndarray] = None,
+        extra: Optional[Dict[str, np.ndarray]] = None,
+        next_step_batch: Optional["TrainingBatch"] = None,
+        rnn_states: Optional[Dict[str, Dict[str, np.ndarray]]] = None,
+    ):
         assert 0 < batch_size
         self.batch_size = batch_size
         if s_current is not None:
@@ -159,7 +167,7 @@ class TrainingBatch():
         return num_steps
 
 
-class TrainingVariables():
+class TrainingVariables:
     batch_size: int
     s_current: Union[nn.Variable, Tuple[nn.Variable, ...]]
     a_current: nn.Variable
@@ -172,21 +180,23 @@ class TrainingVariables():
     rnn_states: Dict[str, Dict[str, nn.Variable]]
 
     # Used in rnn learning
-    _next_step_variables: Optional['TrainingVariables']
-    _prev_step_variables: Optional['TrainingVariables']
+    _next_step_variables: Optional["TrainingVariables"]
+    _prev_step_variables: Optional["TrainingVariables"]
 
-    def __init__(self,
-                 batch_size: int,
-                 s_current: Optional[Union[nn.Variable, Tuple[nn.Variable, ...]]] = None,
-                 a_current: Optional[nn.Variable] = None,
-                 reward: Optional[nn.Variable] = None,
-                 gamma: Optional[nn.Variable] = None,
-                 non_terminal: Optional[nn.Variable] = None,
-                 s_next: Optional[Union[nn.Variable, Tuple[nn.Variable, ...]]] = None,
-                 weight: Optional[nn.Variable] = None,
-                 extra: Optional[Dict[str, nn.Variable]] = None,
-                 next_step_variables: Optional["TrainingVariables"] = None,
-                 rnn_states: Optional[Dict[str, Dict[str, nn.Variable]]] = None):
+    def __init__(
+        self,
+        batch_size: int,
+        s_current: Optional[Union[nn.Variable, Tuple[nn.Variable, ...]]] = None,
+        a_current: Optional[nn.Variable] = None,
+        reward: Optional[nn.Variable] = None,
+        gamma: Optional[nn.Variable] = None,
+        non_terminal: Optional[nn.Variable] = None,
+        s_next: Optional[Union[nn.Variable, Tuple[nn.Variable, ...]]] = None,
+        weight: Optional[nn.Variable] = None,
+        extra: Optional[Dict[str, nn.Variable]] = None,
+        next_step_variables: Optional["TrainingVariables"] = None,
+        rnn_states: Optional[Dict[str, Dict[str, nn.Variable]]] = None,
+    ):
         assert 0 < batch_size
         self.batch_size = batch_size
         if s_current is not None:
@@ -327,11 +337,13 @@ class ModelTrainer(metaclass=ABCMeta):
     _train_count: int
     _training_variables: TrainingVariables
 
-    def __init__(self,
-                 models: Union[Model, Sequence[Model]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: TrainerConfig):
+    def __init__(
+        self,
+        models: Union[Model, Sequence[Model]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: TrainerConfig,
+    ):
         self._env_info = env_info
         self._config = config
 
@@ -340,7 +352,7 @@ class ModelTrainer(metaclass=ABCMeta):
         self._models = convert_to_list_if_not_list(models)
         self._assert_no_duplicate_model(self._models)
         if self._need_rnn_support(self._models) and not self.support_rnn():
-            raise NotImplementedError(f'{self.__name__} does not support RNN models!')
+            raise NotImplementedError(f"{self.__name__} does not support RNN models!")
         self._solvers = solvers
 
         # Initially create training variables with batch_size 1.
@@ -365,7 +377,7 @@ class ModelTrainer(metaclass=ABCMeta):
 
     def train(self, batch: TrainingBatch, **kwargs) -> Dict[str, np.ndarray]:
         if self._models is None:
-            raise RuntimeError('Call setup_training() first. Model is not set!')
+            raise RuntimeError("Call setup_training() first. Model is not set!")
         self._train_count += 1
 
         batch = self._setup_batch(batch)
@@ -411,18 +423,18 @@ class ModelTrainer(metaclass=ABCMeta):
         return training_batch
 
     @abstractmethod
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         raise NotImplementedError
 
     @abstractmethod
-    def _build_training_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables):
+    def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         raise NotImplementedError
 
     @abstractmethod
@@ -439,9 +451,11 @@ class ModelTrainer(metaclass=ABCMeta):
     def _assert_variable_length_equals_total_timesteps(self):
         total_timesptes = self._total_timesteps()
         if len(self._training_variables) != total_timesptes:
-            raise RuntimeError(f'Training variables length and rnn unroll + burn-in steps does not match!. \
+            raise RuntimeError(
+                f"Training variables length and rnn unroll + burn-in steps does not match!. \
                                    {len(self._training_variables)} != {total_timesptes}. \
-                                   Check that the training method supports recurrent networks.')
+                                   Check that the training method supports recurrent networks."
+            )
 
     @classmethod
     def _assert_no_duplicate_model(cls, models):

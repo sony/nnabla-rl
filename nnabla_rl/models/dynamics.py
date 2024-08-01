@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ class DeterministicDynamics(Dynamics, metaclass=ABCMeta):
     This dynamics returns next state for given state and control input
     (action).
     """
+
     @abstractmethod
     def next_state(self, x: nn.Variable, u: nn.Variable) -> nn.Variable:
         """Next_state.
@@ -64,6 +65,7 @@ class StochasticDynamics(Dynamics, metaclass=ABCMeta):
     This dynamics returns the probability distribution of next state for
     given state and control input (action).
     """
+
     @abstractmethod
     def next_state(self, x: nn.Variable, u: nn.Variable) -> Distribution:
         """Next_state.

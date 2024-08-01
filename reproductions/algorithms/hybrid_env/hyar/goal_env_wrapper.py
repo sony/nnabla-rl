@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,19 +29,20 @@ class ExtendedGoalEnvWrapper(gym.ObservationWrapper):
 
         low = np.zeros(extended_observation_shape)
         low[:14] = original_observation_space.low
-        low[14] = -1.
-        low[15] = -1.
+        low[14] = -1.0
+        low[15] = -1.0
         low[16] = -GOAL_WIDTH / 2
 
         high = np.ones(extended_observation_shape)
         high[:14] = original_observation_space.high
-        high[14] = 1.
-        high[15] = 1.
+        high[14] = 1.0
+        high[15] = 1.0
         high[16] = GOAL_WIDTH
 
         max_steps = 200
-        self.observation_space = gym.spaces.Tuple((gym.spaces.Box(low=low, high=high, dtype=np.float32),
-                                                   gym.spaces.Discrete(max_steps)))
+        self.observation_space = gym.spaces.Tuple(
+            (gym.spaces.Box(low=low, high=high, dtype=np.float32), gym.spaces.Discrete(max_steps))
+        )
 
     def observation(self, obs):
         state, steps = obs

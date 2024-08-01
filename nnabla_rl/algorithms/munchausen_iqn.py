@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,15 @@ from typing import Union
 import gym
 
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.algorithms.iqn import (IQN, DefaultExplorerBuilder, DefaultQuantileFunctionBuilder,
-                                      DefaultReplayBufferBuilder, DefaultSolverBuilder, IQNConfig, risk_neutral_measure)
+from nnabla_rl.algorithms.iqn import (
+    IQN,
+    DefaultExplorerBuilder,
+    DefaultQuantileFunctionBuilder,
+    DefaultReplayBufferBuilder,
+    DefaultSolverBuilder,
+    IQNConfig,
+    risk_neutral_measure,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import StateActionQuantileFunction
@@ -48,8 +55,8 @@ class MunchausenIQNConfig(IQNConfig):
         Check that set values are in valid range.
         """
         super().__post_init__()
-        self._assert_positive(self.embedding_dim, 'embedding_dim')
-        self._assert_negative(self.clipping_value, 'clipping_value')
+        self._assert_positive(self.embedding_dim, "embedding_dim")
+        self._assert_negative(self.clipping_value, "clipping_value")
 
 
 class MunchausenIQN(IQN):
@@ -81,21 +88,25 @@ class MunchausenIQN(IQN):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: MunchausenIQNConfig
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: MunchausenIQNConfig = MunchausenIQNConfig(),
-                 risk_measure_function=risk_neutral_measure,
-                 quantile_function_builder: ModelBuilder[StateActionQuantileFunction]
-                 = DefaultQuantileFunctionBuilder(),
-                 quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super(MunchausenIQN, self).__init__(env_or_env_info, config=config,
-                                            risk_measure_function=risk_measure_function,
-                                            quantile_function_builder=quantile_function_builder,
-                                            quantile_solver_builder=quantile_solver_builder,
-                                            replay_buffer_builder=replay_buffer_builder,
-                                            explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: MunchausenIQNConfig = MunchausenIQNConfig(),
+        risk_measure_function=risk_neutral_measure,
+        quantile_function_builder: ModelBuilder[StateActionQuantileFunction] = DefaultQuantileFunctionBuilder(),
+        quantile_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super(MunchausenIQN, self).__init__(
+            env_or_env_info,
+            config=config,
+            risk_measure_function=risk_measure_function,
+            quantile_function_builder=quantile_function_builder,
+            quantile_solver_builder=quantile_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_quantile_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.MunchausenIQNQTrainerConfig(
@@ -110,14 +121,16 @@ class MunchausenIQN(IQN):
             clip_max=0.0,
             unroll_steps=self._config.unroll_steps,
             burn_in_steps=self._config.burn_in_steps,
-            reset_on_terminal=self._config.reset_rnn_on_terminal)
+            reset_on_terminal=self._config.reset_rnn_on_terminal,
+        )
 
         quantile_function_trainer = MT.q_value_trainers.MunchausenIQNQTrainer(
             train_functions=self._quantile_function,
             solvers={self._quantile_function.scope_name: self._quantile_function_solver},
             target_function=self._target_quantile_function,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction

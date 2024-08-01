@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -118,127 +118,130 @@ class HyARConfig(TD3Config):
     vae_buffer_size: int = int(2e6)
 
     latent_select_batch_size: int = 5000
-    latent_select_range: float = 96.
+    latent_select_range: float = 96.0
 
     noise_decay_steps: int = 1000
     initial_exploration_noise: float = 1.0
     final_exploration_noise: float = 0.1
 
     def __post_init__(self):
-        self._assert_positive(self.latent_dim, 'latent_dim')
-        self._assert_positive(self.embed_dim, 'embed_dim')
-        self._assert_positive(self.T, 'T')
-        self._assert_positive_or_zero(self.vae_pretrain_episodes, 'vae_pretrain_episodes')
-        self._assert_positive(self.vae_pretrain_batch_size, 'vae_pretrain_batch_size')
-        self._assert_positive_or_zero(self.vae_pretrain_times, 'vae_pretrain_times')
-        self._assert_positive(self.vae_training_batch_size, 'vae_training_batch_size')
-        self._assert_positive_or_zero(self.vae_training_times, 'vae_training_times')
-        self._assert_positive_or_zero(self.vae_learning_rate, 'vae_learning_rate')
-        self._assert_positive(self.vae_buffer_size, 'vae_buffer_size')
-        self._assert_positive(self.latent_select_batch_size, 'latent_select_batch_size')
-        self._assert_between(self.latent_select_range, 0, 100, 'latent_select_range')
-        self._assert_positive(self.noise_decay_steps, 'noise_decay_steps')
-        self._assert_positive(self.initial_exploration_noise, 'initial_exploration_noise')
-        self._assert_positive(self.final_exploration_noise, 'final_exploration_noise')
+        self._assert_positive(self.latent_dim, "latent_dim")
+        self._assert_positive(self.embed_dim, "embed_dim")
+        self._assert_positive(self.T, "T")
+        self._assert_positive_or_zero(self.vae_pretrain_episodes, "vae_pretrain_episodes")
+        self._assert_positive(self.vae_pretrain_batch_size, "vae_pretrain_batch_size")
+        self._assert_positive_or_zero(self.vae_pretrain_times, "vae_pretrain_times")
+        self._assert_positive(self.vae_training_batch_size, "vae_training_batch_size")
+        self._assert_positive_or_zero(self.vae_training_times, "vae_training_times")
+        self._assert_positive_or_zero(self.vae_learning_rate, "vae_learning_rate")
+        self._assert_positive(self.vae_buffer_size, "vae_buffer_size")
+        self._assert_positive(self.latent_select_batch_size, "latent_select_batch_size")
+        self._assert_between(self.latent_select_range, 0, 100, "latent_select_range")
+        self._assert_positive(self.noise_decay_steps, "noise_decay_steps")
+        self._assert_positive(self.initial_exploration_noise, "initial_exploration_noise")
+        self._assert_positive(self.final_exploration_noise, "final_exploration_noise")
         return super().__post_init__()
 
 
 class DefaultCriticBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: HyARConfig,
-                    **kwargs) -> QFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: HyARConfig,
+        **kwargs,
+    ) -> QFunction:
         return HyARQFunction(scope_name)
 
 
 class DefaultActorBuilder(ModelBuilder[DeterministicPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: HyARConfig,
-                    **kwargs) -> DeterministicPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: HyARConfig,
+        **kwargs,
+    ) -> DeterministicPolicy:
         max_action_value = 1.0
         action_dim = algorithm_config.latent_dim + algorithm_config.embed_dim
         return HyARPolicy(scope_name, action_dim, max_action_value=max_action_value)
 
 
 class DefaultVAEBuilder(ModelBuilder[HyARVAE]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: HyARConfig,
-                    **kwargs) -> HyARVAE:
-        return HyARVAE(scope_name,
-                       state_dim=env_info.state_dim,
-                       action_dim=env_info.action_dim,
-                       encode_dim=algorithm_config.latent_dim,
-                       embed_dim=algorithm_config.embed_dim)
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: HyARConfig,
+        **kwargs,
+    ) -> HyARVAE:
+        return HyARVAE(
+            scope_name,
+            state_dim=env_info.state_dim,
+            action_dim=env_info.action_dim,
+            encode_dim=algorithm_config.latent_dim,
+            embed_dim=algorithm_config.embed_dim,
+        )
 
 
 class DefaultActorSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: HyARConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: HyARConfig, **kwargs
+    ) -> nn.solver.Solver:
         solver = NS.Adam(alpha=algorithm_config.learning_rate)
         return AutoClipGradByNorm(solver, 10.0)
 
 
 class DefaultVAESolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: HyARConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: HyARConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.vae_learning_rate)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: HyARConfig,
-                       algorithm: "HyAR",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: HyARConfig,
+        algorithm: "HyAR",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = HyARPolicyExplorerConfig(
-            warmup_random_steps=0,
-            initial_step_num=algorithm.iteration_num,
-            timelimit_as_terminal=False
+            warmup_random_steps=0, initial_step_num=algorithm.iteration_num, timelimit_as_terminal=False
         )
-        explorer = HyARPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
-                                      env_info=env_info,
-                                      config=explorer_config)
+        explorer = HyARPolicyExplorer(
+            policy_action_selector=algorithm._exploration_action_selector, env_info=env_info, config=explorer_config
+        )
         return explorer
 
 
 class DefaultPretrainExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: HyARConfig,
-                       algorithm: "HyAR",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: HyARConfig,
+        algorithm: "HyAR",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = HyARPretrainExplorerConfig(
-            warmup_random_steps=0,
-            initial_step_num=algorithm.iteration_num,
-            timelimit_as_terminal=False
+            warmup_random_steps=0, initial_step_num=algorithm.iteration_num, timelimit_as_terminal=False
         )
-        explorer = HyARPretrainExplorer(env_info=env_info,
-                                        config=explorer_config)
+        explorer = HyARPretrainExplorer(env_info=env_info, config=explorer_config)
         return explorer
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: HyARConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: HyARConfig, **kwargs
+    ) -> ReplayBuffer:
         return ReplacementSamplingReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DefaultVAEBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: HyARConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: HyARConfig, **kwargs
+    ) -> ReplayBuffer:
         return ReplacementSamplingReplayBuffer(capacity=algorithm_config.vae_buffer_size)
 
 
@@ -272,6 +275,7 @@ class HyAR(TD3):
         pretrain_explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer for pretraining stage
     """
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -279,30 +283,34 @@ class HyAR(TD3):
     _evaluation_actor: "_HyARPolicyActionSelector"  # type: ignore
     _exploration_actor: "_HyARPolicyActionSelector"  # type: ignore
 
-    def __init__(self,
-                 env_or_env_info,
-                 config: HyARConfig = HyARConfig(),
-                 critic_builder=DefaultCriticBuilder(),
-                 critic_solver_builder=DefaultSolverBuilder(),
-                 actor_builder=DefaultActorBuilder(),
-                 actor_solver_builder=DefaultActorSolverBuilder(),
-                 vae_builder=DefaultVAEBuilder(),
-                 vae_solver_buidler=DefaultVAESolverBuilder(),
-                 replay_buffer_builder=DefaultReplayBufferBuilder(),
-                 vae_buffer_builder=DefaultVAEBufferBuilder(),
-                 explorer_builder=DefaultExplorerBuilder(),
-                 pretrain_explorer_builder=DefaultPretrainExplorerBuilder()):
-        super().__init__(env_or_env_info,
-                         config,
-                         critic_builder,
-                         critic_solver_builder,
-                         actor_builder,
-                         actor_solver_builder,
-                         replay_buffer_builder,
-                         explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info,
+        config: HyARConfig = HyARConfig(),
+        critic_builder=DefaultCriticBuilder(),
+        critic_solver_builder=DefaultSolverBuilder(),
+        actor_builder=DefaultActorBuilder(),
+        actor_solver_builder=DefaultActorSolverBuilder(),
+        vae_builder=DefaultVAEBuilder(),
+        vae_solver_buidler=DefaultVAESolverBuilder(),
+        replay_buffer_builder=DefaultReplayBufferBuilder(),
+        vae_buffer_builder=DefaultVAEBufferBuilder(),
+        explorer_builder=DefaultExplorerBuilder(),
+        pretrain_explorer_builder=DefaultPretrainExplorerBuilder(),
+    ):
+        super().__init__(
+            env_or_env_info,
+            config,
+            critic_builder,
+            critic_solver_builder,
+            actor_builder,
+            actor_solver_builder,
+            replay_buffer_builder,
+            explorer_builder,
+        )
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            self._vae = vae_builder('vae', self._env_info, self._config)
+            self._vae = vae_builder("vae", self._env_info, self._config)
             self._vae_solver = vae_solver_buidler(self._env_info, self._config)
             # We use different replay buffer for vae
             self._vae_replay_buffer = vae_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
@@ -313,7 +321,8 @@ class HyAR(TD3):
             self._pi.shallowcopy(),
             self._vae.shallowcopy(),
             embed_dim=self._config.embed_dim,
-            latent_dim=self._config.latent_dim)
+            latent_dim=self._config.latent_dim,
+        )
         self._exploration_actor = _HyARPolicyActionSelector(
             self._env_info,
             self._pi.shallowcopy(),
@@ -323,7 +332,8 @@ class HyAR(TD3):
             append_noise=True,
             sigma=self._config.exploration_noise_sigma,
             action_clip_low=-1.0,
-            action_clip_high=1.0)
+            action_clip_high=1.0,
+        )
         self._episode_number = 1
         self._experienced_episodes = 0
 
@@ -337,7 +347,7 @@ class HyAR(TD3):
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
         q_function_trainer_config = MT.q_value_trainers.HyARQTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             q_loss_scalar=1.0,
             grad_clip=None,
             train_action_noise_sigma=self._config.train_action_noise_sigma,
@@ -349,7 +359,8 @@ class HyAR(TD3):
             burn_in_steps=self._config.critic_burn_in_steps,
             reset_on_terminal=self._config.critic_reset_rnn_on_terminal,
             embed_dim=self._config.embed_dim,
-            latent_dim=self._config.latent_dim)
+            latent_dim=self._config.latent_dim,
+        )
         q_function_trainer = MT.q_value_trainers.HyARQTrainer(
             train_functions=self._train_q_functions,
             solvers=self._train_q_solvers,
@@ -357,26 +368,29 @@ class HyAR(TD3):
             target_policy=self._target_pi,
             vae=self._vae,
             env_info=self._env_info,
-            config=q_function_trainer_config)
+            config=q_function_trainer_config,
+        )
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
             sync_model(q, target_q)
         return q_function_trainer
 
     def _setup_policy_training(self, env_or_buffer):
         # return super()._setup_policy_training(env_or_buffer)
-        action_dim = self._config.latent_dim+self._config.embed_dim
+        action_dim = self._config.latent_dim + self._config.embed_dim
         policy_trainer_config = MT.policy_trainers.HyARPolicyTrainerConfig(
             unroll_steps=self._config.actor_unroll_steps,
             burn_in_steps=self._config.actor_burn_in_steps,
             reset_on_terminal=self._config.actor_reset_rnn_on_terminal,
             p_max=np.ones(shape=(1, action_dim)),
-            p_min=-np.ones(shape=(1, action_dim)))
+            p_min=-np.ones(shape=(1, action_dim)),
+        )
         policy_trainer = MT.policy_trainers.HyARPolicyTrainer(
             models=self._pi,
             solvers={self._pi.scope_name: self._pi_solver},
             q_function=self._q1,
             env_info=self._env_info,
-            config=policy_trainer_config)
+            config=policy_trainer_config,
+        )
         sync_model(self._pi, self._target_pi, 1.0)
 
         return policy_trainer
@@ -385,16 +399,18 @@ class HyAR(TD3):
         vae_trainer_config = MT.encoder_trainers.HyARVAETrainerConfig(
             unroll_steps=self._config.critic_unroll_steps,
             burn_in_steps=self._config.critic_burn_in_steps,
-            reset_on_terminal=self._config.critic_reset_rnn_on_terminal)
-        return MT.encoder_trainers.HyARVAETrainer(self._vae,
-                                                  {self._vae.scope_name: self._vae_solver},
-                                                  self._env_info,
-                                                  vae_trainer_config)
+            reset_on_terminal=self._config.critic_reset_rnn_on_terminal,
+        )
+        return MT.encoder_trainers.HyARVAETrainer(
+            self._vae, {self._vae.scope_name: self._vae_solver}, self._env_info, vae_trainer_config
+        )
 
     def _setup_pretrain_explorer(self, env_or_buffer):
-        return None if self._is_buffer(env_or_buffer) else self._pretrain_explorer_builder(self._env_info,
-                                                                                           self._config,
-                                                                                           self)
+        return (
+            None
+            if self._is_buffer(env_or_buffer)
+            else self._pretrain_explorer_builder(self._env_info, self._config, self)
+        )
 
     def _pretrain_vae(self, env: gym.Env):
         for _ in range(self._config.vae_pretrain_episodes):
@@ -415,13 +431,15 @@ class HyAR(TD3):
         self._vae_replay_buffer.append_all(experiences)
 
         (_, _, _, non_terminal, *_) = experiences[-1]
-        end_of_episode = (non_terminal == 0.0)
+        end_of_episode = non_terminal == 0.0
         if end_of_episode:
             self._experienced_episodes += 1
-            if (self._experienced_episodes < self._config.noise_decay_steps):
+            if self._experienced_episodes < self._config.noise_decay_steps:
                 ratio = self._experienced_episodes / self._config.noise_decay_steps
-                new_sigma = self._config.initial_exploration_noise * (1.0 - ratio) \
+                new_sigma = (
+                    self._config.initial_exploration_noise * (1.0 - ratio)
                     + self._config.final_exploration_noise * ratio
+                )
                 self._exploration_actor.update_sigma(sigma=new_sigma)
             else:
                 self._exploration_actor.update_sigma(sigma=self._config.final_exploration_noise)
@@ -448,28 +466,30 @@ class HyAR(TD3):
         num_steps = max(actor_steps, critic_steps)
         experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = (experiences_tuple, )
+            experiences_tuple = (experiences_tuple,)
         assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
             (s, a, r, non_terminal, s_next, extra, *_) = marshal_experiences(experiences)
-            rnn_states = extra['rnn_states'] if 'rnn_states' in extra else {}
-            extra.update({'c_rate': self._c_rate, 'ds_rate': self._ds_rate})
-            batch = TrainingBatch(batch_size=self._config.batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  gamma=self._config.gamma,
-                                  reward=r,
-                                  non_terminal=non_terminal,
-                                  s_next=s_next,
-                                  extra=extra,
-                                  weight=info['weights'],
-                                  next_step_batch=batch,
-                                  rnn_states=rnn_states)
+            rnn_states = extra["rnn_states"] if "rnn_states" in extra else {}
+            extra.update({"c_rate": self._c_rate, "ds_rate": self._ds_rate})
+            batch = TrainingBatch(
+                batch_size=self._config.batch_size,
+                s_current=s,
+                a_current=a,
+                gamma=self._config.gamma,
+                reward=r,
+                non_terminal=non_terminal,
+                s_next=s_next,
+                extra=extra,
+                weight=info["weights"],
+                next_step_batch=batch,
+                rnn_states=rnn_states,
+            )
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
-        td_errors = self._q_function_trainer_state['td_errors']
+        td_errors = self._q_function_trainer_state["td_errors"]
         replay_buffer.update_priorities(td_errors)
 
         if self.iteration_num % self._config.d == 0:
@@ -487,24 +507,26 @@ class HyAR(TD3):
         num_steps = max(actor_steps, critic_steps)
         experiences_tuple, info = replay_buffer.sample(batch_size, num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = (experiences_tuple, )
+            experiences_tuple = (experiences_tuple,)
         assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
             (s, a, r, non_terminal, s_next, extra, *_) = marshal_experiences(experiences)
-            rnn_states = extra['rnn_states'] if 'rnn_states' in extra else {}
-            batch = TrainingBatch(batch_size=batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  gamma=self._config.gamma,
-                                  reward=r,
-                                  non_terminal=non_terminal,
-                                  s_next=s_next,
-                                  extra=extra,
-                                  weight=info['weights'],
-                                  next_step_batch=batch,
-                                  rnn_states=rnn_states)
+            rnn_states = extra["rnn_states"] if "rnn_states" in extra else {}
+            batch = TrainingBatch(
+                batch_size=batch_size,
+                s_current=s,
+                a_current=a,
+                gamma=self._config.gamma,
+                reward=r,
+                non_terminal=non_terminal,
+                s_next=s_next,
+                extra=extra,
+                weight=info["weights"],
+                next_step_batch=batch,
+                rnn_states=rnn_states,
+            )
 
         self._vae_trainer_state = self._vae_trainer.train(batch)
 
@@ -525,8 +547,9 @@ class HyAR(TD3):
         experiences, _ = replay_buffer.sample(num_samples=batch_size)
         (s, a, _, _, s_next, *_) = marshal_experiences(experiences)
 
-        if not hasattr(self, '_rate_state_var'):
+        if not hasattr(self, "_rate_state_var"):
             from nnabla_rl.utils.misc import create_variable
+
             self._rate_state_var = create_variable(batch_size, self._env_info.state_shape)
             self._rate_action_var = create_variable(batch_size, self._env_info.action_shape)
             self._rate_next_state_var = create_variable(batch_size, self._env_info.state_shape)
@@ -534,7 +557,8 @@ class HyAR(TD3):
             action1, action2 = self._rate_action_var
             x = action1 if isinstance(self._env_info.action_space[0], gym.spaces.Box) else action2
             latent_distribution, (_, predicted_ds) = self._vae.encode_and_decode(
-                x=x, state=self._rate_state_var, action=self._rate_action_var)
+                x=x, state=self._rate_state_var, action=self._rate_action_var
+            )
             z = latent_distribution.sample()
             # NOTE: ascending order
             z_sorted = NF.sort(z, axis=0)
@@ -560,8 +584,9 @@ class HyAR(TD3):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return env_info.is_tuple_action_env() and not env_info.is_tuple_state_env()
 
     @classmethod
@@ -571,28 +596,33 @@ class HyAR(TD3):
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super().latest_iteration_state
-        if hasattr(self, '_vae_trainer_state'):
-            latest_iteration_state['scalar'].update(
-                {'encoder_loss': float(self._vae_trainer_state['encoder_loss']),
-                 'kl_loss': float(self._vae_trainer_state['kl_loss']),
-                 'reconstruction_loss': float(self._vae_trainer_state['reconstruction_loss']),
-                 'dyn_loss': float(self._vae_trainer_state['dyn_loss'])})
+        if hasattr(self, "_vae_trainer_state"):
+            latest_iteration_state["scalar"].update(
+                {
+                    "encoder_loss": float(self._vae_trainer_state["encoder_loss"]),
+                    "kl_loss": float(self._vae_trainer_state["kl_loss"]),
+                    "reconstruction_loss": float(self._vae_trainer_state["reconstruction_loss"]),
+                    "dyn_loss": float(self._vae_trainer_state["dyn_loss"]),
+                }
+            )
         return latest_iteration_state
 
 
 class _HyARPolicyActionSelector(_ActionSelector[DeterministicPolicy]):
     _vae: HyARVAE
 
-    def __init__(self,
-                 env_info: EnvironmentInfo,
-                 model: DeterministicPolicy,
-                 vae: HyARVAE,
-                 embed_dim: int,
-                 latent_dim: int,
-                 append_noise: bool = False,
-                 action_clip_low: float = np.finfo(np.float32).min,  # type: ignore
-                 action_clip_high: float = np.finfo(np.float32).max,  # type: ignore
-                 sigma: float = 1.0):
+    def __init__(
+        self,
+        env_info: EnvironmentInfo,
+        model: DeterministicPolicy,
+        vae: HyARVAE,
+        embed_dim: int,
+        latent_dim: int,
+        append_noise: bool = False,
+        action_clip_low: float = np.finfo(np.float32).min,  # type: ignore
+        action_clip_high: float = np.finfo(np.float32).max,  # type: ignore
+        sigma: float = 1.0,
+    ):
         super().__init__(env_info, model)
         self._vae = vae
         self._embed_dim = embed_dim
@@ -617,7 +647,7 @@ class _HyARPolicyActionSelector(_ActionSelector[DeterministicPolicy]):
         # self._e.d[0] and self._z.d[0]
         e = self._e.d[0]
         z = self._z.d[0]
-        info.update({'e': e, 'z': z})
+        info.update({"e": e, "z": z})
         (d_action, c_action) = action
         return (d_action, c_action), info
 
@@ -634,9 +664,9 @@ class _HyARPolicyActionSelector(_ActionSelector[DeterministicPolicy]):
             noise = NF.randn(shape=latent_action.shape)
             latent_action = latent_action + noise * self._sigma
             latent_action = NF.clip_by_value(latent_action, min=self._action_clip_low, max=self._action_clip_high)
-        self._e = latent_action[:, :self._embed_dim]
+        self._e = latent_action[:, : self._embed_dim]
         self._e.persistent = True
-        self._z = latent_action[:, self._embed_dim:]
+        self._z = latent_action[:, self._embed_dim :]
         self._z.persistent = True
         assert latent_action.shape[-1] == self._embed_dim + self._latent_dim
 
@@ -668,9 +698,7 @@ class HyARPretrainExplorerConfig(EnvironmentExplorerConfig):
 
 
 class HyARPretrainExplorer(EnvironmentExplorer):
-    def __init__(self,
-                 env_info: EnvironmentInfo,
-                 config: HyARPretrainExplorerConfig = HyARPretrainExplorerConfig()):
+    def __init__(self, env_info: EnvironmentInfo, config: HyARPretrainExplorerConfig = HyARPretrainExplorerConfig()):
         super().__init__(env_info, config)
 
     def action(self, step: int, state, *, begin_of_episode: bool = False):
@@ -687,13 +715,13 @@ class HyARPretrainExplorer(EnvironmentExplorer):
             action = []
             for a, action_space in zip(env_info.action_space.sample(), env_info.action_space):
                 if isinstance(action_space, gym.spaces.Discrete):
-                    a = np.asarray(a).reshape((1, ))
+                    a = np.asarray(a).reshape((1,))
                 action.append(a)
             action = tuple(action)
         else:
             if env_info.is_discrete_action_env():
                 action = env_info.action_space.sample()
-                action = np.asarray(action).reshape((1, ))
+                action = np.asarray(action).reshape((1,))
             else:
                 action = env_info.action_space.sample()
         return action, action_info

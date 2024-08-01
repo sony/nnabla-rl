@@ -13,6 +13,10 @@
 # limitations under the License.
 
 from nnabla_rl.model_trainers.reward.gail_reward_function_trainer import (  # noqa
-    GAILRewardFunctionTrainer,  GAILRewardFunctionTrainerConfig)
+    GAILRewardFunctionTrainer,
+    GAILRewardFunctionTrainerConfig,
+)
 from nnabla_rl.model_trainers.reward.amp_reward_function_trainer import (  # noqa
-    AMPRewardFunctionTrainer,  AMPRewardFunctionTrainerConfig)
+    AMPRewardFunctionTrainer,
+    AMPRewardFunctionTrainerConfig,
+)

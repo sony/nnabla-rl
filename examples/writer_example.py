@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ from nnabla_rl.writer import Writer
 
 class MyScalarWriter(Writer):
     def __init__(self, outdir):
-        self._outdir = os.path.join(outdir, 'writer')
+        self._outdir = os.path.join(outdir, "writer")
         create_dir_if_not_exist(outdir=self._outdir)
         self._monitor = Monitor(self._outdir)
         self._monitor_series = None
@@ -43,22 +43,21 @@ class MyScalarWriter(Writer):
     def _create_monitor_series(self, names):
         self._monitor_series = []
         for name in names:
-            self._monitor_series.append(MonitorSeries(
-                name, self._monitor, interval=1, verbose=False))
+            self._monitor_series.append(MonitorSeries(name, self._monitor, interval=1, verbose=False))
 
 
 def build_env(seed=None):
     try:
-        env = gym.make('Pendulum-v0')
+        env = gym.make("Pendulum-v0")
     except gym.error.DeprecatedEnv:
-        env = gym.make('Pendulum-v1')
+        env = gym.make("Pendulum-v1")
     env = NumpyFloat32Env(env)
     env.seed(seed)
     return env
 
 
 def main():
-    writer = MyScalarWriter('./pendulum_v0_ddpg_results')
+    writer = MyScalarWriter("./pendulum_v0_ddpg_results")
     training_state_hook = H.IterationStateHook(writer=writer, timing=100)
 
     train_env = build_env()

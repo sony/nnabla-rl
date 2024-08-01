@@ -29,28 +29,53 @@ import nnabla.solvers as NS
 import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import Algorithm, AlgorithmConfig, eval_api
-from nnabla_rl.algorithms.common_utils import (_get_shape, _StatePreprocessedRewardFunction,
-                                               _StatePreprocessedStochasticPolicy, _StatePreprocessedVFunction,
-                                               _StochasticPolicyActionSelector)
+from nnabla_rl.algorithms.common_utils import (
+    _get_shape,
+    _StatePreprocessedRewardFunction,
+    _StatePreprocessedStochasticPolicy,
+    _StatePreprocessedVFunction,
+    _StochasticPolicyActionSelector,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, PreprocessorBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environment_explorer import EnvironmentExplorer
 from nnabla_rl.environments.amp_env import AMPEnv, AMPGoalEnv, TaskResult
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.functions import compute_std, unnormalize
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
-from nnabla_rl.models import (AMPDiscriminator, AMPGatedPolicy, AMPGatedVFunction, AMPPolicy, AMPVFunction, Model,
-                              RewardFunction, StochasticPolicy, VFunction)
+from nnabla_rl.models import (
+    AMPDiscriminator,
+    AMPGatedPolicy,
+    AMPGatedVFunction,
+    AMPPolicy,
+    AMPVFunction,
+    Model,
+    RewardFunction,
+    StochasticPolicy,
+    VFunction,
+)
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.random import drng
 from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.buffer_iterator import BufferIterator
 from nnabla_rl.typing import Experience
 from nnabla_rl.utils import context
-from nnabla_rl.utils.data import (add_batch_dimension, compute_std_ndarray, marshal_experiences, normalize_ndarray,
-                                  set_data_to_variable, unnormalize_ndarray)
+from nnabla_rl.utils.data import (
+    add_batch_dimension,
+    compute_std_ndarray,
+    marshal_experiences,
+    normalize_ndarray,
+    set_data_to_variable,
+    unnormalize_ndarray,
+)
 from nnabla_rl.utils.misc import create_variable
-from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
-                                          mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
+from nnabla_rl.utils.multiprocess import (
+    copy_mp_arrays_to_params,
+    copy_params_to_mp_arrays,
+    mp_array_from_np_array,
+    mp_to_np_array,
+    new_mp_arrays_from_params,
+    np_to_mp_array,
+)
 from nnabla_rl.utils.reproductions import set_global_seed
 
 
@@ -228,10 +253,12 @@ class AMPConfig(AlgorithmConfig):
         self._assert_positive(self.discriminator_learning_rate, "discriminator_learning_rate")
         self._assert_positive(self.discriminator_momentum, "discriminator_momentum")
         self._assert_positive(self.discriminator_weight_decay, "discriminator_weight_decay")
-        self._assert_positive(self.discriminator_extra_regularization_coefficient,
-                              "discriminator_extra_regularization_coefficient")
-        self._assert_positive(self.discriminator_gradient_penelty_coefficient,
-                              "discriminator_gradient_penelty_coefficient")
+        self._assert_positive(
+            self.discriminator_extra_regularization_coefficient, "discriminator_extra_regularization_coefficient"
+        )
+        self._assert_positive(
+            self.discriminator_gradient_penelty_coefficient, "discriminator_gradient_penelty_coefficient"
+        )
         self._assert_positive(self.discriminator_batch_size, "discriminator_batch_size")
         self._assert_positive(self.discriminator_epochs, "discriminator_epochs")
         self._assert_positive(self.discriminator_reward_scale, "discriminator_reward_scale")
@@ -240,11 +267,13 @@ class AMPConfig(AlgorithmConfig):
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AMPConfig,
-                    **kwargs) -> StochasticPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: AMPConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
         if env_info.is_goal_conditioned_env():
             return AMPGatedPolicy(scope_name, env_info.action_dim, 0.01)
         else:
@@ -252,11 +281,13 @@ class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
 
 
 class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AMPConfig,
-                    **kwargs) -> VFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: AMPConfig,
+        **kwargs,
+    ) -> VFunction:
         if env_info.is_goal_conditioned_env():
             return AMPGatedVFunction(scope_name)
         else:
@@ -264,68 +295,71 @@ class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
 
 
 class DefaultRewardFunctionBuilder(ModelBuilder[RewardFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AMPConfig,
-                    **kwargs) -> RewardFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: AMPConfig,
+        **kwargs,
+    ) -> RewardFunction:
         return AMPDiscriminator(scope_name, 1.0)
 
 
 class DefaultVFunctionSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: AMPConfig,
-                     **kwargs) -> nn.solver.Solver:
-        return NS.Momentum(lr=algorithm_config.v_function_learning_rate,
-                           momentum=algorithm_config.v_function_momentum)
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: AMPConfig, **kwargs
+    ) -> nn.solver.Solver:
+        return NS.Momentum(lr=algorithm_config.v_function_learning_rate, momentum=algorithm_config.v_function_momentum)
 
 
 class DefaultPolicySolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: AMPConfig,
-                     **kwargs) -> nn.solver.Solver:
-        return NS.Momentum(lr=algorithm_config.policy_learning_rate,
-                           momentum=algorithm_config.policy_momentum)
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: AMPConfig, **kwargs
+    ) -> nn.solver.Solver:
+        return NS.Momentum(lr=algorithm_config.policy_learning_rate, momentum=algorithm_config.policy_momentum)
 
 
 class DefaultRewardFunctionSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: AMPConfig,
-                     **kwargs) -> nn.solver.Solver:
-        return NS.Momentum(lr=algorithm_config.discriminator_learning_rate,
-                           momentum=algorithm_config.discriminator_momentum)
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: AMPConfig, **kwargs
+    ) -> nn.solver.Solver:
+        return NS.Momentum(
+            lr=algorithm_config.discriminator_learning_rate, momentum=algorithm_config.discriminator_momentum
+        )
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: AMPConfig,
-                       algorithm: "AMP",
-                       **kwargs) -> EnvironmentExplorer:
-        explorer_config = \
-            EE.LinearDecayEpsilonGreedyExplorerConfig(initial_step_num=0,
-                                                      timelimit_as_terminal=algorithm_config.timelimit_as_terminal,
-                                                      initial_epsilon=1.0,
-                                                      final_epsilon=algorithm_config.final_explore_rate,
-                                                      max_explore_steps=algorithm_config.max_explore_steps,
-                                                      append_explorer_info=True)
-        explorer = EE.LinearDecayEpsilonGreedyExplorer(greedy_action_selector=kwargs["greedy_action_selector"],
-                                                       random_action_selector=kwargs["random_action_selector"],
-                                                       env_info=env_info,
-                                                       config=explorer_config)
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: AMPConfig,
+        algorithm: "AMP",
+        **kwargs,
+    ) -> EnvironmentExplorer:
+        explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
+            initial_step_num=0,
+            timelimit_as_terminal=algorithm_config.timelimit_as_terminal,
+            initial_epsilon=1.0,
+            final_epsilon=algorithm_config.final_explore_rate,
+            max_explore_steps=algorithm_config.max_explore_steps,
+            append_explorer_info=True,
+        )
+        explorer = EE.LinearDecayEpsilonGreedyExplorer(
+            greedy_action_selector=kwargs["greedy_action_selector"],
+            random_action_selector=kwargs["random_action_selector"],
+            env_info=env_info,
+            config=explorer_config,
+        )
         return explorer
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: AMPConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: AMPConfig, **kwargs
+    ) -> ReplayBuffer:
         return ReplayBuffer(
-            capacity=int(np.ceil(algorithm_config.discriminator_agent_replay_buffer_size / algorithm_config.actor_num)))
+            capacity=int(np.ceil(algorithm_config.discriminator_agent_replay_buffer_size / algorithm_config.actor_num))
+        )
 
 
 class AMP(Algorithm):
@@ -361,6 +395,7 @@ class AMP(Algorithm):
         (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`): builder of replay_buffer of \
             discriminator.
     """
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -391,18 +426,20 @@ class AMP(Algorithm):
 
     _evaluation_actor: _StochasticPolicyActionSelector
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: AMPConfig = AMPConfig(),
-                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
-                 v_solver_builder: SolverBuilder = DefaultVFunctionSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultPolicySolverBuilder(),
-                 reward_function_builder: ModelBuilder[RewardFunction] = DefaultRewardFunctionBuilder(),
-                 reward_solver_builder: SolverBuilder = DefaultRewardFunctionSolverBuilder(),
-                 state_preprocessor_builder: Optional[PreprocessorBuilder] = None,
-                 env_explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
-                 discriminator_replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: AMPConfig = AMPConfig(),
+        v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
+        v_solver_builder: SolverBuilder = DefaultVFunctionSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultPolicySolverBuilder(),
+        reward_function_builder: ModelBuilder[RewardFunction] = DefaultRewardFunctionBuilder(),
+        reward_solver_builder: SolverBuilder = DefaultRewardFunctionSolverBuilder(),
+        state_preprocessor_builder: Optional[PreprocessorBuilder] = None,
+        env_explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+        discriminator_replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+    ):
         super(AMP, self).__init__(env_or_env_info, config=config)
 
         # Initialize on cpu and change the context later
@@ -415,18 +452,20 @@ class AMP(Algorithm):
                 if state_preprocessor_builder is None:
                     raise ValueError("State preprocessing is enabled but no preprocessor builder is given")
 
-                self._pi_v_state_preprocessor = state_preprocessor_builder("pi_v_preprocessor",
-                                                                           self._env_info,
-                                                                           self._config)
-                v_function = _StatePreprocessedVFunction(v_function=v_function,
-                                                         preprocessor=self._pi_v_state_preprocessor)
+                self._pi_v_state_preprocessor = state_preprocessor_builder(
+                    "pi_v_preprocessor", self._env_info, self._config
+                )
+                v_function = _StatePreprocessedVFunction(
+                    v_function=v_function, preprocessor=self._pi_v_state_preprocessor
+                )
                 policy = _StatePreprocessedStochasticPolicy(policy=policy, preprocessor=self._pi_v_state_preprocessor)
 
-                self._discriminator_state_preprocessor = state_preprocessor_builder("r_preprocessor",
-                                                                                    self._env_info,
-                                                                                    self._config)
-                discriminator = _StatePreprocessedRewardFunction(reward_function=discriminator,
-                                                                 preprocessor=self._discriminator_state_preprocessor)
+                self._discriminator_state_preprocessor = state_preprocessor_builder(
+                    "r_preprocessor", self._env_info, self._config
+                )
+                discriminator = _StatePreprocessedRewardFunction(
+                    reward_function=discriminator, preprocessor=self._discriminator_state_preprocessor
+                )
 
             self._v_function = v_function
             self._policy = policy
@@ -440,22 +479,25 @@ class AMP(Algorithm):
             self._discriminator_solver_builder = reward_solver_builder  # keep for later use
             self._env_explorer_builder = env_explorer_builder  # keep for later use
 
-        self._evaluation_actor = _StochasticPolicyActionSelector(self._env_info,
-                                                                 self._policy.shallowcopy(),
-                                                                 deterministic=self._config.act_deterministic_in_eval)
-        self._discriminator_agent_replay_buffers = \
-            [discriminator_replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
-             for _ in range(self._config.actor_num)]
-        self._discriminator_expert_replay_buffers = \
-            [discriminator_replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
-             for _ in range(self._config.actor_num)]
+        self._evaluation_actor = _StochasticPolicyActionSelector(
+            self._env_info, self._policy.shallowcopy(), deterministic=self._config.act_deterministic_in_eval
+        )
+        self._discriminator_agent_replay_buffers = [
+            discriminator_replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            for _ in range(self._config.actor_num)
+        ]
+        self._discriminator_expert_replay_buffers = [
+            discriminator_replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
+            for _ in range(self._config.actor_num)
+        ]
 
         if self._config.normalize_action:
             action_mean = add_batch_dimension(np.array(self._config.action_mean, dtype=np.float32))
             self._action_mean = nn.Variable.from_numpy_array(action_mean)
             action_var = add_batch_dimension(np.array(self._config.action_var, dtype=np.float32))
-            self._action_std = compute_std(nn.Variable.from_numpy_array(action_var),
-                                           epsilon=0.0, mode_for_floating_point_error="max")
+            self._action_std = compute_std(
+                nn.Variable.from_numpy_array(action_var), epsilon=0.0, mode_for_floating_point_error="max"
+            )
         else:
             self._action_mean = None
             self._action_std = None
@@ -466,8 +508,11 @@ class AMP(Algorithm):
             action, _ = self._evaluation_action_selector(state, begin_of_episode=begin_of_episode)
 
             if self._config.normalize_action:
-                std = compute_std_ndarray(np.array(self._config.action_var, dtype=np.float32), epsilon=0.0,
-                                          mode_for_floating_point_error="max")
+                std = compute_std_ndarray(
+                    np.array(self._config.action_var, dtype=np.float32),
+                    epsilon=0.0,
+                    mode_for_floating_point_error="max",
+                )
                 action = unnormalize_ndarray(action, np.array(self._config.action_mean, dtype=np.float32), std)
 
             return action
@@ -516,23 +561,27 @@ class AMP(Algorithm):
             action_bound_loss_coefficient=self._config.action_bound_loss_coefficient,
             action_mean=self._config.action_mean,
             action_var=self._config.action_var,
-            regularization_coefficient=self._config.policy_weight_decay)
+            regularization_coefficient=self._config.policy_weight_decay,
+        )
         policy_trainer = MT.policy_trainers.AMPPolicyTrainer(
             models=self._policy,
             solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
-            config=policy_trainer_config)
+            config=policy_trainer_config,
+        )
         return policy_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
         # training input/loss variables
-        v_function_trainer_config = MT.v_value_trainers.MonteCarloVTrainerConfig(reduction_method="mean",
-                                                                                 v_loss_scalar=0.5)
+        v_function_trainer_config = MT.v_value_trainers.MonteCarloVTrainerConfig(
+            reduction_method="mean", v_loss_scalar=0.5
+        )
         v_function_trainer = MT.v_value_trainers.MonteCarloVTrainer(
             train_functions=self._v_function,
             solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
-            config=v_function_trainer_config)
+            config=v_function_trainer_config,
+        )
         return v_function_trainer
 
     def _setup_reward_function_training(self, env_or_buffer):
@@ -542,16 +591,21 @@ class AMP(Algorithm):
             extra_regularization_coefficient=self._config.discriminator_extra_regularization_coefficient,
             extra_regularization_variable_names=self._config.discriminator_extra_regularization_variable_names,
             gradient_penelty_coefficient=self._config.discriminator_gradient_penelty_coefficient,
-            gradient_penalty_indexes=self._config.discriminator_gradient_penalty_indexes)
-        model = self._discriminator._reward_function if isinstance(
-            self._discriminator, _StatePreprocessedRewardFunction) else self._discriminator
+            gradient_penalty_indexes=self._config.discriminator_gradient_penalty_indexes,
+        )
+        model = (
+            self._discriminator._reward_function
+            if isinstance(self._discriminator, _StatePreprocessedRewardFunction)
+            else self._discriminator
+        )
         preprocessor = self._discriminator_state_preprocessor if self._config.preprocess_state else None
         reward_function_trainer = MT.reward_trainiers.AMPRewardFunctionTrainer(
             models=model,
             solvers={self._discriminator.scope_name: self._discriminator_solver},
             env_info=self._env_info,
             state_preprocessor=preprocessor,
-            config=reward_function_trainer_config)
+            config=reward_function_trainer_config,
+        )
         return reward_function_trainer
 
     def _after_training_finish(self, env_or_buffer):
@@ -561,20 +615,23 @@ class AMP(Algorithm):
             self._kill_actor_processes(process)
 
     def _launch_actor_processes(self, env):
-        actors = self._build_amp_actors(env=env,
-                                        policy=self._policy,
-                                        v_function=self._v_function,
-                                        state_preprocessor=(self._pi_v_state_preprocessor if
-                                                            self._config.preprocess_state else None),
-                                        reward_function=self._discriminator,
-                                        reward_state_preprocessor=(self._discriminator_state_preprocessor if
-                                                                   self._config.preprocess_state else None),
-                                        env_explorer=self._env_explorer_builder(
-                                            self._env_info,
-                                            self._config,
-                                            self,
-                                            greedy_action_selector=self._compute_greedy_action,
-                                            random_action_selector=self._compute_explore_action))
+        actors = self._build_amp_actors(
+            env=env,
+            policy=self._policy,
+            v_function=self._v_function,
+            state_preprocessor=(self._pi_v_state_preprocessor if self._config.preprocess_state else None),
+            reward_function=self._discriminator,
+            reward_state_preprocessor=(
+                self._discriminator_state_preprocessor if self._config.preprocess_state else None
+            ),
+            env_explorer=self._env_explorer_builder(
+                self._env_info,
+                self._config,
+                self,
+                greedy_action_selector=self._compute_greedy_action,
+                random_action_selector=self._compute_explore_action,
+            ),
+        )
         processes = []
         for actor in actors:
             if self._config.actor_num == 1:
@@ -586,20 +643,23 @@ class AMP(Algorithm):
             processes.append(p)
         return actors, processes
 
-    def _build_amp_actors(self, env, policy, v_function, state_preprocessor, reward_function,
-                          reward_state_preprocessor, env_explorer):
+    def _build_amp_actors(
+        self, env, policy, v_function, state_preprocessor, reward_function, reward_state_preprocessor, env_explorer
+    ):
         actors = []
         for i in range(self._config.actor_num):
-            actor = _AMPActor(actor_num=i,
-                              env=env,
-                              env_info=self._env_info,
-                              policy=policy,
-                              v_function=v_function,
-                              state_preprocessor=state_preprocessor,
-                              reward_function=reward_function,
-                              reward_state_preprocessor=reward_state_preprocessor,
-                              config=self._config,
-                              env_explorer=env_explorer)
+            actor = _AMPActor(
+                actor_num=i,
+                env=env,
+                env_info=self._env_info,
+                policy=policy,
+                v_function=v_function,
+                state_preprocessor=state_preprocessor,
+                reward_function=reward_function,
+                reward_state_preprocessor=reward_state_preprocessor,
+                config=self._config,
+                env_explorer=env_explorer,
+            )
             actors.append(actor)
         return actors
 
@@ -619,8 +679,12 @@ class AMP(Algorithm):
         if update_interval < self.iteration_num:
             # NOTE: The first update (when update_interval == self.iteration_num) will be skipped
             policy_buffers, v_function_buffers = self._create_policy_and_v_function_buffers(experiences_per_agent)
-            self._amp_training(self._discriminator_agent_replay_buffers, self._discriminator_expert_replay_buffers,
-                               policy_buffers, v_function_buffers)
+            self._amp_training(
+                self._discriminator_agent_replay_buffers,
+                self._discriminator_expert_replay_buffers,
+                policy_buffers,
+                v_function_buffers,
+            )
 
         if self._config.preprocess_state and self.iteration_num < self._config.num_processor_samples:
             self._pi_v_state_preprocessor.update(s)
@@ -641,7 +705,8 @@ class AMP(Algorithm):
                     actor.update_state_preprocessor_params(casted_pi_v_state_preprocessor.get_parameters())
                     casted_discriminator_state_preprocessor = cast(Model, self._discriminator_state_preprocessor)
                     actor.update_reward_state_preprocessor_params(
-                        casted_discriminator_state_preprocessor.get_parameters())
+                        casted_discriminator_state_preprocessor.get_parameters()
+                    )
             else:
                 # Its running on same process. No need to synchronize parameters with multiprocessing arrays.
                 pass
@@ -664,8 +729,10 @@ class AMP(Algorithm):
 
             experience = [
                 (s, a, r, non_terminal, n_s, log_prob, non_greedy, e_s, e_a, e_s_next, v_target, advantage)
-                for (s, a, r, non_terminal, n_s, log_prob, non_greedy, e_s, e_a, e_s_next, v_target, advantage)
-                in zip(*splitted_result)]
+                for (s, a, r, non_terminal, n_s, log_prob, non_greedy, e_s, e_a, e_s_next, v_target, advantage) in zip(
+                    *splitted_result
+                )
+            ]
             assert len(experience) == self._config.actor_timesteps
             experiences_per_agent.append(experience)
 
@@ -675,9 +742,9 @@ class AMP(Algorithm):
     def _add_experience_to_reward_buffers(self, experience_per_agent):
         assert len(self._discriminator_agent_replay_buffers) == len(experience_per_agent)
         assert len(self._discriminator_expert_replay_buffers) == len(experience_per_agent)
-        for agent_buffer, expert_buffer, experience in zip(self._discriminator_agent_replay_buffers,
-                                                           self._discriminator_expert_replay_buffers,
-                                                           experience_per_agent):
+        for agent_buffer, expert_buffer, experience in zip(
+            self._discriminator_agent_replay_buffers, self._discriminator_expert_replay_buffers, experience_per_agent
+        ):
             agent_buffer.append_all(experience)
             expert_buffer.append_all(experience)
 
@@ -710,8 +777,13 @@ class AMP(Algorithm):
     def _run_offline_training_iteration(self, buffer):
         raise NotImplementedError
 
-    def _amp_training(self, discriminator_agent_replay_buffers, discriminator_expert_replay_buffers,
-                      policy_replay_buffers, v_function_replay_buffers):
+    def _amp_training(
+        self,
+        discriminator_agent_replay_buffers,
+        discriminator_expert_replay_buffers,
+        policy_replay_buffers,
+        v_function_replay_buffers,
+    ):
         self._reward_function_training(discriminator_agent_replay_buffers, discriminator_expert_replay_buffers)
 
         total_updates = (self._config.actor_num * self._config.actor_timesteps) // self._config.batch_size
@@ -723,13 +795,14 @@ class AMP(Algorithm):
         for _ in range(self._config.discriminator_epochs):
             for _ in range(num_updates):
                 agent_experiences = _sample_experiences_from_buffers(
-                    agent_buffers, self._config.discriminator_batch_size)
+                    agent_buffers, self._config.discriminator_batch_size
+                )
                 (s_agent, a_agent, _, _, s_next_agent, *_) = marshal_experiences(agent_experiences)
 
                 expert_experiences = _sample_experiences_from_buffers(
-                    expert_buffers, self._config.discriminator_batch_size)
-                (_, _, _, _, _, _, _, s_expert, a_expert, s_next_expert, _, _) = marshal_experiences(
-                    expert_experiences)
+                    expert_buffers, self._config.discriminator_batch_size
+                )
+                (_, _, _, _, _, _, _, s_expert, a_expert, s_next_expert, _, _) = marshal_experiences(expert_experiences)
 
                 extra = {}
                 extra["s_current_agent"] = s_agent
@@ -744,7 +817,8 @@ class AMP(Algorithm):
 
     def _v_function_training(self, total_updates, v_function_replay_buffers):
         v_function_buffer_iterator = _EquallySampleBufferIterator(
-            total_updates, v_function_replay_buffers, self._config.batch_size)
+            total_updates, v_function_replay_buffers, self._config.batch_size
+        )
         for _ in range(self._config.epochs):
             for experiences in v_function_buffer_iterator:
                 (s, a, _, _, _, _, v_target, _, _) = marshal_experiences(experiences)
@@ -755,7 +829,8 @@ class AMP(Algorithm):
 
     def _policy_training(self, total_updates, policy_replay_buffers):
         policy_buffer_iterator = _EquallySampleBufferIterator(
-            total_updates, policy_replay_buffers, self._config.batch_size)
+            total_updates, policy_replay_buffers, self._config.batch_size
+        )
         for _ in range(self._config.epochs):
             for experiences in policy_buffer_iterator:
                 (s, a, _, _, _, log_prob, _, advantage, _) = marshal_experiences(experiences)
@@ -788,8 +863,9 @@ class AMP(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(
-            env_or_env_info, gym.Env) else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @eval_api
@@ -854,9 +930,11 @@ class AMP(Algorithm):
 
     @property
     def trainers(self):
-        return {"discriminator": self._discriminator_trainer,
-                "v_function": self._v_function_trainer,
-                "policy": self._policy_trainer}
+        return {
+            "discriminator": self._discriminator_trainer,
+            "v_function": self._v_function_trainer,
+            "policy": self._policy_trainer,
+        }
 
 
 def _sample_experiences_from_buffers(buffers: List[ReplayBuffer], batch_size: int) -> List[Experience]:
@@ -880,17 +958,19 @@ def _concatenate_state(experiences_per_agent) -> Tuple[np.ndarray, np.ndarray]:
 
 class _AMPActor:
 
-    def __init__(self,
-                 actor_num: int,
-                 env: gym.Env,
-                 env_info: EnvironmentInfo,
-                 policy: StochasticPolicy,
-                 v_function: VFunction,
-                 state_preprocessor: Optional[Preprocessor],
-                 reward_function: RewardFunction,
-                 reward_state_preprocessor: Optional[Preprocessor],
-                 env_explorer: EnvironmentExplorer,
-                 config: AMPConfig):
+    def __init__(
+        self,
+        actor_num: int,
+        env: gym.Env,
+        env_info: EnvironmentInfo,
+        policy: StochasticPolicy,
+        v_function: VFunction,
+        state_preprocessor: Optional[Preprocessor],
+        reward_function: RewardFunction,
+        reward_state_preprocessor: Optional[Preprocessor],
+        env_explorer: EnvironmentExplorer,
+        config: AMPConfig,
+    ):
         # These variables will be copied when process is created
         self._actor_num = actor_num
         self._env = env
@@ -925,60 +1005,78 @@ class _AMPActor:
                 casted_reward_state_preprocessor.get_parameters()
             )
 
-        MultiProcessingArrays = namedtuple("MultiProcessingArrays",
-                                           ["state",
-                                            "action",
-                                            "reward",
-                                            "non_terminal",
-                                            "next_state",
-                                            "log_prob",
-                                            "non_greedy_action",
-                                            "expert_state",
-                                            "expert_action",
-                                            "expert_next_state",
-                                            "v_target",
-                                            "advantage"])
+        MultiProcessingArrays = namedtuple(
+            "MultiProcessingArrays",
+            [
+                "state",
+                "action",
+                "reward",
+                "non_terminal",
+                "next_state",
+                "log_prob",
+                "non_greedy_action",
+                "expert_state",
+                "expert_action",
+                "expert_next_state",
+                "v_target",
+                "advantage",
+            ],
+        )
 
         state_mp_array = self._prepare_state_mp_array(env_info.observation_space, env_info)
         action_mp_array = self._prepare_action_mp_array(env_info.action_space, env_info)
 
         scalar_mp_array_shape = (self._timesteps, 1)
-        reward_mp_array = (mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
-                           scalar_mp_array_shape,
-                           np.float32)
-        non_terminal_mp_array = (mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
-                                 scalar_mp_array_shape,
-                                 np.float32)
+        reward_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
+        non_terminal_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
         next_state_mp_array = self._prepare_state_mp_array(env_info.observation_space, env_info)
-        log_prob_mp_array = (mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
-                             scalar_mp_array_shape,
-                             np.float32)
-        non_greedy_action_mp_array = (mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
-                                      scalar_mp_array_shape,
-                                      np.float32)
-        v_target_mp_array = (mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
-                             scalar_mp_array_shape,
-                             np.float32)
-        advantage_mp_array = (mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
-                              scalar_mp_array_shape,
-                              np.float32)
+        log_prob_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
+        non_greedy_action_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
+        v_target_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
+        advantage_mp_array = (
+            mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32)),
+            scalar_mp_array_shape,
+            np.float32,
+        )
 
         expert_state_mp_array = self._prepare_state_mp_array(env_info.observation_space, env_info)
         expert_action_mp_array = self._prepare_action_mp_array(env_info.action_space, env_info)
         expert_next_state_mp_array = self._prepare_state_mp_array(env_info.observation_space, env_info)
 
-        self._mp_arrays = MultiProcessingArrays(state_mp_array,
-                                                action_mp_array,
-                                                reward_mp_array,
-                                                non_terminal_mp_array,
-                                                next_state_mp_array,
-                                                log_prob_mp_array,
-                                                non_greedy_action_mp_array,
-                                                expert_state_mp_array,
-                                                expert_action_mp_array,
-                                                expert_next_state_mp_array,
-                                                v_target_mp_array,
-                                                advantage_mp_array)
+        self._mp_arrays = MultiProcessingArrays(
+            state_mp_array,
+            action_mp_array,
+            reward_mp_array,
+            non_terminal_mp_array,
+            next_state_mp_array,
+            log_prob_mp_array,
+            non_greedy_action_mp_array,
+            expert_state_mp_array,
+            expert_action_mp_array,
+            expert_next_state_mp_array,
+            v_target_mp_array,
+            advantage_mp_array,
+        )
 
         self._reward_min = np.inf
         self._reward_max = -np.inf
@@ -1057,8 +1155,9 @@ class _AMPActor:
         indexes = np.arange(len(experiences))
         drng.shuffle(indexes)
         experiences = [experiences[i] for i in indexes[: self._config.actor_timesteps]]
-        (s, a,  r, non_terminal, s_next, log_prob, non_greedy_action, e_s, e_a,
-         e_s_next, v_target, advantage) = marshal_experiences(experiences)
+        (s, a, r, non_terminal, s_next, log_prob, non_greedy_action, e_s, e_a, e_s_next, v_target, advantage) = (
+            marshal_experiences(experiences)
+        )
 
         _copy_np_array_to_mp_array(s, self._mp_arrays.state)
         _copy_np_array_to_mp_array(a, self._mp_arrays.action)
@@ -1086,13 +1185,15 @@ class _AMPActor:
             lmb=self._config.lmb,
             value_clip=(self._reward_min / (1.0 - self._config.gamma), self._reward_max / (1.0 - self._config.gamma)),
             value_at_task_fail=self._config.value_at_task_fail,
-            value_at_task_success=self._config.value_at_task_success)
+            value_at_task_success=self._config.value_at_task_success,
+        )
         assert self._config.target_value_clip[0] < self._config.target_value_clip[1]
         v_targets = np.clip(v_targets, a_min=self._config.target_value_clip[0], a_max=self._config.target_value_clip[1])
 
         advantage_std = compute_std_ndarray(np.var(advantages), epsilon=1e-5, mode_for_floating_point_error="add")
-        advantages = normalize_ndarray(advantages, mean=np.mean(
-            advantages), std=advantage_std, value_clip=self._config.normalized_advantage_clip)
+        advantages = normalize_ndarray(
+            advantages, mean=np.mean(advantages), std=advantage_std, value_clip=self._config.normalized_advantage_clip
+        )
 
         assert len(experiences) == len(v_targets)
         assert len(experiences) == len(advantages)
@@ -1101,18 +1202,22 @@ class _AMPActor:
             expert_s, expert_a, _, _, expert_n_s, _ = info["expert_experience"]
 
             assert "greedy_action" in info
-            organized_experiences.append((s,
-                                          a,
-                                          r,
-                                          non_terminal,
-                                          s_next,
-                                          info["log_prob"],
-                                          0.0 if info["greedy_action"] else 1.0,
-                                          expert_s,
-                                          expert_a,
-                                          expert_n_s,
-                                          v_target,
-                                          advantage))
+            organized_experiences.append(
+                (
+                    s,
+                    a,
+                    r,
+                    non_terminal,
+                    s_next,
+                    info["log_prob"],
+                    0.0 if info["greedy_action"] else 1.0,
+                    expert_s,
+                    expert_a,
+                    expert_n_s,
+                    v_target,
+                    advantage,
+                )
+            )
 
         return organized_experiences
 
@@ -1135,8 +1240,9 @@ class _AMPActor:
             self._reward_var.forward()
 
             if self._config.use_reward_from_env:
-                reward = (1.0 - self._config.lerp_reward_coefficient) * \
-                    float(self._reward_var.d) + self._config.lerp_reward_coefficient * float(env_r)
+                reward = (1.0 - self._config.lerp_reward_coefficient) * float(
+                    self._reward_var.d
+                ) + self._config.lerp_reward_coefficient * float(env_r)
             else:
                 reward = float(self._reward_var.d)
             rewards.append(reward)
@@ -1168,29 +1274,27 @@ class _AMPActor:
             state_mp_array_dtypes = []
             for space in obs_space:
                 state_mp_array_shape = (self._timesteps, *space.shape)
-                state_mp_array = mp_array_from_np_array(
-                    np.empty(shape=state_mp_array_shape, dtype=space.dtype))
+                state_mp_array = mp_array_from_np_array(np.empty(shape=state_mp_array_shape, dtype=space.dtype))
                 state_mp_array_shapes.append(state_mp_array_shape)
                 state_mp_array_dtypes.append(space.dtype)
                 state_mp_arrays.append(state_mp_array)
             return tuple(x for x in zip(state_mp_arrays, state_mp_array_shapes, state_mp_array_dtypes))
         else:
             state_mp_array_shape = (self._timesteps, *obs_space.shape)
-            state_mp_array = mp_array_from_np_array(
-                np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
+            state_mp_array = mp_array_from_np_array(np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
             return (state_mp_array, state_mp_array_shape, obs_space.dtype)
 
     def _prepare_action_mp_array(self, action_space, env_info):
         action_mp_array_shape = (self._timesteps, action_space.shape[0])
-        action_mp_array = mp_array_from_np_array(
-            np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
+        action_mp_array = mp_array_from_np_array(np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
         return (action_mp_array, action_mp_array_shape, action_space.dtype)
 
 
 def _copy_np_array_to_mp_array(
     np_array: Union[np.ndarray, Tuple[np.ndarray]],
-    mp_array_shape_type: Union[Tuple[np.ndarray, Tuple[int, ...], np.dtype],
-                               Tuple[Tuple[np.ndarray, Tuple[int, ...], np.dtype]]],
+    mp_array_shape_type: Union[
+        Tuple[np.ndarray, Tuple[int, ...], np.dtype], Tuple[Tuple[np.ndarray, Tuple[int, ...], np.dtype]]
+    ],
 ):
     """Copy numpy array to multiprocessing array.
 
@@ -1210,15 +1314,16 @@ def _copy_np_array_to_mp_array(
         raise ValueError("Invalid pair of np_array and mp_array!")
 
 
-def _compute_v_target_and_advantage_with_clipping_and_overwriting(v_function: VFunction,
-                                                                  experiences: List[Experience],
-                                                                  rewards: List[float],
-                                                                  gamma: float,
-                                                                  lmb: float,
-                                                                  value_at_task_fail: float,
-                                                                  value_at_task_success: float,
-                                                                  value_clip: Optional[Tuple[float, float]] = None
-                                                                  ) -> Tuple[np.ndarray, np.ndarray]:
+def _compute_v_target_and_advantage_with_clipping_and_overwriting(
+    v_function: VFunction,
+    experiences: List[Experience],
+    rewards: List[float],
+    gamma: float,
+    lmb: float,
+    value_at_task_fail: float,
+    value_at_task_success: float,
+    value_clip: Optional[Tuple[float, float]] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
     assert isinstance(v_function, VFunction), "Invalid v_function"
     if value_clip is not None:
         assert value_clip[0] < value_clip[1]
@@ -1293,11 +1398,11 @@ class _EndlessBufferIterator(BufferIterator):
         super().__init__(buffer, batch_size, shuffle, repeat=True)
 
     def next(self):
-        indices = self._indices[self._index:self._index + self._batch_size]
-        if (len(indices) < self._batch_size):
+        indices = self._indices[self._index : self._index + self._batch_size]
+        if len(indices) < self._batch_size:
             rest = self._batch_size - len(indices)
             self.reset()
-            indices = np.append(indices, self._indices[self._index:self._index + rest])
+            indices = np.append(indices, self._indices[self._index : self._index + rest])
             self._index += rest
         else:
             self._index += self._batch_size
@@ -1306,13 +1411,13 @@ class _EndlessBufferIterator(BufferIterator):
     __next__ = next
 
 
-class _EquallySampleBufferIterator():
+class _EquallySampleBufferIterator:
     def __init__(self, total_num_iterations: int, replay_buffers: List[ReplayBuffer], batch_size: int):
         buffer_batch_size = int(np.ceil(batch_size / len(replay_buffers)))
-        self._internal_iterators = [_EndlessBufferIterator(buffer=buffer,
-                                                           shuffle=False,
-                                                           batch_size=buffer_batch_size)
-                                    for buffer in replay_buffers]
+        self._internal_iterators = [
+            _EndlessBufferIterator(buffer=buffer, shuffle=False, batch_size=buffer_batch_size)
+            for buffer in replay_buffers
+        ]
         self._total_num_iterations = total_num_iterations
         self._replay_buffers = replay_buffers
         self._batch_size = batch_size
@@ -1344,6 +1449,6 @@ class _EquallySampleBufferIterator():
 
         if len(experiences) > self._batch_size:
             drng.shuffle(experiences)
-            experiences = experiences[:self._batch_size]
+            experiences = experiences[: self._batch_size]
 
         return experiences

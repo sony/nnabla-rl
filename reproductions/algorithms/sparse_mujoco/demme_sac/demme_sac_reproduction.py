@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,66 +26,67 @@ import sparse_mujoco  # noqa
 
 
 def select_start_timesteps(env_name):
-    if env_name in ['SparseAnt-v1', 'SparseHalfCheetah-v1']:
+    if env_name in ["SparseAnt-v1", "SparseHalfCheetah-v1"]:
         timesteps = 10000
     else:
         timesteps = 1000
-    print(f'Selected start timesteps: {timesteps}')
+    print(f"Selected start timesteps: {timesteps}")
     return timesteps
 
 
 def select_total_iterations(env_name):
-    if env_name in ['SparseAnt-v1']:
+    if env_name in ["SparseAnt-v1"]:
         total_iterations = 3000000
     else:
         total_iterations = 1000000
-    print(f'Selected total iterations: {total_iterations}')
+    print(f"Selected total iterations: {total_iterations}")
     return total_iterations
 
 
 def select_alpha_pi(env_name):
-    if env_name in ['SparseHopper-v1']:
+    if env_name in ["SparseHopper-v1"]:
         alpha_pi = 0.04
-    elif env_name in ['SparseHalfCheetah-v1']:
+    elif env_name in ["SparseHalfCheetah-v1"]:
         alpha_pi = 0.02
-    elif env_name in ['SparseWalker2d-v1']:
+    elif env_name in ["SparseWalker2d-v1"]:
         alpha_pi = 0.02
-    elif env_name in ['SparseAnt-v1']:
+    elif env_name in ["SparseAnt-v1"]:
         alpha_pi = 0.01
     else:
         alpha_pi = 1.0
-    print(f'Selected alpha_pi: {alpha_pi}')
+    print(f"Selected alpha_pi: {alpha_pi}")
     return alpha_pi
 
 
 def select_alpha_q(env_name):
-    if env_name in ['SparseHopper-v1']:
+    if env_name in ["SparseHopper-v1"]:
         alpha_q = 2.0
-    elif env_name in ['SparseHalfCheetah-v1']:
+    elif env_name in ["SparseHalfCheetah-v1"]:
         alpha_q = 2.0
-    elif env_name in ['SparseWalker2d-v1']:
+    elif env_name in ["SparseWalker2d-v1"]:
         alpha_q = 2.0
-    elif env_name in ['SparseAnt-v1']:
+    elif env_name in ["SparseAnt-v1"]:
         alpha_q = 0.1
     else:
         alpha_q = 1.0
-    print(f'Selected alpha_q: {alpha_q}')
+    print(f"Selected alpha_q: {alpha_q}")
     return alpha_q
 
 
 def run_training(args):
-    outdir = f'{args.env}_results/seed-{args.seed}'
+    outdir = f"{args.env}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
-    evaluation_hook = H.EvaluationHook(eval_env,
-                                       evaluator,
-                                       timing=args.eval_timing,
-                                       writer=W.FileWriter(outdir=outdir,
-                                                           file_prefix='evaluation_result'))
+    evaluation_hook = H.EvaluationHook(
+        eval_env,
+        evaluator,
+        timing=args.eval_timing,
+        writer=W.FileWriter(outdir=outdir, file_prefix="evaluation_result"),
+    )
 
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
     iteration_num_hook = H.IterationNumHook(timing=100)
@@ -94,10 +95,7 @@ def run_training(args):
     timesteps = select_start_timesteps(args.env)
     alpha_pi = select_alpha_pi(args.env)
     alpha_q = select_alpha_q(args.env)
-    config = A.DEMMESACConfig(gpu_id=args.gpu,
-                              start_timesteps=timesteps,
-                              alpha_pi=alpha_pi,
-                              alpha_q=alpha_q)
+    config = A.DEMMESACConfig(gpu_id=args.gpu, start_timesteps=timesteps, alpha_pi=alpha_pi, alpha_q=alpha_q)
     demme_sac = A.DEMMESAC(train_env, config=config)
 
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
@@ -112,13 +110,12 @@ def run_training(args):
 
 def run_showcase(args):
     if args.snapshot_dir is None:
-        raise ValueError(
-            'Please specify the snapshot dir for showcasing')
+        raise ValueError("Please specify the snapshot dir for showcasing")
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.DEMMESACConfig(gpu_id=args.gpu)
     demme_sac = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(demme_sac, A.DEMMESAC):
-        raise ValueError('Loaded snapshot is not trained with DEMMESAC!')
+        raise ValueError("Loaded snapshot is not trained with DEMMESAC!")
 
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(demme_sac, eval_env)
@@ -126,17 +123,17 @@ def run_showcase(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='SparseAnt-v1')
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--showcase', action='store_true')
-    parser.add_argument('--snapshot-dir', type=str, default=None)
-    parser.add_argument('--save-dir', type=str, default=None)
-    parser.add_argument('--total_iterations', type=int, default=None)
-    parser.add_argument('--save_timing', type=int, default=5000)
-    parser.add_argument('--eval_timing', type=int, default=5000)
-    parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument("--env", type=str, default="SparseAnt-v1")
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--showcase", action="store_true")
+    parser.add_argument("--snapshot-dir", type=str, default=None)
+    parser.add_argument("--save-dir", type=str, default=None)
+    parser.add_argument("--total_iterations", type=int, default=None)
+    parser.add_argument("--save_timing", type=int, default=5000)
+    parser.add_argument("--eval_timing", type=int, default=5000)
+    parser.add_argument("--showcase_runs", type=int, default=10)
 
     args = parser.parse_args()
 
@@ -146,5 +143,5 @@ def main():
         run_training(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

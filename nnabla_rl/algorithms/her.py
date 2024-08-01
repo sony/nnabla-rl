@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,8 +25,11 @@ import nnabla_rl.environment_explorers as EE
 import nnabla_rl.model_trainers as MT
 import nnabla_rl.preprocessors as RP
 from nnabla_rl.algorithms import DDPG, DDPGConfig
-from nnabla_rl.algorithms.common_utils import (_DeterministicPolicyActionSelector,
-                                               _StatePreprocessedDeterministicPolicy, _StatePreprocessedQFunction)
+from nnabla_rl.algorithms.common_utils import (
+    _DeterministicPolicyActionSelector,
+    _StatePreprocessedDeterministicPolicy,
+    _StatePreprocessedQFunction,
+)
 from nnabla_rl.builders import ModelBuilder, PreprocessorBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingBatch
@@ -85,49 +88,59 @@ class HERConfig(DDPGConfig):
 
 
 class HERActorBuilder(ModelBuilder[DeterministicPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: HERConfig,
-                    **kwargs) -> DeterministicPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: HERConfig,
+        **kwargs,
+    ) -> DeterministicPolicy:
         max_action_value = float(env_info.action_high[0])
         return HERPolicy(scope_name, env_info.action_dim, max_action_value=max_action_value)
 
 
 class HERCriticBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: HERConfig,
-                    **kwargs) -> QFunction:
-        target_policy = kwargs.get('target_policy')
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: HERConfig,
+        **kwargs,
+    ) -> QFunction:
+        target_policy = kwargs.get("target_policy")
         return HERQFunction(scope_name, optimal_policy=target_policy)
 
 
 class HERPreprocessorBuilder(PreprocessorBuilder):
-    def build_preprocessor(self,  # type: ignore[override]
-                           scope_name: str,
-                           env_info: EnvironmentInfo,
-                           algorithm_config: HERConfig,
-                           **kwargs) -> Preprocessor:
-        return RP.HERPreprocessor('preprocessor', env_info.state_shape,
-                                  epsilon=algorithm_config.normalize_epsilon,
-                                  value_clip=algorithm_config.normalize_clip_range)
+    def build_preprocessor(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: HERConfig,
+        **kwargs,
+    ) -> Preprocessor:
+        return RP.HERPreprocessor(
+            "preprocessor",
+            env_info.state_shape,
+            epsilon=algorithm_config.normalize_epsilon,
+            value_clip=algorithm_config.normalize_clip_range,
+        )
 
 
 class HERSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: HERConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: HERConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class HindsightReplayBufferBuilder(ReplayBufferBuilder):
     def __call__(self, env_info, algorithm_config, **kwargs):
-        return HindsightReplayBuffer(reward_function=env_info.reward_function,
-                                     hindsight_prob=algorithm_config.hindsight_prob,
-                                     capacity=algorithm_config.replay_buffer_size)
+        return HindsightReplayBuffer(
+            reward_function=env_info.reward_function,
+            hindsight_prob=algorithm_config.hindsight_prob,
+            capacity=algorithm_config.replay_buffer_size,
+        )
 
 
 class HER(DDPG):
@@ -157,6 +170,7 @@ class HER(DDPG):
         replay_buffer_builder (:py:class:`ReplayBufferBuilder <nnabla_rl.builders.ReplayBufferBuilder>`):
             builder of replay_buffer
     """
+
     _config: HERConfig
     _q: QFunction
     _q_solver: nn.solver.Solver
@@ -167,25 +181,30 @@ class HER(DDPG):
     _state_preprocessor: Optional[Preprocessor]
     _replay_buffer: HindsightReplayBuffer
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: HERConfig = HERConfig(),
-                 critic_builder: ModelBuilder[QFunction] = HERCriticBuilder(),
-                 critic_solver_builder: SolverBuilder = HERSolverBuilder(),
-                 actor_builder: ModelBuilder[DeterministicPolicy] = HERActorBuilder(),
-                 actor_solver_builder: SolverBuilder = HERSolverBuilder(),
-                 state_preprocessor_builder: Optional[PreprocessorBuilder] = HERPreprocessorBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = HindsightReplayBufferBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: HERConfig = HERConfig(),
+        critic_builder: ModelBuilder[QFunction] = HERCriticBuilder(),
+        critic_solver_builder: SolverBuilder = HERSolverBuilder(),
+        actor_builder: ModelBuilder[DeterministicPolicy] = HERActorBuilder(),
+        actor_solver_builder: SolverBuilder = HERSolverBuilder(),
+        state_preprocessor_builder: Optional[PreprocessorBuilder] = HERPreprocessorBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = HindsightReplayBufferBuilder(),
+    ):
 
-        super(HER, self).__init__(env_or_env_info=env_or_env_info,
-                                  config=config,
-                                  critic_builder=critic_builder,
-                                  critic_solver_builder=critic_solver_builder,
-                                  actor_builder=actor_builder,
-                                  actor_solver_builder=actor_solver_builder,
-                                  replay_buffer_builder=replay_buffer_builder)
+        super(HER, self).__init__(
+            env_or_env_info=env_or_env_info,
+            config=config,
+            critic_builder=critic_builder,
+            critic_solver_builder=critic_solver_builder,
+            actor_builder=actor_builder,
+            actor_solver_builder=actor_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+        )
 
         if self._config.preprocess_state and state_preprocessor_builder is not None:
-            preprocessor = state_preprocessor_builder('preprocessor', self._env_info, self._config)
+            preprocessor = state_preprocessor_builder("preprocessor", self._env_info, self._config)
             assert preprocessor is not None
             self._q = _StatePreprocessedQFunction(q_function=self._q, preprocessor=preprocessor)
             self._target_q = _StatePreprocessedQFunction(q_function=self._target_q, preprocessor=preprocessor)
@@ -199,19 +218,22 @@ class HER(DDPG):
 
     def _setup_q_function_training(self, env_or_buffer):
         q_function_trainer_config = MT.q_value_trainers.HERQTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             grad_clip=None,
             return_clip=self._config.return_clip,
             unroll_steps=self._config.critic_unroll_steps,
             burn_in_steps=self._config.critic_burn_in_steps,
-            reset_on_terminal=self._config.critic_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.critic_reset_rnn_on_terminal,
+        )
 
-        q_function_trainer = MT.q_value_trainers.HERQTrainer(train_functions=self._q,
-                                                             solvers={self._q.scope_name: self._q_solver},
-                                                             target_functions=self._target_q,
-                                                             target_policy=self._target_pi,
-                                                             env_info=self._env_info,
-                                                             config=q_function_trainer_config)
+        q_function_trainer = MT.q_value_trainers.HERQTrainer(
+            train_functions=self._q,
+            solvers={self._q.scope_name: self._q_solver},
+            target_functions=self._target_q,
+            target_policy=self._target_pi,
+            env_info=self._env_info,
+            config=q_function_trainer_config,
+        )
         sync_model(self._q, self._target_q)
         return q_function_trainer
 
@@ -220,13 +242,16 @@ class HER(DDPG):
             action_loss_coef=self._config.action_loss_coef,
             unroll_steps=self._config.actor_unroll_steps,
             burn_in_steps=self._config.actor_burn_in_steps,
-            reset_on_terminal=self._config.actor_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.actor_reset_rnn_on_terminal,
+        )
 
-        policy_trainer = MT.policy_trainers.HERPolicyTrainer(models=self._pi,
-                                                             solvers={self._pi.scope_name: self._pi_solver},
-                                                             q_function=self._q,
-                                                             env_info=self._env_info,
-                                                             config=policy_trainer_config)
+        policy_trainer = MT.policy_trainers.HERPolicyTrainer(
+            models=self._pi,
+            solvers={self._pi.scope_name: self._pi_solver},
+            q_function=self._q,
+            env_info=self._env_info,
+            config=policy_trainer_config,
+        )
         sync_model(self._pi, self._target_pi)
         return policy_trainer
 
@@ -290,28 +315,30 @@ class HER(DDPG):
         for i in range(self._config.n_update):
             experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
             if num_steps == 1:
-                experiences_tuple = (experiences_tuple, )
+                experiences_tuple = (experiences_tuple,)
             assert len(experiences_tuple) == num_steps
 
             batch = None
             for experiences in reversed(experiences_tuple):
                 (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
-                rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
-                batch = TrainingBatch(batch_size=self._config.batch_size,
-                                      s_current=s,
-                                      a_current=a,
-                                      gamma=self._config.gamma,
-                                      reward=r,
-                                      non_terminal=non_terminal,
-                                      s_next=s_next,
-                                      weight=info['weights'],
-                                      next_step_batch=batch,
-                                      rnn_states=rnn_states)
+                rnn_states = rnn_states_dict["rnn_states"] if "rnn_states" in rnn_states_dict else {}
+                batch = TrainingBatch(
+                    batch_size=self._config.batch_size,
+                    s_current=s,
+                    a_current=a,
+                    gamma=self._config.gamma,
+                    reward=r,
+                    non_terminal=non_terminal,
+                    s_next=s_next,
+                    weight=info["weights"],
+                    next_step_batch=batch,
+                    rnn_states=rnn_states,
+                )
 
             self._q_function_trainer_state = self._q_function_trainer.train(batch)
             self._policy_trainer_state = self._policy_trainer.train(batch)
 
-            td_errors = np.abs(self._q_function_trainer_state['td_errors'])
+            td_errors = np.abs(self._q_function_trainer_state["td_errors"])
             replay_buffer.update_priorities(td_errors)
 
         # target update
@@ -346,8 +373,9 @@ class HER(DDPG):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
 
         # continuous action env
         is_continuous_action_env = env_info.is_continuous_action_env()

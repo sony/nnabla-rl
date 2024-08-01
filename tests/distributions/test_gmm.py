@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,14 @@ import pytest
 from scipy import stats
 
 import nnabla as nn
-from nnabla_rl.distributions.gmm import (GMM, NumpyGMM, compute_mean_and_covariance, compute_mixing_coefficient,
-                                         compute_responsibility, inference_data_mean_and_covariance)
+from nnabla_rl.distributions.gmm import (
+    GMM,
+    NumpyGMM,
+    compute_mean_and_covariance,
+    compute_mixing_coefficient,
+    compute_responsibility,
+    inference_data_mean_and_covariance,
+)
 
 
 def _generate_dummy_params():
@@ -32,7 +38,7 @@ def _generate_dummy_params():
     return num_classes, dims, means, covariances, mixing_coefficients
 
 
-class TestGMM():
+class TestGMM:
     def test_nnabla_constructor(self):
         _, _, means, covariances, mixing_coefficients = _generate_dummy_params()
         nnabla_means = nn.Variable.from_numpy_array(means)
@@ -47,12 +53,12 @@ class TestGMM():
         assert isinstance(distribution._delegate, NumpyGMM)
 
 
-class TestNumpyGMM():
+class TestNumpyGMM:
     def test_sample(self):
         _, dims, means, covariances, mixing_coefficients = _generate_dummy_params()
         gmm = NumpyGMM(means, covariances, mixing_coefficients)
         sample = gmm.sample()
-        assert sample.shape == (dims, )
+        assert sample.shape == (dims,)
 
         with pytest.raises(NotImplementedError):
             gmm.sample(noise_clip=np.ones(means.shape[1:]))
@@ -88,9 +94,7 @@ class TestNumpyGMM():
 
     def test_numpy_compute_mixing_coefficient(self):
         responsibility = np.random.randn(3, 1) + 2.0
-        with mock.patch(
-            'nnabla_rl.distributions.gmm.logsumexp', return_value=1.0
-        ) as mock_logsumexp:
+        with mock.patch("nnabla_rl.distributions.gmm.logsumexp", return_value=1.0) as mock_logsumexp:
             result = compute_mixing_coefficient(responsibility)
             mock_logsumexp.assert_called_once()
             assert result == np.exp(1 - np.log(responsibility.shape[0]))
@@ -110,13 +114,13 @@ class TestNumpyGMM():
         gmm = NumpyGMM(means, covariances, mixing_coefficients)
 
         with mock.patch(
-            'nnabla_rl.distributions.gmm.compute_responsibility', return_value=(None, None)
+            "nnabla_rl.distributions.gmm.compute_responsibility", return_value=(None, None)
         ) as mock_compute_responsibility:
             with mock.patch(
-                'nnabla_rl.distributions.gmm.compute_mixing_coefficient', return_value=None
+                "nnabla_rl.distributions.gmm.compute_mixing_coefficient", return_value=None
             ) as mock_compute_mixing_coefficient:
                 with mock.patch(
-                    'nnabla_rl.distributions.gmm.compute_mean_and_covariance',
+                    "nnabla_rl.distributions.gmm.compute_mean_and_covariance",
                     return_value=(None, None),
                 ) as mock_compute_mean_and_var:
 
@@ -126,5 +130,5 @@ class TestNumpyGMM():
                     mock_compute_mean_and_var.assert_called_once()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

@@ -35,8 +35,11 @@ class DeepMimicEpisodicEvaluator:
 
             if info["valid_episode"]:
                 returns.append(reward_sum)
-                logger.info("Finished evaluation run: #{} out of {}. Total reward: {}".format(
-                    len(returns), self._num_episodes, reward_sum))
+                logger.info(
+                    "Finished evaluation run: #{} out of {}. Total reward: {}".format(
+                        len(returns), self._num_episodes, reward_sum
+                    )
+                )
             else:
                 logger.info("Invalid episode. Skip to add this episode to evaluation")
         return returns

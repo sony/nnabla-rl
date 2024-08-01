@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,8 +30,7 @@ class TestHindsightReplayBuffer(object):
 
     def test_unsupported_env(self):
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
-        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward,
-                                       capacity=100)
+        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward, capacity=100)
         experiences = self._generate_experiences(dummy_env)
 
         with pytest.raises(RuntimeError):
@@ -40,8 +39,7 @@ class TestHindsightReplayBuffer(object):
     def test_extract_end_index_of_episode(self):
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
         dummy_env = GoalConditionedTupleObservationEnv(dummy_env)
-        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward,
-                                       capacity=100)
+        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward, capacity=100)
         for _ in range(num_episode):
             experiences = self._generate_experiences(dummy_env)
             buffer.append_all(experiences)
@@ -52,26 +50,24 @@ class TestHindsightReplayBuffer(object):
             gt_end_index_of_episode = (i + 1) * max_episode_steps - 1
             assert end_index_of_episode == gt_end_index_of_episode
 
-    @pytest.mark.parametrize('index', [np.random.randint(num_experiences) for _ in range(10)])
+    @pytest.mark.parametrize("index", [np.random.randint(num_experiences) for _ in range(10)])
     def test_select_future_index(self, index):
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
         dummy_env = GoalConditionedTupleObservationEnv(dummy_env)
-        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward,
-                                       capacity=100)
+        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward, capacity=100)
         for _ in range(num_episode):
             experiences = self._generate_experiences(dummy_env)
             buffer.append_all(experiences)
 
         end_index_of_episode = self._extract_end_index_of_episode(buffer, index)
         future_index = buffer._select_future_index(index, end_index_of_episode)
-        assert ((index <= future_index) and (future_index <= end_index_of_episode))
+        assert (index <= future_index) and (future_index <= end_index_of_episode)
 
-    @pytest.mark.parametrize('index', [np.random.randint(num_experiences) for _ in range(10)])
+    @pytest.mark.parametrize("index", [np.random.randint(num_experiences) for _ in range(10)])
     def test_replace_goal(self, index):
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
         dummy_env = GoalConditionedTupleObservationEnv(dummy_env)
-        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward,
-                                       capacity=100)
+        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward, capacity=100)
         for _ in range(num_episode):
             experiences = self._generate_experiences(dummy_env)
             buffer.append_all(experiences)
@@ -85,12 +81,11 @@ class TestHindsightReplayBuffer(object):
         assert np.allclose(new_experience[0][1], future_experience[4][2])
         assert np.allclose(new_experience[4][1], future_experience[4][2])
 
-    @pytest.mark.parametrize('index', [np.random.randint(num_experiences) for _ in range(10)])
+    @pytest.mark.parametrize("index", [np.random.randint(num_experiences) for _ in range(10)])
     def test_replace_goal_with_same_index(self, index):
         dummy_env = DummyContinuousActionGoalEnv(max_episode_steps=max_episode_steps)
         dummy_env = GoalConditionedTupleObservationEnv(dummy_env)
-        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward,
-                                       capacity=100)
+        buffer = HindsightReplayBuffer(reward_function=dummy_env.compute_reward, capacity=100)
         for _ in range(num_episode):
             experiences = self._generate_experiences(dummy_env)
             buffer.append_all(experiences)
@@ -118,8 +113,8 @@ class TestHindsightReplayBuffer(object):
 
     def _extract_end_index_of_episode(self, buffer, item_index):
         _, _, _, _, _, info = buffer[item_index]
-        index_in_episode = info['index_in_episode']
-        episode_end_index = int(info['episode_end_index'])
+        index_in_episode = info["index_in_episode"]
+        episode_end_index = int(info["episode_end_index"])
         distance_to_end = episode_end_index - index_in_episode
 
         return distance_to_end + item_index

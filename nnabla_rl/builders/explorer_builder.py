@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,21 +19,16 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 
 class ExplorerBuilder(object):
-    """Explorer builder interface class
-    """
+    """Explorer builder interface class"""
 
-    def __call__(self,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 algorithm: Algorithm,
-                 **kwargs) -> EnvironmentExplorer:
+    def __call__(
+        self, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, algorithm: Algorithm, **kwargs
+    ) -> EnvironmentExplorer:
         return self.build_explorer(env_info, algorithm_config, algorithm, **kwargs)
 
-    def build_explorer(self,
-                       env_info: EnvironmentInfo,
-                       algorithm_config: AlgorithmConfig,
-                       algorithm: Algorithm,
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(
+        self, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, algorithm: Algorithm, **kwargs
+    ) -> EnvironmentExplorer:
         """Build explorer.
 
         Args:

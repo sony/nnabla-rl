@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,16 +32,17 @@ class LinearDynamics(Dynamics):
         # input changes the velocity
         self._B = np.array([[0, 0], [0, dt]])
 
-    def next_state(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, Dict[str, Any]]:
+    def next_state(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
         return self._A.dot(x) + self._B.dot(u), {}
 
-    def gradient(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray]:
+    def gradient(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         return self._A, self._B
 
-    def hessian(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def hessian(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         raise NotImplementedError
 
     def state_dim(self) -> int:
@@ -65,7 +66,7 @@ class QuadraticCostFunction(CostFunction):
             return x.T.dot(self._Q).dot(x)
         else:
             # Assuming that target state is zero
-            return x.T.dot(self._Q).dot(x) + 2.0*x.T.dot(self._F).dot(u) + u.T.dot(self._R).dot(u)
+            return x.T.dot(self._Q).dot(x) + 2.0 * x.T.dot(self._F).dot(u) + u.T.dot(self._R).dot(u)
 
     def gradient(
         self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
@@ -86,18 +87,18 @@ class QuadraticCostFunction(CostFunction):
 
 class TestiLQR(object):
     def test_algorithm_name(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
         ilqr = A.iLQR(env, dynamics=dynamics, cost_function=cost_function)
 
-        assert ilqr.__name__ == 'iLQR'
+        assert ilqr.__name__ == "iLQR"
 
     def test_continuous_action_env_supported(self):
         """Check that no error occurs when training on continuous action
         env."""
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
@@ -113,7 +114,7 @@ class TestiLQR(object):
             A.iLQR(env, dynamics=dynamics, cost_function=cost_function)
 
     def test_compute_eval_action(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
@@ -132,7 +133,7 @@ class TestiLQR(object):
         np.testing.assert_almost_equal(lqr_action, ilqr_action, decimal=3)
 
     def test_compute_trajectory(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
@@ -149,13 +150,13 @@ class TestiLQR(object):
         lqr_trajectory, _ = lqr.compute_trajectory(initial_trajectory)
         ilqr_trajectory, _ = ilqr.compute_trajectory(initial_trajectory)
 
-        for (lqr_state, ilqr_state) in zip(lqr_trajectory[:-1], ilqr_trajectory[:-1]):
+        for lqr_state, ilqr_state in zip(lqr_trajectory[:-1], ilqr_trajectory[:-1]):
             np.testing.assert_almost_equal(lqr_state[0], ilqr_state[0], decimal=3)
             np.testing.assert_almost_equal(lqr_state[1], ilqr_state[1], decimal=3)
 
     def test_run_online_training(self):
         """Check that error occurs when calling online training."""
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
@@ -165,7 +166,7 @@ class TestiLQR(object):
 
     def test_run_offline_training(self):
         """Check that error occurs when calling offline training."""
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 

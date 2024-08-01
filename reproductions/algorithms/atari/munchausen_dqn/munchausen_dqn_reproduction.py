@@ -34,7 +34,7 @@ class MemoryEfficientBufferBuilder(ReplayBufferBuilder):
 
 
 def run_training(args):
-    outdir = f'{args.env}_results/seed-{args.seed}'
+    outdir = f"{args.env}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
@@ -59,38 +59,37 @@ def run_training(args):
 
 def run_showcase(args):
     if args.snapshot_dir is None:
-        raise ValueError('Please specify the snapshot dir for showcasing')
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render,
-                               use_gymnasium=args.use_gymnasium)
+        raise ValueError("Please specify the snapshot dir for showcasing")
+    eval_env = build_atari_env(
+        args.env, test=True, seed=args.seed + 200, render=args.render, use_gymnasium=args.use_gymnasium
+    )
     config = A.MunchausenDQNConfig(gpu_id=args.gpu)
     m_dqn = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(m_dqn, A.MunchausenDQN):
-        raise ValueError('Loaded snapshot is not trained with DQN!')
+        raise ValueError("Loaded snapshot is not trained with DQN!")
 
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     returns = evaluator(m_dqn, eval_env)
     mean = np.mean(returns)
     std_dev = np.std(returns)
     median = np.median(returns)
-    logger.info('Evaluation results. mean: {} +/- std: {}, median: {}'.format(
-        mean, std_dev, median))
+    logger.info("Evaluation results. mean: {} +/- std: {}, median: {}".format(mean, std_dev, median))
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str,
-                        default='BreakoutNoFrameskip-v4')
-    parser.add_argument('--save-dir', type=str, default="")
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--showcase', action='store_true')
-    parser.add_argument('--snapshot-dir', type=str, default=None)
-    parser.add_argument('--total_iterations', type=int, default=50000000)
-    parser.add_argument('--save_timing', type=int, default=250000)
-    parser.add_argument('--eval_timing', type=int, default=250000)
-    parser.add_argument('--showcase_runs', type=int, default=10)
-    parser.add_argument('--use-gymnasium', action='store_true')
+    parser.add_argument("--env", type=str, default="BreakoutNoFrameskip-v4")
+    parser.add_argument("--save-dir", type=str, default="")
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--showcase", action="store_true")
+    parser.add_argument("--snapshot-dir", type=str, default=None)
+    parser.add_argument("--total_iterations", type=int, default=50000000)
+    parser.add_argument("--save_timing", type=int, default=250000)
+    parser.add_argument("--eval_timing", type=int, default=250000)
+    parser.add_argument("--showcase_runs", type=int, default=10)
+    parser.add_argument("--use-gymnasium", action="store_true")
 
     args = parser.parse_args()
 
@@ -100,5 +99,5 @@ def main():
         run_training(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

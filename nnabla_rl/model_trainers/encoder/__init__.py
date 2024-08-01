@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.model_trainers.encoder.hyar_vae_trainer import (  # noqa
-    HyARVAETrainer, HyARVAETrainerConfig)
+from nnabla_rl.model_trainers.encoder.hyar_vae_trainer import HyARVAETrainer, HyARVAETrainerConfig  # noqa
 from nnabla_rl.model_trainers.encoder.kld_variational_auto_encoder_trainer import (  # noqa
-    KLDVariationalAutoEncoderTrainer, KLDVariationalAutoEncoderTrainerConfig)
+    KLDVariationalAutoEncoderTrainer,
+    KLDVariationalAutoEncoderTrainerConfig,
+)

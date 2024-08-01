@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ import nnabla as nn
 import nnabla_rl.functions as RNF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
-from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (SquaredTDQFunctionTrainer,
-                                                                            SquaredTDQFunctionTrainerConfig)
+from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (
+    SquaredTDQFunctionTrainer,
+    SquaredTDQFunctionTrainerConfig,
+)
 from nnabla_rl.models import QFunction, VFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 from nnabla_rl.utils.misc import create_variables
@@ -35,6 +37,7 @@ class VTargetedQTrainerConfig(SquaredTDQFunctionTrainerConfig):
             :math:`target=\\gamma\\times V(s_{t+1})`.\
             Used in Disentangled MME.\
     """
+
     pure_exploration: bool = False
 
 
@@ -46,12 +49,14 @@ class VTargetedQTrainer(SquaredTDQFunctionTrainer):
     _target_v_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _config: VTargetedQTrainerConfig
 
-    def __init__(self,
-                 train_functions: Union[QFunction, Sequence[QFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_functions: Union[VFunction, Sequence[VFunction]],
-                 env_info: EnvironmentInfo,
-                 config: VTargetedQTrainerConfig = VTargetedQTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[QFunction, Sequence[QFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_functions: Union[VFunction, Sequence[VFunction]],
+        env_info: EnvironmentInfo,
+        config: VTargetedQTrainerConfig = VTargetedQTrainerConfig(),
+    ):
         self._target_functions = convert_to_list_if_not_list(target_functions)
         self._assert_no_duplicate_model(self._target_functions)
         self._target_v_rnn_states = {}

@@ -21,9 +21,9 @@ import nnabla as nn
 import nnabla.functions as NF
 
 
-def sample_gaussian(mean: nn.Variable,
-                    ln_var: nn.Variable,
-                    noise_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+def sample_gaussian(
+    mean: nn.Variable, ln_var: nn.Variable, noise_clip: Optional[Tuple[float, float]] = None
+) -> nn.Variable:
     """Sample value from a gaussian distribution of given mean and variance.
 
     Args:
@@ -35,7 +35,7 @@ def sample_gaussian(mean: nn.Variable,
         nn.Variable: Sampled value from gaussian distribution of given mean and variance
     """
     if not (mean.shape == ln_var.shape):
-        raise ValueError('mean and ln_var has different shape')
+        raise ValueError("mean and ln_var has different shape")
 
     noise = NF.randn(shape=mean.shape)
     stddev = NF.exp(ln_var * 0.5)
@@ -45,10 +45,9 @@ def sample_gaussian(mean: nn.Variable,
     return mean + stddev * noise
 
 
-def sample_gaussian_multiple(mean: nn.Variable,
-                             ln_var: nn.Variable,
-                             num_samples: int,
-                             noise_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+def sample_gaussian_multiple(
+    mean: nn.Variable, ln_var: nn.Variable, num_samples: int, noise_clip: Optional[Tuple[float, float]] = None
+) -> nn.Variable:
     """Sample multiple values from a gaussian distribution of given mean and
     variance. The returned variable will have an additional axis in the middle
     as follows (batch_size, num_samples, dimension)
@@ -63,13 +62,12 @@ def sample_gaussian_multiple(mean: nn.Variable,
         nn.Variable: Sampled values from gaussian distribution of given mean and variance
     """
     if not (mean.shape == ln_var.shape):
-        raise ValueError('mean and ln_var has different shape')
+        raise ValueError("mean and ln_var has different shape")
 
     batch_size = mean.shape[0]
     data_shape = mean.shape[1:]
     mean = NF.reshape(mean, shape=(batch_size, 1, *data_shape))
-    stddev = NF.reshape(NF.exp(ln_var * 0.5),
-                        shape=(batch_size, 1, *data_shape))
+    stddev = NF.reshape(NF.exp(ln_var * 0.5), shape=(batch_size, 1, *data_shape))
 
     output_shape = (batch_size, num_samples, *data_shape)
 
@@ -110,9 +108,9 @@ def repeat(x: nn.Variable, repeats: int, axis: int) -> nn.Variable:
     assert isinstance(repeats, int)
     assert axis is not None
     assert axis < len(x.shape)
-    reshape_size = (*x.shape[0:axis+1], 1, *x.shape[axis+1:])
-    repeater_size = (*x.shape[0:axis+1], repeats, *x.shape[axis+1:])
-    final_size = (*x.shape[0:axis], x.shape[axis] * repeats, *x.shape[axis+1:])
+    reshape_size = (*x.shape[0 : axis + 1], 1, *x.shape[axis + 1 :])
+    repeater_size = (*x.shape[0 : axis + 1], repeats, *x.shape[axis + 1 :])
+    final_size = (*x.shape[0:axis], x.shape[axis] * repeats, *x.shape[axis + 1 :])
     x = NF.reshape(x=x, shape=reshape_size)
     x = NF.broadcast(x, repeater_size)
     return NF.reshape(x, final_size)
@@ -228,7 +226,7 @@ def minimum_n(variables: Sequence[nn.Variable]) -> nn.Variable:
         nn.Variable: Minimum value among the list of variables
     """
     if len(variables) < 1:
-        raise ValueError('Variables must have at least 1 variable')
+        raise ValueError("Variables must have at least 1 variable")
     if len(variables) == 1:
         return variables[0]
     if len(variables) == 2:
@@ -240,10 +238,15 @@ def minimum_n(variables: Sequence[nn.Variable]) -> nn.Variable:
     return minimum
 
 
-def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn.Variable],
-                                  init_mean: Union[nn.Variable, np.ndarray], init_var: Union[nn.Variable, np.ndarray],
-                                  sample_size: int = 500, num_elites: int = 10,
-                                  num_iterations: int = 5, alpha: float = 0.25) -> Tuple[nn.Variable, nn.Variable]:
+def gaussian_cross_entropy_method(
+    objective_function: Callable[[nn.Variable], nn.Variable],
+    init_mean: Union[nn.Variable, np.ndarray],
+    init_var: Union[nn.Variable, np.ndarray],
+    sample_size: int = 500,
+    num_elites: int = 10,
+    num_iterations: int = 5,
+    alpha: float = 0.25,
+) -> Tuple[nn.Variable, nn.Variable]:
     """Optimize objective function with respect to input using cross entropy
     method using gaussian distribution. Candidates are sampled from a gaussian
     distribution :math:`\\mathcal{N}(mean,\\,variance)`
@@ -341,7 +344,7 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
         # new_mean.shape = (batch_size, 1, gaussian_dimension)
         new_mean = NF.mean(elites, axis=1, keepdims=True)
         # new_var.shape = (batch_size, 1, gaussian_dimension)
-        new_var = NF.mean((elites - new_mean)**2, axis=1, keepdims=True)
+        new_var = NF.mean((elites - new_mean) ** 2, axis=1, keepdims=True)
 
         mean = alpha * mean + (1 - alpha) * new_mean.reshape((batch_size, gaussian_dimension))
         var = alpha * var + (1 - alpha) * new_var.reshape((batch_size, gaussian_dimension))
@@ -349,10 +352,12 @@ def gaussian_cross_entropy_method(objective_function: Callable[[nn.Variable], nn
     return mean, top
 
 
-def random_shooting_method(objective_function: Callable[[nn.Variable], nn.Variable],
-                           upper_bound: np.ndarray,
-                           lower_bound: np.ndarray,
-                           sample_size: int = 500) -> nn.Variable:
+def random_shooting_method(
+    objective_function: Callable[[nn.Variable], nn.Variable],
+    upper_bound: np.ndarray,
+    lower_bound: np.ndarray,
+    sample_size: int = 500,
+) -> nn.Variable:
     """Optimize objective function with respect to the variable using random
     shooting method. Candidates are sampled from a uniform distribution
     :math:`x \\sim U(lower\\:bound, upper\\:bound)`.
@@ -481,6 +486,7 @@ def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable]
     Returns:
         nn.Variable: lower triangular matrix constructed from given variables.
     """
+
     def _flat_tri_indices(batch_size, matrix_dim, upper):
         matrix_size = matrix_dim * matrix_dim
 
@@ -502,8 +508,8 @@ def triangular_matrix(diagonal: nn.Variable, non_diagonal: Optional[nn.Variable]
         scatter_indices = _flat_tri_indices(batch_size, matrix_dim=diagonal_size, upper=upper)
 
         matrix_size = diagonal_size * diagonal_size
-        non_diagonal_part = NF.reshape(non_diagonal, shape=(batch_size * non_diagonal_size, ))
-        non_diagonal_part = NF.scatter_nd(non_diagonal_part, scatter_indices, shape=(batch_size * matrix_size, ))
+        non_diagonal_part = NF.reshape(non_diagonal, shape=(batch_size * non_diagonal_size,))
+        non_diagonal_part = NF.scatter_nd(non_diagonal_part, scatter_indices, shape=(batch_size * matrix_size,))
         non_diagonal_part = NF.reshape(non_diagonal_part, shape=(batch_size, diagonal_size, diagonal_size))
 
         return diagonal_part + non_diagonal_part
@@ -556,7 +562,7 @@ def pytorch_equivalent_gather(x: nn.Variable, indices: nn.Variable, axis: int) -
         nn.Variable: gathered (in pytorch's style) variable.
     """
     assert x.shape[:axis] == indices.shape[:axis]
-    assert x.shape[axis+1:] == indices.shape[axis+1:]
+    assert x.shape[axis + 1 :] == indices.shape[axis + 1 :]
     if axis != len(x.shape) - 1:
         x = swapaxes(x, axis, len(x.shape) - 1)
         indices = swapaxes(indices, axis, len(indices.shape) - 1)
@@ -596,7 +602,7 @@ def concat_interleave(variables: Sequence[nn.Variable], axis: int) -> nn.Variabl
     indices = np.swapaxes(indices, axis, len(indices.shape) - 1)
     original_size = axis_size // variable_num
     for i in range(axis_size):
-        item_index = (i // variable_num)
+        item_index = i // variable_num
         var_index = i % variable_num
         data_index = var_index * original_size + item_index
         indices[..., i] = data_index
@@ -622,10 +628,9 @@ def swapaxes(x: nn.Variable, axis1: int, axis2: int) -> nn.Variable:
     return NF.transpose(x, axes=axes)
 
 
-def normalize(x: nn.Variable,
-              mean: nn.Variable,
-              std: nn.Variable,
-              value_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+def normalize(
+    x: nn.Variable, mean: nn.Variable, std: nn.Variable, value_clip: Optional[Tuple[float, float]] = None
+) -> nn.Variable:
     """Normalize the given variable.
 
     Args:
@@ -643,10 +648,9 @@ def normalize(x: nn.Variable,
     return normalized
 
 
-def unnormalize(x: nn.Variable,
-                mean: nn.Variable,
-                std: nn.Variable,
-                value_clip: Optional[Tuple[float, float]] = None) -> nn.Variable:
+def unnormalize(
+    x: nn.Variable, mean: nn.Variable, std: nn.Variable, value_clip: Optional[Tuple[float, float]] = None
+) -> nn.Variable:
     """Unnormalize the given variable.
 
     Args:

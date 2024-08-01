@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@ from nnabla_rl.hooks import IterationStateHook
 from nnabla_rl.writer import Writer
 
 
-class TestIterationStateHook():
+class TestIterationStateHook:
     def test_call(self):
         dummy_algorithm = mock.MagicMock()
 
         test_latest_iteration_state = {}
-        test_latest_iteration_state['scalar'] = {}
-        test_latest_iteration_state['histogram'] = {}
-        test_latest_iteration_state['image'] = {}
+        test_latest_iteration_state["scalar"] = {}
+        test_latest_iteration_state["histogram"] = {}
+        test_latest_iteration_state["image"] = {}
 
         dummy_algorithm.iteration_num = 1
         dummy_algorithm.latest_iteration_state = test_latest_iteration_state
@@ -40,9 +40,10 @@ class TestIterationStateHook():
 
         hook(dummy_algorithm)
 
-        writer.write_scalar.assert_called_once_with(dummy_algorithm.iteration_num,
-                                                    test_latest_iteration_state['scalar'])
-        writer.write_histogram.assert_called_once_with(dummy_algorithm.iteration_num,
-                                                       test_latest_iteration_state['histogram'])
-        writer.write_image.assert_called_once_with(dummy_algorithm.iteration_num,
-                                                   test_latest_iteration_state['image'])
+        writer.write_scalar.assert_called_once_with(
+            dummy_algorithm.iteration_num, test_latest_iteration_state["scalar"]
+        )
+        writer.write_histogram.assert_called_once_with(
+            dummy_algorithm.iteration_num, test_latest_iteration_state["histogram"]
+        )
+        writer.write_image.assert_called_once_with(dummy_algorithm.iteration_num, test_latest_iteration_state["image"])

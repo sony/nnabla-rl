@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,20 +31,20 @@ class EmptyModel(Model):
 class EmptyRnnModel(EmptyModel):
     def __init__(self, scope_name: str):
         super().__init__(scope_name)
-        self._internal_state_shape = (10, )
+        self._internal_state_shape = (10,)
         self._fake_internal_state = None
 
     def is_recurrent(self) -> bool:
         return True
 
     def internal_state_shapes(self):
-        return {'fake': self._internal_state_shape}
+        return {"fake": self._internal_state_shape}
 
     def set_internal_states(self, states):
-        self._fake_internal_state = states['fake']
+        self._fake_internal_state = states["fake"]
 
     def get_internal_states(self):
-        return {'fake': self._fake_internal_state}
+        return {"fake": self._fake_internal_state}
 
     def __call__(self, s):
         self._fake_internal_state = self._fake_internal_state * 2
@@ -56,16 +56,16 @@ class TestModelTrainer(object):
         nn.clear_parameters()
 
     def test_assert_no_duplicate_model_without_duplicates(self):
-        models = [EmptyModel('model1'), EmptyModel('model2'), EmptyModel('model3')]
+        models = [EmptyModel("model1"), EmptyModel("model2"), EmptyModel("model3")]
         ModelTrainer._assert_no_duplicate_model(models)
 
     def test_assert_no_duplicate_model_with_duplicates(self):
-        duplicate_models = [EmptyModel('model1'), EmptyModel('model2'), EmptyModel('model1'), EmptyModel('model3')]
+        duplicate_models = [EmptyModel("model1"), EmptyModel("model2"), EmptyModel("model1"), EmptyModel("model3")]
         with pytest.raises(AssertionError):
             ModelTrainer._assert_no_duplicate_model(duplicate_models)
 
     def test_rnn_support_with_reset_on_terminal(self):
-        scope_name = 'test'
+        scope_name = "test"
         test_model = EmptyRnnModel(scope_name)
         batch_size = 3
         num_steps = 3
@@ -74,10 +74,12 @@ class TestModelTrainer(object):
         for _ in range(num_steps):
             train_rnn_states = self._create_fake_internal_states(batch_size, test_model)
             non_terminal = self._create_fake_non_terminals(batch_size)
-            training_variables = TrainingVariables(batch_size,
-                                                   non_terminal=non_terminal,
-                                                   rnn_states=train_rnn_states,
-                                                   next_step_variables=training_variables)
+            training_variables = TrainingVariables(
+                batch_size,
+                non_terminal=non_terminal,
+                rnn_states=train_rnn_states,
+                next_step_variables=training_variables,
+            )
 
         prev_rnn_states = {}
         config = TrainerConfig(unroll_steps=num_steps, reset_on_terminal=True)
@@ -95,8 +97,9 @@ class TestModelTrainer(object):
                     prev_non_terminal = variables.prev_step_variables.non_terminal
                     expected_states = {}
                     for key in prev_states.keys():
-                        expected_state = prev_states[key] * prev_non_terminal + \
-                            (1 - prev_non_terminal) * train_states[key]
+                        expected_state = (
+                            prev_states[key] * prev_non_terminal + (1 - prev_non_terminal) * train_states[key]
+                        )
                         expected_states[key] = expected_state
                     self._assert_have_same_states(actual_states, expected_states)
 
@@ -108,7 +111,7 @@ class TestModelTrainer(object):
             self._assert_have_same_states(actual_states, expected_states)
 
     def test_rnn_support_without_reset_on_terminal(self):
-        scope_name = 'test'
+        scope_name = "test"
         test_model = EmptyRnnModel(scope_name)
         batch_size = 3
         num_steps = 3
@@ -117,10 +120,12 @@ class TestModelTrainer(object):
         for _ in range(num_steps):
             train_rnn_states = self._create_fake_internal_states(batch_size, test_model)
             non_terminal = self._create_fake_non_terminals(batch_size)
-            training_variables = TrainingVariables(batch_size,
-                                                   non_terminal=non_terminal,
-                                                   rnn_states=train_rnn_states,
-                                                   next_step_variables=training_variables)
+            training_variables = TrainingVariables(
+                batch_size,
+                non_terminal=non_terminal,
+                rnn_states=train_rnn_states,
+                next_step_variables=training_variables,
+            )
 
         prev_rnn_states = {}
         config = TrainerConfig(unroll_steps=num_steps, reset_on_terminal=False)
@@ -148,7 +153,7 @@ class TestModelTrainer(object):
             self._assert_have_same_states(actual_states, expected_states)
 
     def test_rnn_support_with_non_rnn_model(self):
-        scope_name = 'test'
+        scope_name = "test"
         test_model = EmptyModel(scope_name)
         batch_size = 3
         num_steps = 3
@@ -156,9 +161,9 @@ class TestModelTrainer(object):
         training_variables = None
         for _ in range(num_steps):
             non_terminal = self._create_fake_non_terminals(batch_size)
-            training_variables = TrainingVariables(batch_size,
-                                                   non_terminal=non_terminal,
-                                                   next_step_variables=training_variables)
+            training_variables = TrainingVariables(
+                batch_size, non_terminal=non_terminal, next_step_variables=training_variables
+            )
         train_rnn_states = {}
         prev_rnn_states = {}
         config = TrainerConfig(num_steps)

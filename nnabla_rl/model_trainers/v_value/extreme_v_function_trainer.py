@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ class ExtremeVFunctionTrainerConfig(VFunctionTrainerConfig):
 
     def __post_init__(self):
         super(ExtremeVFunctionTrainerConfig, self).__post_init__()
-        self._assert_positive(self.beta, 'beta')
+        self._assert_positive(self.beta, "beta")
 
 
 class ExtremeVFunctionTrainer(VFunctionTrainer):
@@ -40,18 +40,19 @@ class ExtremeVFunctionTrainer(VFunctionTrainer):
     _config: ExtremeVFunctionTrainerConfig
     _prev_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 models: Union[VFunction, Sequence[VFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: ExtremeVFunctionTrainerConfig = ExtremeVFunctionTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[VFunction, Sequence[VFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: ExtremeVFunctionTrainerConfig = ExtremeVFunctionTrainerConfig(),
+    ):
         self._prev_rnn_states = {}
         super(ExtremeVFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _compute_loss(self,
-                      model: VFunction,
-                      target_value: nn.Variable,
-                      training_variables: TrainingVariables) -> nn.Variable:
+    def _compute_loss(
+        self, model: VFunction, target_value: nn.Variable, training_variables: TrainingVariables
+    ) -> nn.Variable:
         prev_rnn_states = self._prev_rnn_states
         train_rnn_states = training_variables.rnn_states
         with rnn_support(model, prev_rnn_states, train_rnn_states, training_variables, self._config):
@@ -65,4 +66,4 @@ class ExtremeVFunctionTrainer(VFunctionTrainer):
         # original code seems to rescale the gumbel loss by max(z)
         # i.e. exp(z) / max(z) - z / max(z)
         # - NF.exp(-max_z) <- this term exists in the original code but this should take no effect
-        return NF.exp(z-max_z) - z * NF.exp(-max_z) - NF.exp(-max_z)
+        return NF.exp(z - max_z) - z * NF.exp(-max_z) - NF.exp(-max_z)

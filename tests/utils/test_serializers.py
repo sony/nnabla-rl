@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ from nnabla_rl.utils.serializers import load_snapshot
 
 class TestLoadSnapshot(object):
     def test_load_snapshot(self):
-        snapshot_path = pathlib.Path('test_resources/utils/ddpg-snapshot')
-        env = DummyContinuous(observation_shape=(3, ), action_shape=(1, ))
+        snapshot_path = pathlib.Path("test_resources/utils/ddpg-snapshot")
+        env = DummyContinuous(observation_shape=(3,), action_shape=(1,))
         ddpg = load_snapshot(snapshot_path, env)
 
         assert isinstance(ddpg, A.DDPG)
@@ -39,10 +39,10 @@ class TestLoadSnapshot(object):
         assert ddpg._config.replay_buffer_size == 1000000
 
     def test_load_snapshot_no_env(self):
-        snapshot_path = pathlib.Path('test_resources/utils/ddpg-snapshot')
+        snapshot_path = pathlib.Path("test_resources/utils/ddpg-snapshot")
         with pytest.raises(RuntimeError):
             load_snapshot(snapshot_path, {})
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

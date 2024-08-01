@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,5 +13,8 @@
 # limitations under the License.
 
 from nnabla_rl.model_trainers.decision_transformer.decision_transformer_trainer import (  # noqa
-    StochasticDecisionTransformerTrainer, StochasticDecisionTransformerTrainerConfig,
-    DeterministicDecisionTransformerTrainer, DeterministicDecisionTransformerTrainerConfig)
+    StochasticDecisionTransformerTrainer,
+    StochasticDecisionTransformerTrainerConfig,
+    DeterministicDecisionTransformerTrainer,
+    DeterministicDecisionTransformerTrainerConfig,
+)

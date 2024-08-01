@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,10 +22,12 @@ from nnabla_rl.typing import Experience
 
 
 class HindsightReplayBuffer(ReplayBuffer):
-    def __init__(self,
-                 reward_function: Callable[[np.ndarray, np.ndarray, Dict[str, Any]], Any],
-                 hindsight_prob: float = 0.8,
-                 capacity: Optional[int] = None):
+    def __init__(
+        self,
+        reward_function: Callable[[np.ndarray, np.ndarray, Dict[str, Any]], Any],
+        hindsight_prob: float = 0.8,
+        capacity: Optional[int] = None,
+    ):
         super(HindsightReplayBuffer, self).__init__(capacity=capacity)
         self._reward_function = reward_function
         self._hindsight_prob = hindsight_prob
@@ -38,17 +40,16 @@ class HindsightReplayBuffer(ReplayBuffer):
     def append(self, experience: Experience):
         # experience = (s, a, r, non_terminal, s_next, info)
         if not isinstance(experience[0], tuple):
-            raise RuntimeError('Hindsight replay only supports tuple observation environment')
+            raise RuntimeError("Hindsight replay only supports tuple observation environment")
         if not len(experience[0]) == 3:
-            raise RuntimeError('Observation is not a tuple of 3 elements: (observation, desired_goal, achieved_goal)')
+            raise RuntimeError("Observation is not a tuple of 3 elements: (observation, desired_goal, achieved_goal)")
         # Here, info will be updated.
         if not isinstance(experience[5], dict):
             raise ValueError
         non_terminal = experience[3]
         done = non_terminal == 0
         self._episode_end_index[0] = self._index_in_episode  # end index is shared among episode
-        update_info = {'index_in_episode': self._index_in_episode,
-                       'episode_end_index': self._episode_end_index}
+        update_info = {"index_in_episode": self._index_in_episode, "episode_end_index": self._episode_end_index}
         experience[5].update(update_info)
 
         super().append(experience)
@@ -65,7 +66,7 @@ class HindsightReplayBuffer(ReplayBuffer):
             raise NotImplementedError
 
         if len(indices) == 0:
-            raise ValueError('Indices are empty')
+            raise ValueError("Indices are empty")
         weights = np.ones([len(indices), 1])
         return [self._sample_experience(index) for index in indices], dict(weights=weights)
 
@@ -80,8 +81,8 @@ class HindsightReplayBuffer(ReplayBuffer):
         # state = (observation, desired_goal, achieved_goal)
         experience = self.__getitem__(index)
         experience_info = experience[5]
-        index_in_episode = experience_info['index_in_episode']
-        episode_end_index = int(experience_info['episode_end_index'])  # NOTE: episode_end_index is saved as np.ndarray
+        index_in_episode = experience_info["index_in_episode"]
+        episode_end_index = int(experience_info["episode_end_index"])  # NOTE: episode_end_index is saved as np.ndarray
         distance_to_end = episode_end_index - index_in_episode
 
         # sample index for hindsight goal
@@ -93,7 +94,7 @@ class HindsightReplayBuffer(ReplayBuffer):
         new_experience = self._replace_goal(experience, future_experience)
 
         # save for test
-        new_experience[-1].update({'future_index': future_index})
+        new_experience[-1].update({"future_index": future_index})
 
         return new_experience
 

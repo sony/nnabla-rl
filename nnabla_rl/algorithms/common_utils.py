@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,9 +24,18 @@ import nnabla_rl.functions as RF
 from nnabla_rl.algorithm import eval_api
 from nnabla_rl.distributions.distribution import Distribution
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.models import (DeterministicDecisionTransformer, DeterministicDynamics, DeterministicPolicy,
-                              FactoredContinuousQFunction, Model, QFunction, RewardFunction,
-                              StochasticDecisionTransformer, StochasticPolicy, VFunction)
+from nnabla_rl.models import (
+    DeterministicDecisionTransformer,
+    DeterministicDynamics,
+    DeterministicPolicy,
+    FactoredContinuousQFunction,
+    Model,
+    QFunction,
+    RewardFunction,
+    StochasticDecisionTransformer,
+    StochasticPolicy,
+    VFunction,
+)
 from nnabla_rl.preprocessors import Preprocessor
 from nnabla_rl.typing import Experience, State
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
@@ -51,10 +60,9 @@ def has_batch_dimension(state: State, env_info: EnvironmentInfo):
     return not (fed_state_shape == env_state_shape)
 
 
-def compute_v_target_and_advantage(v_function: VFunction,
-                                   experiences: Sequence[Experience],
-                                   gamma: float = 0.99,
-                                   lmb: float = 0.97) -> Tuple[np.ndarray, np.ndarray]:
+def compute_v_target_and_advantage(
+    v_function: VFunction, experiences: Sequence[Experience], gamma: float = 0.99, lmb: float = 0.97
+) -> Tuple[np.ndarray, np.ndarray]:
     """Compute value target and advantage by using Generalized Advantage
     Estimation (GAE)
 
@@ -75,7 +83,7 @@ def compute_v_target_and_advantage(v_function: VFunction,
     T = len(experiences)
     v_targets: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
     advantages: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
-    advantage: np.float32 = np.float32(0.)
+    advantage: np.float32 = np.float32(0.0)
 
     v_current = None
     v_next = None
@@ -108,10 +116,8 @@ def compute_v_target_and_advantage(v_function: VFunction,
     return np.array(v_targets, dtype=np.float32), np.array(advantages, dtype=np.float32)
 
 
-def compute_average_v_target_and_advantage(v_function: VFunction,
-                                           experiences: Sequence[Experience],
-                                           lmb=0.95):
-    ''' Compute value target and advantage by using Average Reward Criterion
+def compute_average_v_target_and_advantage(v_function: VFunction, experiences: Sequence[Experience], lmb=0.95):
+    """Compute value target and advantage by using Average Reward Criterion
     See: https://arxiv.org/pdf/2106.07329.pdf
 
     Args:
@@ -121,12 +127,12 @@ def compute_average_v_target_and_advantage(v_function: VFunction,
         lmb (float): lambda
     Returns:
         Tuple[np.ndarray, np.ndarray]: target of value and advantage
-    '''
+    """
     assert isinstance(v_function, VFunction), "Invalid v_function"
     T = len(experiences)
     v_targets: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
     advantages: np.ndarray = np.empty(shape=(T, 1), dtype=np.float32)
-    advantage: np.float32 = np.float32(0.)
+    advantage: np.float32 = np.float32(0.0)
 
     v_current = None
     v_next = None
@@ -175,9 +181,9 @@ class _StatePreprocessedVFunction(VFunction):
         preprocessed_state = self._preprocessor.process(s)
         return self._v_function.v(preprocessed_state)
 
-    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedVFunction':
+    def deepcopy(self, new_scope_name: str) -> "_StatePreprocessedVFunction":
         copied = super().deepcopy(new_scope_name=new_scope_name)
-        assert isinstance(copied,  _StatePreprocessedVFunction)
+        assert isinstance(copied, _StatePreprocessedVFunction)
         copied._v_function._scope_name = new_scope_name
         return copied
 
@@ -207,9 +213,9 @@ class _StatePreprocessedDeterministicPolicy(DeterministicPolicy):
         preprocessed_state = self._preprocessor.process(s)
         return self._policy.pi(preprocessed_state)
 
-    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedDeterministicPolicy':
+    def deepcopy(self, new_scope_name: str) -> "_StatePreprocessedDeterministicPolicy":
         copied = super().deepcopy(new_scope_name=new_scope_name)
-        assert isinstance(copied,  _StatePreprocessedDeterministicPolicy)
+        assert isinstance(copied, _StatePreprocessedDeterministicPolicy)
         copied._policy._scope_name = new_scope_name
         return copied
 
@@ -239,9 +245,9 @@ class _StatePreprocessedStochasticPolicy(StochasticPolicy):
         preprocessed_state = self._preprocessor.process(s)
         return self._policy.pi(preprocessed_state)
 
-    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedStochasticPolicy':
+    def deepcopy(self, new_scope_name: str) -> "_StatePreprocessedStochasticPolicy":
         copied = super().deepcopy(new_scope_name=new_scope_name)
-        assert isinstance(copied,  _StatePreprocessedStochasticPolicy)
+        assert isinstance(copied, _StatePreprocessedStochasticPolicy)
         copied._policy._scope_name = new_scope_name
         return copied
 
@@ -272,9 +278,9 @@ class _StatePreprocessedRewardFunction(RewardFunction):
         preprocessed_state_next = self._preprocessor.process(s_next)
         return self._reward_function.r(preprocessed_state_current, a_current, preprocessed_state_next)
 
-    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedRewardFunction':
+    def deepcopy(self, new_scope_name: str) -> "_StatePreprocessedRewardFunction":
         copied = super().deepcopy(new_scope_name=new_scope_name)
-        assert isinstance(copied,  _StatePreprocessedRewardFunction)
+        assert isinstance(copied, _StatePreprocessedRewardFunction)
         copied._reward_function._scope_name = new_scope_name
         return copied
 
@@ -316,9 +322,9 @@ class _StatePreprocessedQFunction(QFunction):
         preprocessed_state = self._preprocessor.process(s)
         return self._q_function.argmax_q(preprocessed_state)
 
-    def deepcopy(self, new_scope_name: str) -> '_StatePreprocessedQFunction':
+    def deepcopy(self, new_scope_name: str) -> "_StatePreprocessedQFunction":
         copied = super().deepcopy(new_scope_name=new_scope_name)
-        assert isinstance(copied,  _StatePreprocessedQFunction)
+        assert isinstance(copied, _StatePreprocessedQFunction)
         copied._q_function._scope_name = new_scope_name
         return copied
 
@@ -335,7 +341,7 @@ class _StatePreprocessedQFunction(QFunction):
         return self._q_function.get_internal_states()
 
 
-M = TypeVar('M', bound=Model)
+M = TypeVar("M", bound=Model)
 
 
 class _ActionSelector(Generic[M], metaclass=ABCMeta):
@@ -355,7 +361,7 @@ class _ActionSelector(Generic[M], metaclass=ABCMeta):
         if not has_batch_dimension(s, self._env_info):
             s = add_batch_dimension(s)
         batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
-        if not hasattr(self, '_eval_state_var') or batch_size != self._batch_size:
+        if not hasattr(self, "_eval_state_var") or batch_size != self._batch_size:
             # Variable creation
             self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)
             if self._model.is_recurrent():
@@ -389,8 +395,15 @@ class _ActionSelector(Generic[M], metaclass=ABCMeta):
 
 
 class _DecisionTransformerActionSelector(_ActionSelector[DecisionTransformerModel]):
-    def __init__(self, env_info: EnvironmentInfo, decision_transformer: DecisionTransformerModel,
-                 max_timesteps: int, context_length: int, target_return: float, reward_scale: float):
+    def __init__(
+        self,
+        env_info: EnvironmentInfo,
+        decision_transformer: DecisionTransformerModel,
+        max_timesteps: int,
+        context_length: int,
+        target_return: float,
+        reward_scale: float,
+    ):
         super().__init__(env_info, decision_transformer)
         self._max_timesteps = max_timesteps
         self._context_length = context_length
@@ -399,13 +412,13 @@ class _DecisionTransformerActionSelector(_ActionSelector[DecisionTransformerMode
 
     def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], *, begin_of_episode: bool = False, extra_info={}):
         if self._env_info.is_tuple_state_env():
-            raise NotImplementedError('Tuple env not supported')
+            raise NotImplementedError("Tuple env not supported")
 
         if not has_batch_dimension(s, self._env_info):
             s = add_batch_dimension(s)
         batch_size = len(s)
 
-        if not hasattr(self, '_eval_states') or batch_size != self._batch_size:
+        if not hasattr(self, "_eval_states") or batch_size != self._batch_size:
             self._eval_states = np.empty(shape=(batch_size, self._context_length, *self._env_info.state_shape))
             self._eval_actions = np.empty(shape=(batch_size, self._context_length, *self._env_info.action_shape))
             self._eval_rtgs = np.empty(shape=(batch_size, self._context_length, 1))
@@ -420,19 +433,19 @@ class _DecisionTransformerActionSelector(_ActionSelector[DecisionTransformerMode
         if t == 0:
             self._eval_rtgs[:, T, ...] = self._target_return * self._reward_scale
         else:
-            reward = extra_info['reward'] * self._reward_scale
-            self._eval_rtgs[:, T, ...] = self._eval_rtgs[:, T-1, ...] - reward
+            reward = extra_info["reward"] * self._reward_scale
+            self._eval_rtgs[:, T, ...] = self._eval_rtgs[:, T - 1, ...] - reward
 
         with nn.auto_forward():
-            states_var = nn.Variable.from_numpy_array(self._eval_states[:, 0:T+1, ...])
+            states_var = nn.Variable.from_numpy_array(self._eval_states[:, 0 : T + 1, ...])
             if begin_of_episode:
                 actions_var = None
             else:
                 if self._context_length <= t:
-                    actions_var = nn.Variable.from_numpy_array(self._eval_actions[:, 0:T+1, ...])
+                    actions_var = nn.Variable.from_numpy_array(self._eval_actions[:, 0 : T + 1, ...])
                 else:
                     actions_var = nn.Variable.from_numpy_array(self._eval_actions[:, 0:T, ...])
-            rtgs_var = nn.Variable.from_numpy_array(self._eval_rtgs[:, 0:T+1, ...])
+            rtgs_var = nn.Variable.from_numpy_array(self._eval_rtgs[:, 0 : T + 1, ...])
             timesteps_var = nn.Variable.from_numpy_array(self._eval_timesteps)
 
             if isinstance(self._model, DeterministicDecisionTransformer):
@@ -503,17 +516,13 @@ class _StatePredictor(Generic[M], metaclass=ABCMeta):
         self._batch_size = 1
 
     @eval_api
-    def __call__(self,
-                 s: Union[np.ndarray, Tuple[np.ndarray, ...]],
-                 a: np.ndarray,
-                 *,
-                 begin_of_episode: bool = False):
+    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], a: np.ndarray, *, begin_of_episode: bool = False):
         if not has_batch_dimension(s, self._env_info):
             s = add_batch_dimension(s)
         if not has_batch_dimension(a, self._env_info):
             a = cast(np.ndarray, add_batch_dimension(a))
         batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
-        if not hasattr(self, '_eval_state_var') or batch_size != self._batch_size:
+        if not hasattr(self, "_eval_state_var") or batch_size != self._batch_size:
             # Variable creation
             self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)
             self._eval_action_var = create_variable(batch_size, self._env_info.action_shape)
@@ -562,6 +571,7 @@ class _InfluenceMetricsEvaluator:
         env_info (EnvironmentInfo): Environment infomation.
         q_function (FactoredContinuousQFunction): Factored Q-function for continuous action.
     """
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -574,13 +584,14 @@ class _InfluenceMetricsEvaluator:
         self._batch_size = 1
 
     @eval_api
-    def __call__(self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], a: np.ndarray, *, begin_of_episode: bool = False) \
-            -> Tuple[np.ndarray, Dict]:
+    def __call__(
+        self, s: Union[np.ndarray, Tuple[np.ndarray, ...]], a: np.ndarray, *, begin_of_episode: bool = False
+    ) -> Tuple[np.ndarray, Dict]:
         if not has_batch_dimension(s, self._env_info):
             s = add_batch_dimension(s)
             a = cast(np.ndarray, add_batch_dimension(a))
         batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
-        if not hasattr(self, '_eval_state_var') or batch_size != self._batch_size:
+        if not hasattr(self, "_eval_state_var") or batch_size != self._batch_size:
             # Variable creation
             self._batch_size = batch_size
             self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)

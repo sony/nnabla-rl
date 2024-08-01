@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ from nnabla_rl.hooks import IterationNumHook
 from nnabla_rl.logger import logger
 
 
-class TestIterationStateHook():
+class TestIterationStateHook:
     def test_call(self):
         dummy_algorithm = mock.MagicMock()
 
         hook = IterationNumHook(timing=1)
 
-        with mock.patch.object(logger, 'info') as mock_logger:
+        with mock.patch.object(logger, "info") as mock_logger:
             for i in range(10):
                 dummy_algorithm.iteration_num = i
                 hook(dummy_algorithm)

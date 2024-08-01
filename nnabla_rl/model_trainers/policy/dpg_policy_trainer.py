@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,8 +20,14 @@ import numpy as np
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables, rnn_support)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+    rnn_support,
+)
 from nnabla_rl.models import DeterministicPolicy, Model, QFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable, create_variables
@@ -34,6 +40,7 @@ class DPGPolicyTrainerConfig(TrainerConfig):
 
 class DPGPolicyTrainer(ModelTrainer):
     """Deterministic Policy Gradient (DPG) style Policy Trainer."""
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -43,12 +50,14 @@ class DPGPolicyTrainer(ModelTrainer):
     _prev_policy_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _prev_q_rnn_states: Dict[str, Dict[str, Dict[str, nn.Variable]]]
 
-    def __init__(self,
-                 models: Union[DeterministicPolicy, Sequence[DeterministicPolicy]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 q_function: QFunction,
-                 env_info: EnvironmentInfo,
-                 config: DPGPolicyTrainerConfig = DPGPolicyTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[DeterministicPolicy, Sequence[DeterministicPolicy]],
+        solvers: Dict[str, nn.solver.Solver],
+        q_function: QFunction,
+        env_info: EnvironmentInfo,
+        config: DPGPolicyTrainerConfig = DPGPolicyTrainerConfig(),
+    ):
         self._q_function = q_function
         self._prev_policy_rnn_states = {}
         self._prev_q_rnn_states = {}
@@ -60,12 +69,14 @@ class DPGPolicyTrainer(ModelTrainer):
     def support_rnn(self) -> bool:
         return True
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.non_terminal, b.non_terminal)
@@ -97,7 +108,7 @@ class DPGPolicyTrainer(ModelTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['pi_loss'] = self._pi_loss.d.copy()
+        trainer_state["pi_loss"] = self._pi_loss.d.copy()
         return trainer_state
 
     def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
@@ -110,10 +121,7 @@ class DPGPolicyTrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         models = cast(Sequence[DeterministicPolicy], models)
         train_rnn_states = training_variables.rnn_states
         for policy in models:

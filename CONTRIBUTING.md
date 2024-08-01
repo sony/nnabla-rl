@@ -69,13 +69,13 @@ $ pip install -e .
 
 ### Code format guidelines
 
-We use [autopep8](https://github.com/hhatto/autopep8) and [isort](https://github.com/PyCQA/isort) to keep consistent coding style. After finishing developing the code, run autopep8 and isort to ensure that your code is correctly formatted.
+We use [black](https://github.com/psf/black) and [isort](https://github.com/PyCQA/isort) to keep consistent coding style. After finishing developing the code, run black and isort to ensure that your code is correctly formatted.
 
-You can run autopep8 and isort as follows.
+You can run black and isort as follows.
 
 ```sh
 cd <nnabla-rl root directory>
-autopep8 .
+black .
 ```
 
 ```sh
