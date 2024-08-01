@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import re
 import subprocess
 
 _exclude_dirs = ['external', '.git']
-_insert_file_regex = re.compile('.*.(py|cfg|ini|sh)')
+_insert_file_regex = re.compile('.*.(py|cfg|ini|sh|toml|flake8)')
 _header_extract_regex = re.compile('# Copyright \\d{4}.*? limitations under the License.', re.DOTALL)
 _shebang_extract_regex = re.compile('#!.+')
 _date_extract_regex = re.compile('(\\d{4}-\\d{2}-\\d{2})')

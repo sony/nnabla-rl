@@ -106,7 +106,7 @@ You can run tests with the following command.
 
 ```sh
 cd <nnabla-rl root directory>
-python setup.py test
+pytest
 ```
 
 #### Evaluating the algorithm
@@ -145,5 +145,5 @@ Use docformatter to properly format the pydoc written in each python files.
 Run docformatter as follows:
 
 ```sh
-docformatter --exclude build --i --config setup.cfg .
+docformatter --exclude build --i --config pyproject.toml .
 ```
