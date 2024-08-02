@@ -177,4 +177,4 @@ jobs:
           pip install -r requirements.txt
       - name: check pydoc format with docformat
         run: |
-          docformatter --exclude build --check --config setup.cfg .
+          docformatter --exclude build --check --config pyproject.toml .

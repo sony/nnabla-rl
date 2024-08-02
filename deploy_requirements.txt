@@ -1,3 +1,4 @@
-setuptools
+setuptools >= 61.0.0
 wheel
 numpy>=1.17
+build

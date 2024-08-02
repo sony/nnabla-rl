@@ -20,7 +20,7 @@ jobs:
           pip install -r deploy_requirements.txt
       - name: Build release distributions
         run: |
-          python setup.py bdist_wheel
+          python -m build --wheel
       - name: Temporarily upload release distribution
         uses: actions/upload-artifact@v3
         with:
