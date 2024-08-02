@@ -8,7 +8,7 @@ flake8
 pylint
 pytest
 pytest-cov
-mypy
+mypy!=1.11.0
 typing-extensions
 isort
 autopep8
