@@ -13,5 +13,5 @@ python:
     - requirements: docs/rtd_requirements.txt
     - requirements: docs/requirements.txt
     - requirements: ./requirements.txt
-    - method: setuptools
+    - method: pip
       path: .
