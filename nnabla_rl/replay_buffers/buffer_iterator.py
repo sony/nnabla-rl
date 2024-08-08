@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,21 +41,19 @@ class BufferIterator(object):
         if self.is_new_epoch():
             self._new_epoch = False
             raise StopIteration
-        indices = \
-            self._indices[self._index:self._index + self._batch_size]
-        if (len(indices) < self._batch_size):
+        indices = self._indices[self._index : self._index + self._batch_size]
+        if len(indices) < self._batch_size:
             if self._repeat:
                 rest = self._batch_size - len(indices)
                 self.reset()
-                indices = np.append(
-                    indices, self._indices[self._index:self._index + rest])
+                indices = np.append(indices, self._indices[self._index : self._index + rest])
                 self._index += rest
             else:
                 self._index = len(self._replay_buffer)
             self._new_epoch = True
         else:
             self._index += self._batch_size
-            self._new_epoch = (len(self._replay_buffer) <= self._index)
+            self._new_epoch = len(self._replay_buffer) <= self._index
         return self._sample(indices)
 
     __next__ = next

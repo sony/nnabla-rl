@@ -36,9 +36,10 @@ from . import kuka
 INTERNAL_BULLET_ROOT = None
 if INTERNAL_BULLET_ROOT is None:
     import pybullet_data
+
     OSS_DATA_ROOT = pybullet_data.getDataPath()
 else:
-    OSS_DATA_ROOT = ''
+    OSS_DATA_ROOT = ""
 # pylint: enable=bad-import-order
 # pylint: enable=g-import-not-at-top
 
@@ -47,28 +48,29 @@ class KukaGraspingProceduralEnv(gym.Env):
     """Simplified grasping environment with discrete and continuous actions."""
 
     def __init__(
-            self,
-            block_random=0.3,
-            camera_random=0,
-            simple_observations=False,
-            continuous=False,
-            remove_height_hack=False,
-            urdf_list=None,
-            render_mode='GUI',
-            num_objects=5,
-            dv=0.06,
-            target=False,
-            target_filenames=None,
-            non_target_filenames=None,
-            num_resets_per_setup=1,
-            render_width=128,
-            render_height=128,
-            downsample_width=64,
-            downsample_height=64,
-            test=False,
-            allow_duplicate_objects=True,
-            max_num_training_models=900,
-            max_num_test_models=100):
+        self,
+        block_random=0.3,
+        camera_random=0,
+        simple_observations=False,
+        continuous=False,
+        remove_height_hack=False,
+        urdf_list=None,
+        render_mode="GUI",
+        num_objects=5,
+        dv=0.06,
+        target=False,
+        target_filenames=None,
+        non_target_filenames=None,
+        num_resets_per_setup=1,
+        render_width=128,
+        render_height=128,
+        downsample_width=64,
+        downsample_height=64,
+        test=False,
+        allow_duplicate_objects=True,
+        max_num_training_models=900,
+        max_num_test_models=100,
+    ):
         """Creates a KukaGraspingEnv.
 
         Args:
@@ -99,16 +101,16 @@ class KukaGraspingProceduralEnv(gym.Env):
           max_num_test_models: The number of distinct models to choose from when
             selecting the num_objects placed in the tray for testing.
         """
-        self._time_step = 1. / 200.
+        self._time_step = 1.0 / 200.0
         self._max_steps = 15
 
         # Open-source search paths.
         self._urdf_root = OSS_DATA_ROOT
-        self._models_dir = os.path.join(self._urdf_root, 'random_urdfs')
+        self._models_dir = os.path.join(self._urdf_root, "random_urdfs")
 
         self._action_repeat = 200
         self._env_step = 0
-        self._renders = render_mode in ['GUI', 'TCP']
+        self._renders = render_mode in ["GUI", "TCP"]
         # Size we render at.
         self._width = render_width
         self._height = render_height
@@ -122,10 +124,8 @@ class KukaGraspingProceduralEnv(gym.Env):
         if target_filenames:
             target_filenames = [self._get_urdf_path(f) for f in target_filenames]
         if non_target_filenames:
-            non_target_filenames = [
-                self._get_urdf_path(f) for f in non_target_filenames]
-        self._object_filenames = (target_filenames or []) + (
-            non_target_filenames or [])
+            non_target_filenames = [self._get_urdf_path(f) for f in non_target_filenames]
+        self._object_filenames = (target_filenames or []) + (non_target_filenames or [])
         self._target_filenames = target_filenames or []
         self._block_random = block_random
         self._cam_random = camera_random
@@ -139,13 +139,13 @@ class KukaGraspingProceduralEnv(gym.Env):
         self._max_num_training_models = max_num_training_models
         self._max_num_test_models = max_num_test_models
 
-        if render_mode == 'GUI':
+        if render_mode == "GUI":
             self.cid = pybullet.connect(pybullet.GUI)
             pybullet.resetDebugVisualizerCamera(1.3, 180, -41, [0.52, -0.2, -0.33])
-        elif render_mode == 'DIRECT':
+        elif render_mode == "DIRECT":
             self.cid = pybullet.connect(pybullet.DIRECT)
-        elif render_mode == 'TCP':
-            self.cid = pybullet.connect(pybullet.TCP, 'localhost', 6667)
+        elif render_mode == "TCP":
+            self.cid = pybullet.connect(pybullet.TCP, "localhost", 6667)
 
         self.setup()
         if self._continuous:
@@ -165,10 +165,7 @@ class KukaGraspingProceduralEnv(gym.Env):
             self.observation_space = spaces.Box(low=-100, high=100, shape=(14,))
         else:
             # image (self._height, self._width, 3) x position of the gripper (3,)
-            img_space = spaces.Box(
-                low=0,
-                high=255,
-                shape=(self._downsample_height, self._downsample_width, 3))
+            img_space = spaces.Box(low=0, high=255, shape=(self._downsample_height, self._downsample_width, 3))
             # self.observation_space = spaces.Tuple((img_space, pos_space))
             self.observation_space = img_space
         self.viewer = None
@@ -185,29 +182,23 @@ class KukaGraspingProceduralEnv(gym.Env):
                 )
             self._urdf_list = self._object_filenames
         pybullet.resetSimulation(physicsClientId=self.cid)
-        pybullet.setPhysicsEngineParameter(
-            numSolverIterations=150, physicsClientId=self.cid)
+        pybullet.setPhysicsEngineParameter(numSolverIterations=150, physicsClientId=self.cid)
         pybullet.setTimeStep(self._time_step, physicsClientId=self.cid)
         pybullet.setGravity(0, 0, -10, physicsClientId=self.cid)
-        plane_path = os.path.join(self._urdf_root, 'plane.urdf')
+        plane_path = os.path.join(self._urdf_root, "plane.urdf")
         pybullet.loadURDF(plane_path, [0, 0, -1], physicsClientId=self.cid)
-        table_path = os.path.join(self._urdf_root, 'table/table.urdf')
-        pybullet.loadURDF(
-            table_path, [0.5, 0.0, -.82], [0., 0., 0., 1.],
-            physicsClientId=self.cid)
-        self._kuka = kuka.Kuka(
-            urdfRootPath=self._urdf_root,
-            timeStep=self._time_step,
-            clientId=self.cid)
+        table_path = os.path.join(self._urdf_root, "table/table.urdf")
+        pybullet.loadURDF(table_path, [0.5, 0.0, -0.82], [0.0, 0.0, 0.0, 1.0], physicsClientId=self.cid)
+        self._kuka = kuka.Kuka(urdfRootPath=self._urdf_root, timeStep=self._time_step, clientId=self.cid)
         self._block_uids = []
         for urdf_name in self._urdf_list:
             xpos = 0.4 + self._block_random * random.random()
-            ypos = self._block_random * (random.random() - .5)
+            ypos = self._block_random * (random.random() - 0.5)
             angle = np.pi / 2 + self._block_random * np.pi * random.random()
             ori = pybullet.getQuaternionFromEuler([0, 0, angle])
             uid = pybullet.loadURDF(
-                urdf_name, [xpos, ypos, .15], [ori[0], ori[1], ori[2], ori[3]],
-                physicsClientId=self.cid)
+                urdf_name, [xpos, ypos, 0.15], [ori[0], ori[1], ori[2], ori[3]], physicsClientId=self.cid
+            )
             self._block_uids.append(uid)
             for _ in range(500):
                 pybullet.stepSimulation(physicsClientId=self.cid)
@@ -220,30 +211,27 @@ class KukaGraspingProceduralEnv(gym.Env):
         self._attempted_grasp = False
 
         look = [0.23, 0.2, 0.54]
-        distance = 1.
+        distance = 1.0
         pitch = -56 + self._cam_random * np.random.uniform(-3, 3)
         yaw = 245 + self._cam_random * np.random.uniform(-3, 3)
         roll = 0
-        self._view_matrix = pybullet.computeViewMatrixFromYawPitchRoll(
-            look, distance, yaw, pitch, roll, 2)
-        fov = 20. + self._cam_random * np.random.uniform(-2, 2)
+        self._view_matrix = pybullet.computeViewMatrixFromYawPitchRoll(look, distance, yaw, pitch, roll, 2)
+        fov = 20.0 + self._cam_random * np.random.uniform(-2, 2)
         aspect = self._width / self._height
         near = 0.1
         far = 10
-        self._proj_matrix = pybullet.computeProjectionMatrixFOV(
-            fov, aspect, near, far)
+        self._proj_matrix = pybullet.computeProjectionMatrixFOV(fov, aspect, near, far)
         self._env_step = 0
 
         for i in range(len(self._urdf_list)):
             xpos = 0.4 + self._block_random * random.random()
-            ypos = self._block_random * (random.random() - .5)
+            ypos = self._block_random * (random.random() - 0.5)
             # random angle
             angle = np.pi / 2 + self._block_random * np.pi * random.random()
             ori = pybullet.getQuaternionFromEuler([0, 0, angle])
             pybullet.resetBasePositionAndOrientation(
-                self._block_uids[i], [xpos, ypos, .15],
-                [ori[0], ori[1], ori[2], ori[3]],
-                physicsClientId=self.cid)
+                self._block_uids[i], [xpos, ypos, 0.15], [ori[0], ori[1], ori[2], ori[3]], physicsClientId=self.cid
+            )
             # Let each object fall to the tray individual, to prevent object
             # intersection.
             for _ in range(500):
@@ -267,11 +255,13 @@ class KukaGraspingProceduralEnv(gym.Env):
             return self._get_image_observation()
 
     def _get_image_observation(self):
-        results = pybullet.getCameraImage(width=self._width,
-                                          height=self._height,
-                                          viewMatrix=self._view_matrix,
-                                          projectionMatrix=self._proj_matrix,
-                                          physicsClientId=self.cid)
+        results = pybullet.getCameraImage(
+            width=self._width,
+            height=self._height,
+            viewMatrix=self._view_matrix,
+            projectionMatrix=self._proj_matrix,
+            physicsClientId=self.cid,
+        )
         rgba = results[2]
         np_img_arr = np.reshape(rgba, (self._height, self._width, 4))
         # Extract RGB components only.
@@ -288,17 +278,14 @@ class KukaGraspingProceduralEnv(gym.Env):
           Numpy array containing location and orientation of nearest block and
           location of end-effector.
         """
-        state = pybullet.getLinkState(
-            self._kuka.kukaUid, self._kuka.kukaEndEffectorIndex,
-            physicsClientId=self.cid)
+        state = pybullet.getLinkState(self._kuka.kukaUid, self._kuka.kukaEndEffectorIndex, physicsClientId=self.cid)
         end_effector_pos = np.array(state[0])
         end_effector_ori = np.array(state[1])
 
         distances = []
         pos_and_ori = []
         for uid in self._block_uids:
-            pos, ori = pybullet.getBasePositionAndOrientation(
-                uid, physicsClientId=self.cid)
+            pos, ori = pybullet.getBasePositionAndOrientation(uid, physicsClientId=self.cid)
             pos, ori = np.array(pos), np.array(ori)
             pos_and_ori.append((pos, ori))
             distances.append(np.linalg.norm(end_effector_pos - pos))
@@ -354,9 +341,7 @@ class KukaGraspingProceduralEnv(gym.Env):
                 break
 
         # If we are close to the bin, attempt grasp.
-        state = pybullet.getLinkState(self._kuka.kukaUid,
-                                      self._kuka.kukaEndEffectorIndex,
-                                      physicsClientId=self.cid)
+        state = pybullet.getLinkState(self._kuka.kukaUid, self._kuka.kukaEndEffectorIndex, physicsClientId=self.cid)
         end_effector_pos = state[0]
         if end_effector_pos[2] <= 0.1:
             finger_angle = 0.3
@@ -364,7 +349,7 @@ class KukaGraspingProceduralEnv(gym.Env):
                 grasp_action = [0, 0, 0.001, 0, finger_angle]
                 self._kuka.applyAction(grasp_action)
                 pybullet.stepSimulation(physicsClientId=self.cid)
-                finger_angle -= 0.3/100.
+                finger_angle -= 0.3 / 100.0
                 if finger_angle < 0:
                     finger_angle = 0
             self._attempted_grasp = True
@@ -372,12 +357,10 @@ class KukaGraspingProceduralEnv(gym.Env):
         done = self._termination()
         reward = self._reward()
 
-        debug = {
-            'grasp_success': self._grasp_success
-        }
+        debug = {"grasp_success": self._grasp_success}
         return observation, reward, done, debug
 
-    def _render(self, mode='human'):
+    def _render(self, mode="human"):
         return
 
     def _termination(self):
@@ -388,13 +371,12 @@ class KukaGraspingProceduralEnv(gym.Env):
         self._grasp_success = 0
 
         if self._target:
-            target_uids = self._block_uids[0:len(self._target_filenames)]
+            target_uids = self._block_uids[0 : len(self._target_filenames)]
         else:
             target_uids = self._block_uids
 
         for uid in target_uids:
-            pos, _ = pybullet.getBasePositionAndOrientation(
-                uid, physicsClientId=self.cid)
+            pos, _ = pybullet.getBasePositionAndOrientation(uid, physicsClientId=self.cid)
             # If any block is above height, provide reward.
             if pos[2] > 0.2:
                 self._grasp_success = 1
@@ -423,17 +405,16 @@ class KukaGraspingProceduralEnv(gym.Env):
           A list of urdf filenames.
         """
         if test:
-            urdf_pattern = os.path.join(self._models_dir, '*0/*.urdf')
+            urdf_pattern = os.path.join(self._models_dir, "*0/*.urdf")
             max_num_objects = self._max_num_test_models
         else:
-            urdf_pattern = os.path.join(self._models_dir, '*[^0]/*.urdf')
+            urdf_pattern = os.path.join(self._models_dir, "*[^0]/*.urdf")
             max_num_objects = self._max_num_training_models
         found_object_directories = glob.glob(urdf_pattern)
         total_num_objects = len(found_object_directories)
         if total_num_objects > max_num_objects:
             total_num_objects = max_num_objects
-        selected_objects = np.random.choice(
-            np.arange(total_num_objects), num_objects, replace=replace)
+        selected_objects = np.random.choice(np.arange(total_num_objects), num_objects, replace=replace)
         selected_objects_filenames = []
         for object_index in selected_objects:
             selected_objects_filenames += [found_object_directories[object_index]]

@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,6 +72,6 @@ class TrainingGraphHook(Hook):
         contents = {"networks": networks, "executors": executors}
 
         save(path, contents)
-        logger.info(f'Training computational graphs have been saved to {path}.')
+        logger.info(f"Training computational graphs have been saved to {path}.")
 
         self._saved = True

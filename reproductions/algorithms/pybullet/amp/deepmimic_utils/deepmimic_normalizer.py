@@ -24,31 +24,37 @@ from nnabla_rl.preprocessors.running_mean_normalizer import RunningMeanNormalize
 class DeepMimicTupleRunningMeanNormalizer(Preprocessor, Model):
     _normalizers: List[RunningMeanNormalizer]
 
-    def __init__(self,
-                 scope_name: str,
-                 policy_state_shape: Tuple[Tuple[int, ...], ...],
-                 reward_state_shape: Tuple[Tuple[int, ...], ...],
-                 policy_state_mean_initializer: np.ndarray,
-                 policy_state_var_initializer: np.ndarray,
-                 reward_state_mean_initializer: np.ndarray,
-                 reward_state_var_initializer: np.ndarray,
-                 epsilon: float = 1e-2,
-                 mode_for_floating_point_error: str = "max"):
+    def __init__(
+        self,
+        scope_name: str,
+        policy_state_shape: Tuple[Tuple[int, ...], ...],
+        reward_state_shape: Tuple[Tuple[int, ...], ...],
+        policy_state_mean_initializer: np.ndarray,
+        policy_state_var_initializer: np.ndarray,
+        reward_state_mean_initializer: np.ndarray,
+        reward_state_var_initializer: np.ndarray,
+        epsilon: float = 1e-2,
+        mode_for_floating_point_error: str = "max",
+    ):
         super(DeepMimicTupleRunningMeanNormalizer, self).__init__(scope_name)
 
         self._normalizers = []
-        policy_state_normalizer = RunningMeanNormalizer(scope_name + "/policy_state",
-                                                        shape=policy_state_shape,
-                                                        epsilon=epsilon,
-                                                        mode_for_floating_point_error=mode_for_floating_point_error,
-                                                        mean_initializer=policy_state_mean_initializer,
-                                                        var_initializer=policy_state_var_initializer)
-        reward_state_normalizer = RunningMeanNormalizer(scope_name + "/reward_state",
-                                                        shape=reward_state_shape,
-                                                        epsilon=epsilon,
-                                                        mode_for_floating_point_error=mode_for_floating_point_error,
-                                                        mean_initializer=reward_state_mean_initializer,
-                                                        var_initializer=reward_state_var_initializer)
+        policy_state_normalizer = RunningMeanNormalizer(
+            scope_name + "/policy_state",
+            shape=policy_state_shape,
+            epsilon=epsilon,
+            mode_for_floating_point_error=mode_for_floating_point_error,
+            mean_initializer=policy_state_mean_initializer,
+            var_initializer=policy_state_var_initializer,
+        )
+        reward_state_normalizer = RunningMeanNormalizer(
+            scope_name + "/reward_state",
+            shape=reward_state_shape,
+            epsilon=epsilon,
+            mode_for_floating_point_error=mode_for_floating_point_error,
+            mean_initializer=reward_state_mean_initializer,
+            var_initializer=reward_state_var_initializer,
+        )
         self._normalizers = [policy_state_normalizer, reward_state_normalizer]
 
     def process(self, x):
@@ -68,34 +74,40 @@ class DeepMimicTupleRunningMeanNormalizer(Preprocessor, Model):
 class DeepMimicGoalTupleRunningMeanNormalizer(DeepMimicTupleRunningMeanNormalizer):
     _normalizers: List[RunningMeanNormalizer]
 
-    def __init__(self,
-                 scope_name: str,
-                 policy_state_shape: Tuple[Tuple[int, ...], ...],
-                 reward_state_shape: Tuple[Tuple[int, ...], ...],
-                 goal_state_shape: Tuple[Tuple[int, ...], ...],
-                 policy_state_mean_initializer: np.ndarray,
-                 policy_state_var_initializer: np.ndarray,
-                 reward_state_mean_initializer: np.ndarray,
-                 reward_state_var_initializer: np.ndarray,
-                 goal_state_mean_initializer: np.ndarray,
-                 goal_state_var_initializer: np.ndarray,
-                 epsilon: float = 1e-2,
-                 mode_for_floating_point_error: str = "max"):
-        super().__init__(scope_name,
-                         policy_state_shape,
-                         reward_state_shape,
-                         policy_state_mean_initializer,
-                         policy_state_var_initializer,
-                         reward_state_mean_initializer,
-                         reward_state_var_initializer,
-                         epsilon,
-                         mode_for_floating_point_error)
-        goal_state_normalizer = RunningMeanNormalizer(scope_name + "/goal_state",
-                                                      shape=goal_state_shape,
-                                                      epsilon=epsilon,
-                                                      mode_for_floating_point_error=mode_for_floating_point_error,
-                                                      mean_initializer=goal_state_mean_initializer,
-                                                      var_initializer=goal_state_var_initializer)
+    def __init__(
+        self,
+        scope_name: str,
+        policy_state_shape: Tuple[Tuple[int, ...], ...],
+        reward_state_shape: Tuple[Tuple[int, ...], ...],
+        goal_state_shape: Tuple[Tuple[int, ...], ...],
+        policy_state_mean_initializer: np.ndarray,
+        policy_state_var_initializer: np.ndarray,
+        reward_state_mean_initializer: np.ndarray,
+        reward_state_var_initializer: np.ndarray,
+        goal_state_mean_initializer: np.ndarray,
+        goal_state_var_initializer: np.ndarray,
+        epsilon: float = 1e-2,
+        mode_for_floating_point_error: str = "max",
+    ):
+        super().__init__(
+            scope_name,
+            policy_state_shape,
+            reward_state_shape,
+            policy_state_mean_initializer,
+            policy_state_var_initializer,
+            reward_state_mean_initializer,
+            reward_state_var_initializer,
+            epsilon,
+            mode_for_floating_point_error,
+        )
+        goal_state_normalizer = RunningMeanNormalizer(
+            scope_name + "/goal_state",
+            shape=goal_state_shape,
+            epsilon=epsilon,
+            mode_for_floating_point_error=mode_for_floating_point_error,
+            mean_initializer=goal_state_mean_initializer,
+            var_initializer=goal_state_var_initializer,
+        )
         self._normalizers.append(goal_state_normalizer)
 
     def process(self, x):

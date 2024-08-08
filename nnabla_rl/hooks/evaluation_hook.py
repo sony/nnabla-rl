@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,27 +42,29 @@ class EvaluationHook(Hook):
 
     def on_hook_called(self, algorithm):
         iteration_num = algorithm.iteration_num
-        logger.info(
-            'Starting evaluation at iteration {}.'.format(iteration_num))
+        logger.info("Starting evaluation at iteration {}.".format(iteration_num))
         returns = self._evaluator(algorithm, self._env)
         mean = np.mean(returns)
         std_dev = np.std(returns)
         median = np.median(returns)
-        logger.info('Evaluation results at iteration {}. mean: {} +/- std: {}, median: {}'.format(
-            iteration_num, mean, std_dev, median))
+        logger.info(
+            "Evaluation results at iteration {}. mean: {} +/- std: {}, median: {}".format(
+                iteration_num, mean, std_dev, median
+            )
+        )
 
         if self._writer is not None:
             minimum = np.min(returns)
             maximum = np.max(returns)
             # From python 3.6 or above, the dictionary preserves insertion order
             scalar_results = {}
-            scalar_results['mean'] = mean
-            scalar_results['std_dev'] = std_dev
-            scalar_results['min'] = minimum
-            scalar_results['max'] = maximum
-            scalar_results['median'] = median
+            scalar_results["mean"] = mean
+            scalar_results["std_dev"] = std_dev
+            scalar_results["min"] = minimum
+            scalar_results["max"] = maximum
+            scalar_results["median"] = median
             self._writer.write_scalar(algorithm.iteration_num, scalar_results)
 
             histogram_results = {}
-            histogram_results['returns'] = returns
+            histogram_results["returns"] = returns
             self._writer.write_histogram(algorithm.iteration_num, histogram_results)

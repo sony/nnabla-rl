@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,10 +19,15 @@ import math
 import numpy as np
 import pytest
 
-from nnabla_rl.replay_buffers.prioritized_replay_buffer import (MaxHeap, MaxHeapDataHolder, MinTree,
-                                                                ProportionalPrioritizedReplayBuffer,
-                                                                RankBasedPrioritizedReplayBuffer, SumTree,
-                                                                SumTreeDataHolder)
+from nnabla_rl.replay_buffers.prioritized_replay_buffer import (
+    MaxHeap,
+    MaxHeapDataHolder,
+    MinTree,
+    ProportionalPrioritizedReplayBuffer,
+    RankBasedPrioritizedReplayBuffer,
+    SumTree,
+    SumTreeDataHolder,
+)
 
 
 class TestMinTree(object):
@@ -297,7 +302,8 @@ class TestProportionalPrioritizedReplayBuffer(object):
     @pytest.mark.parametrize("normalization_method", ["batch_max", "buffer_max"])
     def test_sample_one_experience(self, beta, normalization_method):
         buffer = self._generate_buffer_with_experiences(
-            experience_num=100, beta=beta, normalization_method=normalization_method)
+            experience_num=100, beta=beta, normalization_method=normalization_method
+        )
         experiences, info = buffer.sample()
         indices = buffer._last_sampled_indices
         assert len(experiences) == 1
@@ -315,7 +321,8 @@ class TestProportionalPrioritizedReplayBuffer(object):
     @pytest.mark.parametrize("normalization_method", ["batch_max", "buffer_max"])
     def test_sample_multiple_experiences(self, beta, normalization_method):
         buffer = self._generate_buffer_with_experiences(
-            experience_num=100, beta=beta, normalization_method=normalization_method)
+            experience_num=100, beta=beta, normalization_method=normalization_method
+        )
         num_samples = 10
         experiences, info = buffer.sample(num_samples=num_samples)
         indices = buffer._last_sampled_indices
@@ -335,10 +342,15 @@ class TestProportionalPrioritizedReplayBuffer(object):
     @pytest.mark.parametrize("normalization_method", ["batch_max", "buffer_max"])
     def test_sample_multiple_step_experience(self, beta, num_steps, normalization_method):
         buffer = self._generate_buffer_with_experiences(
-            experience_num=100, beta=beta, normalization_method=normalization_method)
+            experience_num=100, beta=beta, normalization_method=normalization_method
+        )
         experiences_tuple, info = buffer.sample(num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = tuple([experiences_tuple, ])
+            experiences_tuple = tuple(
+                [
+                    experiences_tuple,
+                ]
+            )
         indices = buffer._last_sampled_indices
         assert len(experiences_tuple) == num_steps
         assert "weights" in info
@@ -361,7 +373,8 @@ class TestProportionalPrioritizedReplayBuffer(object):
     @pytest.mark.parametrize("normalization_method", ["batch_max", "buffer_max"])
     def test_sample_indices(self, beta, normalization_method):
         buffer = self._generate_buffer_with_experiences(
-            experience_num=100, beta=beta, normalization_method=normalization_method)
+            experience_num=100, beta=beta, normalization_method=normalization_method
+        )
         indices = [1, 67, 50, 4, 99]
 
         experiences, info = buffer.sample_indices(indices)
@@ -484,8 +497,8 @@ class TestProportionalPrioritizedReplayBuffer(object):
         assert all(max_error >= processed)
 
     def _generate_experience_mock(self):
-        state_shape = (5, )
-        action_shape = (10, )
+        state_shape = (5,)
+        action_shape = (10,)
 
         state = np.empty(shape=state_shape)
         action = np.empty(shape=action_shape)
@@ -496,12 +509,12 @@ class TestProportionalPrioritizedReplayBuffer(object):
 
         return (state, action, reward, non_terminal, next_state, next_action)
 
-    def _generate_buffer_with_experiences(self,
-                                          experience_num, beta=1.0,
-                                          betasteps=1,
-                                          normalization_method="batch_max"):
+    def _generate_buffer_with_experiences(
+        self, experience_num, beta=1.0, betasteps=1, normalization_method="batch_max"
+    ):
         buffer = ProportionalPrioritizedReplayBuffer(
-            capacity=experience_num, beta=beta, betasteps=betasteps, normalization_method=normalization_method)
+            capacity=experience_num, beta=beta, betasteps=betasteps, normalization_method=normalization_method
+        )
         for _ in range(experience_num):
             experience = _generate_experience_mock()
             buffer.append(experience)
@@ -510,8 +523,9 @@ class TestProportionalPrioritizedReplayBuffer(object):
     def _compute_weight(self, buffer, index, alpha, beta):
         priority = buffer._buffer.get_priority(index)
         if buffer._normalization_method == "batch_max":
-            min_priority = np.min(np.array([buffer._buffer.get_priority(index)
-                                            for index in buffer._last_sampled_indices]))
+            min_priority = np.min(
+                np.array([buffer._buffer.get_priority(index) for index in buffer._last_sampled_indices])
+            )
         elif buffer._normalization_method == "buffer_max":
             min_priority = buffer._buffer.min_priority()
         else:
@@ -596,11 +610,14 @@ class TestRankBasedPrioritizedReplayBuffer(object):
     @pytest.mark.parametrize("beta", [np.random.uniform(low=0.0, high=1.0) for _ in range(1, 10)])
     @pytest.mark.parametrize("num_steps", range(1, 5))
     def test_sample_multiple_step_experience(self, beta, num_steps):
-        buffer = self._generate_buffer_with_experiences(experience_num=100,
-                                                        beta=beta)
+        buffer = self._generate_buffer_with_experiences(experience_num=100, beta=beta)
         experiences_tuple, info = buffer.sample(num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = tuple([experiences_tuple, ])
+            experiences_tuple = tuple(
+                [
+                    experiences_tuple,
+                ]
+            )
         indices = buffer._last_sampled_indices
         assert len(experiences_tuple) == num_steps
         assert "weights" in info
@@ -708,9 +725,11 @@ class TestRankBasedPrioritizedReplayBuffer(object):
             buffer._last_sampled_indices = [i]
             buffer.update_priorities(errors=[np.random.randint(100)])
             if (i + 1) % sort_interval == 0:
-                sorted_heap = sorted(buffer._buffer._max_heap._heap,
-                                     key=lambda item: -math.inf if item is None else item[1],
-                                     reverse=True)
+                sorted_heap = sorted(
+                    buffer._buffer._max_heap._heap,
+                    key=lambda item: -math.inf if item is None else item[1],
+                    reverse=True,
+                )
                 assert np.alltrue(buffer._buffer._max_heap._heap == sorted_heap)
 
     @pytest.mark.parametrize("error_clip", [(-np.random.uniform(), np.random.uniform()) for _ in range(1, 10)])
@@ -741,8 +760,8 @@ class TestRankBasedPrioritizedReplayBuffer(object):
 
 
 def _generate_experience_mock():
-    state_shape = (5, )
-    action_shape = (10, )
+    state_shape = (5,)
+    action_shape = (10,)
 
     state = np.empty(shape=state_shape)
     action = np.empty(shape=action_shape)

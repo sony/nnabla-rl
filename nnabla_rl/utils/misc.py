@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ def sync_model(src: Model, dst: Model, tau: float = 1.0):
 
 def copy_network_parameters(origin_params, target_params, tau=1.0):
     if not ((0.0 <= tau) & (tau <= 1.0)):
-        raise ValueError('tau must lie between [0.0, 1.0]')
+        raise ValueError("tau must lie between [0.0, 1.0]")
 
     for key in target_params.keys():
         target_params[key].data.copy_from(origin_params[key].data * tau + target_params[key].data * (1 - tau))
@@ -66,11 +66,13 @@ def create_variables(batch_size: int, shapes: Dict[str, Tuple[int, ...]]) -> Dic
     return variables
 
 
-def retrieve_internal_states(scope_name: str,
-                             prev_rnn_states: Dict[str, Dict[str, nn.Variable]],
-                             train_rnn_states: Dict[str, Dict[str, nn.Variable]],
-                             training_variables: 'TrainingVariables',
-                             reset_on_terminal: bool) -> Dict[str, nn.Variable]:
+def retrieve_internal_states(
+    scope_name: str,
+    prev_rnn_states: Dict[str, Dict[str, nn.Variable]],
+    train_rnn_states: Dict[str, Dict[str, nn.Variable]],
+    training_variables: "TrainingVariables",
+    reset_on_terminal: bool,
+) -> Dict[str, nn.Variable]:
     internal_states: Dict[str, nn.Variable] = {}
     if training_variables.is_initial_step():
         internal_states = train_rnn_states[scope_name]

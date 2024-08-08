@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,10 +54,9 @@ class DRQNConfig(DQNConfig):
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: DRQNConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: DRQNConfig, **kwargs
+    ) -> nn.solver.Solver:
         decay: float = 0.95
         solver = NS.Adadelta(lr=algorithm_config.learning_rate, decay=decay)
         solver = AutoClipGradByNorm(solver, algorithm_config.clip_grad_norm)
@@ -65,11 +64,13 @@ class DefaultSolverBuilder(SolverBuilder):
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: DRQNConfig,
-                    **kwargs) -> QFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: DRQNConfig,
+        **kwargs,
+    ) -> QFunction:
         return DRQNQFunction(scope_name, env_info.action_dim)
 
 
@@ -99,33 +100,40 @@ class DRQN(DQN):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: DRQNConfig
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: DRQNConfig = DRQNConfig(),
-                 q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super(DRQN, self).__init__(env_or_env_info,
-                                   config=config,
-                                   q_func_builder=q_func_builder,
-                                   q_solver_builder=q_solver_builder,
-                                   replay_buffer_builder=replay_buffer_builder,
-                                   explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: DRQNConfig = DRQNConfig(),
+        q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super(DRQN, self).__init__(
+            env_or_env_info,
+            config=config,
+            q_func_builder=q_func_builder,
+            q_solver_builder=q_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_q_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.DQNQTrainerConfig(
             num_steps=self._config.num_steps,
-            reduction_method='mean',  # This parameter is different from DQN
+            reduction_method="mean",  # This parameter is different from DQN
             grad_clip=self._config.grad_clip,
             unroll_steps=self._config.unroll_steps,
             burn_in_steps=self._config.burn_in_steps,
-            reset_on_terminal=self._config.reset_rnn_on_terminal)
+            reset_on_terminal=self._config.reset_rnn_on_terminal,
+        )
 
         q_function_trainer = MT.q_value_trainers.DQNQTrainer(
             train_functions=self._q,
             solvers={self._q.scope_name: self._q_solver},
             target_function=self._target_q,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
         sync_model(self._q, self._target_q)
         return q_function_trainer

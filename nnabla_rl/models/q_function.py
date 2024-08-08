@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ from nnabla_rl.models.model import Model
 
 class QFunction(Model, metaclass=ABCMeta):
     """Base QFunction Class."""
+
     @abstractmethod
     def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         """Compute Q-value for given state and action.
@@ -72,15 +73,16 @@ class QFunction(Model, metaclass=ABCMeta):
 
 class DiscreteQFunction(QFunction):
     """Base QFunction Class for discrete action environment."""
+
     @abstractmethod
     def all_q(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError
 
     def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         q_values = self.all_q(s)
-        q_value = NF.sum(q_values * NF.one_hot(NF.reshape(a, (-1, 1), inplace=False), (q_values.shape[1],)),
-                         axis=1,
-                         keepdims=True)  # get q value of a
+        q_value = NF.sum(
+            q_values * NF.one_hot(NF.reshape(a, (-1, 1), inplace=False), (q_values.shape[1],)), axis=1, keepdims=True
+        )  # get q value of a
 
         return q_value
 
@@ -95,12 +97,14 @@ class DiscreteQFunction(QFunction):
 
 class ContinuousQFunction(QFunction):
     """Base QFunction Class for continuous action environment."""
+
     pass
 
 
 class FactoredContinuousQFunction(ContinuousQFunction):
     """Base FactoredContinuousQFunction Class for continuous action
     environment."""
+
     @abstractmethod
     def factored_q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         """Compute factored Q-value for given state.

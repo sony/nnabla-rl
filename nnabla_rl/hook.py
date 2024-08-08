@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,13 +32,13 @@ class Hook(metaclass=ABCMeta):
     def __init__(self, timing: int = 1000):
         self._timing = timing
 
-    def __call__(self, algorithm: 'Algorithm'):
+    def __call__(self, algorithm: "Algorithm"):
         if algorithm.iteration_num % self._timing != 0:
             return
         self.on_hook_called(algorithm)
 
     @abstractmethod
-    def on_hook_called(self, algorithm: 'Algorithm'):
+    def on_hook_called(self, algorithm: "Algorithm"):
         """Called every "timing" iteration which is set on Hook's instance
         creation. Will run additional periodical operation (see each class'
         documentation) during the training.
@@ -49,7 +49,7 @@ class Hook(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def setup(self, algorithm: 'Algorithm', total_iterations: int):
+    def setup(self, algorithm: "Algorithm", total_iterations: int):
         """Called before the training starts.
 
         Args:
@@ -59,7 +59,7 @@ class Hook(metaclass=ABCMeta):
         """
         pass
 
-    def teardown(self, algorithm: 'Algorithm', total_iterations: int):
+    def teardown(self, algorithm: "Algorithm", total_iterations: int):
         """Called after the training ends.
 
         Args:

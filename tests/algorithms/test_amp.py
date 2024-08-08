@@ -20,9 +20,13 @@ import pytest
 import nnabla as nn
 import nnabla_rl.algorithms as A
 import nnabla_rl.environments as E
-from nnabla_rl.algorithms.amp import (_compute_v_target_and_advantage_with_clipping_and_overwriting, _concatenate_state,
-                                      _copy_np_array_to_mp_array, _EquallySampleBufferIterator,
-                                      _sample_experiences_from_buffers)
+from nnabla_rl.algorithms.amp import (
+    _compute_v_target_and_advantage_with_clipping_and_overwriting,
+    _concatenate_state,
+    _copy_np_array_to_mp_array,
+    _EquallySampleBufferIterator,
+    _sample_experiences_from_buffers,
+)
 from nnabla_rl.environments.amp_env import TaskResult
 from nnabla_rl.environments.wrappers.common import FlattenNestedTupleStateWrapper
 from nnabla_rl.environments.wrappers.goal_conditioned import GoalConditionedTupleObservationEnv
@@ -38,9 +42,9 @@ class DummyVFunction(VFunction):
     def v(self, s):
         with nn.parameter_scope(self.scope_name):
             if isinstance(s, tuple):
-                h = s[0] * 2. + s[1] * 2.
+                h = s[0] * 2.0 + s[1] * 2.0
             else:
-                h = s * 2.
+                h = s * 2.0
         return h
 
 
@@ -52,7 +56,7 @@ class TestAMP(object):
         dummy_env = E.DummyAMPEnv()
         amp = A.AMP(dummy_env)
 
-        assert amp.__name__ == 'AMP'
+        assert amp.__name__ == "AMP"
 
     def test_run_online_amp_env_training(self):
         """Check that no error occurs when calling online training (amp env)"""
@@ -63,7 +67,7 @@ class TestAMP(object):
         config = A.AMPConfig(batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num)
         amp = A.AMP(dummy_env, config=config)
 
-        amp.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
+        amp.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
     def test_run_online_amp_goal_env_training(self):
         """Check that no error occurs when calling online training (emp goal
@@ -74,11 +78,12 @@ class TestAMP(object):
         dummy_env = FlattenNestedTupleStateWrapper(dummy_env)
         actor_timesteps = 10
         actor_num = 2
-        config = A.AMPConfig(batch_size=5, actor_timesteps=actor_timesteps,
-                             actor_num=actor_num, use_reward_from_env=True)
+        config = A.AMPConfig(
+            batch_size=5, actor_timesteps=actor_timesteps, actor_num=actor_num, use_reward_from_env=True
+        )
         amp = A.AMP(dummy_env, config=config)
 
-        amp.train_online(dummy_env, total_iterations=actor_timesteps*actor_num)
+        amp.train_online(dummy_env, total_iterations=actor_timesteps * actor_num)
 
     def test_run_online_with_invalid_env_trainig(self):
         """Check that error occurs when calling online training (invalid env,
@@ -181,17 +186,17 @@ class TestAMP(object):
         dummy_env = E.DummyAMPEnv()
         amp = A.AMP(dummy_env)
 
-        amp._policy_trainer_state = {'pi_loss': 0.}
-        amp._v_function_trainer_state = {'v_loss': 1.}
-        amp._discriminator_trainer_state = {'reward_loss': 2.}
+        amp._policy_trainer_state = {"pi_loss": 0.0}
+        amp._v_function_trainer_state = {"v_loss": 1.0}
+        amp._discriminator_trainer_state = {"reward_loss": 2.0}
 
         latest_iteration_state = amp.latest_iteration_state
-        assert 'pi_loss' in latest_iteration_state['scalar']
-        assert 'v_loss' in latest_iteration_state['scalar']
-        assert 'reward_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['pi_loss'] == 0.
-        assert latest_iteration_state['scalar']['v_loss'] == 1.
-        assert latest_iteration_state['scalar']['reward_loss'] == 2.
+        assert "pi_loss" in latest_iteration_state["scalar"]
+        assert "v_loss" in latest_iteration_state["scalar"]
+        assert "reward_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["pi_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["v_loss"] == 1.0
+        assert latest_iteration_state["scalar"]["reward_loss"] == 2.0
 
     def test_copy_np_array_to_mp_array(self):
         shape = (10, 9, 8, 7)
@@ -254,9 +259,14 @@ class TestAMP(object):
         e_s_next = (np.random.rand(3), np.random.rand(3))
         v_target = (np.random.rand(1), np.random.rand(1))
         advantage = (np.random.rand(1), np.random.rand(1))
-        dummy_experiences_per_agent = [[tuple(experience) for experience in
-                                       zip(s, a, r, non_terminal, n_s, log_prob,
-                                           non_greedy, e_s, e_a, e_s_next, v_target, advantage)]]
+        dummy_experiences_per_agent = [
+            [
+                tuple(experience)
+                for experience in zip(
+                    s, a, r, non_terminal, n_s, log_prob, non_greedy, e_s, e_a, e_s_next, v_target, advantage
+                )
+            ]
+        ]
         actual_concat_s, actual_concat_e_s = _concatenate_state(dummy_experiences_per_agent)
         assert np.allclose(actual_concat_s, np.stack(s, axis=0))
         assert np.allclose(actual_concat_e_s, np.stack(e_s, axis=0))
@@ -264,7 +274,7 @@ class TestAMP(object):
     def test_sample_experiences_from_buffers(self):
         buffers = [ReplayBuffer() for _ in range(2)]
         for buffer in buffers:
-            buffer.sample = MagicMock(return_value=(((1, ), (2, ), (3, )), {}))
+            buffer.sample = MagicMock(return_value=(((1,), (2,), (3,)), {}))
 
         _sample_experiences_from_buffers(buffers=buffers, batch_size=6)
 
@@ -272,98 +282,117 @@ class TestAMP(object):
         for buffer in buffers:
             buffer.sample.assert_called_once_with(num_samples=3)
 
-    @pytest.mark.parametrize("gamma, lmb, value_at_task_fail, value_at_task_success,"
-                             "value_clip, expected_adv, expected_vtarg",
-                             [[1., 0., 0., 1., None, np.array([[1.], [1.], [1.]]), np.array([[3.], [3.], [3.]])],
-                              [1., 1., 0., 1., None, np.array([[3.], [2.], [1.]]), np.array([[5.], [4.], [3.]])],
-                              [0.9, 0.7, 0., 1., None, np.array([[1.62152], [1.304], [0.8]]),
-                               np.array([[3.62152], [3.304], [2.8]])],
-                              [1., 1., 0., 1., (-1.2, 1.2), np.array([[3.], [2.], [1.]]),
-                               np.array([[4.2], [3.2], [2.2]])]
-                              ])
+    @pytest.mark.parametrize(
+        "gamma, lmb, value_at_task_fail, value_at_task_success," "value_clip, expected_adv, expected_vtarg",
+        [
+            [1.0, 0.0, 0.0, 1.0, None, np.array([[1.0], [1.0], [1.0]]), np.array([[3.0], [3.0], [3.0]])],
+            [1.0, 1.0, 0.0, 1.0, None, np.array([[3.0], [2.0], [1.0]]), np.array([[5.0], [4.0], [3.0]])],
+            [0.9, 0.7, 0.0, 1.0, None, np.array([[1.62152], [1.304], [0.8]]), np.array([[3.62152], [3.304], [2.8]])],
+            [1.0, 1.0, 0.0, 1.0, (-1.2, 1.2), np.array([[3.0], [2.0], [1.0]]), np.array([[4.2], [3.2], [2.2]])],
+        ],
+    )
     def test_compute_v_target_and_advantage_with_clipping_and_overwriting_unknown_task_result(
-            self, gamma, lmb, value_at_task_fail, value_at_task_success,
-            value_clip, expected_adv, expected_vtarg):
+        self, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip, expected_adv, expected_vtarg
+    ):
         dummy_v_function = DummyVFunction()
         dummy_experience = self._collect_dummy_experience_unknown_task_result()
         r = np.ones(3)
 
         actual_vtarg, actual_adv = _compute_v_target_and_advantage_with_clipping_and_overwriting(
-            dummy_v_function, dummy_experience, r, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip)
+            dummy_v_function, dummy_experience, r, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip
+        )
 
         assert np.allclose(actual_adv, expected_adv)
         assert np.allclose(actual_vtarg, expected_vtarg)
 
-    @pytest.mark.parametrize("gamma, lmb, value_at_task_fail, value_at_task_success,"
-                             "value_clip, expected_adv, expected_vtarg",
-                             [[1., 0., -1., 1., None, np.array([[1.], [1.], [-2.]]), np.array([[3.], [3.], [0.]])],
-                              [1., 1., -1., 1., None, np.array([[0.], [-1.], [-2.]]), np.array([[2.], [1.], [0.]])],
-                              [1., 1., -1., 1., (-1.2, 1.2), np.array([[0.8], [-0.2], [-1.2]]),
-                               np.array([[2.], [1.], [0.]])]
-                              ])
+    @pytest.mark.parametrize(
+        "gamma, lmb, value_at_task_fail, value_at_task_success," "value_clip, expected_adv, expected_vtarg",
+        [
+            [1.0, 0.0, -1.0, 1.0, None, np.array([[1.0], [1.0], [-2.0]]), np.array([[3.0], [3.0], [0.0]])],
+            [1.0, 1.0, -1.0, 1.0, None, np.array([[0.0], [-1.0], [-2.0]]), np.array([[2.0], [1.0], [0.0]])],
+            [1.0, 1.0, -1.0, 1.0, (-1.2, 1.2), np.array([[0.8], [-0.2], [-1.2]]), np.array([[2.0], [1.0], [0.0]])],
+        ],
+    )
     def test_compute_v_target_and_advantage_with_clipping_and_overwriting_unknown_task_fail(
-            self, gamma, lmb, value_at_task_fail, value_at_task_success,
-            value_clip, expected_adv, expected_vtarg):
+        self, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip, expected_adv, expected_vtarg
+    ):
         dummy_v_function = DummyVFunction()
         dummy_experience = self._collect_dummy_experience_unknown_task_result(
-            task_result=TaskResult(TaskResult.FAIL.value))
+            task_result=TaskResult(TaskResult.FAIL.value)
+        )
         r = np.ones(3)
 
         actual_vtarg, actual_adv = _compute_v_target_and_advantage_with_clipping_and_overwriting(
-            dummy_v_function, dummy_experience, r, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip)
+            dummy_v_function, dummy_experience, r, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip
+        )
 
         assert np.allclose(actual_adv, expected_adv, atol=1e-6)
         assert np.allclose(actual_vtarg, expected_vtarg, atol=1e-6)
 
-    @pytest.mark.parametrize("gamma, lmb, value_at_task_fail, value_at_task_success,"
-                             "value_clip, expected_adv, expected_vtarg",
-                             [[1., 0., -1., 5., None, np.array([[1.], [1.], [4.]]), np.array([[3.], [3.], [6.]])],
-                              [1., 1., -1., 5., None, np.array([[6.], [5.], [4.]]), np.array([[8.], [7.], [6.]])],
-                              [1., 1., -1., 5., (-1.2, 1.2), np.array([[6.8], [5.8], [4.8]]),
-                               np.array([[8.], [7.], [6.]])]
-                              ])
+    @pytest.mark.parametrize(
+        "gamma, lmb, value_at_task_fail, value_at_task_success," "value_clip, expected_adv, expected_vtarg",
+        [
+            [1.0, 0.0, -1.0, 5.0, None, np.array([[1.0], [1.0], [4.0]]), np.array([[3.0], [3.0], [6.0]])],
+            [1.0, 1.0, -1.0, 5.0, None, np.array([[6.0], [5.0], [4.0]]), np.array([[8.0], [7.0], [6.0]])],
+            [1.0, 1.0, -1.0, 5.0, (-1.2, 1.2), np.array([[6.8], [5.8], [4.8]]), np.array([[8.0], [7.0], [6.0]])],
+        ],
+    )
     def test_compute_v_target_and_advantage_with_clipping_and_overwriting_unknown_task_success(
-            self, gamma, lmb, value_at_task_fail, value_at_task_success,
-            value_clip, expected_adv, expected_vtarg):
+        self, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip, expected_adv, expected_vtarg
+    ):
         dummy_v_function = DummyVFunction()
         dummy_experience = self._collect_dummy_experience_unknown_task_result(
-            task_result=TaskResult(TaskResult.SUCCESS.value))
+            task_result=TaskResult(TaskResult.SUCCESS.value)
+        )
         r = np.ones(3)
 
         actual_vtarg, actual_adv = _compute_v_target_and_advantage_with_clipping_and_overwriting(
-            dummy_v_function, dummy_experience, r, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip)
+            dummy_v_function, dummy_experience, r, gamma, lmb, value_at_task_fail, value_at_task_success, value_clip
+        )
 
         assert np.allclose(actual_adv, expected_adv, atol=1e-6)
         assert np.allclose(actual_vtarg, expected_vtarg, atol=1e-6)
 
-    def _collect_dummy_experience_unknown_task_result(self,
-                                                      num_episodes=1, episode_length=3,
-                                                      task_result=TaskResult(TaskResult.UNKNOWN.value)):
+    def _collect_dummy_experience_unknown_task_result(
+        self, num_episodes=1, episode_length=3, task_result=TaskResult(TaskResult.UNKNOWN.value)
+    ):
         experience = []
         for _ in range(num_episodes):
             for i in range(episode_length):
-                s_current = np.ones(1, )
-                a = np.ones(1, )
-                s_next = np.ones(1, )
-                r = np.ones(1, )
-                non_terminal = np.ones(1, )
+                s_current = np.ones(
+                    1,
+                )
+                a = np.ones(
+                    1,
+                )
+                s_next = np.ones(
+                    1,
+                )
+                r = np.ones(
+                    1,
+                )
+                non_terminal = np.ones(
+                    1,
+                )
                 info = {"task_result": TaskResult(0)}
 
-                if i == episode_length-1:
-                    non_terminal = np.zeros(1, )
+                if i == episode_length - 1:
+                    non_terminal = np.zeros(
+                        1,
+                    )
                     info = {"task_result": task_result}
 
                 experience.append((s_current, a, r, non_terminal, s_next, info))
         return experience
 
 
-class TestEquallySampleBufferIterator():
+class TestEquallySampleBufferIterator:
     def test_equally_sample_buffer_iterator_iterates_correct_number_of_times(self):
         buffer_size = 5
         buffers = [ReplayBuffer(buffer_size) for _ in range(2)]
 
         for i, buffer in enumerate(buffers):
-            buffer.append_all(np.arange(buffer_size) * (i+1))
+            buffer.append_all(np.arange(buffer_size) * (i + 1))
 
         batch_size = 6
         total_num_iterations = 10
@@ -381,7 +410,7 @@ class TestEquallySampleBufferIterator():
         buffers = [ReplayBuffer(buffer_size) for _ in range(2)]
 
         for i, buffer in enumerate(buffers):
-            dummy_experience = [((j+1)*(i+1), ) for j in range(buffer_size)]
+            dummy_experience = [((j + 1) * (i + 1),) for j in range(buffer_size)]
             buffer.append_all(dummy_experience)
 
         batch_size = 4

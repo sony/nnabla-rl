@@ -13,11 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.environments.wrappers.common import (Float32RewardEnv, HWCToCHWEnv, NumpyFloat32Env,  # noqa
-                                                    ScreenRenderEnv, TimestepAsStateEnv, FlattenNestedTupleStateWrapper)
+from nnabla_rl.environments.wrappers.common import (  # noqa
+    Float32RewardEnv,
+    HWCToCHWEnv,
+    NumpyFloat32Env,
+    ScreenRenderEnv,
+    TimestepAsStateEnv,
+    FlattenNestedTupleStateWrapper,
+)
 
 from nnabla_rl.environments.wrappers.mujoco import EndlessEnv  # noqa
 from nnabla_rl.environments.wrappers.atari import make_atari, wrap_deepmind  # noqa
-from nnabla_rl.environments.wrappers.hybrid_env import (EmbedActionWrapper, FlattenActionWrapper,  # noqa
-                                                        RemoveStepWrapper, ScaleActionWrapper, ScaleStateWrapper)
+from nnabla_rl.environments.wrappers.hybrid_env import (  # noqa
+    EmbedActionWrapper,
+    FlattenActionWrapper,
+    RemoveStepWrapper,
+    ScaleActionWrapper,
+    ScaleStateWrapper,
+)
 from nnabla_rl.environments.wrappers.gymnasium import Gymnasium2GymWrapper  # noqa

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -115,6 +115,7 @@ class ValueDistributionFunction(Model, metaclass=ABCMeta):
 
 class DiscreteValueDistributionFunction(ValueDistributionFunction):
     """Base value distribution class for discrete action envs."""
+
     @abstractmethod
     def all_probs(self, s: nn.Variable) -> nn.Variable:
         raise NotImplementedError
@@ -130,9 +131,9 @@ class DiscreteValueDistributionFunction(ValueDistributionFunction):
 
     def as_q_function(self) -> QFunction:
         class Wrapper(QFunction):
-            _value_distribution_function: 'DiscreteValueDistributionFunction'
+            _value_distribution_function: "DiscreteValueDistributionFunction"
 
-            def __init__(self, value_distribution_function: 'DiscreteValueDistributionFunction'):
+            def __init__(self, value_distribution_function: "DiscreteValueDistributionFunction"):
                 super(Wrapper, self).__init__(value_distribution_function.scope_name)
                 self._value_distribution_function = value_distribution_function
 
@@ -203,6 +204,7 @@ class DiscreteValueDistributionFunction(ValueDistributionFunction):
 
 class ContinuousValueDistributionFunction(ValueDistributionFunction):
     """Base value distribution class for continuous action envs."""
+
     pass
 
 
@@ -301,9 +303,9 @@ class DiscreteQuantileDistributionFunction(QuantileDistributionFunction):
 
     def as_q_function(self) -> QFunction:
         class Wrapper(QFunction):
-            _quantile_distribution_function: 'DiscreteQuantileDistributionFunction'
+            _quantile_distribution_function: "DiscreteQuantileDistributionFunction"
 
-            def __init__(self, quantile_distribution_function: 'DiscreteQuantileDistributionFunction'):
+            def __init__(self, quantile_distribution_function: "DiscreteQuantileDistributionFunction"):
                 super(Wrapper, self).__init__(quantile_distribution_function.scope_name)
                 self._quantile_distribution_function = quantile_distribution_function
 
@@ -370,9 +372,9 @@ class DiscreteQuantileDistributionFunction(QuantileDistributionFunction):
 class ContinuousQuantileDistributionFunction(QuantileDistributionFunction):
     def as_q_function(self) -> QFunction:
         class Wrapper(QFunction):
-            _quantile_distribution_function: 'ContinuousQuantileDistributionFunction'
+            _quantile_distribution_function: "ContinuousQuantileDistributionFunction"
 
-            def __init__(self, quantile_distribution_function: 'ContinuousQuantileDistributionFunction'):
+            def __init__(self, quantile_distribution_function: "ContinuousQuantileDistributionFunction"):
                 super(Wrapper, self).__init__(quantile_distribution_function.scope_name)
                 self._quantile_distribution_function = quantile_distribution_function
 
@@ -427,11 +429,13 @@ class StateActionQuantileFunction(Model, metaclass=ABCMeta):
     _K: int
     # _risk_measure_funciton: Callable[[nn.Variable], nn.Variable]
 
-    def __init__(self,
-                 scope_name: str,
-                 n_action: int,
-                 K: int,
-                 risk_measure_function: Callable[[nn.Variable], nn.Variable] = risk_neutral_measure):
+    def __init__(
+        self,
+        scope_name: str,
+        n_action: int,
+        K: int,
+        risk_measure_function: Callable[[nn.Variable], nn.Variable] = risk_neutral_measure,
+    ):
         super(StateActionQuantileFunction, self).__init__(scope_name)
         self._n_action = n_action
         self._K = K
@@ -514,7 +518,7 @@ class DiscreteStateActionQuantileFunction(StateActionQuantileFunction):
 
     def max_q_quantile_values(self, s: nn.Variable, tau: nn.Variable) -> nn.Variable:
         if self.is_recurrent():
-            raise RuntimeError('max_q_quantile_values should be reimplemented in inherited class to support RNN layers')
+            raise RuntimeError("max_q_quantile_values should be reimplemented in inherited class to support RNN layers")
 
         batch_size = s.shape[0]
         tau_k = self._sample_risk_measured_tau(shape=(batch_size, self._K))
@@ -534,10 +538,11 @@ class DiscreteStateActionQuantileFunction(StateActionQuantileFunction):
             nnabla_rl.models.q_function.QFunction:
                 QFunction instance which computes the q-values based on the return_samples.
         """
-        class Wrapper(QFunction):
-            _quantile_function: 'DiscreteStateActionQuantileFunction'
 
-            def __init__(self, quantile_function: 'DiscreteStateActionQuantileFunction'):
+        class Wrapper(QFunction):
+            _quantile_function: "DiscreteStateActionQuantileFunction"
+
+            def __init__(self, quantile_function: "DiscreteStateActionQuantileFunction"):
                 super(Wrapper, self).__init__(quantile_function.scope_name)
                 self._quantile_function = quantile_function
 

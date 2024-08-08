@@ -18,8 +18,14 @@ from typing import Any, Callable, Dict, Optional
 
 import gym
 
-from nnabla_rl.environments.gym_utils import (extract_max_episode_steps, get_space_dim, get_space_high, get_space_low,
-                                              get_space_shape, is_same_space_type)
+from nnabla_rl.environments.gym_utils import (
+    extract_max_episode_steps,
+    get_space_dim,
+    get_space_high,
+    get_space_low,
+    get_space_shape,
+    is_same_space_type,
+)
 from nnabla_rl.external.goal_env import GoalEnv
 
 
@@ -30,16 +36,19 @@ class EnvironmentInfo(object):
     This class contains the basic information of the target training
     environment.
     """
+
     observation_space: gym.spaces.Space
     action_space: gym.spaces.Space
     max_episode_steps: int
 
-    def __init__(self,
-                 observation_space,
-                 action_space,
-                 max_episode_steps,
-                 unwrapped_env,
-                 reward_function: Optional[Callable[[Any, Any, Dict], int]] = None):
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        max_episode_steps,
+        unwrapped_env,
+        reward_function: Optional[Callable[[Any, Any, Dict], int]] = None,
+    ):
         self.observation_space = observation_space
         self.action_space = action_space
         self.max_episode_steps = max_episode_steps
@@ -71,13 +80,15 @@ class EnvironmentInfo(object):
             >>> env_info.state_shape
             (4,)
         """
-        reward_function = env.compute_reward if hasattr(env, 'compute_reward') else None
+        reward_function = env.compute_reward if hasattr(env, "compute_reward") else None
         unwrapped_env = env.unwrapped
-        return EnvironmentInfo(observation_space=env.observation_space,
-                               action_space=env.action_space,
-                               max_episode_steps=extract_max_episode_steps(env),
-                               unwrapped_env=unwrapped_env,
-                               reward_function=reward_function)
+        return EnvironmentInfo(
+            observation_space=env.observation_space,
+            action_space=env.action_space,
+            max_episode_steps=extract_max_episode_steps(env),
+            unwrapped_env=unwrapped_env,
+            reward_function=reward_function,
+        )
 
     def is_discrete_action_env(self):
         """Check whether the action to execute in the environment is discrete

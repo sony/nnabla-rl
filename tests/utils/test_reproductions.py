@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import nnabla.initializer as NI
 import nnabla_rl.utils.reproductions as reproductions
 
 
-class TestReproductions():
+class TestReproductions:
     def test_set_global_seed(self):
         seed = 0
 
@@ -58,5 +58,5 @@ class TestReproductions():
         assert not np.allclose(random_variable1.d, random_variable3.d)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

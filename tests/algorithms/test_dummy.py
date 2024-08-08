@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ class TestDummy(object):
         dummy_env = E.DummyDiscrete()
         dummy = A.Dummy(dummy_env)
 
-        assert dummy.__name__ == 'Dummy'
+        assert dummy.__name__ == "Dummy"
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
@@ -44,19 +44,16 @@ class TestDummy(object):
         dummy = A.Dummy(dummy_env)
 
         experience_num = 100
-        fake_states = np.empty(shape=(experience_num, ) +
-                               dummy_env.observation_space.shape)
-        fake_actions = np.empty(shape=(experience_num, ) +
-                                dummy_env.action_space.shape)
+        fake_states = np.empty(shape=(experience_num,) + dummy_env.observation_space.shape)
+        fake_actions = np.empty(shape=(experience_num,) + dummy_env.action_space.shape)
         fake_rewards = np.empty(shape=(experience_num, 1))
         fake_non_terminals = np.empty(shape=(experience_num, 1))
-        fake_next_states = np.empty(shape=(experience_num, ) +
-                                    dummy_env.observation_space.shape)
-        fake_next_actions = np.empty(shape=(experience_num, ) +
-                                     dummy_env.action_space.shape)
+        fake_next_states = np.empty(shape=(experience_num,) + dummy_env.observation_space.shape)
+        fake_next_actions = np.empty(shape=(experience_num,) + dummy_env.action_space.shape)
 
-        fake_experiences = zip(fake_states, fake_actions, fake_rewards,
-                               fake_non_terminals, fake_next_states, fake_next_actions)
+        fake_experiences = zip(
+            fake_states, fake_actions, fake_rewards, fake_non_terminals, fake_next_states, fake_next_actions
+        )
         dummy.train_offline(fake_experiences, total_iterations=10)
 
     def test_compute_eval_action(self):

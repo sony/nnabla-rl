@@ -23,8 +23,13 @@ import nnabla.functions as NF
 from nnabla_rl.distributions.distribution import Distribution
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.functions import compute_std, normalize
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+)
 from nnabla_rl.models import Model, StochasticPolicy
 from nnabla_rl.utils.data import add_batch_dimension, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
@@ -49,11 +54,13 @@ class AMPPolicyTrainer(ModelTrainer):
     _config: AMPPolicyTrainerConfig
     _pi_loss: nn.Variable
 
-    def __init__(self,
-                 models: Union[StochasticPolicy, Sequence[StochasticPolicy]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: AMPPolicyTrainerConfig = AMPPolicyTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[StochasticPolicy, Sequence[StochasticPolicy]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: AMPPolicyTrainerConfig = AMPPolicyTrainerConfig(),
+    ):
 
         self._action_mean = None
         self._action_std = None
@@ -61,17 +68,20 @@ class AMPPolicyTrainer(ModelTrainer):
             action_mean = add_batch_dimension(np.array(config.action_mean, dtype=np.float32))
             self._action_mean = nn.Variable.from_numpy_array(action_mean)
             action_var = add_batch_dimension(np.array(config.action_var, dtype=np.float32))
-            self._action_std = compute_std(nn.Variable.from_numpy_array(action_var),
-                                           epsilon=0.0, mode_for_floating_point_error="max")
+            self._action_std = compute_std(
+                nn.Variable.from_numpy_array(action_var), epsilon=0.0, mode_for_floating_point_error="max"
+            )
 
         super(AMPPolicyTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -140,11 +150,12 @@ class AMPPolicyTrainer(ModelTrainer):
         clipped_ratio = NF.clip_by_value(probability_ratio, 1 - self._config.epsilon, 1 + self._config.epsilon)
         advantage = training_variables.extra["advantage"]
         lower_bounds = NF.minimum2(probability_ratio * advantage, clipped_ratio * advantage)
-        clip_loss = - NF.mean(lower_bounds)
+        clip_loss = -NF.mean(lower_bounds)
         return clip_loss
 
-    def _bound_loss(self, mean: nn.Variable, bound_min: nn.Variable, bound_max: nn.Variable, axis: int = -1
-                    ) -> nn.Variable:
+    def _bound_loss(
+        self, mean: nn.Variable, bound_min: nn.Variable, bound_max: nn.Variable, axis: int = -1
+    ) -> nn.Variable:
         violation_min = NF.minimum_scalar(mean - bound_min, 0.0)
         violation_max = NF.maximum_scalar(mean - bound_max, 0.0)
         violation = NF.sum((violation_min**2), axis=axis) + NF.sum((violation_max**2), axis=axis)

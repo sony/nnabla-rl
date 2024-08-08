@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,10 @@
 import numpy as np
 import pytest
 
-from nnabla_rl.numpy_model_trainers.distribution_parameters.gmm_parameter_trainer import (GMMParameterTrainer,
-                                                                                          GMMParameterTrainerConfig)
+from nnabla_rl.numpy_model_trainers.distribution_parameters.gmm_parameter_trainer import (
+    GMMParameterTrainer,
+    GMMParameterTrainerConfig,
+)
 from nnabla_rl.numpy_models.distribution_parameters.gmm_parameter import GMMParameter
 
 
@@ -58,7 +60,8 @@ class TestGMMParameterTrainer:
             data = _sample_gaussian(means, covariances, 5000)
             trainer = GMMParameterTrainer(
                 parameter=GMMParameter.from_data(data, num_classes=3),
-                config=GMMParameterTrainerConfig(num_iterations_per_update=1000, threshold=1e-12))
+                config=GMMParameterTrainerConfig(num_iterations_per_update=1000, threshold=1e-12),
+            )
             trainer.update(data)
 
             order = np.argsort(trainer._parameter._means[:, 0])
@@ -69,8 +72,12 @@ class TestGMMParameterTrainer:
             expected_covariances = covariances[order]
 
             matched = True
-            for actual_mean, actual_covariance, expected_mean, expected_covariance, in zip(
-                    actual_means, actual_covariances, expected_means, expected_covariances):
+            for (
+                actual_mean,
+                actual_covariance,
+                expected_mean,
+                expected_covariance,
+            ) in zip(actual_means, actual_covariances, expected_means, expected_covariances):
                 matched &= np.allclose(actual_mean, expected_mean, atol=1e-1)
                 matched &= np.allclose(actual_covariance, expected_covariance, atol=1e-1)
             if matched:

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,8 +58,7 @@ class RNNValueDistributionFunction(DiscreteValueDistributionFunction):
                 h = self._h
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
-                h = NPF.affine(
-                    h, n_outmaps=self._n_action * self._n_atom)
+                h = NPF.affine(h, n_outmaps=self._n_action * self._n_atom)
             h = NF.reshape(h, (-1, self._n_action, self._n_atom))
         assert h.shape == (batch_size, self._n_action, self._n_atom)
         return NF.softmax(h, axis=2)
@@ -69,14 +68,14 @@ class RNNValueDistributionFunction(DiscreteValueDistributionFunction):
 
     def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
         shapes: Dict[str, nn.Variable] = {}
-        shapes['lstm_hidden'] = (self._lstm_state_size, )
-        shapes['lstm_cell'] = (self._lstm_state_size, )
+        shapes["lstm_hidden"] = (self._lstm_state_size,)
+        shapes["lstm_cell"] = (self._lstm_state_size,)
         return shapes
 
     def get_internal_states(self) -> Dict[str, nn.Variable]:
         states: Dict[str, nn.Variable] = {}
-        states['lstm_hidden'] = self._h
-        states['lstm_cell'] = self._c
+        states["lstm_hidden"] = self._h
+        states["lstm_cell"] = self._c
         return states
 
     def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
@@ -86,8 +85,8 @@ class RNNValueDistributionFunction(DiscreteValueDistributionFunction):
             if self._c is not None:
                 self._c.data.zero()
         else:
-            self._h = states['lstm_hidden']
-            self._c = states['lstm_cell']
+            self._h = states["lstm_hidden"]
+            self._c = states["lstm_cell"]
 
     def _create_internal_states(self, batch_size):
         self._h = nn.Variable((batch_size, self._lstm_state_size))
@@ -108,7 +107,7 @@ class TestCategoricalDQN(object):
         dummy_env = E.DummyDiscreteImg()
         categorical_dqn = A.CategoricalDQN(dummy_env)
 
-        assert categorical_dqn.__name__ == 'CategoricalDQN'
+        assert categorical_dqn.__name__ == "CategoricalDQN"
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
@@ -145,6 +144,7 @@ class TestCategoricalDQN(object):
     def test_run_online_rnn_training(self):
         """Check that no error occurs when calling online training with RNN
         model."""
+
         class RNNModelBuilder(ModelBuilder[ValueDistributionFunction]):
             def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
                 n_action = env_info.action_dim
@@ -152,6 +152,7 @@ class TestCategoricalDQN(object):
                 v_min = algorithm_config.v_min
                 v_max = algorithm_config.v_max
                 return RNNValueDistributionFunction(scope_name, n_action, n_atom, v_min, v_max)
+
         dummy_env = E.DummyDiscreteImg()
         config = A.CategoricalDQNConfig()
         config.num_steps = 2
@@ -185,7 +186,7 @@ class TestCategoricalDQN(object):
         state = np.float32(state)
         action = categorical_dqn.compute_eval_action(state)
 
-        assert action.shape == (1, )
+        assert action.shape == (1,)
 
     def test_latest_iteration_state(self):
         """Check that latest iteration state has the keys and values we
@@ -194,17 +195,18 @@ class TestCategoricalDQN(object):
         dummy_env = E.DummyDiscreteImg()
         categorical_dqn = A.CategoricalDQN(dummy_env)
 
-        categorical_dqn._model_trainer_state = {'cross_entropy_loss': 0., 'td_errors': np.array([0., 1.])}
+        categorical_dqn._model_trainer_state = {"cross_entropy_loss": 0.0, "td_errors": np.array([0.0, 1.0])}
 
         latest_iteration_state = categorical_dqn.latest_iteration_state
-        assert 'cross_entropy_loss' in latest_iteration_state['scalar']
-        assert 'td_errors' in latest_iteration_state['histogram']
-        assert latest_iteration_state['scalar']['cross_entropy_loss'] == 0.
-        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+        assert "cross_entropy_loss" in latest_iteration_state["scalar"]
+        assert "td_errors" in latest_iteration_state["histogram"]
+        assert latest_iteration_state["scalar"]["cross_entropy_loss"] == 0.0
+        assert np.allclose(latest_iteration_state["histogram"]["td_errors"], np.array([0.0, 1.0]))
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,14 @@ import numpy as np
 
 import nnabla as nn
 import nnabla_rl.functions as RF
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables, rnn_support)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+    rnn_support,
+)
 from nnabla_rl.models import DeterministicDynamics, Model
 from nnabla_rl.utils.data import convert_to_list_if_not_list, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable, create_variables
@@ -32,7 +38,7 @@ class MPPIDynamicsTrainerConfig(TrainerConfig):
 
     def __post_init__(self):
         super().__post_init__()
-        self._assert_positive(self.dt, 'dt')
+        self._assert_positive(self.dt, "dt")
 
 
 class MPPIDynamicsTrainer(ModelTrainer):
@@ -43,23 +49,27 @@ class MPPIDynamicsTrainer(ModelTrainer):
     _loss: nn.Variable
     _prev_dynamics_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 models: Union[DeterministicDynamics, Sequence[DeterministicDynamics]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info,
-                 config: MPPIDynamicsTrainerConfig = MPPIDynamicsTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[DeterministicDynamics, Sequence[DeterministicDynamics]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info,
+        config: MPPIDynamicsTrainerConfig = MPPIDynamicsTrainerConfig(),
+    ):
         self._prev_dynamics_rnn_states = {}
         super(MPPIDynamicsTrainer, self).__init__(models, solvers, env_info, config)
 
     def support_rnn(self) -> bool:
         return True
 
-    def _update_model(self,
-                      models: Iterable[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Iterable[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -88,11 +98,10 @@ class MPPIDynamicsTrainer(ModelTrainer):
             solver.update()
 
         trainer_state: Dict[str, np.ndarray] = {}
-        trainer_state['dynamics_loss'] = self._loss.d.copy()
+        trainer_state["dynamics_loss"] = self._loss.d.copy()
         return trainer_state
 
-    def _build_training_graph(self, models: Union[Model, Sequence[Model]],
-                              training_variables: TrainingVariables):
+    def _build_training_graph(self, models: Union[Model, Sequence[Model]], training_variables: TrainingVariables):
         models = convert_to_list_if_not_list(models)
         models = cast(Sequence[DeterministicDynamics], models)
 
@@ -104,10 +113,7 @@ class MPPIDynamicsTrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         models = cast(Sequence[DeterministicDynamics], models)
         train_rnn_states = training_variables.rnn_states
         for model in models:
@@ -117,8 +123,8 @@ class MPPIDynamicsTrainer(ModelTrainer):
 
             s_current = cast(nn.Variable, training_variables.s_current)
             s_next = cast(nn.Variable, training_variables.s_next)
-            q_dot = s_current[:, self._env_info.state_dim // 2:]
-            q_dot_next = s_next[:, self._env_info.state_dim // 2:]
+            q_dot = s_current[:, self._env_info.state_dim // 2 :]
+            q_dot_next = s_next[:, self._env_info.state_dim // 2 :]
             target_a = (q_dot_next - q_dot) / self._config.dt
             target_a.need_grad = False
             loss = RF.mean_squared_error(predicted_a, target_a)
@@ -136,9 +142,14 @@ class MPPIDynamicsTrainer(ModelTrainer):
                 rnn_state_variables = create_variables(batch_size, model.internal_state_shapes())
                 rnn_states[model.scope_name] = rnn_state_variables
 
-        return TrainingVariables(batch_size, s_current_var, a_current_var, s_next=s_next_var,
-                                 non_terminal=non_terminal_var,
-                                 rnn_states=rnn_states)
+        return TrainingVariables(
+            batch_size,
+            s_current_var,
+            a_current_var,
+            s_next=s_next_var,
+            non_terminal=non_terminal_var,
+            rnn_states=rnn_states,
+        )
 
     @property
     def loss_variables(self) -> Dict[str, nn.Variable]:

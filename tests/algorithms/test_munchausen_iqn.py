@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ class TestMunchausenIQN(object):
         dummy_env = E.DummyDiscreteImg()
         m_iqn = A.MunchausenIQN(dummy_env)
 
-        assert m_iqn.__name__ == 'MunchausenIQN'
+        assert m_iqn.__name__ == "MunchausenIQN"
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
@@ -87,7 +87,7 @@ class TestMunchausenIQN(object):
         state = np.float32(state)
         action = m_iqn.compute_eval_action(state)
 
-        assert action.shape == (1, )
+        assert action.shape == (1,)
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
@@ -130,15 +130,16 @@ class TestMunchausenIQN(object):
         dummy_env = E.DummyDiscreteImg()
         m_iqn = A.MunchausenIQN(dummy_env)
 
-        m_iqn._quantile_function_trainer_state = {'q_loss': 0.}
+        m_iqn._quantile_function_trainer_state = {"q_loss": 0.0}
 
         latest_iteration_state = m_iqn.latest_iteration_state
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['q_loss'] == 0.
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["q_loss"] == 0.0
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

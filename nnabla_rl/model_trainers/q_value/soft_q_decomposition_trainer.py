@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,14 +34,16 @@ class SoftQDTrainerConfig(SoftQTrainerConfig):
 class SoftQDTrainer(SoftQTrainer):
     _target_functions: Sequence[FactoredContinuousQFunction]
 
-    def __init__(self,
-                 train_functions: Union[FactoredContinuousQFunction, Sequence[FactoredContinuousQFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_functions: Union[FactoredContinuousQFunction, Sequence[FactoredContinuousQFunction]],
-                 target_policy: StochasticPolicy,
-                 temperature: nn.Variable,
-                 env_info: EnvironmentInfo,
-                 config: SoftQDTrainerConfig = SoftQDTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[FactoredContinuousQFunction, Sequence[FactoredContinuousQFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_functions: Union[FactoredContinuousQFunction, Sequence[FactoredContinuousQFunction]],
+        target_policy: StochasticPolicy,
+        temperature: nn.Variable,
+        env_info: EnvironmentInfo,
+        config: SoftQDTrainerConfig = SoftQDTrainerConfig(),
+    ):
         super().__init__(
             train_functions=train_functions,
             solvers=solvers,
@@ -52,10 +54,9 @@ class SoftQDTrainer(SoftQTrainer):
             config=config,
         )
 
-    def _compute_loss(self,
-                      model: QFunction,
-                      target_q: nn.Variable,
-                      training_variables: TrainingVariables) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
+    def _compute_loss(
+        self, model: QFunction, target_q: nn.Variable, training_variables: TrainingVariables
+    ) -> Tuple[nn.Variable, Dict[str, nn.Variable]]:
         assert isinstance(model, FactoredContinuousQFunction)
 
         s_current = training_variables.s_current
@@ -72,14 +73,14 @@ class SoftQDTrainer(SoftQTrainer):
             maximum = nn.Variable.from_numpy_array(np.full(td_error.shape, clip_max))
             td_error = NF.clip_grad_by_value(td_error, minimum, maximum)
         squared_td_error = training_variables.weight * NF.pow_scalar(td_error, 2.0)
-        if self._config.reduction_method == 'mean':
+        if self._config.reduction_method == "mean":
             q_loss += self._config.q_loss_scalar * NF.mean(squared_td_error)
-        elif self._config.reduction_method == 'sum':
+        elif self._config.reduction_method == "sum":
             q_loss += self._config.q_loss_scalar * NF.sum(squared_td_error)
         else:
             raise RuntimeError
 
-        extra = {'td_error': td_error}
+        extra = {"td_error": td_error}
         return q_loss, extra
 
     def _compute_target(self, training_variables: TrainingVariables, **kwargs) -> nn.Variable:

@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ class MPPIDeterministicDynamics(DeterministicDynamics):
     def next_state(self, x: nn.Variable, u: nn.Variable) -> nn.Variable:
         assert x.shape[-1] % 2 == 0  # must have even number of states (state and its time derivative pairs)
         a = self.acceleration(x, u)
-        time_derivatives = NF.concatenate(x[:, x.shape[-1] // 2:], a, axis=len(a.shape)-1)
+        time_derivatives = NF.concatenate(x[:, x.shape[-1] // 2 :], a, axis=len(a.shape) - 1)
         return x + time_derivatives * self._dt
 
     def acceleration(self, x: nn.Variable, u: nn.Variable) -> nn.Variable:

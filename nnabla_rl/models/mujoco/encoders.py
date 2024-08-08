@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,14 +39,14 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
         self._latent_dim = latent_dim
 
     def encode_and_decode(self, x: nn.Variable, **kwargs) -> Tuple[Distribution, nn.Variable]:
-        '''
+        """
         Args:
             x (nn.Variable): encoder input.
 
         Returns:
             [Distribution, nn.Variable]: Reconstructed input and latent distribution
-        '''
-        a = kwargs['action']
+        """
+        a = kwargs["action"]
         h = NF.concatenate(x, a)
         latent_distribution = self.latent_distribution(h)
         z = latent_distribution.sample()
@@ -54,13 +54,13 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
         return latent_distribution, reconstructed
 
     def encode(self, x: nn.Variable, **kwargs) -> nn.Variable:
-        a = kwargs['action']
+        a = kwargs["action"]
         x = NF.concatenate(x, a)
         latent_distribution = self.latent_distribution(x)
         return latent_distribution.sample()
 
     def decode(self, z: nn.Variable, **kwargs) -> nn.Variable:
-        s = kwargs['state']
+        s = kwargs["state"]
         if z is None:
             z = NF.randn(shape=(s.shape[0], self._latent_dim))
             z = NF.clip_by_value(z, -0.5, 0.5)
@@ -74,7 +74,7 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
         return h
 
     def decode_multiple(self, z: nn.Variable, decode_num: int, **kwargs) -> nn.Variable:
-        s = kwargs['state']
+        s = kwargs["state"]
         if z is None:
             z = NF.randn(shape=(s.shape[0], decode_num, self._latent_dim))
             z = NF.clip_by_value(z, -0.5, 0.5)
@@ -100,7 +100,7 @@ class UnsquashedVariationalAutoEncoder(VariationalAutoEncoder):
             h = NF.relu(x=h)
             h = NPF.affine(h, n_outmaps=750, name="linear2")
             h = NF.relu(x=h)
-            h = NPF.affine(h, n_outmaps=self._latent_dim*2, name="linear3")
+            h = NPF.affine(h, n_outmaps=self._latent_dim * 2, name="linear3")
             reshaped = NF.reshape(h, shape=(-1, 2, self._latent_dim))
             mean, ln_var = NF.split(reshaped, axis=1)
             # Clip for numerical stability

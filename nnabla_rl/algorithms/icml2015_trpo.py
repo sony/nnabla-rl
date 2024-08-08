@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ class ICML2015TRPOConfig(AlgorithmConfig):
         conjugate_gradient_damping (float): Damping size of conjugate gradient method. Defaults to 0.1.
         conjugate_gradient_iterations (int): Number of iterations of conjugate gradient method. Defaults to 20.
     """
+
     gamma: float = 0.99
     num_steps_per_iteration: int = int(1e5)
     batch_size: int = int(1e5)
@@ -69,51 +70,52 @@ class ICML2015TRPOConfig(AlgorithmConfig):
 
         Check the values are in valid range.
         """
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_between(self.batch_size, 0, self.num_steps_per_iteration, 'batch_size')
-        self._assert_positive(self.num_steps_per_iteration, 'num_steps_per_iteration')
-        self._assert_positive(self.sigma_kl_divergence_constraint, 'sigma_kl_divergence_constraint')
-        self._assert_positive(self.maximum_backtrack_numbers, 'maximum_backtrack_numbers')
-        self._assert_positive(self.conjugate_gradient_damping, 'conjugate_gradient_damping')
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_between(self.batch_size, 0, self.num_steps_per_iteration, "batch_size")
+        self._assert_positive(self.num_steps_per_iteration, "num_steps_per_iteration")
+        self._assert_positive(self.sigma_kl_divergence_constraint, "sigma_kl_divergence_constraint")
+        self._assert_positive(self.maximum_backtrack_numbers, "maximum_backtrack_numbers")
+        self._assert_positive(self.conjugate_gradient_damping, "conjugate_gradient_damping")
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: ICML2015TRPOConfig,
-                    **kwargs) -> StochasticPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: ICML2015TRPOConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
         if env_info.is_discrete_action_env():
             return self._build_default_discrete_policy(scope_name, env_info, algorithm_config)
         else:
             return self._build_default_continuous_policy(scope_name, env_info, algorithm_config)
 
-    def _build_default_continuous_policy(self,
-                                         scope_name: str,
-                                         env_info: EnvironmentInfo,
-                                         algorithm_config: ICML2015TRPOConfig,
-                                         **kwargs) -> StochasticPolicy:
+    def _build_default_continuous_policy(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: ICML2015TRPOConfig, **kwargs
+    ) -> StochasticPolicy:
         return ICML2015TRPOMujocoPolicy(scope_name, env_info.action_dim)
 
-    def _build_default_discrete_policy(self,
-                                       scope_name: str,
-                                       env_info: EnvironmentInfo,
-                                       algorithm_config: ICML2015TRPOConfig,
-                                       **kwargs) -> StochasticPolicy:
+    def _build_default_discrete_policy(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: ICML2015TRPOConfig, **kwargs
+    ) -> StochasticPolicy:
         return ICML2015TRPOAtariPolicy(scope_name, env_info.action_dim)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: ICML2015TRPOConfig,
-                       algorithm: "ICML2015TRPO",
-                       **kwargs) -> EnvironmentExplorer:
-        explorer_config = EE.RawPolicyExplorerConfig(initial_step_num=algorithm.iteration_num,
-                                                     timelimit_as_terminal=False)
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
-                                        env_info=env_info,
-                                        config=explorer_config)
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: ICML2015TRPOConfig,
+        algorithm: "ICML2015TRPO",
+        **kwargs,
+    ) -> EnvironmentExplorer:
+        explorer_config = EE.RawPolicyExplorerConfig(
+            initial_step_num=algorithm.iteration_num, timelimit_as_terminal=False
+        )
+        explorer = EE.RawPolicyExplorer(
+            policy_action_selector=algorithm._exploration_action_selector, env_info=env_info, config=explorer_config
+        )
         return explorer
 
 
@@ -150,10 +152,13 @@ class ICML2015TRPO(Algorithm):
     _evaluation_actor: _StochasticPolicyActionSelector
     _exploration_actor: _StochasticPolicyActionSelector
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: ICML2015TRPOConfig = ICML2015TRPOConfig(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(ICML2015TRPO, self).__init__(env_or_env_info, config=config)
 
         self._explorer_builder = explorer_builder
@@ -162,9 +167,11 @@ class ICML2015TRPO(Algorithm):
             self._policy = policy_builder("pi", self._env_info, self._config)
 
         self._evaluation_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._policy.shallowcopy(), deterministic=False)
+            self._env_info, self._policy.shallowcopy(), deterministic=False
+        )
         self._exploration_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._policy.shallowcopy(), deterministic=False)
+            self._env_info, self._policy.shallowcopy(), deterministic=False
+        )
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
@@ -187,11 +194,11 @@ class ICML2015TRPO(Algorithm):
             sigma_kl_divergence_constraint=self._config.sigma_kl_divergence_constraint,
             maximum_backtrack_numbers=self._config.maximum_backtrack_numbers,
             conjugate_gradient_damping=self._config.conjugate_gradient_damping,
-            conjugate_gradient_iterations=self._config.conjugate_gradient_iterations)
+            conjugate_gradient_iterations=self._config.conjugate_gradient_iterations,
+        )
         policy_trainer = MT.policy_trainers.TRPOPolicyTrainer(
-            model=self._policy,
-            env_info=self._env_info,
-            config=policy_trainer_config)
+            model=self._policy, env_info=self._env_info, config=policy_trainer_config
+        )
 
         return policy_trainer
 
@@ -217,11 +224,8 @@ class ICML2015TRPO(Algorithm):
         s, a, accumulated_reward = self._align_experiences(buffer_iterator)
 
         extra = {}
-        extra['advantage'] = accumulated_reward  # Use accumulated_reward as advantage
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              extra=extra)
+        extra["advantage"] = accumulated_reward  # Use accumulated_reward as advantage
+        batch = TrainingBatch(batch_size=self._config.batch_size, s_current=s, a_current=a, extra=extra)
 
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
@@ -243,25 +247,25 @@ class ICML2015TRPO(Algorithm):
         a_batch = np.concatenate(a_batch, axis=0)
         accumulated_reward_batch = np.concatenate(accumulated_reward_batch, axis=0)
 
-        return s_batch[:self._config.num_steps_per_iteration], \
-            a_batch[:self._config.num_steps_per_iteration], \
-            accumulated_reward_batch[:self._config.num_steps_per_iteration]
+        return (
+            s_batch[: self._config.num_steps_per_iteration],
+            a_batch[: self._config.num_steps_per_iteration],
+            accumulated_reward_batch[: self._config.num_steps_per_iteration],
+        )
 
     def _compute_accumulated_reward(self, reward_sequence, gamma):
         if not reward_sequence.ndim == 1:
             raise ValueError("Invalid reward_sequence dimension")
         episode_length = len(reward_sequence)
-        gamma_seq = np.array(
-            [gamma**i for i in range(episode_length)])
+        gamma_seq = np.array([gamma**i for i in range(episode_length)])
 
-        left_justified_gamma_seqs = np.tril(
-            np.tile(gamma_seq, (episode_length, 1)), k=0)[::-1]
-        mask = left_justified_gamma_seqs != 0.
+        left_justified_gamma_seqs = np.tril(np.tile(gamma_seq, (episode_length, 1)), k=0)[::-1]
+        mask = left_justified_gamma_seqs != 0.0
 
         gamma_seqs = np.zeros((episode_length, episode_length))
         gamma_seqs[np.triu_indices(episode_length)] = left_justified_gamma_seqs[mask]
 
-        return np.sum(reward_sequence*gamma_seqs, axis=1, keepdims=True)
+        return np.sum(reward_sequence * gamma_seqs, axis=1, keepdims=True)
 
     def _evaluation_action_selector(self, s, *, begin_of_episode=False):
         return self._evaluation_actor(s, begin_of_episode=begin_of_episode)
@@ -279,8 +283,9 @@ class ICML2015TRPO(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_tuple_action_env()
 
     @property

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,8 +29,15 @@ from nnabla_rl.algorithms.common_utils import has_batch_dimension
 from nnabla_rl.builders import ModelBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
-from nnabla_rl.models import (BEARPolicy, DeterministicPolicy, QFunction, StochasticPolicy, TD3QFunction,
-                              UnsquashedVariationalAutoEncoder, VariationalAutoEncoder)
+from nnabla_rl.models import (
+    BEARPolicy,
+    DeterministicPolicy,
+    QFunction,
+    StochasticPolicy,
+    TD3QFunction,
+    UnsquashedVariationalAutoEncoder,
+    VariationalAutoEncoder,
+)
 from nnabla_rl.utils import context
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable, sync_model
@@ -64,6 +71,7 @@ class BEARConfig(AlgorithmConfig):
         use_mean_for_eval (bool): Use mean value instead of best action among the samples for evaluation.\
             Defaults to False.
     """
+
     gamma: float = 0.99
     learning_rate: float = 1e-3
     batch_size: int = 100
@@ -73,7 +81,7 @@ class BEARConfig(AlgorithmConfig):
     num_q_ensembles: int = 2
     num_mmd_actions: int = 5
     num_action_samples: int = 10
-    mmd_type: str = 'gaussian'
+    mmd_type: str = "gaussian"
     mmd_sigma: float = 20.0
     initial_lagrange_multiplier: Optional[float] = None
     fix_lagrange_multiplier: bool = False
@@ -86,56 +94,60 @@ class BEARConfig(AlgorithmConfig):
         Check set values are in valid range.
         """
         if not ((0.0 <= self.tau) & (self.tau <= 1.0)):
-            raise ValueError('tau must lie between [0.0, 1.0]')
+            raise ValueError("tau must lie between [0.0, 1.0]")
         if not ((0.0 <= self.gamma) & (self.gamma <= 1.0)):
-            raise ValueError('gamma must lie between [0.0, 1.0]')
+            raise ValueError("gamma must lie between [0.0, 1.0]")
         if not (0 <= self.num_q_ensembles):
-            raise ValueError('num q ensembles must not be negative')
+            raise ValueError("num q ensembles must not be negative")
         if not (0 <= self.num_mmd_actions):
-            raise ValueError('num mmd actions must not be negative')
+            raise ValueError("num mmd actions must not be negative")
         if not (0 <= self.num_action_samples):
-            raise ValueError('num action samples must not be negative')
+            raise ValueError("num action samples must not be negative")
         if not (0 <= self.warmup_iterations):
-            raise ValueError('warmup iterations must not be negative')
+            raise ValueError("warmup iterations must not be negative")
         if not (0 <= self.batch_size):
-            raise ValueError('batch size must not be negative')
+            raise ValueError("batch size must not be negative")
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: BEARConfig,
-                    **kwargs) -> QFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: BEARConfig,
+        **kwargs,
+    ) -> QFunction:
         return TD3QFunction(scope_name)
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: BEARConfig,
-                    **kwargs) -> StochasticPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: BEARConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
         return BEARPolicy(scope_name, env_info.action_dim)
 
 
 class DefaultVAEBuilder(ModelBuilder[VariationalAutoEncoder]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: BEARConfig,
-                    **kwargs) -> VariationalAutoEncoder:
-        return UnsquashedVariationalAutoEncoder(scope_name,
-                                                env_info.state_dim,
-                                                env_info.action_dim,
-                                                env_info.action_dim*2)
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: BEARConfig,
+        **kwargs,
+    ) -> VariationalAutoEncoder:
+        return UnsquashedVariationalAutoEncoder(
+            scope_name, env_info.state_dim, env_info.action_dim, env_info.action_dim * 2
+        )
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: BEARConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: BEARConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
@@ -195,15 +207,18 @@ class BEAR(Algorithm):
     _policy_trainer_state: Dict[str, Any]
     _q_function_trainer_state: Dict[str, Any]
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: BEARConfig = BEARConfig(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 pi_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 pi_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 vae_builder: ModelBuilder[VariationalAutoEncoder] = DefaultVAEBuilder(),
-                 vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 lagrange_solver_builder: SolverBuilder = DefaultSolverBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: BEARConfig = BEARConfig(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        pi_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        pi_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        vae_builder: ModelBuilder[VariationalAutoEncoder] = DefaultVAEBuilder(),
+        vae_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        lagrange_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+    ):
         super(BEAR, self).__init__(env_or_env_info, config=config)
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
@@ -211,10 +226,12 @@ class BEAR(Algorithm):
             self._q_solvers = {}
             self._target_q_ensembles = []
             for i in range(self._config.num_q_ensembles):
-                q = q_function_builder(scope_name="q{}".format(
-                    i), env_info=self._env_info, algorithm_config=self._config)
+                q = q_function_builder(
+                    scope_name="q{}".format(i), env_info=self._env_info, algorithm_config=self._config
+                )
                 target_q = q_function_builder(
-                    scope_name="target_q{}".format(i), env_info=self._env_info, algorithm_config=self._config)
+                    scope_name="target_q{}".format(i), env_info=self._env_info, algorithm_config=self._config
+                )
                 self._q_ensembles.append(q)
                 self._q_solvers[q.scope_name] = q_solver_builder(env_info=self._env_info, algorithm_config=self._config)
                 self._target_q_ensembles.append(target_q)
@@ -227,17 +244,17 @@ class BEAR(Algorithm):
             self._vae_solver = vae_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
             self._lagrange = MT.policy_trainers.bear_policy_trainer.AdjustableLagrangeMultiplier(
-                scope_name="alpha",
-                initial_value=self._config.initial_lagrange_multiplier)
+                scope_name="alpha", initial_value=self._config.initial_lagrange_multiplier
+            )
             self._lagrange_solver = lagrange_solver_builder(env_info=self._env_info, algorithm_config=self._config)
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
         if has_batch_dimension(state, self._env_info):
-            raise RuntimeError(f'{self.__name__} does not support batched state!')
+            raise RuntimeError(f"{self.__name__} does not support batched state!")
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             state = add_batch_dimension(state)
-            if not hasattr(self, '_eval_state_var'):
+            if not hasattr(self, "_eval_state_var"):
                 self._eval_state_var = create_variable(1, self._env_info.state_shape)
                 if self._config.use_mean_for_eval:
                     eval_distribution = self._pi.pi(self._eval_state_var)
@@ -245,8 +262,9 @@ class BEAR(Algorithm):
                 else:
                     repeat_num = 100
                     if isinstance(self._eval_state_var, tuple):
-                        state_var = tuple(RF.repeat(x=s_var, repeats=repeat_num, axis=0)
-                                          for s_var in self._eval_state_var)
+                        state_var = tuple(
+                            RF.repeat(x=s_var, repeats=repeat_num, axis=0) for s_var in self._eval_state_var
+                        )
                     else:
                         state_var = RF.repeat(x=self._eval_state_var, repeats=repeat_num, axis=0)
                         assert state_var.shape == (repeat_num, self._eval_state_var.shape[1])
@@ -284,17 +302,25 @@ class BEAR(Algorithm):
                 latent_distribution, reconstructed = self._original_vae.encode_and_decode(s, **kwargs)
                 return latent_distribution, NF.tanh(reconstructed)
 
-            def encode(self, *args): raise NotImplementedError
-            def decode(self, *args): raise NotImplementedError
-            def decode_multiple(self, decode_num, *args): raise NotImplementedError
-            def latent_distribution(self, *args): raise NotImplementedError
+            def encode(self, *args):
+                raise NotImplementedError
+
+            def decode(self, *args):
+                raise NotImplementedError
+
+            def decode_multiple(self, decode_num, *args):
+                raise NotImplementedError
+
+            def latent_distribution(self, *args):
+                raise NotImplementedError
 
         squashed_action_vae = SquashedActionVAE(self._vae)
         encoder_trainer = MT.encoder_trainers.KLDVariationalAutoEncoderTrainer(
             models=squashed_action_vae,
             solvers={self._vae.scope_name: self._vae_solver},
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
         return encoder_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
@@ -307,18 +333,20 @@ class BEAR(Algorithm):
             def pi(self, s):
                 policy_distribution = self._target_pi.pi(s)
                 return NF.tanh(policy_distribution.sample())
+
         target_policy = PerturbedPolicy(self._target_pi)
 
-        trainer_config = MT.q_value.BCQQTrainerConfig(reduction_method='mean',
-                                                      num_action_samples=self._config.num_action_samples,
-                                                      lmb=self._config.lmb)
+        trainer_config = MT.q_value.BCQQTrainerConfig(
+            reduction_method="mean", num_action_samples=self._config.num_action_samples, lmb=self._config.lmb
+        )
         q_function_trainer = MT.q_value.BCQQTrainer(
             train_functions=self._q_ensembles,
             solvers=self._q_solvers,
             target_functions=self._target_q_ensembles,
             target_policy=target_policy,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
             sync_model(q, target_q, 1.0)
         return q_function_trainer
@@ -329,7 +357,8 @@ class BEAR(Algorithm):
             mmd_type=self._config.mmd_type,
             epsilon=self._config.epsilon,
             fix_lagrange_multiplier=self._config.fix_lagrange_multiplier,
-            warmup_iterations=self._config.warmup_iterations-self._iteration_num)
+            warmup_iterations=self._config.warmup_iterations - self._iteration_num,
+        )
 
         class SquashedActionQ(QFunction):
             def __init__(self, original_q):
@@ -349,7 +378,8 @@ class BEAR(Algorithm):
             lagrange_multiplier=self._lagrange,
             lagrange_solver=self._lagrange_solver,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
         sync_model(self._pi, self._target_pi, 1.0)
 
         return policy_trainer
@@ -363,19 +393,21 @@ class BEAR(Algorithm):
     def _bear_training(self, replay_buffer):
         experiences, info = replay_buffer.sample(self._config.batch_size)
         (s, a, r, non_terminal, s_next, *_) = marshal_experiences(experiences)
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              gamma=self._config.gamma,
-                              reward=r,
-                              non_terminal=non_terminal,
-                              s_next=s_next,
-                              weight=info['weights'])
+        batch = TrainingBatch(
+            batch_size=self._config.batch_size,
+            s_current=s,
+            a_current=a,
+            gamma=self._config.gamma,
+            reward=r,
+            non_terminal=non_terminal,
+            s_next=s_next,
+            weight=info["weights"],
+        )
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
         for q, target_q in zip(self._q_ensembles, self._target_q_ensembles):
             sync_model(q, target_q, tau=self._config.tau)
-        td_errors = self._q_function_trainer_state['td_errors']
+        td_errors = self._q_function_trainer_state["td_errors"]
         replay_buffer.update_priorities(td_errors)
 
         self._encoder_trainer_state = self._encoder_trainer.train(batch)
@@ -383,9 +415,7 @@ class BEAR(Algorithm):
         sync_model(self._pi, self._target_pi, tau=self._config.tau)
 
     def _models(self):
-        models = [*self._q_ensembles, *self._target_q_ensembles,
-                  self._pi, self._target_pi, self._vae,
-                  self._lagrange]
+        models = [*self._q_ensembles, *self._target_q_ensembles, self._pi, self._target_pi, self._vae, self._lagrange]
         return {model.scope_name: model for model in models}
 
     def _solvers(self):
@@ -399,21 +429,23 @@ class BEAR(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(BEAR, self).latest_iteration_state
-        if hasattr(self, '_encoder_trainer_state'):
-            latest_iteration_state['scalar'].update(
-                {'encoder_loss': float(self._encoder_trainer_state['encoder_loss'])})
-        if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
-        if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
-            latest_iteration_state['histogram'].update({'td_errors': self._q_function_trainer_state['td_errors']})
+        if hasattr(self, "_encoder_trainer_state"):
+            latest_iteration_state["scalar"].update(
+                {"encoder_loss": float(self._encoder_trainer_state["encoder_loss"])}
+            )
+        if hasattr(self, "_policy_trainer_state"):
+            latest_iteration_state["scalar"].update({"pi_loss": float(self._policy_trainer_state["pi_loss"])})
+        if hasattr(self, "_q_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"q_loss": float(self._q_function_trainer_state["q_loss"])})
+            latest_iteration_state["histogram"].update({"td_errors": self._q_function_trainer_state["td_errors"]})
         return latest_iteration_state
 
     @property

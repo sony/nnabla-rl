@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,28 +15,28 @@
 from gym.envs.registration import register
 
 register(
-    id='DelayedHalfCheetah-v1',
-    entry_point='delayed_mujoco.delayed_mujoco:DelayedHalfCheetahEnv',
+    id="DelayedHalfCheetah-v1",
+    entry_point="delayed_mujoco.delayed_mujoco:DelayedHalfCheetahEnv",
     max_episode_steps=1000,
     reward_threshold=4800.0,
 )
 
 register(
-    id='DelayedHopper-v1',
-    entry_point='delayed_mujoco.delayed_mujoco:DelayedHopperEnv',
+    id="DelayedHopper-v1",
+    entry_point="delayed_mujoco.delayed_mujoco:DelayedHopperEnv",
     max_episode_steps=1000,
     reward_threshold=3800.0,
 )
 
 register(
-    id='DelayedWalker2d-v1',
+    id="DelayedWalker2d-v1",
     max_episode_steps=1000,
-    entry_point='delayed_mujoco.delayed_mujoco:DelayedWalker2dEnv',
+    entry_point="delayed_mujoco.delayed_mujoco:DelayedWalker2dEnv",
 )
 
 register(
-    id='DelayedAnt-v1',
-    entry_point='delayed_mujoco.delayed_mujoco:DelayedAntEnv',
+    id="DelayedAnt-v1",
+    entry_point="delayed_mujoco.delayed_mujoco:DelayedAntEnv",
     max_episode_steps=1000,
     reward_threshold=6000.0,
 )

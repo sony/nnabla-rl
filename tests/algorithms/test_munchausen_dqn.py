@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ class TestMunchausenDQN(object):
         dummy_env = E.DummyDiscreteImg()
         dqn = A.MunchausenDQN(dummy_env)
 
-        assert dqn.__name__ == 'MunchausenDQN'
+        assert dqn.__name__ == "MunchausenDQN"
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
@@ -121,17 +121,18 @@ class TestMunchausenDQN(object):
         dummy_env = E.DummyDiscreteImg()
         m_dqn = A.MunchausenDQN(dummy_env)
 
-        m_dqn._q_function_trainer_state = {'q_loss': 0., 'td_errors': np.array([0., 1.])}
+        m_dqn._q_function_trainer_state = {"q_loss": 0.0, "td_errors": np.array([0.0, 1.0])}
 
         latest_iteration_state = m_dqn.latest_iteration_state
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert 'td_errors' in latest_iteration_state['histogram']
-        assert latest_iteration_state['scalar']['q_loss'] == 0.
-        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert "td_errors" in latest_iteration_state["histogram"]
+        assert latest_iteration_state["scalar"]["q_loss"] == 0.0
+        assert np.allclose(latest_iteration_state["histogram"]["td_errors"], np.array([0.0, 1.0]))
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

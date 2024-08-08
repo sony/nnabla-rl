@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,8 +44,9 @@ class PendulumDynamics(Dynamics):
         self.m = 1.0
         self.length = 1.0
 
-    def next_state(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, Dict[str, Any]]:
+    def next_state(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
         if batched:
             raise NotImplementedError
         # x.shape = (state_dim, 1) and u.shape = (input_dim, 1)
@@ -63,18 +64,19 @@ class PendulumDynamics(Dynamics):
         th = x.flatten()[0]  # th := theta
         Fx = np.zeros((self.state_dim(), self.state_dim()))
 
-        Fx[0, 0] = 1.
-        Fx[0, 1] = 1. * self.dt
+        Fx[0, 0] = 1.0
+        Fx[0, 1] = 1.0 * self.dt
         Fx[1, 0] = 3 * self.g / (2 * self.length) * np.cos(th) * self.dt
-        Fx[1, 1] = 1.
+        Fx[1, 1] = 1.0
 
         Fu = np.zeros((self.state_dim(), self.action_dim()))
         Fu[1, 0] = (3.0 / (self.m * self.length**2)) * self.dt
 
         return Fx, Fu
 
-    def hessian(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def hessian(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         state_dim = self.state_dim()
         action_dim = self.action_dim()
         Fxx = np.zeros((state_dim, state_dim, state_dim))
@@ -97,7 +99,7 @@ class PendulumDynamics(Dynamics):
 class PendulumCostFunction(CostFunction):
     def __init__(self):
         super().__init__()
-        self._weight_u = 1.
+        self._weight_u = 1.0
         self._weight_th = 2.5
         self._weight_thdot = 0.5
 
@@ -114,18 +116,23 @@ class PendulumCostFunction(CostFunction):
         if final_state:
             return state_cost
         else:
-            act_cost = self._weight_u * (u.flatten()**2)
+            act_cost = self._weight_u * (u.flatten() ** 2)
             return state_cost + act_cost
 
     def gradient(
-        self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False,
+        self,
+        x: np.ndarray,
+        u: Optional[np.ndarray],
+        t: int,
+        final_state: bool = False,
+        batched: bool = False,
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         if batched:
             raise NotImplementedError
         # x.shape = (state_dim, 1) and u.shape = (input_dim, 1)
         th = x.flatten()[0]  # th := theta
         thdot = x.flatten()[1]
-        Cx = np.array([[2 * self._weight_th * self._angle_normalize(th)], [2. * self._weight_thdot * thdot]])
+        Cx = np.array([[2 * self._weight_th * self._angle_normalize(th)], [2.0 * self._weight_thdot * thdot]])
         if final_state:
             return (Cx, None)
         else:
@@ -181,7 +188,7 @@ def run_control(args):
             start = time.time()
             improved_trajectory, trajectory_info = ilqr.compute_trajectory(initial_trajectory)
             end = time.time()
-            print(f'optimization time: {end - start} [s]')
+            print(f"optimization time: {end - start} [s]")
 
             next_state, reward, done, info = env.step(improved_trajectory[0][1])
             total_reward += reward
@@ -198,13 +205,13 @@ def run_control(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--T', type=int, default=25)
-    parser.add_argument('--num_episodes', type=int, default=10)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--T", type=int, default=25)
+    parser.add_argument("--num_episodes", type=int, default=10)
     args = parser.parse_args()
     run_control(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

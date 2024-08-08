@@ -63,11 +63,9 @@ _ALGORITHMS = {}
 def register_algorithm(algorithm_class, config_class):
     global _ALGORITHMS
     if not issubclass(algorithm_class, Algorithm):
-        raise ValueError(
-            "{} is not subclass of Algorithm".format(algorithm_class))
+        raise ValueError("{} is not subclass of Algorithm".format(algorithm_class))
     if not issubclass(config_class, AlgorithmConfig):
-        raise ValueError(
-            "{} is not subclass of AlgorithmConfig".format(config_class))
+        raise ValueError("{} is not subclass of AlgorithmConfig".format(config_class))
     _ALGORITHMS[algorithm_class.__name__] = (algorithm_class, config_class)
 
 

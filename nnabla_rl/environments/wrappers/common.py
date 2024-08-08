@@ -28,8 +28,7 @@ class Float32ObservationEnv(gym.ObservationWrapper):
         self.dtype = np.float32
         if isinstance(env.observation_space, spaces.Tuple):
             self.observation_space = spaces.Tuple(
-                [self._create_observation_space(observation_space)
-                 for observation_space in env.observation_space]
+                [self._create_observation_space(observation_space) for observation_space in env.observation_space]
             )
         else:
             self.observation_space = self._create_observation_space(env.observation_space)
@@ -37,10 +36,7 @@ class Float32ObservationEnv(gym.ObservationWrapper):
     def _create_observation_space(self, observation_space):
         if isinstance(observation_space, spaces.Box):
             return spaces.Box(
-                low=observation_space.low,
-                high=observation_space.high,
-                shape=observation_space.shape,
-                dtype=self.dtype
+                low=observation_space.low, high=observation_space.high, shape=observation_space.shape, dtype=self.dtype
             )
         elif isinstance(observation_space, spaces.Discrete):
             return spaces.Discrete(n=observation_space.n)
@@ -98,10 +94,7 @@ class Float32ActionEnv(gym.ActionWrapper):
     def _create_action_space(self, action_space):
         if isinstance(action_space, spaces.Box):
             return spaces.Box(
-                low=action_space.low,
-                high=action_space.high,
-                shape=action_space.shape,
-                dtype=self.continuous_dtype
+                low=action_space.low, high=action_space.high, shape=action_space.shape, dtype=self.continuous_dtype
             )
         elif isinstance(action_space, spaces.Discrete):
             return spaces.Discrete(n=action_space.n)
@@ -139,7 +132,7 @@ class ScreenRenderEnv(gym.Wrapper):
     def __init__(self, env):
         super(ScreenRenderEnv, self).__init__(env)
         self._installed_gym_version = parse(gym.__version__)
-        self._gym_version25 = parse('0.25.0')
+        self._gym_version25 = parse("0.25.0")
         self._env_name = "Unknown" if env.unwrapped.spec is None else env.unwrapped.spec.id
 
     def step(self, action):
@@ -148,7 +141,7 @@ class ScreenRenderEnv(gym.Wrapper):
         return results
 
     def reset(self):
-        if 'Bullet' in self._env_name:
+        if "Bullet" in self._env_name:
             self._render_env()
             state = self.env.reset()
         else:
@@ -159,8 +152,8 @@ class ScreenRenderEnv(gym.Wrapper):
     def _render_env(self):
         if self._gym_version25 <= self._installed_gym_version:
             # 0.25.0 <= gym version
-            rgb_array = self.env.render(mode='rgb_array')
-            cv2.imshow(f'{self._env_name}', cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR))
+            rgb_array = self.env.render(mode="rgb_array")
+            cv2.imshow(f"{self._env_name}", cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR))
             cv2.waitKey(1)
         else:
             # old gym version
@@ -180,8 +173,8 @@ class PrintEpisodeResultEnv(gym.Wrapper):
             self._episode_num += 1
             episode_steps = len(self._episode_rewards)
             episode_return = np.sum(self._episode_rewards)
-            logger.info(f'Episode #{self._episode_num} finished.')
-            logger.info(f'Episode steps: {episode_steps}. Total return: {episode_return}.')
+            logger.info(f"Episode #{self._episode_num} finished.")
+            logger.info(f"Episode steps: {episode_steps}. Total return: {episode_return}.")
             self._episode_rewards.clear()
         return s_next, reward, done, info
 
@@ -201,7 +194,7 @@ class TimestepAsStateEnv(gym.Wrapper):
         super(TimestepAsStateEnv, self).__init__(env)
         self._timestep = 0
         obs_space = self.observation_space
-        timestep_obs_space = spaces.Box(low=0., high=np.inf, shape=(1, ), dtype=np.float32)
+        timestep_obs_space = spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32)
         self.observation_space = spaces.Tuple([obs_space, timestep_obs_space])
 
     def reset(self):

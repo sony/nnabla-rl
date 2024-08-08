@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,18 @@ import math
 from typing import Optional, Tuple
 
 import numpy as np
-from gym.envs.box2d.lunar_lander import (FPS, LEG_DOWN, MAIN_ENGINE_POWER, SCALE, SIDE_ENGINE_AWAY, SIDE_ENGINE_HEIGHT,
-                                         SIDE_ENGINE_POWER, VIEWPORT_H, VIEWPORT_W, LunarLander)
+from gym.envs.box2d.lunar_lander import (
+    FPS,
+    LEG_DOWN,
+    MAIN_ENGINE_POWER,
+    SCALE,
+    SIDE_ENGINE_AWAY,
+    SIDE_ENGINE_HEIGHT,
+    SIDE_ENGINE_POWER,
+    VIEWPORT_H,
+    VIEWPORT_W,
+    LunarLander,
+)
 from gym.envs.mujoco.ant_v4 import AntEnv
 from gym.envs.mujoco.half_cheetah_v4 import HalfCheetahEnv
 from gym.envs.mujoco.hopper_v4 import HopperEnv
@@ -66,17 +76,11 @@ class FactoredLunarLanderV2(LunarLander):
 
         # Update wind
         assert self.lander is not None, "You forgot to call reset()"
-        if self.enable_wind and not (
-            self.legs[0].ground_contact or self.legs[1].ground_contact
-        ):
+        if self.enable_wind and not (self.legs[0].ground_contact or self.legs[1].ground_contact):
             # the function used for wind is tanh(sin(2 k x) + sin(pi k x)),
             # which is proven to never be periodic, k = 0.01
             wind_mag = (
-                math.tanh(
-                    math.sin(0.02 * self.wind_idx)
-                    + (math.sin(math.pi * 0.01 * self.wind_idx))
-                )
-                * self.wind_power
+                math.tanh(math.sin(0.02 * self.wind_idx) + (math.sin(math.pi * 0.01 * self.wind_idx))) * self.wind_power
             )
             self.wind_idx += 1
             self.lander.ApplyForceToCenter(
@@ -86,10 +90,9 @@ class FactoredLunarLanderV2(LunarLander):
 
             # the function used for torque is tanh(sin(2 k x) + sin(pi k x)),
             # which is proven to never be periodic, k = 0.01
-            torque_mag = math.tanh(
-                math.sin(0.02 * self.torque_idx)
-                + (math.sin(math.pi * 0.01 * self.torque_idx))
-            ) * (self.turbulence_power)
+            torque_mag = math.tanh(math.sin(0.02 * self.torque_idx) + (math.sin(math.pi * 0.01 * self.torque_idx))) * (
+                self.turbulence_power
+            )
             self.torque_idx += 1
             self.lander.ApplyTorque(
                 (torque_mag),
@@ -99,9 +102,7 @@ class FactoredLunarLanderV2(LunarLander):
         if self.continuous:
             action = np.clip(action, -1, +1).astype(np.float32)
         else:
-            assert self.action_space.contains(
-                action
-            ), f"{action!r} ({type(action)}) invalid "
+            assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid "
 
         # Engines
         tip = (math.sin(self.lander.angle), math.cos(self.lander.angle))
@@ -109,9 +110,7 @@ class FactoredLunarLanderV2(LunarLander):
         dispersion = [self.np_random.uniform(-1.0, +1.0) / SCALE for _ in range(2)]
 
         m_power = 0.0
-        if (self.continuous and action[0] > 0.0) or (
-            not self.continuous and action == 2
-        ):
+        if (self.continuous and action[0] > 0.0) or (not self.continuous and action == 2):
             # Main engine
             if self.continuous:
                 m_power = (np.clip(action[0], 0.0, 1.0) + 1.0) * 0.5  # 0.5..1.0
@@ -140,9 +139,7 @@ class FactoredLunarLanderV2(LunarLander):
             )
 
         s_power = 0.0
-        if (self.continuous and np.abs(action[1]) > 0.5) or (
-            not self.continuous and action in [1, 3]
-        ):
+        if (self.continuous and np.abs(action[1]) > 0.5) or (not self.continuous and action in [1, 3]):
             # Orientation engines
             if self.continuous:
                 direction = np.sign(action[1])
@@ -151,12 +148,8 @@ class FactoredLunarLanderV2(LunarLander):
             else:
                 direction = action - 2
                 s_power = 1.0
-            ox = tip[0] * dispersion[0] + side[0] * (
-                3 * dispersion[1] + direction * SIDE_ENGINE_AWAY / SCALE
-            )
-            oy = -tip[1] * dispersion[0] - side[1] * (
-                3 * dispersion[1] + direction * SIDE_ENGINE_AWAY / SCALE
-            )
+            ox = tip[0] * dispersion[0] + side[0] * (3 * dispersion[1] + direction * SIDE_ENGINE_AWAY / SCALE)
+            oy = -tip[1] * dispersion[0] - side[1] * (3 * dispersion[1] + direction * SIDE_ENGINE_AWAY / SCALE)
             impulse_pos = (
                 self.lander.position[0] + ox - tip[0] * 17 / SCALE,
                 self.lander.position[1] + oy + tip[1] * SIDE_ENGINE_HEIGHT / SCALE,
@@ -191,10 +184,12 @@ class FactoredLunarLanderV2(LunarLander):
 
         # shaping rewards
         prev_state = np.zeros_like(state) if self.prev_state is None else self.prev_state
-        reward_position = -100 * (np.sqrt(state[0] ** 2 + state[1] ** 2) -
-                                  np.sqrt(prev_state[0] ** 2 + prev_state[1] ** 2))
-        reward_velocity = -100 * (np.sqrt(state[2] ** 2 + state[3] ** 2) -
-                                  np.sqrt(prev_state[2] ** 2 + prev_state[3] ** 2))
+        reward_position = -100 * (
+            np.sqrt(state[0] ** 2 + state[1] ** 2) - np.sqrt(prev_state[0] ** 2 + prev_state[1] ** 2)
+        )
+        reward_velocity = -100 * (
+            np.sqrt(state[2] ** 2 + state[3] ** 2) - np.sqrt(prev_state[2] ** 2 + prev_state[3] ** 2)
+        )
         reward_angle = -100 * (abs(state[4]) - abs(prev_state[4]))
         reward_left_leg = 10 * (state[6] - prev_state[6])
         reward_right_leg = 10 * (state[7] - prev_state[7])
@@ -220,8 +215,17 @@ class FactoredLunarLanderV2(LunarLander):
         if self.render_mode == "human":
             self.render()
 
-        reward = [reward_position, reward_velocity, reward_angle, reward_left_leg, reward_right_leg,
-                  reward_main_engine, reward_side_engine, reward_failure, reward_success]
+        reward = [
+            reward_position,
+            reward_velocity,
+            reward_angle,
+            reward_left_leg,
+            reward_right_leg,
+            reward_main_engine,
+            reward_side_engine,
+            reward_failure,
+            reward_success,
+        ]
 
         return np.array(state, dtype=np.float32), np.array(reward), terminated, {}
 

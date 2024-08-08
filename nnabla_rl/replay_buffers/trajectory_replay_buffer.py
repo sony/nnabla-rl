@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,22 +66,24 @@ class TrajectoryReplayBuffer(ReplayBuffer):
         self._num_experiences = num_experiences
         self._cumsum_experiences = cumsum_experiences
 
-    def sample_indices(self, indices: Sequence[int], num_steps: int = 1) \
-            -> Tuple[Union[Sequence[Experience], Tuple[Sequence[Experience], ...]], Dict[str, Any]]:
+    def sample_indices(
+        self, indices: Sequence[int], num_steps: int = 1
+    ) -> Tuple[Union[Sequence[Experience], Tuple[Sequence[Experience], ...]], Dict[str, Any]]:
         if len(indices) == 0:
-            raise ValueError('Indices are empty')
+            raise ValueError("Indices are empty")
         if num_steps < 1:
-            raise ValueError(f'num_steps: {num_steps} should be greater than 0!')
+            raise ValueError(f"num_steps: {num_steps} should be greater than 0!")
         experiences: Union[Sequence[Experience], Tuple[Sequence[Experience], ...]]
         if num_steps == 1:
             experiences = [self._get_experience(index) for index in indices]
         else:
-            experiences = tuple([self._get_experience(index+i) for index in indices] for i in range(num_steps))
+            experiences = tuple([self._get_experience(index + i) for index in indices] for i in range(num_steps))
         weights = np.ones([len(indices), 1])
         return experiences, dict(weights=weights)
 
-    def sample_trajectories(self, num_samples: int = 1) -> Tuple[Union[Trajectory, Tuple[Trajectory, ...]],
-                                                                 Dict[str, Any]]:
+    def sample_trajectories(
+        self, num_samples: int = 1
+    ) -> Tuple[Union[Trajectory, Tuple[Trajectory, ...]], Dict[str, Any]]:
         """Randomly sample num_samples trajectories from the replay buffer.
 
         Args:
@@ -95,14 +97,16 @@ class TrajectoryReplayBuffer(ReplayBuffer):
         max_index = self.trajectory_num
         if num_samples > max_index:
             raise ValueError(
-                f'num_samples: {num_samples} is greater than the number of trajectories saved in buffer: {max_index}')
+                f"num_samples: {num_samples} is greater than the number of trajectories saved in buffer: {max_index}"
+            )
         indices = self._random_trajectory_indices(num_samples=num_samples, max_index=max_index)
         return self.sample_indices_trajectory(indices)
 
-    def sample_indices_trajectory(self, indices: Sequence[int]) \
-            -> Tuple[Union[Trajectory, Tuple[Trajectory, ...]], Dict[str, Any]]:
+    def sample_indices_trajectory(
+        self, indices: Sequence[int]
+    ) -> Tuple[Union[Trajectory, Tuple[Trajectory, ...]], Dict[str, Any]]:
         if len(indices) == 0:
-            raise ValueError('Indices are empty')
+            raise ValueError("Indices are empty")
         trajectories: Union[Trajectory, Tuple[Trajectory, ...]]
         if len(indices) == 1:
             trajectories = self.get_trajectory(indices[0])
@@ -111,9 +115,9 @@ class TrajectoryReplayBuffer(ReplayBuffer):
         weights = np.ones([len(indices), 1])
         return trajectories, dict(weights=weights)
 
-    def sample_trajectories_portion(self,
-                                    num_samples: int = 1,
-                                    portion_length: int = 1) -> Tuple[Tuple[Trajectory, ...], Dict[str, Any]]:
+    def sample_trajectories_portion(
+        self, num_samples: int = 1, portion_length: int = 1
+    ) -> Tuple[Tuple[Trajectory, ...], Dict[str, Any]]:
         """Randomly sample num_samples trajectories with length portion_length
         from the replay buffer. (i.e. Each trajectory length will be
         portion_length) Trajectory will be sampled as follows. First, a
@@ -142,16 +146,17 @@ class TrajectoryReplayBuffer(ReplayBuffer):
 
         sliced_trajectories: MutableSequence[Trajectory] = []
         for trajectory in trajectories:
-            max_index = len(trajectory)-portion_length
+            max_index = len(trajectory) - portion_length
             if max_index < 0:
-                raise RuntimeError(f'Trajectory length is shorter than portion length: {portion_length}')
-            initial_index = rl.random.drng.choice(max_index+1, replace=False)
-            sliced_trajectories.append(trajectory[initial_index:initial_index+portion_length])
+                raise RuntimeError(f"Trajectory length is shorter than portion length: {portion_length}")
+            initial_index = rl.random.drng.choice(max_index + 1, replace=False)
+            sliced_trajectories.append(trajectory[initial_index : initial_index + portion_length])
         weights = np.ones([len(trajectories), 1])
         return tuple(sliced_trajectories), dict(weights=weights)
 
-    def sample_indices_portion(self, indices: Sequence[int], portion_length: int = 1) ->  \
-            Tuple[Tuple[Trajectory, ...], Dict[str, Any]]:
+    def sample_indices_portion(
+        self, indices: Sequence[int], portion_length: int = 1
+    ) -> Tuple[Tuple[Trajectory, ...], Dict[str, Any]]:
         """Sample trajectory portions from the buffer. (i.e. Each trajectory
         length will be portion_length) Trajectory from given index to
         index+portion_length-1 will be sampled. Index should be the index of a
@@ -177,23 +182,23 @@ class TrajectoryReplayBuffer(ReplayBuffer):
             RuntimeError: Trajectory's length is below portion_length.
         """
         if len(indices) == 0:
-            raise ValueError('Indices are empty')
+            raise ValueError("Indices are empty")
         if portion_length < 1:
-            raise ValueError(f'portion_length: {portion_length} should be greater than 0!')
+            raise ValueError(f"portion_length: {portion_length} should be greater than 0!")
 
         sliced_trajectories: MutableSequence[Trajectory] = []
         for index in indices:
             trajectory_index = np.argwhere(np.asarray(self._cumsum_experiences) > index)[0][0]
             trajectory = self.get_trajectory(trajectory_index)
             if len(trajectory) < portion_length:
-                raise RuntimeError(f'Trajectory length is shorter than portion length: {portion_length}')
+                raise RuntimeError(f"Trajectory length is shorter than portion length: {portion_length}")
 
             if 0 < trajectory_index:
                 experience_index = index - self._cumsum_experiences[trajectory_index - 1]
             else:
                 experience_index = index
             experience_index = min(experience_index, len(trajectory) - portion_length)
-            sliced_trajectories.append(trajectory[experience_index:experience_index+portion_length])
+            sliced_trajectories.append(trajectory[experience_index : experience_index + portion_length])
 
         weights = np.ones([len(indices), 1])
         return tuple(sliced_trajectories), dict(weights=weights)
@@ -222,4 +227,4 @@ class TrajectoryReplayBuffer(ReplayBuffer):
                 experience: Experience = trajectory[experience_index - prev_cumsum]
                 return experience
             prev_cumsum = cumsum
-        raise ValueError(f'index {experience_index} is out of range')
+        raise ValueError(f"index {experience_index} is out of range")

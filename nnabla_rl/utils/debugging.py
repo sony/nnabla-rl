@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ def print_network(x):
         print(nnabla_func.inputs)
         print(nnabla_func.outputs)
         print(nnabla_func.info.args)
+
     x.visit(accept_nnabla_func)
 
 
@@ -45,12 +46,12 @@ def save_graph(x, file_path, verbose=False):
 
 
 def count_parameter_number(parameters):
-    '''
+    """
     Args:
         parameters (dict): parameters in dictionary form
     Returns:
         parameter_number (int): parameter number
-    '''
+    """
     parameter_number = 0
     for parameter in parameters.values():
         parameter_number += parameter.size
@@ -61,7 +62,7 @@ def profile_graph(
     output_variable: nn.Variable,
     csv_file_path: Union[str, pathlib.Path],
     solver: Optional[S.Solver] = None,
-    ext_name: str = 'cudnn',
+    ext_name: str = "cudnn",
     device_id: int = 0,
     n_run: int = 1000,
 ) -> None:
@@ -107,8 +108,9 @@ try:
             summarized = summary.summarize(all_objects)
             self.print_summary(summarized)
 
-        def print_summary(self, rows, limit=30, sort='size', order='descending'):
+        def print_summary(self, rows, limit=30, sort="size", order="descending"):
             for line in summary.format_(rows, limit=limit, sort=sort, order=order):
                 logger.debug(line)
+
 except ModuleNotFoundError:
     pass

@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,14 @@ import nnabla as nn
 import nnabla.functions as NF
 import nnabla_rl.functions as RNF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables, rnn_support)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+    rnn_support,
+)
 from nnabla_rl.models import Model, QFunction, StochasticPolicy, VFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable, create_variables
@@ -39,6 +45,7 @@ class XQLForwardPolicyTrainerConfig(TrainerConfig):
 
 class XQLForwardPolicyTrainer(ModelTrainer):
     """EXtreme Q-learning style (w/ forward KL-divergence) Policy Trainer."""
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
@@ -50,15 +57,17 @@ class XQLForwardPolicyTrainer(ModelTrainer):
     _prev_q_rnn_states: Dict[str, Dict[str, Dict[str, nn.Variable]]]
     _prev_v_rnn_states: Dict[str, Dict[str, Dict[str, nn.Variable]]]
 
-    def __init__(self,
-                 models: Union[StochasticPolicy, Sequence[StochasticPolicy]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 q_functions: Sequence[QFunction],
-                 v_function: VFunction,
-                 env_info: EnvironmentInfo,
-                 config: XQLForwardPolicyTrainerConfig = XQLForwardPolicyTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[StochasticPolicy, Sequence[StochasticPolicy]],
+        solvers: Dict[str, nn.solver.Solver],
+        q_functions: Sequence[QFunction],
+        v_function: VFunction,
+        env_info: EnvironmentInfo,
+        config: XQLForwardPolicyTrainerConfig = XQLForwardPolicyTrainerConfig(),
+    ):
         if len(q_functions) < 2:
-            raise ValueError('Must provide at least 2 Q-functions for training')
+            raise ValueError("Must provide at least 2 Q-functions for training")
         self._q_functions = q_functions
         self._v_function = v_function
 
@@ -73,12 +82,14 @@ class XQLForwardPolicyTrainer(ModelTrainer):
     def support_rnn(self) -> bool:
         return True
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -122,12 +133,10 @@ class XQLForwardPolicyTrainer(ModelTrainer):
         for solver in solvers.values():
             solver.update()
         trainer_state = {}
-        trainer_state['pi_loss'] = self._pi_loss.d.copy()
+        trainer_state["pi_loss"] = self._pi_loss.d.copy()
         return trainer_state
 
-    def _build_training_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables):
+    def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         self._pi_loss = 0
         ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
         for step_index, variables in enumerate(training_variables):
@@ -136,10 +145,7 @@ class XQLForwardPolicyTrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._pi_loss += self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         train_rnn_states = training_variables.rnn_states
         for policy in models:
             assert isinstance(policy, StochasticPolicy)
@@ -192,11 +198,9 @@ class XQLForwardPolicyTrainer(ModelTrainer):
             rnn_state_variables = create_variables(batch_size, shapes)
             rnn_states[self._v_function.scope_name] = rnn_state_variables
 
-        return TrainingVariables(batch_size,
-                                 s_current_var,
-                                 a_current_var,
-                                 non_terminal=non_terminal_var,
-                                 rnn_states=rnn_states)
+        return TrainingVariables(
+            batch_size, s_current_var, a_current_var, non_terminal=non_terminal_var, rnn_states=rnn_states
+        )
 
     @property
     def loss_variables(self) -> Dict[str, nn.Variable]:

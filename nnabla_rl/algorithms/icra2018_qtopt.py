@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -84,6 +84,7 @@ class ICRA2018QtOptConfig(DDQNConfig):
         random_sample_size (int): number of candidates at the sampling step of random shooting method.
             Defaults to 16.
     """
+
     gamma: float = 0.9
     learning_rate: float = 0.001
     batch_size: int = 64
@@ -107,82 +108,87 @@ class ICRA2018QtOptConfig(DDQNConfig):
 
         Check set values are in valid range.
         """
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.learning_rate, 'learning_rate')
-        self._assert_positive(self.batch_size, 'batch_size')
-        self._assert_positive(self.num_steps, 'num_steps')
-        self._assert_positive(self.q_loss_scalar, 'q_loss_scalar')
-        self._assert_positive(self.learner_update_frequency, 'learner_update_frequency')
-        self._assert_positive(self.target_update_frequency, 'target_update_frequency')
-        self._assert_positive(self.start_timesteps, 'start_timesteps')
-        self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
-        self._assert_smaller_than(self.start_timesteps, self.replay_buffer_size, 'start_timesteps')
-        self._assert_between(self.initial_epsilon, 0.0, 1.0, 'initial_epsilon')
-        self._assert_between(self.final_epsilon, 0.0, 1.0, 'final_epsilon')
-        self._assert_between(self.test_epsilon, 0.0, 1.0, 'test_epsilon')
-        self._assert_positive(self.max_explore_steps, 'max_explore_steps')
-        self._assert_positive(self.unroll_steps, 'unroll_steps')
-        self._assert_positive_or_zero(self.burn_in_steps, 'burn_in_steps')
-        self._assert_positive(self.cem_sample_size, 'cem_sample_size')
-        self._assert_positive(self.cem_num_elites, 'cem_num_elites')
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_positive(self.learning_rate, "learning_rate")
+        self._assert_positive(self.batch_size, "batch_size")
+        self._assert_positive(self.num_steps, "num_steps")
+        self._assert_positive(self.q_loss_scalar, "q_loss_scalar")
+        self._assert_positive(self.learner_update_frequency, "learner_update_frequency")
+        self._assert_positive(self.target_update_frequency, "target_update_frequency")
+        self._assert_positive(self.start_timesteps, "start_timesteps")
+        self._assert_positive(self.replay_buffer_size, "replay_buffer_size")
+        self._assert_smaller_than(self.start_timesteps, self.replay_buffer_size, "start_timesteps")
+        self._assert_between(self.initial_epsilon, 0.0, 1.0, "initial_epsilon")
+        self._assert_between(self.final_epsilon, 0.0, 1.0, "final_epsilon")
+        self._assert_between(self.test_epsilon, 0.0, 1.0, "test_epsilon")
+        self._assert_positive(self.max_explore_steps, "max_explore_steps")
+        self._assert_positive(self.unroll_steps, "unroll_steps")
+        self._assert_positive_or_zero(self.burn_in_steps, "burn_in_steps")
+        self._assert_positive(self.cem_sample_size, "cem_sample_size")
+        self._assert_positive(self.cem_num_elites, "cem_num_elites")
         self._assert_positive_or_zero(self.cem_alpha, "cem_alpha")
-        self._assert_positive(self.cem_num_iterations, 'cem_num_iterations')
-        self._assert_positive(self.random_sample_size, 'random_sample_size')
+        self._assert_positive(self.cem_num_iterations, "cem_num_iterations")
+        self._assert_positive(self.random_sample_size, "random_sample_size")
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: ICRA2018QtOptConfig,
-                    **kwargs) -> QFunction:
-        return ICRA2018QtOptQFunction(scope_name,
-                                      env_info.action_dim,
-                                      action_high=env_info.action_high,
-                                      action_low=env_info.action_low,
-                                      cem_initial_mean=algorithm_config.cem_initial_mean,
-                                      cem_initial_variance=algorithm_config.cem_initial_variance,
-                                      cem_sample_size=algorithm_config.cem_sample_size,
-                                      cem_num_elites=algorithm_config.cem_num_elites,
-                                      cem_num_iterations=algorithm_config.cem_num_iterations,
-                                      cem_alpha=algorithm_config.cem_alpha,
-                                      random_sample_size=algorithm_config.random_sample_size)
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: ICRA2018QtOptConfig,
+        **kwargs,
+    ) -> QFunction:
+        return ICRA2018QtOptQFunction(
+            scope_name,
+            env_info.action_dim,
+            action_high=env_info.action_high,
+            action_low=env_info.action_low,
+            cem_initial_mean=algorithm_config.cem_initial_mean,
+            cem_initial_variance=algorithm_config.cem_initial_variance,
+            cem_sample_size=algorithm_config.cem_sample_size,
+            cem_num_elites=algorithm_config.cem_num_elites,
+            cem_num_iterations=algorithm_config.cem_num_iterations,
+            cem_alpha=algorithm_config.cem_alpha,
+            random_sample_size=algorithm_config.random_sample_size,
+        )
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: ICRA2018QtOptConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: ICRA2018QtOptConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: ICRA2018QtOptConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: ICRA2018QtOptConfig, **kwargs
+    ) -> ReplayBuffer:
         return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: ICRA2018QtOptConfig,
-                       algorithm: "ICRA2018QtOpt",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: ICRA2018QtOptConfig,
+        algorithm: "ICRA2018QtOpt",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
             warmup_random_steps=algorithm_config.start_timesteps,
             initial_step_num=algorithm.iteration_num,
             initial_epsilon=algorithm_config.initial_epsilon,
             final_epsilon=algorithm_config.final_epsilon,
-            max_explore_steps=algorithm_config.max_explore_steps
+            max_explore_steps=algorithm_config.max_explore_steps,
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
             greedy_action_selector=algorithm._exploration_action_selector,
             random_action_selector=algorithm._random_action_selector,
             env_info=env_info,
-            config=explorer_config)
+            config=explorer_config,
+        )
         return explorer
 
 
@@ -227,33 +233,42 @@ class ICRA2018QtOpt(DDQN):
     _evaluation_actor: _GreedyActionSelector
     _exploration_actor: _GreedyActionSelector
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: ICRA2018QtOptConfig = ICRA2018QtOptConfig(),
-                 q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super(ICRA2018QtOpt, self).__init__(env_or_env_info=env_or_env_info,
-                                            config=config,
-                                            q_func_builder=q_func_builder,
-                                            q_solver_builder=q_solver_builder,
-                                            replay_buffer_builder=replay_buffer_builder,
-                                            explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: ICRA2018QtOptConfig = ICRA2018QtOptConfig(),
+        q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super(ICRA2018QtOpt, self).__init__(
+            env_or_env_info=env_or_env_info,
+            config=config,
+            q_func_builder=q_func_builder,
+            q_solver_builder=q_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_q_function_training(self, env_or_buffer):
-        trainer_config = MT.q_value_trainers.DDQNQTrainerConfig(num_steps=self._config.num_steps,
-                                                                q_loss_scalar=self._config.q_loss_scalar,
-                                                                reduction_method='sum',
-                                                                grad_clip=self._config.grad_clip,
-                                                                unroll_steps=self._config.unroll_steps,
-                                                                burn_in_steps=self._config.burn_in_steps,
-                                                                reset_on_terminal=self._config.reset_rnn_on_terminal)
+        trainer_config = MT.q_value_trainers.DDQNQTrainerConfig(
+            num_steps=self._config.num_steps,
+            q_loss_scalar=self._config.q_loss_scalar,
+            reduction_method="sum",
+            grad_clip=self._config.grad_clip,
+            unroll_steps=self._config.unroll_steps,
+            burn_in_steps=self._config.burn_in_steps,
+            reset_on_terminal=self._config.reset_rnn_on_terminal,
+        )
 
-        q_function_trainer = MT.q_value_trainers.DDQNQTrainer(train_function=self._q,
-                                                              solvers={self._q.scope_name: self._q_solver},
-                                                              target_function=self._target_q,
-                                                              env_info=self._env_info,
-                                                              config=trainer_config)
+        q_function_trainer = MT.q_value_trainers.DDQNQTrainer(
+            train_function=self._q,
+            solvers={self._q.scope_name: self._q_solver},
+            target_function=self._target_q,
+            env_info=self._env_info,
+            config=trainer_config,
+        )
         sync_model(self._q, self._target_q)
         return q_function_trainer
 
@@ -262,6 +277,7 @@ class ICRA2018QtOpt(DDQN):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return env_info.is_continuous_action_env() and not env_info.is_tuple_action_env()

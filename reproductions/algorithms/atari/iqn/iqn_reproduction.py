@@ -31,16 +31,21 @@ class MemoryEfficientAtariBufferBuilder(ReplayBufferBuilder):
 
 
 def run_training(args):
-    outdir = f'{args.env}_results/seed-{args.seed}'
+    outdir = f"{args.env}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 100, render=args.render,
-                               use_gymnasium=args.use_gymnasium)
+    eval_env = build_atari_env(
+        args.env, test=True, seed=args.seed + 100, render=args.render, use_gymnasium=args.use_gymnasium
+    )
     evaluator = TimestepEvaluator(num_timesteps=125000)
-    evaluation_hook = H.EvaluationHook(eval_env, evaluator, timing=args.eval_timing,
-                                       writer=W.FileWriter(outdir=outdir, file_prefix='evaluation_result'))
+    evaluation_hook = H.EvaluationHook(
+        eval_env,
+        evaluator,
+        timing=args.eval_timing,
+        writer=W.FileWriter(outdir=outdir, file_prefix="evaluation_result"),
+    )
 
     iteration_num_hook = H.IterationNumHook(timing=100)
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
@@ -60,14 +65,14 @@ def run_training(args):
 
 def run_showcase(args):
     if args.snapshot_dir is None:
-        raise ValueError(
-            'Please specify the snapshot dir for showcasing')
-    eval_env = build_atari_env(args.env, test=True, seed=args.seed + 200, render=args.render,
-                               use_gymnasium=args.use_gymnasium)
+        raise ValueError("Please specify the snapshot dir for showcasing")
+    eval_env = build_atari_env(
+        args.env, test=True, seed=args.seed + 200, render=args.render, use_gymnasium=args.use_gymnasium
+    )
     config = A.IQNConfig(gpu_id=args.gpu)
     iqn = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(iqn, A.IQN):
-        raise ValueError('Loaded snapshot is not trained with IQN!')
+        raise ValueError("Loaded snapshot is not trained with IQN!")
 
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(iqn, eval_env)
@@ -75,18 +80,18 @@ def run_showcase(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='BreakoutNoFrameskip-v4')
-    parser.add_argument('--save-dir', type=str, default="")
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--showcase', action='store_true')
-    parser.add_argument('--snapshot-dir', type=str, default=None)
-    parser.add_argument('--total_iterations', type=int, default=50000000)
-    parser.add_argument('--save_timing', type=int, default=250000)
-    parser.add_argument('--eval_timing', type=int, default=250000)
-    parser.add_argument('--showcase_runs', type=int, default=10)
-    parser.add_argument('--use-gymnasium', action='store_true')
+    parser.add_argument("--env", type=str, default="BreakoutNoFrameskip-v4")
+    parser.add_argument("--save-dir", type=str, default="")
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--showcase", action="store_true")
+    parser.add_argument("--snapshot-dir", type=str, default=None)
+    parser.add_argument("--total_iterations", type=int, default=50000000)
+    parser.add_argument("--save_timing", type=int, default=250000)
+    parser.add_argument("--eval_timing", type=int, default=250000)
+    parser.add_argument("--showcase_runs", type=int, default=10)
+    parser.add_argument("--use-gymnasium", action="store_true")
 
     args = parser.parse_args()
 
@@ -96,5 +101,5 @@ def main():
         run_training(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

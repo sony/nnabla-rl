@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,8 +42,9 @@ class Distribution(metaclass=ABCMeta):
         """The number of dimensions of the distribution."""
         raise NotImplementedError
 
-    def sample_multiple(self, num_samples: int, noise_clip: Optional[Tuple[float, float]] = None
-                        ) -> Union[nn.Variable, np.ndarray]:
+    def sample_multiple(
+        self, num_samples: int, noise_clip: Optional[Tuple[float, float]] = None
+    ) -> Union[nn.Variable, np.ndarray]:
         """Sample mutiple value from the distribution New axis will be added
         between the first and second axis. Thefore, the returned value shape
         for mean and variance with shape (batch_size, data_shape) will be
@@ -92,8 +93,9 @@ class Distribution(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def sample_and_compute_log_prob(self, noise_clip: Optional[Tuple[float, float]] = None) \
-            -> Union[Tuple[nn.Variable, nn.Variable], Tuple[np.ndarray, np.ndarray]]:
+    def sample_and_compute_log_prob(
+        self, noise_clip: Optional[Tuple[float, float]] = None
+    ) -> Union[Tuple[nn.Variable, nn.Variable], Tuple[np.ndarray, np.ndarray]]:
         """Sample a value from the distribution and compute its log
         probability.
 
@@ -114,7 +116,7 @@ class Distribution(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def kl_divergence(self, q: 'Distribution') -> Union[nn.Variable, np.ndarray]:
+    def kl_divergence(self, q: "Distribution") -> Union[nn.Variable, np.ndarray]:
         """Compute the kullback leibler divergence between given distribution.
         This function will compute KL(self||q)
 

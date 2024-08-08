@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@ class RainbowConfig(CategoricalDDQNConfig):
             categorical q value update.  :math:`r + \\gamma\\max_{a}{Q_{\\text{target}}(s_{t+1}, a)}`.
             Defaults to False.
     """
+
     learning_rate: float = 0.00025 / 4
     start_timesteps: int = 20000  # 20k steps = 80k frames in Atari game
     target_update_frequency: int = 8000  # 8k steps = 32k frames in Atari game
@@ -76,57 +77,58 @@ class RainbowConfig(CategoricalDDQNConfig):
 
 
 class DefaultValueDistFunctionBuilder(ModelBuilder[ValueDistributionFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: RainbowConfig,
-                    **kwargs) -> ValueDistributionFunction:
-        return RainbowValueDistributionFunction(scope_name,
-                                                env_info.action_dim,
-                                                algorithm_config.num_atoms,
-                                                algorithm_config.v_min,
-                                                algorithm_config.v_max)
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: RainbowConfig,
+        **kwargs,
+    ) -> ValueDistributionFunction:
+        return RainbowValueDistributionFunction(
+            scope_name, env_info.action_dim, algorithm_config.num_atoms, algorithm_config.v_min, algorithm_config.v_max
+        )
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: RainbowConfig,
-                            **kwargs) -> ReplayBuffer:
-        return ProportionalPrioritizedReplayBuffer(capacity=algorithm_config.replay_buffer_size,
-                                                   alpha=algorithm_config.alpha,
-                                                   beta=algorithm_config.beta,
-                                                   betasteps=algorithm_config.betasteps,
-                                                   error_clip=(-100, 100),
-                                                   normalization_method="batch_max")
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: RainbowConfig, **kwargs
+    ) -> ReplayBuffer:
+        return ProportionalPrioritizedReplayBuffer(
+            capacity=algorithm_config.replay_buffer_size,
+            alpha=algorithm_config.alpha,
+            beta=algorithm_config.beta,
+            betasteps=algorithm_config.betasteps,
+            error_clip=(-100, 100),
+            normalization_method="batch_max",
+        )
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: RainbowConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: RainbowConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.learning_rate, eps=1.5e-4)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: RainbowConfig,
-                       algorithm: "Rainbow",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: RainbowConfig,
+        algorithm: "Rainbow",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.RawPolicyExplorerConfig(
-            warmup_random_steps=algorithm_config.warmup_random_steps,
-            initial_step_num=algorithm.iteration_num
+            warmup_random_steps=algorithm_config.warmup_random_steps, initial_step_num=algorithm.iteration_num
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
-                                        env_info=env_info,
-                                        config=explorer_config)
+        explorer = EE.RawPolicyExplorer(
+            policy_action_selector=algorithm._exploration_action_selector, env_info=env_info, config=explorer_config
+        )
         return explorer
 
 
 class Rainbow(CategoricalDDQN):
-    '''Rainbow algorithm.
+    """Rainbow algorithm.
     This class implements the Rainbow algorithm proposed by M. Bellemare, et al. in the paper:
     "Rainbow: Combining Improvements in Deep Reinforcement Learning"
     For details see: https://arxiv.org/abs/1710.02298
@@ -145,21 +147,25 @@ class Rainbow(CategoricalDDQN):
             builder of replay_buffer
         explorer_builder (:py:class:`ExplorerBuilder <nnabla_rl.builders.ExplorerBuilder>`):
             builder of environment explorer
-    '''
+    """
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: RainbowConfig = RainbowConfig(),
-                 value_distribution_builder: ModelBuilder[ValueDistributionFunction]
-                 = DefaultValueDistFunctionBuilder(),
-                 value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super(Rainbow, self).__init__(env_or_env_info,
-                                      config=config,
-                                      value_distribution_builder=value_distribution_builder,
-                                      value_distribution_solver_builder=value_distribution_solver_builder,
-                                      replay_buffer_builder=replay_buffer_builder,
-                                      explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: RainbowConfig = RainbowConfig(),
+        value_distribution_builder: ModelBuilder[ValueDistributionFunction] = DefaultValueDistFunctionBuilder(),
+        value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super(Rainbow, self).__init__(
+            env_or_env_info,
+            config=config,
+            value_distribution_builder=value_distribution_builder,
+            value_distribution_solver_builder=value_distribution_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
         if self._config.no_double:

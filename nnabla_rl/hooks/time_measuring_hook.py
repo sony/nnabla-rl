@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ class TimeMeasuringHook(Hook):
     def on_hook_called(self, algorithm):
         current_time = time.time()
 
-        logger.info("time spent since previous hook: {} seconds".format(
-            current_time - self._prev_time))
+        logger.info("time spent since previous hook: {} seconds".format(current_time - self._prev_time))
 
         self._prev_time = current_time

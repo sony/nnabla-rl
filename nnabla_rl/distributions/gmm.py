@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,21 +36,23 @@ class GMM(ContinuosDistribution):
             mixing coefficients of each gaussian distribution. :math:`\\pi_k`.
     """
 
-    def __init__(self,
-                 means: Union[nn.Variable, np.ndarray],
-                 covariances: Union[nn.Variable, np.ndarray],
-                 mixing_coefficients: Union[nn.Variable, np.ndarray]):
+    def __init__(
+        self,
+        means: Union[nn.Variable, np.ndarray],
+        covariances: Union[nn.Variable, np.ndarray],
+        mixing_coefficients: Union[nn.Variable, np.ndarray],
+    ):
         super(GMM, self).__init__()
         if (
-            isinstance(means, np.ndarray) and
-            isinstance(covariances, np.ndarray) and
-            isinstance(mixing_coefficients, np.ndarray)
+            isinstance(means, np.ndarray)
+            and isinstance(covariances, np.ndarray)
+            and isinstance(mixing_coefficients, np.ndarray)
         ):
             self._delegate = NumpyGMM(means, covariances, mixing_coefficients)
         elif (
-            isinstance(means, nn.Variable) and
-            isinstance(covariances, nn.Variable) and
-            isinstance(mixing_coefficients, nn.Variable)
+            isinstance(means, nn.Variable)
+            and isinstance(covariances, nn.Variable)
+            and isinstance(mixing_coefficients, nn.Variable)
         ):
             raise NotImplementedError
         else:
@@ -58,7 +60,8 @@ class GMM(ContinuosDistribution):
                 "Invalid type or a set of types.\n"
                 f"means type is {type(means)}, "
                 f"covariances type is {type(covariances)} and"
-                f"mixing_coefficients type is {type(mixing_coefficients)}")
+                f"mixing_coefficients type is {type(mixing_coefficients)}"
+            )
 
     def sample(self, noise_clip=None):
         raise self._delegate.sample(noise_clip)
@@ -86,13 +89,13 @@ class NumpyGMM(ContinuosDistribution):
         super(NumpyGMM, self).__init__()
         self._num_classes, self._dim = means.shape
         assert (self._num_classes, self._dim, self._dim) == covariances.shape
-        assert (self._num_classes, ) == mixing_coefficients.shape
+        assert (self._num_classes,) == mixing_coefficients.shape
         self._means = means  # shape (num_classes, dim)
         self._covariances = covariances  # shape (num_classes, dim, dim)
         self._mixing_coefficients = mixing_coefficients  # shape(num_classes, )
 
     @staticmethod
-    def from_gmm_parameter(parameter: 'GMMParameter') -> 'NumpyGMM':
+    def from_gmm_parameter(parameter: "GMMParameter") -> "NumpyGMM":
         return NumpyGMM(parameter._means, parameter._covariances, parameter._mixing_coefficients)
 
     def sample(self, noise_clip=None):
@@ -130,7 +133,7 @@ class NumpyGMM(ContinuosDistribution):
             # compute quadratic form value without solving inverse matrix
             diff = (x - mean).T  # shape (dim, num_data)
             diff_inv_cholesky_decomposed_cov = linalg.solve_triangular(cholesky_decomposed_cov, diff, lower=True)
-            log_probs[:, i] -= 0.5 * np.sum(diff_inv_cholesky_decomposed_cov ** 2, axis=0)
+            log_probs[:, i] -= 0.5 * np.sum(diff_inv_cholesky_decomposed_cov**2, axis=0)
 
         log_probs += np.log(self._mixing_coefficients)
         return log_probs
@@ -160,8 +163,9 @@ def compute_responsibility(data: np.ndarray, distribution: NumpyGMM) -> Tuple[np
     return np.exp(log_probs), np.exp(log_responsibility)
 
 
-def compute_mean_and_covariance(distribution: NumpyGMM,
-                                mixing_coefficients: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
+def compute_mean_and_covariance(
+    distribution: NumpyGMM, mixing_coefficients: Optional[np.ndarray] = None
+) -> Tuple[np.ndarray, np.ndarray]:
     """Compute mean and covariance of gmm.
 
     Args:
@@ -173,8 +177,7 @@ def compute_mean_and_covariance(distribution: NumpyGMM,
     """
     if mixing_coefficients is None:
         # sum of all class's mean, shape (dim, )
-        mean = np.sum(distribution._means *
-                      distribution._mixing_coefficients[:, np.newaxis], axis=0)
+        mean = np.sum(distribution._means * distribution._mixing_coefficients[:, np.newaxis], axis=0)
     else:
         # sum of all class's mean, shape (dim, )
         mean = np.sum(distribution._means * mixing_coefficients[:, np.newaxis], axis=0)
@@ -236,9 +239,10 @@ def logsumexp(x: np.ndarray, axis: int = 0, keepdims: bool = False) -> np.ndarra
         np.ndarray: log sum exp value of the input
     """
     max_x = np.max(x, axis=axis, keepdims=True)
-    max_x[max_x == -float('inf')] = 0.
+    max_x[max_x == -float("inf")] = 0.0
     if keepdims:
-        return cast(np.ndarray, np.log(np.sum(np.exp(x-max_x), axis=axis, keepdims=keepdims)) + max_x)
+        return cast(np.ndarray, np.log(np.sum(np.exp(x - max_x), axis=axis, keepdims=keepdims)) + max_x)
     else:
-        return cast(np.ndarray, np.log(np.sum(np.exp(x-max_x),
-                                              axis=axis, keepdims=keepdims)) + np.squeeze(max_x, axis=axis))
+        return cast(
+            np.ndarray, np.log(np.sum(np.exp(x - max_x), axis=axis, keepdims=keepdims)) + np.squeeze(max_x, axis=axis)
+        )

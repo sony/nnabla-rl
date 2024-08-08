@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,20 +18,15 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.replay_buffer import ReplayBuffer
 
 
-class ReplayBufferBuilder():
-    """ReplayBuffer builder interface class
-    """
+class ReplayBufferBuilder:
+    """ReplayBuffer builder interface class"""
 
-    def __call__(self,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> ReplayBuffer:
+    def __call__(self, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs) -> ReplayBuffer:
         return self.build_replay_buffer(env_info, algorithm_config, **kwargs)
 
-    def build_replay_buffer(self,
-                            env_info: EnvironmentInfo,
-                            algorithm_config: AlgorithmConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(
+        self, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs
+    ) -> ReplayBuffer:
         """Build replay buffer
 
         Args:

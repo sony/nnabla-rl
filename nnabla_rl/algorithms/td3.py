@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ class TD3Config(AlgorithmConfig):
     """
 
     gamma: float = 0.99
-    learning_rate: float = 1.0*1e-3
+    learning_rate: float = 1.0 * 1e-3
     batch_size: int = 100
     tau: float = 0.005
     start_timesteps: int = 10000
@@ -103,75 +103,79 @@ class TD3Config(AlgorithmConfig):
 
         Check the set values are in valid range.
         """
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.batch_size, 'batch_size')
-        self._assert_between(self.tau, 0.0, 1.0, 'tau')
-        self._assert_positive(self.start_timesteps, 'start_timesteps')
-        self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
-        self._assert_positive(self.d, 'd')
-        self._assert_positive(self.exploration_noise_sigma, 'exploration_noise_sigma')
-        self._assert_positive(self.train_action_noise_sigma, 'train_action_noise_sigma')
-        self._assert_positive(self.train_action_noise_abs, 'train_action_noise_abs')
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_positive(self.batch_size, "batch_size")
+        self._assert_between(self.tau, 0.0, 1.0, "tau")
+        self._assert_positive(self.start_timesteps, "start_timesteps")
+        self._assert_positive(self.replay_buffer_size, "replay_buffer_size")
+        self._assert_positive(self.d, "d")
+        self._assert_positive(self.exploration_noise_sigma, "exploration_noise_sigma")
+        self._assert_positive(self.train_action_noise_sigma, "train_action_noise_sigma")
+        self._assert_positive(self.train_action_noise_abs, "train_action_noise_abs")
 
-        self._assert_positive(self.critic_unroll_steps, 'critic_unroll_steps')
-        self._assert_positive_or_zero(self.critic_burn_in_steps, 'critic_burn_in_steps')
-        self._assert_positive(self.actor_unroll_steps, 'actor_unroll_steps')
-        self._assert_positive_or_zero(self.actor_burn_in_steps, 'actor_burn_in_steps')
+        self._assert_positive(self.critic_unroll_steps, "critic_unroll_steps")
+        self._assert_positive_or_zero(self.critic_burn_in_steps, "critic_burn_in_steps")
+        self._assert_positive(self.actor_unroll_steps, "actor_unroll_steps")
+        self._assert_positive_or_zero(self.actor_burn_in_steps, "actor_burn_in_steps")
 
 
 class DefaultCriticBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: TD3Config,
-                    **kwargs) -> QFunction:
-        target_policy = kwargs.get('target_policy')
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: TD3Config,
+        **kwargs,
+    ) -> QFunction:
+        target_policy = kwargs.get("target_policy")
         return TD3QFunction(scope_name, optimal_policy=target_policy)
 
 
 class DefaultActorBuilder(ModelBuilder[DeterministicPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: TD3Config,
-                    **kwargs) -> DeterministicPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: TD3Config,
+        **kwargs,
+    ) -> DeterministicPolicy:
         max_action_value = float(env_info.action_high[0])
         return TD3Policy(scope_name, env_info.action_dim, max_action_value=max_action_value)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: TD3Config,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: TD3Config, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: TD3Config,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: TD3Config, **kwargs
+    ) -> ReplayBuffer:
         return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: TD3Config,
-                       algorithm: "TD3",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: TD3Config,
+        algorithm: "TD3",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.GaussianExplorerConfig(
             warmup_random_steps=algorithm_config.start_timesteps,
             initial_step_num=algorithm.iteration_num,
             timelimit_as_terminal=False,
             action_clip_low=env_info.action_low,
             action_clip_high=env_info.action_high,
-            sigma=algorithm_config.exploration_noise_sigma
+            sigma=algorithm_config.exploration_noise_sigma,
         )
-        explorer = EE.GaussianExplorer(policy_action_selector=algorithm._exploration_action_selector,
-                                       env_info=env_info,
-                                       config=explorer_config)
+        explorer = EE.GaussianExplorer(
+            policy_action_selector=algorithm._exploration_action_selector, env_info=env_info, config=explorer_config
+        )
         return explorer
 
 
@@ -227,14 +231,17 @@ class TD3(Algorithm):
     _policy_trainer_state: Dict[str, Any]
     _q_function_trainer_state: Dict[str, Any]
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: TD3Config = TD3Config(),
-                 critic_builder: ModelBuilder[QFunction] = DefaultCriticBuilder(),
-                 critic_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 actor_builder: ModelBuilder[DeterministicPolicy] = DefaultActorBuilder(),
-                 actor_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: TD3Config = TD3Config(),
+        critic_builder: ModelBuilder[QFunction] = DefaultCriticBuilder(),
+        critic_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        actor_builder: ModelBuilder[DeterministicPolicy] = DefaultActorBuilder(),
+        actor_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(TD3, self).__init__(env_or_env_info, config=config)
 
         self._explorer_builder = explorer_builder
@@ -243,13 +250,15 @@ class TD3(Algorithm):
             self._q1 = critic_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
             self._q2 = critic_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
             self._train_q_functions = [self._q1, self._q2]
-            self._train_q_solvers = {q.scope_name: critic_solver_builder(
-                env_info=self._env_info, algorithm_config=self._config) for q in self._train_q_functions}
-            self._target_q_functions = [q.deepcopy('target_' + q.scope_name) for q in self._train_q_functions]
+            self._train_q_solvers = {
+                q.scope_name: critic_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+                for q in self._train_q_functions
+            }
+            self._target_q_functions = [q.deepcopy("target_" + q.scope_name) for q in self._train_q_functions]
 
             self._pi = actor_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
             self._pi_solver = actor_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-            self._target_pi = self._pi.deepcopy('target_' + self._pi.scope_name)
+            self._target_pi = self._pi.deepcopy("target_" + self._pi.scope_name)
 
             self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
@@ -275,21 +284,23 @@ class TD3(Algorithm):
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
         q_function_trainer_config = MT.q_value_trainers.TD3QTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             grad_clip=None,
             train_action_noise_sigma=self._config.train_action_noise_sigma,
             train_action_noise_abs=self._config.train_action_noise_abs,
             num_steps=self._config.num_steps,
             unroll_steps=self._config.critic_unroll_steps,
             burn_in_steps=self._config.critic_burn_in_steps,
-            reset_on_terminal=self._config.critic_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.critic_reset_rnn_on_terminal,
+        )
         q_function_trainer = MT.q_value_trainers.TD3QTrainer(
             train_functions=self._train_q_functions,
             solvers=self._train_q_solvers,
             target_functions=self._target_q_functions,
             target_policy=self._target_pi,
             env_info=self._env_info,
-            config=q_function_trainer_config)
+            config=q_function_trainer_config,
+        )
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
             sync_model(q, target_q)
         return q_function_trainer
@@ -298,13 +309,15 @@ class TD3(Algorithm):
         policy_trainer_config = MT.policy_trainers.DPGPolicyTrainerConfig(
             unroll_steps=self._config.actor_unroll_steps,
             burn_in_steps=self._config.actor_burn_in_steps,
-            reset_on_terminal=self._config.actor_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.actor_reset_rnn_on_terminal,
+        )
         policy_trainer = MT.policy_trainers.DPGPolicyTrainer(
             models=self._pi,
             solvers={self._pi.scope_name: self._pi_solver},
             q_function=self._q1,
             env_info=self._env_info,
-            config=policy_trainer_config)
+            config=policy_trainer_config,
+        )
         sync_model(self._pi, self._target_pi, 1.0)
 
         return policy_trainer
@@ -325,26 +338,28 @@ class TD3(Algorithm):
         num_steps = max(actor_steps, critic_steps)
         experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = (experiences_tuple, )
+            experiences_tuple = (experiences_tuple,)
         assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
             (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
-            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
-            batch = TrainingBatch(batch_size=self._config.batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  gamma=self._config.gamma,
-                                  reward=r,
-                                  non_terminal=non_terminal,
-                                  s_next=s_next,
-                                  weight=info['weights'],
-                                  next_step_batch=batch,
-                                  rnn_states=rnn_states)
+            rnn_states = rnn_states_dict["rnn_states"] if "rnn_states" in rnn_states_dict else {}
+            batch = TrainingBatch(
+                batch_size=self._config.batch_size,
+                s_current=s,
+                a_current=a,
+                gamma=self._config.gamma,
+                reward=r,
+                non_terminal=non_terminal,
+                s_next=s_next,
+                weight=info["weights"],
+                next_step_batch=batch,
+                rnn_states=rnn_states,
+            )
 
         self._q_function_trainer_state = self._q_function_trainer.train(batch)
-        td_errors = self._q_function_trainer_state['td_errors']
+        td_errors = self._q_function_trainer_state["td_errors"]
         replay_buffer.update_priorities(td_errors)
 
         if self.iteration_num % self._config.d == 0:
@@ -382,19 +397,21 @@ class TD3(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(TD3, self).latest_iteration_state
-        if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
-        if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
-            latest_iteration_state['histogram'].update(
-                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
+        if hasattr(self, "_policy_trainer_state"):
+            latest_iteration_state["scalar"].update({"pi_loss": float(self._policy_trainer_state["pi_loss"])})
+        if hasattr(self, "_q_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"q_loss": float(self._q_function_trainer_state["q_loss"])})
+            latest_iteration_state["histogram"].update(
+                {"td_errors": self._q_function_trainer_state["td_errors"].flatten()}
+            )
         return latest_iteration_state
 
     def trainers(self):

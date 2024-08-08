@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,8 +54,7 @@ class TestDQNQFunction(object):
         scope_name = "test"
         model = DQNQFunction(scope_name=scope_name, n_action=n_action)
 
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, *state_shape))
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         input_action = nn.Variable.from_numpy_array(np.ones((1, 1)))
         outputs = nn.Variable.from_numpy_array(np.random.rand(1, n_action))
 

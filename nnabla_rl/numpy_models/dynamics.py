@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,8 +33,9 @@ class Dynamics(NumpyModel, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def next_state(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, Dict[str, Any]]:
+    def next_state(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
         """Predict next state. if the dynamics is probabilistic, will return
         the mean of the next_state.
 
@@ -56,8 +57,7 @@ class Dynamics(NumpyModel, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def gradient(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray]:
+    def gradient(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         """Gradient of the dynamics with respect to the state and action.
 
         .. math::
@@ -82,8 +82,9 @@ class Dynamics(NumpyModel, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def hessian(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def hessian(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Hessian of the dynamics with respect to the state and action.
 
         .. math::

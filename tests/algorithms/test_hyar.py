@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ class TestHyAR(object):
         dummy_env = E.DummyHybridEnv()
         hyar = A.HyAR(dummy_env)
 
-        assert hyar.__name__ == 'HyAR'
+        assert hyar.__name__ == "HyAR"
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
@@ -46,9 +46,7 @@ class TestHyAR(object):
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
         dummy_env = E.DummyHybridEnv(max_episode_steps=10)
-        config = A.HyARConfig(start_timesteps=1,
-                              vae_pretrain_episodes=1,
-                              vae_pretrain_times=1)
+        config = A.HyARConfig(start_timesteps=1, vae_pretrain_episodes=1, vae_pretrain_times=1)
         hyar = A.HyAR(dummy_env, config=config)
 
         hyar.train_online(dummy_env, total_iterations=10)
@@ -57,9 +55,7 @@ class TestHyAR(object):
         """Check that no error occurs when calling offline training."""
         batch_size = 5
         dummy_env = E.DummyHybridEnv(max_episode_steps=10)
-        config = A.HyARConfig(start_timesteps=1,
-                              vae_pretrain_episodes=1,
-                              vae_pretrain_times=1)
+        config = A.HyARConfig(start_timesteps=1, vae_pretrain_episodes=1, vae_pretrain_times=1)
         hyar = A.HyAR(dummy_env, config=config)
 
         experiences = generate_dummy_experiences(dummy_env, batch_size)
@@ -117,29 +113,30 @@ class TestHyAR(object):
         dummy_env = E.DummyHybridEnv()
         hyar = A.HyAR(dummy_env)
 
-        hyar._q_function_trainer_state = {'q_loss': 0., 'td_errors': np.array([0., 1.])}
-        hyar._policy_trainer_state = {'pi_loss': 1.}
-        hyar._vae_trainer_state = {'encoder_loss': 1., 'kl_loss': 2., 'reconstruction_loss': 3., 'dyn_loss': 4.}
+        hyar._q_function_trainer_state = {"q_loss": 0.0, "td_errors": np.array([0.0, 1.0])}
+        hyar._policy_trainer_state = {"pi_loss": 1.0}
+        hyar._vae_trainer_state = {"encoder_loss": 1.0, "kl_loss": 2.0, "reconstruction_loss": 3.0, "dyn_loss": 4.0}
 
         latest_iteration_state = hyar.latest_iteration_state
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert 'pi_loss' in latest_iteration_state['scalar']
-        assert 'encoder_loss' in latest_iteration_state['scalar']
-        assert 'kl_loss' in latest_iteration_state['scalar']
-        assert 'reconstruction_loss' in latest_iteration_state['scalar']
-        assert 'dyn_loss' in latest_iteration_state['scalar']
-        assert 'td_errors' in latest_iteration_state['histogram']
-        assert latest_iteration_state['scalar']['q_loss'] == 0.
-        assert latest_iteration_state['scalar']['pi_loss'] == 1.
-        assert latest_iteration_state['scalar']['encoder_loss'] == 1.
-        assert latest_iteration_state['scalar']['kl_loss'] == 2.
-        assert latest_iteration_state['scalar']['reconstruction_loss'] == 3.
-        assert latest_iteration_state['scalar']['dyn_loss'] == 4.
-        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert "pi_loss" in latest_iteration_state["scalar"]
+        assert "encoder_loss" in latest_iteration_state["scalar"]
+        assert "kl_loss" in latest_iteration_state["scalar"]
+        assert "reconstruction_loss" in latest_iteration_state["scalar"]
+        assert "dyn_loss" in latest_iteration_state["scalar"]
+        assert "td_errors" in latest_iteration_state["histogram"]
+        assert latest_iteration_state["scalar"]["q_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["pi_loss"] == 1.0
+        assert latest_iteration_state["scalar"]["encoder_loss"] == 1.0
+        assert latest_iteration_state["scalar"]["kl_loss"] == 2.0
+        assert latest_iteration_state["scalar"]["reconstruction_loss"] == 3.0
+        assert latest_iteration_state["scalar"]["dyn_loss"] == 4.0
+        assert np.allclose(latest_iteration_state["histogram"]["td_errors"], np.array([0.0, 1.0]))
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

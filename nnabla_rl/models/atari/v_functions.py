@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,8 +41,7 @@ class PPOVFunction(VFunction):
         h = self._hidden(s)
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("linear_v"):
-                v = NPF.affine(h, n_outmaps=1,
-                               w_init=RI.NormcInitializer(std=0.01))
+                v = NPF.affine(h, n_outmaps=1, w_init=RI.NormcInitializer(std=0.01))
         return v
 
     def _hidden(self, s: nn.Variable) -> nn.Variable:

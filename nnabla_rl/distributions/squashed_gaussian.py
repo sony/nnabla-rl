@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,16 +53,11 @@ class SquashedGaussian(ContinuosDistribution):
         return self._ndim
 
     def sample(self, noise_clip=None):
-        x = RF.sample_gaussian(mean=self._mean,
-                               ln_var=self._ln_var,
-                               noise_clip=noise_clip)
+        x = RF.sample_gaussian(mean=self._mean, ln_var=self._ln_var, noise_clip=noise_clip)
         return NF.tanh(x)
 
     def sample_multiple(self, num_samples, noise_clip=None):
-        x = RF.sample_gaussian_multiple(self._mean,
-                                        self._ln_var,
-                                        num_samples,
-                                        noise_clip=noise_clip)
+        x = RF.sample_gaussian_multiple(self._mean, self._ln_var, num_samples, noise_clip=noise_clip)
         return NF.tanh(x)
 
     def sample_and_compute_log_prob(self, noise_clip=None):
@@ -71,10 +66,8 @@ class SquashedGaussian(ContinuosDistribution):
         If you forward the two variables independently, you'll get a log_prob
         for different sample, since different random variables are sampled
         internally."""
-        x = RF.sample_gaussian(
-            mean=self._mean, ln_var=self._ln_var, noise_clip=noise_clip)
-        log_prob = self._log_prob_internal(
-            x, self._mean, self._var, self._ln_var)
+        x = RF.sample_gaussian(mean=self._mean, ln_var=self._ln_var, noise_clip=noise_clip)
+        log_prob = self._log_prob_internal(x, self._mean, self._var, self._ln_var)
         return NF.tanh(x), log_prob
 
     def sample_multiple_and_compute_log_prob(self, num_samples, noise_clip=None):
@@ -83,10 +76,7 @@ class SquashedGaussian(ContinuosDistribution):
         If you forward the two variables independently, you'll get a log_prob
         for different sample, since different random variables are sampled
         internally."""
-        x = RF.sample_gaussian_multiple(self._mean,
-                                        self._ln_var,
-                                        num_samples=num_samples,
-                                        noise_clip=noise_clip)
+        x = RF.sample_gaussian_multiple(self._mean, self._ln_var, num_samples=num_samples, noise_clip=noise_clip)
         mean = RF.expand_dims(self._mean, axis=1)
         var = RF.expand_dims(self._var, axis=1)
         ln_var = RF.expand_dims(self._ln_var, axis=1)

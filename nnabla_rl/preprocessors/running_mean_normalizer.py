@@ -53,19 +53,20 @@ class RunningMeanNormalizer(Preprocessor, Model):
             The computation of a running variance is started from this value. Defaults to NI.ConstantInitializer(1.0).
     """
 
-    def __init__(self,
-                 scope_name: str,
-                 shape: Shape,
-                 epsilon: float = 1e-8,
-                 value_clip: Optional[Tuple[float, float]] = None,
-                 mode_for_floating_point_error: str = "add",
-                 mean_initializer: Union[NI.BaseInitializer, np.ndarray] = NI.ConstantInitializer(0.0),
-                 var_initializer: Union[NI.BaseInitializer, np.ndarray] = NI.ConstantInitializer(1.0)):
+    def __init__(
+        self,
+        scope_name: str,
+        shape: Shape,
+        epsilon: float = 1e-8,
+        value_clip: Optional[Tuple[float, float]] = None,
+        mode_for_floating_point_error: str = "add",
+        mean_initializer: Union[NI.BaseInitializer, np.ndarray] = NI.ConstantInitializer(0.0),
+        var_initializer: Union[NI.BaseInitializer, np.ndarray] = NI.ConstantInitializer(1.0),
+    ):
         super(RunningMeanNormalizer, self).__init__(scope_name)
 
         if value_clip is not None and value_clip[0] > value_clip[1]:
-            raise ValueError(
-                f"Unexpected clipping value range: {value_clip[0]} > {value_clip[1]}")
+            raise ValueError(f"Unexpected clipping value range: {value_clip[0]} > {value_clip[1]}")
         self._value_clip = value_clip
 
         if isinstance(shape, int):
@@ -117,17 +118,20 @@ class RunningMeanNormalizer(Preprocessor, Model):
     @property
     def _mean(self):
         with nn.parameter_scope(self.scope_name):
-            return nn.parameter.get_parameter_or_create(name='mean', shape=(1, *self._shape),
-                                                        initializer=self._mean_initializer)
+            return nn.parameter.get_parameter_or_create(
+                name="mean", shape=(1, *self._shape), initializer=self._mean_initializer
+            )
 
     @property
     def _var(self):
         with nn.parameter_scope(self.scope_name):
-            return nn.parameter.get_parameter_or_create(name='var', shape=(1, *self._shape),
-                                                        initializer=self._var_initializer)
+            return nn.parameter.get_parameter_or_create(
+                name="var", shape=(1, *self._shape), initializer=self._var_initializer
+            )
 
     @property
     def _count(self):
         with nn.parameter_scope(self.scope_name):
-            return nn.parameter.get_parameter_or_create(name='count', shape=(1, 1),
-                                                        initializer=NI.ConstantInitializer(1e-4))
+            return nn.parameter.get_parameter_or_create(
+                name="count", shape=(1, 1), initializer=NI.ConstantInitializer(1e-4)
+            )

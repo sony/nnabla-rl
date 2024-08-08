@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,11 +44,9 @@ class ContinuousCartPole(CartPoleEnv):
 
         # For the interested reader:
         # https://coneural.org/florian/papers/05_cart_pole.pdf
-        temp = (
-            force + self.polemass_length * theta_dot ** 2 * sintheta
-        ) / self.total_mass
+        temp = (force + self.polemass_length * theta_dot**2 * sintheta) / self.total_mass
         thetaacc = (self.gravity * sintheta - costheta * temp) / (
-            self.length * (4.0 / 3.0 - self.masspole * costheta ** 2 / self.total_mass)
+            self.length * (4.0 / 3.0 - self.masspole * costheta**2 / self.total_mass)
         )
         xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
 
@@ -104,33 +102,34 @@ class ContinuousCartPoleLinearDynamics(Dynamics):
         self.force_mag = 10.0
         self.tau = 0.02  # seconds between state updates
         self._A = np.zeros((4, 4))
-        self._A[0, 1] = 1.
-        self._A[1, 2] = - self.polemass_length / self.total_mass
-        self._A[2, 3] = 1.
-        denom = self.length * (4. / 3. - (self.masspole / self.total_mass))
+        self._A[0, 1] = 1.0
+        self._A[1, 2] = -self.polemass_length / self.total_mass
+        self._A[2, 3] = 1.0
+        denom = self.length * (4.0 / 3.0 - (self.masspole / self.total_mass))
         self._A[3, 2] = self.gravity / denom
         self._A = self._A * self.tau + np.eye(4)
 
         self._B = np.zeros((4, 1))
-        self._B[1, 0] = 1. / self.total_mass
-        self._B[3, 0] = (- 1. / self.total_mass) / denom
+        self._B[1, 0] = 1.0 / self.total_mass
+        self._B[3, 0] = (-1.0 / self.total_mass) / denom
         self._B = self._B * self.tau
 
-    def next_state(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, Dict[str, Any]]:
+    def next_state(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
         if batched:
             raise NotImplementedError
         # x.shape = (state_dim, 1) and u.shape = (input_dim, 1)
         return self._A.dot(x) + self._B.dot(u), {}
 
-    def gradient(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray]:
+    def gradient(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         if batched:
             raise NotImplementedError
         return self._A, self._B
 
-    def hessian(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def hessian(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         raise NotImplementedError
 
     def state_dim(self) -> int:
@@ -156,7 +155,7 @@ class QuadraticCostFunction(CostFunction):
             return x.T.dot(self._Q).dot(x)
         else:
             # Assuming that target state is zero
-            return x.T.dot(self._Q).dot(x) + 2.0*x.T.dot(self._F).dot(u) + u.T.dot(self._R).dot(u)
+            return x.T.dot(self._Q).dot(x) + 2.0 * x.T.dot(self._F).dot(u) + u.T.dot(self._R).dot(u)
 
     def gradient(
         self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
@@ -208,7 +207,7 @@ def run_control(args):
             start = time.time()
             improved_trajectory, trajectory_info = lqr.compute_trajectory(initial_trajectory)
             end = time.time()
-            print(f'optimization time: {end - start} [s]')
+            print(f"optimization time: {end - start} [s]")
 
             next_state, reward, done, info = env.step(improved_trajectory[0][1].flatten().astype(np.float32))
             total_reward += reward
@@ -225,13 +224,13 @@ def run_control(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--T', type=int, default=50)
-    parser.add_argument('--num_episodes', type=int, default=10)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--T", type=int, default=50)
+    parser.add_argument("--num_episodes", type=int, default=10)
     args = parser.parse_args()
     run_control(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

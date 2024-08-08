@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,24 +45,18 @@ class TD3QFunction(ContinuousQFunction):
     def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             h = NF.concatenate(s, a)
-            linear1_init = RI.HeUniform(
-                inmaps=h.shape[1], outmaps=400, factor=1/3)
-            h = NPF.affine(h, n_outmaps=400, name="linear1",
-                           w_init=linear1_init, b_init=linear1_init)
+            linear1_init = RI.HeUniform(inmaps=h.shape[1], outmaps=400, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=400, name="linear1", w_init=linear1_init, b_init=linear1_init)
             h = NF.relu(x=h)
-            linear2_init = RI.HeUniform(
-                inmaps=400, outmaps=300, factor=1/3)
-            h = NPF.affine(h, n_outmaps=300, name="linear2",
-                           w_init=linear2_init, b_init=linear2_init)
+            linear2_init = RI.HeUniform(inmaps=400, outmaps=300, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=300, name="linear2", w_init=linear2_init, b_init=linear2_init)
             h = NF.relu(x=h)
-            linear3_init = RI.HeUniform(
-                inmaps=300, outmaps=1, factor=1/3)
-            h = NPF.affine(h, n_outmaps=1, name="linear3",
-                           w_init=linear3_init, b_init=linear3_init)
+            linear3_init = RI.HeUniform(inmaps=300, outmaps=1, factor=1 / 3)
+            h = NPF.affine(h, n_outmaps=1, name="linear3", w_init=linear3_init, b_init=linear3_init)
         return h
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
-        assert self._optimal_policy, 'Optimal policy is not set!'
+        assert self._optimal_policy, "Optimal policy is not set!"
         optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)
 
@@ -94,7 +88,7 @@ class SACQFunction(ContinuousQFunction):
         return h
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
-        assert self._optimal_policy, 'Optimal policy is not set!'
+        assert self._optimal_policy, "Optimal policy is not set!"
         optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)
 
@@ -131,7 +125,7 @@ class SACDQFunction(FactoredContinuousQFunction):
         return h
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
-        assert self._optimal_policy, 'Optimal policy is not set!'
+        assert self._optimal_policy, "Optimal policy is not set!"
         optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)
 
@@ -150,20 +144,20 @@ class HERQFunction(ContinuousQFunction):
         with nn.parameter_scope(self.scope_name):
             h = NF.concatenate(obs, goal, a, axis=1)
             linear1_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
-            h = NPF.affine(h, n_outmaps=64, name='linear1', w_init=linear1_init)
+            h = NPF.affine(h, n_outmaps=64, name="linear1", w_init=linear1_init)
             h = NF.relu(h)
             linear2_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
-            h = NPF.affine(h, n_outmaps=64, name='linear2', w_init=linear2_init)
+            h = NPF.affine(h, n_outmaps=64, name="linear2", w_init=linear2_init)
             h = NF.relu(h)
             linear3_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=64)
-            h = NPF.affine(h, n_outmaps=64, name='linear3', w_init=linear3_init)
+            h = NPF.affine(h, n_outmaps=64, name="linear3", w_init=linear3_init)
             h = NF.relu(h)
             pred_q_init = RI.GlorotUniform(inmaps=h.shape[1], outmaps=1)
-            q = NPF.affine(h, n_outmaps=1, name='pred_q', w_init=pred_q_init)
+            q = NPF.affine(h, n_outmaps=1, name="pred_q", w_init=pred_q_init)
         return q
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
-        assert self._optimal_policy, 'Optimal policy is not set!'
+        assert self._optimal_policy, "Optimal policy is not set!"
         optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)
 
@@ -197,6 +191,6 @@ class XQLQFunction(ContinuousQFunction):
         return h
 
     def max_q(self, s: nn.Variable) -> nn.Variable:
-        assert self._optimal_policy, 'Optimal policy is not set!'
+        assert self._optimal_policy, "Optimal policy is not set!"
         optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)

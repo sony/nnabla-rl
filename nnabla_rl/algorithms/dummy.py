@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,12 +43,10 @@ class Dummy(Algorithm):
         logger.debug("Before training start!! Write your algorithm's initializations here.")
 
     def _run_online_training_iteration(self, env):
-        logger.debug("Running online training loop. Iteartion: {}".format(
-            self.iteration_num))
+        logger.debug("Running online training loop. Iteartion: {}".format(self.iteration_num))
 
     def _run_offline_training_iteration(self, buffer):
-        logger.debug("Running offline training loop. Iteartion: {}".format(
-            self.iteration_num))
+        logger.debug("Running offline training loop. Iteartion: {}".format(self.iteration_num))
 
     def _after_training_finish(self, env_or_buffer):
         logger.debug("Training finished. Do your algorithm's finalizations here.")

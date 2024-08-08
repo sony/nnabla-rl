@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -74,18 +74,18 @@ class QuadraticCostFunction(CostFunction):
 
 class TestLQR(object):
     def test_algorithm_name(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
         lqr = A.LQR(env, dynamics=dynamics, cost_function=cost_function)
 
-        assert lqr.__name__ == 'LQR'
+        assert lqr.__name__ == "LQR"
 
     def test_continuous_action_env_supported(self):
         """Check that no error occurs when training on continuous action
         env."""
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
@@ -101,7 +101,7 @@ class TestLQR(object):
             A.LQR(env, dynamics=dynamics, cost_function=cost_function)
 
     def test_compute_eval_action(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
@@ -116,7 +116,7 @@ class TestLQR(object):
         assert lqr_action.shape == (*env.action_space.shape, 1)
 
     def test_compute_trajectory(self):
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
@@ -136,7 +136,7 @@ class TestLQR(object):
 
     def test_run_online_training(self):
         """Check that error occurs when calling online training."""
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 
@@ -146,7 +146,7 @@ class TestLQR(object):
 
     def test_run_offline_training(self):
         """Check that error occurs when calling offline training."""
-        env = E.DummyContinuous(observation_shape=(2, ), action_shape=(2, ))
+        env = E.DummyContinuous(observation_shape=(2,), action_shape=(2,))
         dynamics = LinearDynamics()
         cost_function = QuadraticCostFunction()
 

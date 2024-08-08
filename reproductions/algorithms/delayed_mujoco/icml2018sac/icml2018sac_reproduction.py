@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,42 +26,43 @@ import delayed_mujoco  # noqa
 
 
 def select_start_timesteps(env_name):
-    if env_name in ['DelayedAnt-v1', 'DelayedHalfCheetah-v1']:
+    if env_name in ["DelayedAnt-v1", "DelayedHalfCheetah-v1"]:
         timesteps = 10000
     else:
         timesteps = 1000
-    print(f'Selected start timesteps: {timesteps}')
+    print(f"Selected start timesteps: {timesteps}")
     return timesteps
 
 
 def select_total_iterations(env_name):
-    if env_name in ['DelayedHopper-v1']:
+    if env_name in ["DelayedHopper-v1"]:
         total_iterations = 3000000
     else:
         total_iterations = 5000000
-    print(f'Selected total iterations: {total_iterations}')
+    print(f"Selected total iterations: {total_iterations}")
     return total_iterations
 
 
 def select_reward_scalar(env_name):
     scalar = 5.0
-    print(f'Selected reward scalar: {scalar}')
+    print(f"Selected reward scalar: {scalar}")
     return scalar
 
 
 def run_training(args):
-    outdir = f'{args.env}_results/seed-{args.seed}'
+    outdir = f"{args.env}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
-    evaluation_hook = H.EvaluationHook(eval_env,
-                                       evaluator,
-                                       timing=args.eval_timing,
-                                       writer=W.FileWriter(outdir=outdir,
-                                                           file_prefix='evaluation_result'))
+    evaluation_hook = H.EvaluationHook(
+        eval_env,
+        evaluator,
+        timing=args.eval_timing,
+        writer=W.FileWriter(outdir=outdir, file_prefix="evaluation_result"),
+    )
 
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
     iteration_num_hook = H.IterationNumHook(timing=100)
@@ -69,9 +70,7 @@ def run_training(args):
     train_env = build_mujoco_env(args.env, seed=args.seed, render=args.render)
     timesteps = select_start_timesteps(args.env)
     reward_scalar = select_reward_scalar(args.env)
-    config = A.ICML2018SACConfig(gpu_id=args.gpu,
-                                 start_timesteps=timesteps,
-                                 reward_scalar=reward_scalar)
+    config = A.ICML2018SACConfig(gpu_id=args.gpu, start_timesteps=timesteps, reward_scalar=reward_scalar)
     icml2018sac = A.ICML2018SAC(train_env, config=config)
 
     hooks = [iteration_num_hook, save_snapshot_hook, evaluation_hook]
@@ -86,13 +85,12 @@ def run_training(args):
 
 def run_showcase(args):
     if args.snapshot_dir is None:
-        raise ValueError(
-            'Please specify the snapshot dir for showcasing')
+        raise ValueError("Please specify the snapshot dir for showcasing")
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render)
     config = A.ICML2018SACConfig(gpu_id=args.gpu)
     icml2018sac = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(icml2018sac, A.ICML2018SAC):
-        raise ValueError('Loaded snapshot is not trained with ICML2018SAC!')
+        raise ValueError("Loaded snapshot is not trained with ICML2018SAC!")
 
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(icml2018sac, eval_env)
@@ -100,17 +98,17 @@ def run_showcase(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='DelayedAnt-v1')
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--showcase', action='store_true')
-    parser.add_argument('--snapshot-dir', type=str, default=None)
-    parser.add_argument('--save-dir', type=str, default=None)
-    parser.add_argument('--total_iterations', type=int, default=None)
-    parser.add_argument('--save_timing', type=int, default=5000)
-    parser.add_argument('--eval_timing', type=int, default=5000)
-    parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument("--env", type=str, default="DelayedAnt-v1")
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--showcase", action="store_true")
+    parser.add_argument("--snapshot-dir", type=str, default=None)
+    parser.add_argument("--save-dir", type=str, default=None)
+    parser.add_argument("--total_iterations", type=int, default=None)
+    parser.add_argument("--save_timing", type=int, default=5000)
+    parser.add_argument("--eval_timing", type=int, default=5000)
+    parser.add_argument("--showcase_runs", type=int, default=10)
 
     args = parser.parse_args()
 
@@ -120,5 +118,5 @@ def main():
         run_training(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -21,7 +21,7 @@ import nnabla as nn
 from nnabla_rl.logger import logger
 from nnabla_rl.typing import TupledData
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def add_axis_if_single_dim(data):
@@ -85,7 +85,7 @@ def marshal_dict_experiences(dict_experiences: Sequence[Dict[str, Any]]) -> Dict
                 marshaled_experiences.update({key: add_axis_if_single_dim(np.asarray(data))})
         except ValueError as e:
             # do nothing
-            logger.warn(f'key: {key} contains inconsistent elements!. Details: {e}')
+            logger.warn(f"key: {key} contains inconsistent elements!. Details: {e}")
     return marshaled_experiences
 
 
@@ -108,8 +108,9 @@ def convert_to_list_if_not_list(value: Union[Iterable[T], T]) -> List[T]:
         return [value]
 
 
-def set_data_to_variable(variable: Union[nn.Variable, Tuple[nn.Variable, ...]],
-                         data: Union[float, np.ndarray, Tuple[np.ndarray, ...]]) -> None:
+def set_data_to_variable(
+    variable: Union[nn.Variable, Tuple[nn.Variable, ...]], data: Union[float, np.ndarray, Tuple[np.ndarray, ...]]
+) -> None:
     """Set data to variable.
 
     Args:
@@ -213,10 +214,9 @@ class RingBuffer(DataHolder[Any]):
         return removed
 
 
-def normalize_ndarray(ndarray: np.ndarray,
-                      mean: np.ndarray,
-                      std: np.ndarray,
-                      value_clip: Optional[Tuple[float, float]] = None) -> np.ndarray:
+def normalize_ndarray(
+    ndarray: np.ndarray, mean: np.ndarray, std: np.ndarray, value_clip: Optional[Tuple[float, float]] = None
+) -> np.ndarray:
     """Normalize the given ndarray.
 
     Args:
@@ -234,10 +234,9 @@ def normalize_ndarray(ndarray: np.ndarray,
     return normalized
 
 
-def unnormalize_ndarray(ndarray: np.ndarray,
-                        mean: np.ndarray,
-                        std: np.ndarray,
-                        value_clip: Optional[Tuple[float, float]] = None) -> np.ndarray:
+def unnormalize_ndarray(
+    ndarray: np.ndarray, mean: np.ndarray, std: np.ndarray, value_clip: Optional[Tuple[float, float]] = None
+) -> np.ndarray:
     """Unnormalize the given ndarray.
 
     Args:

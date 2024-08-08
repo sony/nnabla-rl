@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ class ICML2018SACConfig(AlgorithmConfig):
     """
 
     gamma: float = 0.99
-    learning_rate: float = 3.0*1e-4
+    learning_rate: float = 3.0 * 1e-4
     batch_size: int = 256
     tau: float = 0.005
     environment_steps: int = 1
@@ -115,82 +115,88 @@ class ICML2018SACConfig(AlgorithmConfig):
 
         Check the values are in valid range.
         """
-        self._assert_between(self.tau, 0.0, 1.0, 'tau')
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.gradient_steps, 'gradient_steps')
-        self._assert_positive(self.environment_steps, 'environment_steps')
-        self._assert_positive(self.start_timesteps, 'start_timesteps')
-        self._assert_positive(self.target_update_interval, 'target_update_interval')
-        self._assert_positive(self.num_steps, 'num_steps')
+        self._assert_between(self.tau, 0.0, 1.0, "tau")
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_positive(self.gradient_steps, "gradient_steps")
+        self._assert_positive(self.environment_steps, "environment_steps")
+        self._assert_positive(self.start_timesteps, "start_timesteps")
+        self._assert_positive(self.target_update_interval, "target_update_interval")
+        self._assert_positive(self.num_steps, "num_steps")
 
-        self._assert_positive(self.pi_unroll_steps, 'pi_unroll_steps')
-        self._assert_positive_or_zero(self.pi_burn_in_steps, 'pi_burn_in_steps')
-        self._assert_positive(self.q_unroll_steps, 'q_unroll_steps')
-        self._assert_positive_or_zero(self.q_burn_in_steps, 'q_burn_in_steps')
-        self._assert_positive(self.v_unroll_steps, 'v_unroll_steps')
-        self._assert_positive_or_zero(self.v_burn_in_steps, 'v_burn_in_steps')
+        self._assert_positive(self.pi_unroll_steps, "pi_unroll_steps")
+        self._assert_positive_or_zero(self.pi_burn_in_steps, "pi_burn_in_steps")
+        self._assert_positive(self.q_unroll_steps, "q_unroll_steps")
+        self._assert_positive_or_zero(self.q_burn_in_steps, "q_burn_in_steps")
+        self._assert_positive(self.v_unroll_steps, "v_unroll_steps")
+        self._assert_positive_or_zero(self.v_burn_in_steps, "v_burn_in_steps")
 
 
 class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: ICML2018SACConfig,
-                    **kwargs) -> VFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: ICML2018SACConfig,
+        **kwargs,
+    ) -> VFunction:
         return SACVFunction(scope_name)
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: ICML2018SACConfig,
-                    **kwargs) -> QFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: ICML2018SACConfig,
+        **kwargs,
+    ) -> QFunction:
         return SACQFunction(scope_name)
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: ICML2018SACConfig,
-                    **kwargs) -> StochasticPolicy:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: ICML2018SACConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
         return SACPolicy(scope_name, env_info.action_dim)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: ICML2018SACConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: ICML2018SACConfig, **kwargs
+    ) -> nn.solver.Solver:
         assert isinstance(algorithm_config, ICML2018SACConfig)
         return NS.Adam(alpha=algorithm_config.learning_rate)
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: ICML2018SACConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: ICML2018SACConfig, **kwargs
+    ) -> ReplayBuffer:
         assert isinstance(algorithm_config, ICML2018SACConfig)
         return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: ICML2018SACConfig,
-                       algorithm: "ICML2018SAC",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: ICML2018SACConfig,
+        algorithm: "ICML2018SAC",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.RawPolicyExplorerConfig(
             warmup_random_steps=algorithm_config.start_timesteps,
             reward_scalar=algorithm_config.reward_scalar,
             initial_step_num=algorithm.iteration_num,
-            timelimit_as_terminal=False
+            timelimit_as_terminal=False,
         )
-        explorer = EE.RawPolicyExplorer(policy_action_selector=algorithm._exploration_action_selector,
-                                        env_info=env_info,
-                                        config=explorer_config)
+        explorer = EE.RawPolicyExplorer(
+            policy_action_selector=algorithm._exploration_action_selector, env_info=env_info, config=explorer_config
+        )
         return explorer
 
 
@@ -256,16 +262,19 @@ class ICML2018SAC(Algorithm):
     _q_function_trainer_state: Dict[str, Any]
     _v_function_trainer_state: Dict[str, Any]
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: ICML2018SACConfig = ICML2018SACConfig(),
-                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
-                 v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: ICML2018SACConfig = ICML2018SACConfig(),
+        v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
+        v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(ICML2018SAC, self).__init__(env_or_env_info, config=config)
 
         self._explorer_builder = explorer_builder
@@ -273,7 +282,7 @@ class ICML2018SAC(Algorithm):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
             self._v = v_function_builder(scope_name="v", env_info=self._env_info, algorithm_config=self._config)
             self._v_solver = v_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-            self._target_v = self._v.deepcopy('target_' + self._v.scope_name)
+            self._target_v = self._v.deepcopy("target_" + self._v.scope_name)
 
             self._q1 = q_function_builder(scope_name="q1", env_info=self._env_info, algorithm_config=self._config)
             self._q2 = q_function_builder(scope_name="q2", env_info=self._env_info, algorithm_config=self._config)
@@ -282,7 +291,8 @@ class ICML2018SAC(Algorithm):
             self._train_q_solvers = {}
             for q in self._train_q_functions:
                 self._train_q_solvers[q.scope_name] = q_solver_builder(
-                    env_info=self._env_info, algorithm_config=self._config)
+                    env_info=self._env_info, algorithm_config=self._config
+                )
 
             self._pi = policy_builder(scope_name="pi", env_info=self._env_info, algorithm_config=self._config)
             self._pi_solver = policy_solver_builder(env_info=self._env_info, algorithm_config=self._config)
@@ -290,9 +300,11 @@ class ICML2018SAC(Algorithm):
             self._replay_buffer = replay_buffer_builder(env_info=self._env_info, algorithm_config=self._config)
 
         self._evaluation_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._pi.shallowcopy(), deterministic=True)
+            self._env_info, self._pi.shallowcopy(), deterministic=True
+        )
         self._exploration_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._pi.shallowcopy(), deterministic=False)
+            self._env_info, self._pi.shallowcopy(), deterministic=False
+        )
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
@@ -317,10 +329,11 @@ class ICML2018SAC(Algorithm):
             fixed_temperature=True,
             unroll_steps=self._config.pi_unroll_steps,
             burn_in_steps=self._config.pi_burn_in_steps,
-            reset_on_terminal=self._config.pi_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.pi_reset_rnn_on_terminal,
+        )
         temperature = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
-            scope_name='temperature',
-            initial_value=1.0)
+            scope_name="temperature", initial_value=1.0
+        )
         policy_trainer = MT.policy_trainers.SoftPolicyTrainer(
             models=self._pi,
             solvers={self._pi.scope_name: self._pi_solver},
@@ -328,39 +341,44 @@ class ICML2018SAC(Algorithm):
             temperature=temperature,
             temperature_solver=None,
             env_info=self._env_info,
-            config=policy_trainer_config)
+            config=policy_trainer_config,
+        )
         return policy_trainer
 
     def _setup_q_function_training(self, env_or_buffer):
         q_function_trainer_param = MT.q_value_trainers.VTargetedQTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             q_loss_scalar=0.5,
             num_steps=self._config.num_steps,
             unroll_steps=self._config.q_unroll_steps,
             burn_in_steps=self._config.q_burn_in_steps,
-            reset_on_terminal=self._config.q_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.q_reset_rnn_on_terminal,
+        )
         q_function_trainer = MT.q_value_trainers.VTargetedQTrainer(
             train_functions=self._train_q_functions,
             solvers=self._train_q_solvers,
             target_functions=self._target_v,
             env_info=self._env_info,
-            config=q_function_trainer_param)
+            config=q_function_trainer_param,
+        )
         return q_function_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
         v_function_trainer_config = MT.v_value_trainers.SoftVTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             v_loss_scalar=0.5,
             unroll_steps=self._config.v_unroll_steps,
             burn_in_steps=self._config.v_burn_in_steps,
-            reset_on_terminal=self._config.v_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.v_reset_rnn_on_terminal,
+        )
         v_function_trainer = MT.v_value_trainers.SoftVTrainer(
             train_functions=self._v,
             solvers={self._v.scope_name: self._v_solver},
             target_functions=self._train_q_functions,  # Set training q as target
             target_policy=self._pi,
             env_info=self._env_info,
-            config=v_function_trainer_config)
+            config=v_function_trainer_config,
+        )
         sync_model(self._v, self._target_v, 1.0)
 
         return v_function_trainer
@@ -389,23 +407,25 @@ class ICML2018SAC(Algorithm):
         num_steps = max(pi_steps, max(q_steps, v_steps))
         experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = (experiences_tuple, )
+            experiences_tuple = (experiences_tuple,)
         assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
             (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
-            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
-            batch = TrainingBatch(batch_size=self._config.batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  gamma=self._config.gamma,
-                                  reward=r,
-                                  non_terminal=non_terminal,
-                                  s_next=s_next,
-                                  weight=info['weights'],
-                                  next_step_batch=batch,
-                                  rnn_states=rnn_states)
+            rnn_states = rnn_states_dict["rnn_states"] if "rnn_states" in rnn_states_dict else {}
+            batch = TrainingBatch(
+                batch_size=self._config.batch_size,
+                s_current=s,
+                a_current=a,
+                gamma=self._config.gamma,
+                reward=r,
+                non_terminal=non_terminal,
+                s_next=s_next,
+                weight=info["weights"],
+                next_step_batch=batch,
+                rnn_states=rnn_states,
+            )
 
         # Train in the order of v -> q -> policy
         self._v_function_trainer_state = self._v_function_trainer.train(batch)
@@ -414,7 +434,7 @@ class ICML2018SAC(Algorithm):
             sync_model(self._v, self._target_v, tau=self._config.tau)
         self._policy_trainer_state = self._policy_trainer.train(batch)
 
-        td_errors = self._q_function_trainer_state['td_errors']
+        td_errors = self._q_function_trainer_state["td_errors"]
         replay_buffer.update_priorities(td_errors)
 
     def _evaluation_action_selector(self, s, *, begin_of_episode=False):
@@ -440,21 +460,23 @@ class ICML2018SAC(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(ICML2018SAC, self).latest_iteration_state
-        if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
-        if hasattr(self, '_v_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'v_loss': float(self._v_function_trainer_state['v_loss'])})
-        if hasattr(self, '_q_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'q_loss': float(self._q_function_trainer_state['q_loss'])})
-            latest_iteration_state['histogram'].update(
-                {'td_errors': self._q_function_trainer_state['td_errors'].flatten()})
+        if hasattr(self, "_policy_trainer_state"):
+            latest_iteration_state["scalar"].update({"pi_loss": float(self._policy_trainer_state["pi_loss"])})
+        if hasattr(self, "_v_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"v_loss": float(self._v_function_trainer_state["v_loss"])})
+        if hasattr(self, "_q_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"q_loss": float(self._q_function_trainer_state["q_loss"])})
+            latest_iteration_state["histogram"].update(
+                {"td_errors": self._q_function_trainer_state["td_errors"].flatten()}
+            )
         return latest_iteration_state
 
     @property

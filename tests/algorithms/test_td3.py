@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,14 +64,14 @@ class RNNActorFunction(DeterministicPolicy):
 
     def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
         shapes: Dict[str, nn.Variable] = {}
-        shapes['lstm_hidden'] = (self._lstm_state_size, )
-        shapes['lstm_cell'] = (self._lstm_state_size, )
+        shapes["lstm_hidden"] = (self._lstm_state_size,)
+        shapes["lstm_cell"] = (self._lstm_state_size,)
         return shapes
 
     def get_internal_states(self) -> Dict[str, nn.Variable]:
         states: Dict[str, nn.Variable] = {}
-        states['lstm_hidden'] = self._h
-        states['lstm_cell'] = self._c
+        states["lstm_hidden"] = self._h
+        states["lstm_cell"] = self._c
         return states
 
     def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
@@ -81,8 +81,8 @@ class RNNActorFunction(DeterministicPolicy):
             if self._c is not None:
                 self._c.data.zero()
         else:
-            self._h = states['lstm_hidden']
-            self._c = states['lstm_cell']
+            self._h = states["lstm_hidden"]
+            self._c = states["lstm_cell"]
 
     def _create_internal_states(self, batch_size):
         self._h = nn.Variable((batch_size, self._lstm_state_size))
@@ -129,14 +129,14 @@ class RNNCriticFunction(QFunction):
 
     def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
         shapes: Dict[str, nn.Variable] = {}
-        shapes['lstm_hidden'] = (self._lstm_state_size, )
-        shapes['lstm_cell'] = (self._lstm_state_size, )
+        shapes["lstm_hidden"] = (self._lstm_state_size,)
+        shapes["lstm_cell"] = (self._lstm_state_size,)
         return shapes
 
     def get_internal_states(self) -> Dict[str, nn.Variable]:
         states: Dict[str, nn.Variable] = {}
-        states['lstm_hidden'] = self._h
-        states['lstm_cell'] = self._c
+        states["lstm_hidden"] = self._h
+        states["lstm_cell"] = self._c
         return states
 
     def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
@@ -146,8 +146,8 @@ class RNNCriticFunction(QFunction):
             if self._c is not None:
                 self._c.data.zero()
         else:
-            self._h = states['lstm_hidden']
-            self._c = states['lstm_cell']
+            self._h = states["lstm_hidden"]
+            self._c = states["lstm_cell"]
 
     def _create_internal_states(self, batch_size):
         self._h = nn.Variable((batch_size, self._lstm_state_size))
@@ -168,7 +168,7 @@ class TestTD3(object):
         dummy_env = E.DummyContinuous()
         td3 = A.TD3(dummy_env)
 
-        assert td3.__name__ == 'TD3'
+        assert td3.__name__ == "TD3"
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
@@ -188,6 +188,7 @@ class TestTD3(object):
     def test_run_online_rnn_training(self):
         """Check that no error occurs when calling online training with RNN
         model."""
+
         class RNNActorBuilder(ModelBuilder[DeterministicPolicy]):
             def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
                 return RNNActorFunction(scope_name, action_dim=env_info.action_dim)
@@ -263,20 +264,21 @@ class TestTD3(object):
         dummy_env = E.DummyContinuous()
         td3 = A.TD3(dummy_env)
 
-        td3._q_function_trainer_state = {'q_loss': 0., 'td_errors': np.array([0., 1.])}
-        td3._policy_trainer_state = {'pi_loss': 1.}
+        td3._q_function_trainer_state = {"q_loss": 0.0, "td_errors": np.array([0.0, 1.0])}
+        td3._policy_trainer_state = {"pi_loss": 1.0}
 
         latest_iteration_state = td3.latest_iteration_state
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert 'pi_loss' in latest_iteration_state['scalar']
-        assert 'td_errors' in latest_iteration_state['histogram']
-        assert latest_iteration_state['scalar']['q_loss'] == 0.
-        assert latest_iteration_state['scalar']['pi_loss'] == 1.
-        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert "pi_loss" in latest_iteration_state["scalar"]
+        assert "td_errors" in latest_iteration_state["histogram"]
+        assert latest_iteration_state["scalar"]["q_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["pi_loss"] == 1.0
+        assert np.allclose(latest_iteration_state["histogram"]["td_errors"], np.array([0.0, 1.0]))
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

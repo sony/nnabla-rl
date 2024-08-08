@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -144,8 +144,8 @@ class TestReplayBuffer(object):
         assert len(buffer) == 10
 
     def _generate_experience_mock(self):
-        state_shape = (5, )
-        action_shape = (10, )
+        state_shape = (5,)
+        action_shape = (10,)
 
         state = np.empty(shape=state_shape)
         action = np.empty(shape=action_shape)

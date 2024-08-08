@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ def get_space_shape(space: gym.spaces.Space) -> Tuple[int, ...]:
     if isinstance(space, gym.spaces.Box):
         return tuple(space.shape)
     elif isinstance(space, gym.spaces.Discrete):
-        return (1, )
+        return (1,)
     else:
         raise ValueError
 
@@ -41,7 +41,7 @@ def get_space_high(space: gym.spaces.Space) -> Union[np.ndarray, str]:
     if isinstance(space, gym.spaces.Box):
         return np.asarray(space.high)
     elif isinstance(space, gym.spaces.Discrete):
-        return 'N/A'
+        return "N/A"
     else:
         raise ValueError
 
@@ -50,7 +50,7 @@ def get_space_low(space: gym.spaces.Space) -> Union[np.ndarray, str]:
     if isinstance(space, gym.spaces.Box):
         return np.asarray(space.low)
     elif isinstance(space, gym.spaces.Discrete):
-        return 'N/A'
+        return "N/A"
     else:
         raise ValueError
 
@@ -65,8 +65,7 @@ def extract_max_episode_steps(env_or_env_info):
         return env_or_env_info.max_episode_steps
 
 
-def is_same_space_type(query_space: gym.spaces.Space,
-                       key_space: Union[gym.spaces.Discrete, gym.spaces.Box]) -> bool:
+def is_same_space_type(query_space: gym.spaces.Space, key_space: Union[gym.spaces.Discrete, gym.spaces.Box]) -> bool:
     """Check whether the query_space has the same type of key_space or not.
     Note that if the query_space is gym.spaces.Tuple, this method checks
     whether all of the element of the query_space are the key_space or not.
@@ -77,6 +76,7 @@ def is_same_space_type(query_space: gym.spaces.Space,
     Returns:
         bool: True if the query_space is the same as key_space. Otherwise False.
     """
+
     def _check_each_space_type(space, key_space) -> bool:
         if key_space == gym.spaces.Discrete:
             return isinstance(space, gym.spaces.Discrete)

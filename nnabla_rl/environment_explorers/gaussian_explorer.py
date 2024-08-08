@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ class GaussianExplorerConfig(EnvironmentExplorerConfig):
     sigma: float = 1.0
 
     def __post_init__(self):
-        self._assert_positive(self.sigma, 'sigma')
+        self._assert_positive(self.sigma, "sigma")
 
 
 class GaussianExplorer(EnvironmentExplorer):
@@ -62,10 +62,12 @@ class GaussianExplorer(EnvironmentExplorer):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: GaussianExplorerConfig
 
-    def __init__(self,
-                 policy_action_selector: ActionSelector,
-                 env_info: EnvironmentInfo,
-                 config: GaussianExplorerConfig = GaussianExplorerConfig()):
+    def __init__(
+        self,
+        policy_action_selector: ActionSelector,
+        env_info: EnvironmentInfo,
+        config: GaussianExplorerConfig = GaussianExplorerConfig(),
+    ):
         super().__init__(env_info, config)
         self._policy_action_selector = policy_action_selector
 

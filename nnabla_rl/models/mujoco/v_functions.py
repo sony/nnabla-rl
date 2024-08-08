@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,14 +49,11 @@ class TRPOVFunction(VFunction):
 
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=64, name="linear1",
-                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NPF.affine(s, n_outmaps=64, name="linear1", w_init=NI.OrthogonalInitializer(np.sqrt(2.0)))
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=64, name="linear2",
-                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NPF.affine(h, n_outmaps=64, name="linear2", w_init=NI.OrthogonalInitializer(np.sqrt(2.0)))
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=1, name="linear3",
-                           w_init=NI.OrthogonalInitializer(np.sqrt(2.)))
+            h = NPF.affine(h, n_outmaps=1, name="linear3", w_init=NI.OrthogonalInitializer(np.sqrt(2.0)))
         return h
 
 
@@ -71,16 +68,13 @@ class PPOVFunction(VFunction):
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
             with nn.parameter_scope("linear1"):
-                h = NPF.affine(s, n_outmaps=64,
-                               w_init=RI.NormcInitializer(std=1.0))
+                h = NPF.affine(s, n_outmaps=64, w_init=RI.NormcInitializer(std=1.0))
             h = NF.tanh(x=h)
             with nn.parameter_scope("linear2"):
-                h = NPF.affine(h, n_outmaps=64,
-                               w_init=RI.NormcInitializer(std=1.0))
+                h = NPF.affine(h, n_outmaps=64, w_init=RI.NormcInitializer(std=1.0))
             h = NF.tanh(x=h)
             with nn.parameter_scope("linear_v"):
-                v = NPF.affine(h, n_outmaps=1,
-                               w_init=RI.NormcInitializer(std=1.0))
+                v = NPF.affine(h, n_outmaps=1, w_init=RI.NormcInitializer(std=1.0))
         return v
 
 
@@ -95,14 +89,11 @@ class GAILVFunction(VFunction):
 
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=100, name="linear1",
-                           w_init=RI.NormcInitializer(std=1.0))
+            h = NPF.affine(s, n_outmaps=100, name="linear1", w_init=RI.NormcInitializer(std=1.0))
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=100, name="linear2",
-                           w_init=RI.NormcInitializer(std=1.0))
+            h = NPF.affine(h, n_outmaps=100, name="linear2", w_init=RI.NormcInitializer(std=1.0))
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=1, name="linear3",
-                           w_init=RI.NormcInitializer(std=1.0))
+            h = NPF.affine(h, n_outmaps=1, name="linear3", w_init=RI.NormcInitializer(std=1.0))
         return h
 
 
@@ -115,17 +106,29 @@ class ATRPOVFunction(VFunction):
 
     def v(self, s: nn.Variable) -> nn.Variable:
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s, n_outmaps=64, name="linear1",
-                           w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.),
-                           b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.))
+            h = NPF.affine(
+                s,
+                n_outmaps=64,
+                name="linear1",
+                w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1.0 / 3.0),
+                b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1.0 / 3.0),
+            )
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=64, name="linear2",
-                           w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.),
-                           b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1./3.))
+            h = NPF.affine(
+                h,
+                n_outmaps=64,
+                name="linear2",
+                w_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1.0 / 3.0),
+                b_init=RI.HeUniform(inmaps=64, outmaps=64, factor=1.0 / 3.0),
+            )
             h = NF.tanh(x=h)
-            h = NPF.affine(h, n_outmaps=1, name="linear3",
-                           w_init=RI.HeUniform(inmaps=64, outmaps=1, factor=0.01/3.),
-                           b_init=NI.ConstantInitializer(0.))
+            h = NPF.affine(
+                h,
+                n_outmaps=1,
+                name="linear3",
+                w_init=RI.HeUniform(inmaps=64, outmaps=1, factor=0.01 / 3.0),
+                b_init=NI.ConstantInitializer(0.0),
+            )
         return h
 
 
@@ -139,16 +142,16 @@ class XQLVFunction(VFunction):
     def v(self, s: nn.Variable) -> nn.Variable:
         w_init = NI.OrthogonalInitializer(np.sqrt(2.0))
         with nn.parameter_scope(self.scope_name):
-            with nn.parameter_scope('linear1'):
+            with nn.parameter_scope("linear1"):
                 h = NPF.affine(s, n_outmaps=256, w_init=w_init)
-            with nn.parameter_scope('layer_norm1'):
+            with nn.parameter_scope("layer_norm1"):
                 h = NPF.layer_normalization(h, eps=1e-6)
             h = NF.relu(x=h)
-            with nn.parameter_scope('linear2'):
+            with nn.parameter_scope("linear2"):
                 h = NPF.affine(h, n_outmaps=256, w_init=w_init)
-            with nn.parameter_scope('layer_norm2'):
+            with nn.parameter_scope("layer_norm2"):
                 h = NPF.layer_normalization(h, eps=1e-6)
             h = NF.relu(x=h)
-            with nn.parameter_scope('linear3'):
+            with nn.parameter_scope("linear3"):
                 h = NPF.affine(h, n_outmaps=1, w_init=w_init)
         return h

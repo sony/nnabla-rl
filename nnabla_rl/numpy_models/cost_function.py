@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ class CostFunction(NumpyModel, metaclass=ABCMeta):
 
     @abstractmethod
     def evaluate(
-            self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
+        self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
     ) -> np.ndarray:
         """Evaluate cost for given state and action.
 
@@ -94,7 +94,7 @@ class CostFunction(NumpyModel, metaclass=ABCMeta):
 
     def __add__(self, o):
         if not isinstance(o, CostFunction):
-            raise ValueError('Only cost function can be added together')
+            raise ValueError("Only cost function can be added together")
         return SumCost([self, o])
 
 

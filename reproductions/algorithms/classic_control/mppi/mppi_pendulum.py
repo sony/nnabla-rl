@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,8 +65,9 @@ class PendulumKnownDynamics(Dynamics):
         self.m = 1.0
         self.length = 1.0
 
-    def next_state(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, Dict[str, Any]]:
+    def next_state(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
         # x.shape = (state_dim, 1) and u.shape = (input_dim, 1)
         if batched:
             th, thdot = np.split(x, x.shape[-1], axis=-1)
@@ -88,8 +89,9 @@ class PendulumKnownDynamics(Dynamics):
     def gradient(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         raise NotImplementedError
 
-    def hessian(self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False) \
-            -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def hessian(
+        self, x: np.ndarray, u: np.ndarray, t: int, batched: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         raise NotImplementedError
 
     def state_dim(self) -> int:
@@ -108,11 +110,9 @@ class PendulumCostFunction(CostFunction):
         self._weight_th = 2.0
         self._weight_thdot = 0.5
 
-    def evaluate(self, x: np.ndarray,
-                 u: Optional[np.ndarray],
-                 t: int,
-                 final_state: bool = False,
-                 batched: bool = False) -> np.ndarray:
+    def evaluate(
+        self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
+    ) -> np.ndarray:
         # x.shape = (state_dim, 1) and u.shape = (input_dim, 1)
         if batched:
             th, thdot = np.split(x, x.shape[-1], axis=-1)
@@ -122,17 +122,14 @@ class PendulumCostFunction(CostFunction):
         state_cost = self._weight_th * self._angle_normalize(th) ** 2 + self._weight_thdot * thdot**2
         return state_cost
 
-    def gradient(self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False,
-                 batched: bool = False) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def gradient(
+        self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         raise NotImplementedError
 
-    def hessian(self,
-                x: np.ndarray,
-                u: Optional[np.ndarray],
-                t: int,
-                final_state: bool = False,
-                batched: bool = False) \
-            -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
+    def hessian(
+        self, x: np.ndarray, u: Optional[np.ndarray], t: int, final_state: bool = False, batched: bool = False
+    ) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
         raise NotImplementedError
 
     def support_batch(self) -> bool:
@@ -168,7 +165,7 @@ class MPPIEvaluationHook(Hook):
             self._dummy_states[0] = x_next
             self._control_inputs[0:-1] = self._control_inputs[1:]
             total_reward += reward
-        print(f'total reward: {total_reward}')
+        print(f"total reward: {total_reward}")
 
 
 def compute_initial_trajectory(x0, dynamics, T, u):
@@ -199,13 +196,15 @@ def run_control(args):
 
     covariance = np.eye(N=env_info.action_dim) * 0.5
     known_dynamics = PendulumKnownDynamics()
-    config = MPPIConfig(gpu_id=args.gpu,
-                        T=args.T,
-                        covariance=covariance,
-                        K=1000,
-                        use_known_dynamics=args.use_known_dynamics,
-                        training_iterations=1000,
-                        dt=known_dynamics.dt)
+    config = MPPIConfig(
+        gpu_id=args.gpu,
+        T=args.T,
+        covariance=covariance,
+        K=1000,
+        use_known_dynamics=args.use_known_dynamics,
+        training_iterations=1000,
+        dt=known_dynamics.dt,
+    )
 
     def normalize_state(x):
         th, thdot = np.split(x, x.shape[-1], axis=-1)
@@ -223,15 +222,15 @@ def run_control(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--T', type=int, default=20)
-    parser.add_argument('--num_episodes', type=int, default=10)
-    parser.add_argument('--use-known-dynamics', action='store_true')
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--T", type=int, default=20)
+    parser.add_argument("--num_episodes", type=int, default=10)
+    parser.add_argument("--use-known-dynamics", action="store_true")
     args = parser.parse_args()
     run_control(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

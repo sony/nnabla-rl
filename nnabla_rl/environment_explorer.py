@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,9 +46,7 @@ class EnvironmentExplorer(metaclass=ABCMeta):
     _next_state: Union[State, None]
     _steps: int
 
-    def __init__(self,
-                 env_info: EnvironmentInfo,
-                 config: EnvironmentExplorerConfig = EnvironmentExplorerConfig()):
+    def __init__(self, env_info: EnvironmentInfo, config: EnvironmentExplorerConfig = EnvironmentExplorerConfig()):
         self._env_info = env_info
         self._config = config
 
@@ -124,12 +122,12 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         if self._steps < self._config.warmup_random_steps:
             self._action, action_info = self._warmup_action(env, begin_of_episode=begin_of_episode)
         else:
-            self._action, action_info = self.action(self._steps,
-                                                    cast(np.ndarray, self._state),
-                                                    begin_of_episode=begin_of_episode)
+            self._action, action_info = self.action(
+                self._steps, cast(np.ndarray, self._state), begin_of_episode=begin_of_episode
+            )
 
         self._next_state, r, done, step_info = env.step(self._action)
-        timelimit = step_info.get('TimeLimit.truncated', False)
+        timelimit = step_info.get("TimeLimit.truncated", False)
         if _is_end_of_episode(done, timelimit, self._config.timelimit_as_terminal):
             non_terminal = 0.0
         else:
@@ -138,12 +136,14 @@ class EnvironmentExplorer(metaclass=ABCMeta):
         extra_info: Dict[str, Any] = {}
         extra_info.update(action_info)
         extra_info.update(step_info)
-        experience = (cast(np.ndarray, self._state),
-                      cast(np.ndarray, self._action),
-                      r * self._config.reward_scalar,
-                      non_terminal,
-                      cast(np.ndarray, self._next_state),
-                      extra_info)
+        experience = (
+            cast(np.ndarray, self._state),
+            cast(np.ndarray, self._action),
+            r * self._config.reward_scalar,
+            non_terminal,
+            cast(np.ndarray, self._next_state),
+            extra_info,
+        )
 
         if done:
             self._state = env.reset()
@@ -168,13 +168,13 @@ def _sample_action(env, env_info):
         action = []
         for a, action_space in zip(env.action_space.sample(), env_info.action_space):
             if isinstance(action_space, gym.spaces.Discrete):
-                a = np.asarray(a).reshape((1, ))
+                a = np.asarray(a).reshape((1,))
             action.append(a)
         action = tuple(action)
     else:
         if env_info.is_discrete_action_env():
             action = env.action_space.sample()
-            action = np.asarray(action).reshape((1, ))
+            action = np.asarray(action).reshape((1,))
         else:
             action = env.action_space.sample()
     return action, action_info

@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,14 @@ from typing import Union
 import gym
 
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.algorithms.categorical_dqn import (CategoricalDQN, CategoricalDQNConfig, DefaultExplorerBuilder,
-                                                  DefaultReplayBufferBuilder, DefaultSolverBuilder,
-                                                  DefaultValueDistFunctionBuilder)
+from nnabla_rl.algorithms.categorical_dqn import (
+    CategoricalDQN,
+    CategoricalDQNConfig,
+    DefaultExplorerBuilder,
+    DefaultReplayBufferBuilder,
+    DefaultSolverBuilder,
+    DefaultValueDistFunctionBuilder,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import ValueDistributionFunction
@@ -58,19 +63,23 @@ class CategoricalDDQN(CategoricalDQN):
             builder of environment explorer
     """
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: CategoricalDQNConfig = CategoricalDDQNConfig(),
-                 value_distribution_builder: ModelBuilder[ValueDistributionFunction]
-                 = DefaultValueDistFunctionBuilder(),
-                 value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super(CategoricalDDQN, self).__init__(env_or_env_info,
-                                              config=config,
-                                              value_distribution_builder=value_distribution_builder,
-                                              value_distribution_solver_builder=value_distribution_solver_builder,
-                                              replay_buffer_builder=replay_buffer_builder,
-                                              explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: CategoricalDQNConfig = CategoricalDDQNConfig(),
+        value_distribution_builder: ModelBuilder[ValueDistributionFunction] = DefaultValueDistFunctionBuilder(),
+        value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super(CategoricalDDQN, self).__init__(
+            env_or_env_info,
+            config=config,
+            value_distribution_builder=value_distribution_builder,
+            value_distribution_solver_builder=value_distribution_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_value_distribution_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.CategoricalDDQNQTrainerConfig(
@@ -81,14 +90,16 @@ class CategoricalDDQN(CategoricalDQN):
             reduction_method=self._config.loss_reduction_method,
             unroll_steps=self._config.unroll_steps,
             burn_in_steps=self._config.burn_in_steps,
-            reset_on_terminal=self._config.reset_rnn_on_terminal)
+            reset_on_terminal=self._config.reset_rnn_on_terminal,
+        )
 
         model_trainer = MT.q_value_trainers.CategoricalDDQNQTrainer(
             train_function=self._atom_p,
             solvers={self._atom_p.scope_name: self._atom_p_solver},
             target_function=self._target_atom_p,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction

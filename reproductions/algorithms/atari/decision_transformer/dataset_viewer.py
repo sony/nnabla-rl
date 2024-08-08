@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,30 +22,30 @@ from atari_dataset_loader import load_expert_dataset
 def view_dataset(args):
     dataset_dir = pathlib.Path(args.dataset_dir)
     (o, a, r, t) = load_expert_dataset(dataset_dir)
-    print('observation data shape: ', o.shape)
-    print('action data shape: ', a.shape)
-    print('reward data shape: ', r.shape)
-    print('terminal data shape: ', t.shape)
+    print("observation data shape: ", o.shape)
+    print("action data shape: ", a.shape)
+    print("reward data shape: ", r.shape)
+    print("terminal data shape: ", t.shape)
 
     show_observations(o)
 
 
 def show_observations(observations):
-    print('press q to quit displaying observation')
+    print("press q to quit displaying observation")
     for observation in observations:
-        cv2.imshow('obs0', observation)
-        if cv2.waitKey(5) & 0xFF == ord('q'):
+        cv2.imshow("obs0", observation)
+        if cv2.waitKey(5) & 0xFF == ord("q"):
             break
     cv2.destroyAllWindows()
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset-dir', type=str, default='datasets/Breakout/1/replay_logs')
+    parser.add_argument("--dataset-dir", type=str, default="datasets/Breakout/1/replay_logs")
     args = parser.parse_args()
 
     view_dataset(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

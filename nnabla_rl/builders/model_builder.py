@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,25 +18,16 @@ from typing import Generic, TypeVar
 from nnabla_rl.algorithm import AlgorithmConfig
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class ModelBuilder(Generic[T]):
-    """Model builder interface class
-    """
+    """Model builder interface class"""
 
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> T:
+    def __call__(self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs) -> T:
         return self.build_model(scope_name, env_info, algorithm_config, **kwargs)
 
-    def build_model(self,
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: AlgorithmConfig,
-                    **kwargs) -> T:
+    def build_model(self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs) -> T:
         """Build model.
 
         Args:

@@ -79,8 +79,8 @@ dev = [
     "pytest-cov",
     "mypy != 1.11.0",
     "typing-extensions",
-    "isort",
-    "autopep8",
+    "isort > 5.0.0",
+    "black",
     "docformatter"
 ]
 deploy = [
@@ -114,11 +114,18 @@ exclude = [
 testpaths = ["tests"]
 addopts = "-s"
 
-[tool.autopep8]
-max_line_length = 120
-recursive = true
+[tool.black]
+line-length = 120
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  nnabla_rl/external
+)
+'''
 
 [tool.isort]
+profile = "black"
 line_length = 120
 honor_noqa = true
 known_first_party = ["nnabla"]

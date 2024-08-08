@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,10 @@ import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
-from nnabla_rl.model_trainers.q_value.categorical_dqn_q_trainer import (CategoricalDQNQTrainer,
-                                                                        CategoricalDQNQTrainerConfig)
+from nnabla_rl.model_trainers.q_value.categorical_dqn_q_trainer import (
+    CategoricalDQNQTrainer,
+    CategoricalDQNQTrainerConfig,
+)
 from nnabla_rl.models import ValueDistributionFunction
 from nnabla_rl.utils.misc import create_variables
 
@@ -40,12 +42,14 @@ class CategoricalDDQNQTrainer(CategoricalDQNQTrainer):
     _prev_train_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_function: ValueDistributionFunction,
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_function: ValueDistributionFunction,
-                 env_info: EnvironmentInfo,
-                 config: CategoricalDDQNQTrainerConfig = CategoricalDDQNQTrainerConfig()):
+    def __init__(
+        self,
+        train_function: ValueDistributionFunction,
+        solvers: Dict[str, nn.solver.Solver],
+        target_function: ValueDistributionFunction,
+        env_info: EnvironmentInfo,
+        config: CategoricalDDQNQTrainerConfig = CategoricalDDQNQTrainerConfig(),
+    ):
         self._train_function = train_function
         self._target_function = target_function
         self._prev_train_rnn_states = {}
@@ -68,7 +72,7 @@ class CategoricalDDQNQTrainer(CategoricalDQNQTrainer):
 
         prev_rnn_states = self._prev_train_rnn_states
         train_rnn_states = training_variables.rnn_states
-        with rnn_support(self._train_function, prev_rnn_states,  train_rnn_states, training_variables, self._config):
+        with rnn_support(self._train_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
             a_next = self._train_function.as_q_function().argmax_q(s_next)
 
         prev_rnn_states = self._prev_target_rnn_states

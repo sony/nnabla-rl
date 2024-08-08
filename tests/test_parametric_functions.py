@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,19 +28,19 @@ class TestFunctions(object):
     def test_noisy_net_forward(self):
         nn.seed(0)
         x = nn.Variable.from_numpy_array(np.random.normal(size=(5, 5)))
-        with nn.parameter_scope('noisy1'):
+        with nn.parameter_scope("noisy1"):
             y1 = RPF.noisy_net(x, n_outmap=10, seed=1)
             y1_params = nn.get_parameters()
         assert y1.shape == (5, 10)
 
         nn.seed(0)
-        with nn.parameter_scope('noisy2'):
+        with nn.parameter_scope("noisy2"):
             y2 = RPF.noisy_net(x, n_outmap=10, seed=1)
             y2_params = nn.get_parameters()
         assert y1.shape == y2.shape
         assert y1_params.keys() == y2_params.keys()
 
-        for param_name in ['W', 'noisy_W', 'b', 'noisy_b']:
+        for param_name in ["W", "noisy_W", "b", "noisy_b"]:
             assert param_name in y1_params.keys()
         nn.forward_all([y1, y2])
 
@@ -51,19 +51,19 @@ class TestFunctions(object):
     def test_noisy_net_rng(self):
         rng = np.random.RandomState(seed=0)
         x = nn.Variable.from_numpy_array(np.random.normal(size=(5, 5)))
-        with nn.parameter_scope('noisy1'):
+        with nn.parameter_scope("noisy1"):
             y1 = RPF.noisy_net(x, n_outmap=10, seed=1, rng=rng)
             y1_params = nn.get_parameters()
         assert y1.shape == (5, 10)
 
         rng = np.random.RandomState(seed=0)
-        with nn.parameter_scope('noisy2'):
+        with nn.parameter_scope("noisy2"):
             y2 = RPF.noisy_net(x, n_outmap=10, seed=1, rng=rng)
             y2_params = nn.get_parameters()
         assert y1.shape == y2.shape
         assert y1_params.keys() == y2_params.keys()
 
-        for param_name in ['W', 'noisy_W', 'b', 'noisy_b']:
+        for param_name in ["W", "noisy_W", "b", "noisy_b"]:
             assert param_name in y1_params.keys()
         nn.forward_all([y1, y2])
 
@@ -74,13 +74,13 @@ class TestFunctions(object):
     def test_noisy_net_backward(self):
         nn.seed(0)
         x = nn.Variable.from_numpy_array(np.random.normal(size=(5, 5)))
-        with nn.parameter_scope('noisy1'):
+        with nn.parameter_scope("noisy1"):
             y1 = RPF.noisy_net(x, n_outmap=10, seed=1)
             y1_params = nn.get_parameters()
         assert y1.shape == (5, 10)
 
         nn.seed(0)
-        with nn.parameter_scope('noisy2'):
+        with nn.parameter_scope("noisy2"):
             y2 = RPF.noisy_net(x, n_outmap=10, seed=1)
             y2_params = nn.get_parameters()
         assert y1.shape == y2.shape
@@ -102,65 +102,74 @@ class TestFunctions(object):
 
     def test_noisy_net_base_axis(self):
         x = nn.Variable.from_numpy_array(np.random.normal(size=(5, 5, 5)))
-        with nn.parameter_scope('noisy1'):
+        with nn.parameter_scope("noisy1"):
             y1 = RPF.noisy_net(x, n_outmap=10, seed=1, base_axis=2)
         assert y1.shape == (5, 5, 10)
 
     def test_noisy_net_without_deterministic_bias(self):
         x = nn.Variable.from_numpy_array(np.random.normal(size=(5, 5)))
-        with nn.parameter_scope('noisy1'):
+        with nn.parameter_scope("noisy1"):
             y1 = RPF.noisy_net(x, n_outmap=10, seed=1, with_bias=False)
             params = nn.get_parameters()
 
         assert y1.shape == (5, 10)
-        assert 'b' not in params.keys()
-        assert 'noisy_b' in params.keys()
+        assert "b" not in params.keys()
+        assert "noisy_b" in params.keys()
 
     def test_noisy_net_without_noisy_bias(self):
         x = nn.Variable.from_numpy_array(np.random.normal(size=(5, 5)))
-        with nn.parameter_scope('noisy1'):
+        with nn.parameter_scope("noisy1"):
             y1 = RPF.noisy_net(x, n_outmap=10, seed=1, with_noisy_bias=False)
             params = nn.get_parameters()
         assert y1.shape == (5, 10)
-        assert 'b' in params.keys()
-        assert 'noisy_b' not in params.keys()
+        assert "b" in params.keys()
+        assert "noisy_b" not in params.keys()
 
     def test_noisy_net_without_bias(self):
         x = nn.Variable.from_numpy_array(np.random.normal(size=(5, 5)))
-        with nn.parameter_scope('noisy1'):
+        with nn.parameter_scope("noisy1"):
             y1 = RPF.noisy_net(x, n_outmap=10, seed=1, with_bias=False, with_noisy_bias=False)
             params = nn.get_parameters()
         assert y1.shape == (5, 10)
-        assert 'b' not in params.keys()
-        assert 'noisy_b' not in params.keys()
+        assert "b" not in params.keys()
+        assert "noisy_b" not in params.keys()
 
-    @pytest.mark.parametrize("x_c1, x_c2, x_c3, expected",
-                             [(np.array([[np.log(2), 0., 0.], [0., 0., 0.], [0., 0., np.log(2)]]),
-                               np.array([[0., np.log(2), 0.], [0., 0., 0.], [0., np.log(2), 0.]]),
-                               np.array([[0., 0., 0.], [np.log(2), 0., np.log(2)], [0., 0., 0.]]),
-                               np.array([[0., 0.], [0., 0.], [0., 0.]])),
-                              (np.array([[0., np.log(2), 0.], [0., 0., 0.], [0., 0., 0.]]),
-                               np.array([[0., 0., 0.], [0., 0., 0.], [0., 0., np.log(2)]]),
-                               np.array([[0., 0., 0.], [np.log(2), 0., 0.], [0., 0., 0.]]),
-                               np.array([[0., -0.1], [0.1, 0.1], [-0.1, 0.]])),
-                              (np.array([[0., np.log(4), 0.], [0., np.log(4), 0.], [0., 0., 0.]]),
-                               np.array([[0., 0., np.log(4)], [0., 0., 0.], [0., 0., np.log(4)]]),
-                               np.array([[0., 0., 0.], [0., 0., np.log(4)], [0., 0., 0.]]),
-                               np.array([[0., -0.2], [0.4, 0.], [0.25, 0.]]))
-                              ])
+    @pytest.mark.parametrize(
+        "x_c1, x_c2, x_c3, expected",
+        [
+            (
+                np.array([[np.log(2), 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, np.log(2)]]),
+                np.array([[0.0, np.log(2), 0.0], [0.0, 0.0, 0.0], [0.0, np.log(2), 0.0]]),
+                np.array([[0.0, 0.0, 0.0], [np.log(2), 0.0, np.log(2)], [0.0, 0.0, 0.0]]),
+                np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]),
+            ),
+            (
+                np.array([[0.0, np.log(2), 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+                np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, np.log(2)]]),
+                np.array([[0.0, 0.0, 0.0], [np.log(2), 0.0, 0.0], [0.0, 0.0, 0.0]]),
+                np.array([[0.0, -0.1], [0.1, 0.1], [-0.1, 0.0]]),
+            ),
+            (
+                np.array([[0.0, np.log(4), 0.0], [0.0, np.log(4), 0.0], [0.0, 0.0, 0.0]]),
+                np.array([[0.0, 0.0, np.log(4)], [0.0, 0.0, 0.0], [0.0, 0.0, np.log(4)]]),
+                np.array([[0.0, 0.0, 0.0], [0.0, 0.0, np.log(4)], [0.0, 0.0, 0.0]]),
+                np.array([[0.0, -0.2], [0.4, 0.0], [0.25, 0.0]]),
+            ),
+        ],
+    )
     def test_spatial_softmax_forward(self, x_c1, x_c2, x_c3, expected):
         batch_size = 1
         channel = 3
         x = np.stack([x_c1, x_c2, x_c3], axis=0)[np.newaxis, :, :, :]
-        expected = expected.reshape((-1, channel*2))
+        expected = expected.reshape((-1, channel * 2))
 
-        with nn.parameter_scope('spatial_softmax1'):
+        with nn.parameter_scope("spatial_softmax1"):
             x = nn.Variable.from_numpy_array(x)
-            y1 = RPF.spatial_softmax(x, alpha_init=1.)
+            y1 = RPF.spatial_softmax(x, alpha_init=1.0)
             y1_params = nn.get_parameters()
-        assert y1.shape == (batch_size, channel*2)
+        assert y1.shape == (batch_size, channel * 2)
 
-        for param_name in ['alpha']:
+        for param_name in ["alpha"]:
             assert param_name in y1_params.keys()
         nn.forward_all([y1])
 
@@ -172,14 +181,14 @@ class TestFunctions(object):
         height = 5
         width = 5
 
-        with nn.parameter_scope('spatial_softmax1'):
+        with nn.parameter_scope("spatial_softmax1"):
             x = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, channel, height, width)))
-            y1 = RPF.spatial_softmax(x, alpha_init=1.)
+            y1 = RPF.spatial_softmax(x, alpha_init=1.0)
             y1_params = nn.get_parameters()
-        assert y1.shape == (batch_size, channel*2)
+        assert y1.shape == (batch_size, channel * 2)
 
-        with nn.parameter_scope('spatial_softmax2'):
-            y2 = RPF.spatial_softmax(x, alpha_init=1.)
+        with nn.parameter_scope("spatial_softmax2"):
+            y2 = RPF.spatial_softmax(x, alpha_init=1.0)
             y2_params = nn.get_parameters()
         assert y1.shape == y2.shape
 
@@ -203,7 +212,7 @@ class TestFunctions(object):
         height = 5
         width = 5
 
-        with nn.parameter_scope('spatial_softmax1'):
+        with nn.parameter_scope("spatial_softmax1"):
             x = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, channel, height, width)))
             y1 = RPF.spatial_softmax(x, alpha_init=1.5, fix_alpha=True)
             y1_params = nn.get_parameters()
@@ -219,16 +228,16 @@ class TestFunctions(object):
         assert np.allclose(y1_params["alpha"].d, np.array([[1.5]]))
 
     @pytest.mark.parametrize("batch_size", [i for i in range(1, 3)])
-    @pytest.mark.parametrize("shape", [(1, ), (5, ), (1, 5), (5, 5)])
+    @pytest.mark.parametrize("shape", [(1,), (5,), (1, 5), (5, 5)])
     def test_lstm_cell_in_out_shape(self, batch_size, shape):
         out_size = 10
         input_shape = (batch_size, *shape)
         x = nn.Variable.from_numpy_array(np.random.normal(size=input_shape))
-        hidden_shape = (batch_size, *(shape[0:-1] + (out_size, )))
+        hidden_shape = (batch_size, *(shape[0:-1] + (out_size,)))
         h = nn.Variable.from_numpy_array(np.random.normal(size=hidden_shape))
-        cell_shape = (batch_size, *(shape[0:-1] + (out_size, )))
+        cell_shape = (batch_size, *(shape[0:-1] + (out_size,)))
         c = nn.Variable.from_numpy_array(np.random.normal(size=cell_shape))
-        with nn.parameter_scope('test'):
+        with nn.parameter_scope("test"):
             y, c = RPF.lstm_cell(x, h, c, state_size=out_size, base_axis=(len(shape)))
         assert y.shape == hidden_shape
         assert c.shape == cell_shape

@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ from nnabla_rl.utils.reproductions import build_atari_env
 
 
 def save_dataset(filepath, data):
-    with gzip.GzipFile(filepath, 'w') as f:
+    with gzip.GzipFile(filepath, "w") as f:
         np.save(f, data, allow_pickle=False)
 
 
 def main():
-    fake_env = build_atari_env('FakeAtariNNablaRLNoFrameskip-v1', test=True)
+    fake_env = build_atari_env("FakeAtariNNablaRLNoFrameskip-v1", test=True)
 
     dataset_size = 20
 
@@ -47,11 +47,11 @@ def main():
 
         state = fake_env.reset() if done else next_state
 
-    save_dataset('./$store$_observation_ckpt.0.gz', np.asarray(states))
-    save_dataset('./$store$_action_ckpt.0.gz', np.asarray(actions))
-    save_dataset('./$store$_reward_ckpt.0.gz', np.asarray(rewards))
-    save_dataset('./$store$_terminal_ckpt.0.gz', np.asarray(dones))
+    save_dataset("./$store$_observation_ckpt.0.gz", np.asarray(states))
+    save_dataset("./$store$_action_ckpt.0.gz", np.asarray(actions))
+    save_dataset("./$store$_reward_ckpt.0.gz", np.asarray(rewards))
+    save_dataset("./$store$_terminal_ckpt.0.gz", np.asarray(dones))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,9 +27,7 @@ class TestTD3Policy(object):
     def test_scope_name(self):
         action_dim = 5
         scope_name = "test"
-        model = TD3Policy(scope_name=scope_name,
-                          action_dim=action_dim,
-                          max_action_value=1.0)
+        model = TD3Policy(scope_name=scope_name, action_dim=action_dim, max_action_value=1.0)
 
         assert scope_name == model.scope_name
 
@@ -37,12 +35,9 @@ class TestTD3Policy(object):
         state_dim = 5
         action_dim = 5
         scope_name = "test"
-        model = TD3Policy(scope_name=scope_name,
-                          action_dim=action_dim,
-                          max_action_value=1.0)
+        model = TD3Policy(scope_name=scope_name, action_dim=action_dim, max_action_value=1.0)
         # Fake input to initialize parameters
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, state_dim))
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, state_dim))
         model.pi(input_state)
 
         assert len(model.get_parameters()) == 6
@@ -55,8 +50,7 @@ class TestSACPolicy(object):
     def test_scope_name(self):
         action_dim = 5
         scope_name = "test"
-        model = SACPolicy(scope_name=scope_name,
-                          action_dim=action_dim)
+        model = SACPolicy(scope_name=scope_name, action_dim=action_dim)
 
         assert scope_name == model.scope_name
 
@@ -64,12 +58,10 @@ class TestSACPolicy(object):
         state_dim = 5
         action_dim = 5
         scope_name = "test"
-        model = SACPolicy(scope_name=scope_name,
-                          action_dim=action_dim)
+        model = SACPolicy(scope_name=scope_name, action_dim=action_dim)
 
         # Fake input to initialize parameters
-        input_state = nn.Variable.from_numpy_array(
-            np.random.rand(1, state_dim))
+        input_state = nn.Variable.from_numpy_array(np.random.rand(1, state_dim))
         model.pi(input_state)
 
         assert len(model.get_parameters()) == 6

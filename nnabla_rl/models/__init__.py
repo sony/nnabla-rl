@@ -13,29 +13,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nnabla_rl.models.decision_transformer import (DecisionTransformer,  # noqa
-                                                   DeterministicDecisionTransformer,
-                                                   StochasticDecisionTransformer)
-from nnabla_rl.models.distributional_function import (ValueDistributionFunction,  # noqa
-                                                      DiscreteValueDistributionFunction,
-                                                      ContinuousValueDistributionFunction)
-from nnabla_rl.models.distributional_function import (QuantileDistributionFunction,  # noqa
-                                                      DiscreteQuantileDistributionFunction,
-                                                      ContinuousQuantileDistributionFunction)
-from nnabla_rl.models.distributional_function import (StateActionQuantileFunction,  # noqa
-                                                      DiscreteStateActionQuantileFunction,
-                                                      ContinuousStateActionQuantileFunction)
+from nnabla_rl.models.decision_transformer import (  # noqa
+    DecisionTransformer,
+    DeterministicDecisionTransformer,
+    StochasticDecisionTransformer,
+)
+from nnabla_rl.models.distributional_function import (  # noqa
+    ValueDistributionFunction,
+    DiscreteValueDistributionFunction,
+    ContinuousValueDistributionFunction,
+)
+from nnabla_rl.models.distributional_function import (  # noqa
+    QuantileDistributionFunction,
+    DiscreteQuantileDistributionFunction,
+    ContinuousQuantileDistributionFunction,
+)
+from nnabla_rl.models.distributional_function import (  # noqa
+    StateActionQuantileFunction,
+    DiscreteStateActionQuantileFunction,
+    ContinuousStateActionQuantileFunction,
+)
 from nnabla_rl.models.dynamics import Dynamics, DeterministicDynamics, StochasticDynamics  # noqa
 from nnabla_rl.models.model import Model  # noqa
 from nnabla_rl.models.perturbator import Perturbator  # noqa
 from nnabla_rl.models.policy import Policy, DeterministicPolicy, StochasticPolicy  # noqa
-from nnabla_rl.models.q_function import QFunction, DiscreteQFunction, ContinuousQFunction, FactoredContinuousQFunction  # noqa
+from nnabla_rl.models.q_function import (  # noqa
+    QFunction,
+    DiscreteQFunction,
+    ContinuousQFunction,
+    FactoredContinuousQFunction,
+)
 from nnabla_rl.models.v_function import VFunction  # noqa
 from nnabla_rl.models.reward_function import RewardFunction  # noqa
 from nnabla_rl.models.encoder import Encoder, VariationalAutoEncoder  # noqa
 
 from nnabla_rl.models.mujoco.policies import TD3Policy, SACPolicy, BEARPolicy, TRPOPolicy  # noqa
-from nnabla_rl.models.mujoco.q_functions import TD3QFunction, SACQFunction, SACDQFunction, HERQFunction, XQLQFunction  # noqa
+from nnabla_rl.models.mujoco.q_functions import (  # noqa
+    TD3QFunction,
+    SACQFunction,
+    SACDQFunction,
+    HERQFunction,
+    XQLQFunction,
+)
 from nnabla_rl.models.mujoco.decision_transformers import MujocoDecisionTransformer  # noqa
 from nnabla_rl.models.mujoco.distributional_functions import QRSACQuantileDistributionFunction  # noqa
 from nnabla_rl.models.mujoco.v_functions import SACVFunction, TRPOVFunction, ATRPOVFunction  # noqa
@@ -58,12 +77,14 @@ from nnabla_rl.models.atari.q_functions import DQNQFunction, DRQNQFunction  # no
 from nnabla_rl.models.atari.v_functions import PPOVFunction as PPOAtariVFunction  # noqa
 from nnabla_rl.models.atari.v_functions import A3CVFunction  # noqa
 from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead, A3CSharedFunctionHead  # noqa
-from nnabla_rl.models.atari.distributional_functions import (C51ValueDistributionFunction,  # noqa
-                                                             RainbowValueDistributionFunction,
-                                                             RainbowNoDuelValueDistributionFunction,
-                                                             RainbowNoNoisyValueDistributionFunction,
-                                                             QRDQNQuantileDistributionFunction,
-                                                             IQNQuantileFunction)
+from nnabla_rl.models.atari.distributional_functions import (  # noqa
+    C51ValueDistributionFunction,
+    RainbowValueDistributionFunction,
+    RainbowNoDuelValueDistributionFunction,
+    RainbowNoNoisyValueDistributionFunction,
+    QRDQNQuantileDistributionFunction,
+    IQNQuantileFunction,
+)
 from nnabla_rl.models.atari.policies import ICML2015TRPOPolicy as ICML2015TRPOAtariPolicy  # noqa
 
 from nnabla_rl.models.pybullet.q_functions import ICRA2018QtOptQFunction  # noqa

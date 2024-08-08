@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import nnabla_rl.algorithms as A
 import nnabla_rl.environments as E
 
 
-class TestTRPO():
+class TestTRPO:
     def setup_method(self):
         nn.clear_parameters()
 
@@ -29,7 +29,7 @@ class TestTRPO():
         dummy_env = E.DummyContinuous()
         trpo = A.TRPO(dummy_env)
 
-        assert trpo.__name__ == 'TRPO'
+        assert trpo.__name__ == "TRPO"
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
@@ -42,12 +42,14 @@ class TestTRPO():
         dummy_env = E.DummyContinuous()
         dummy_env = EpisodicEnv(dummy_env, min_episode_length=3)
 
-        config = A.TRPOConfig(num_steps_per_iteration=5,
-                              gpu_batch_size=5,
-                              pi_batch_size=5,
-                              vf_batch_size=2,
-                              sigma_kl_divergence_constraint=10.0,
-                              maximum_backtrack_numbers=50)
+        config = A.TRPOConfig(
+            num_steps_per_iteration=5,
+            gpu_batch_size=5,
+            pi_batch_size=5,
+            vf_batch_size=2,
+            sigma_kl_divergence_constraint=10.0,
+            maximum_backtrack_numbers=50,
+        )
         trpo = A.TRPO(dummy_env, config=config)
 
         trpo.train_online(dummy_env, total_iterations=5)
@@ -97,15 +99,16 @@ class TestTRPO():
         dummy_env = E.DummyContinuous()
         trpo = A.TRPO(dummy_env)
 
-        trpo._v_function_trainer_state = {'v_loss': 0.}
+        trpo._v_function_trainer_state = {"v_loss": 0.0}
 
         latest_iteration_state = trpo.latest_iteration_state
-        assert 'v_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['v_loss'] == 0.
+        assert "v_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["v_loss"] == 0.0
 
 
 if __name__ == "__main__":
     from testing_utils import EpisodicEnv
+
     pytest.main()
 else:
     from ..testing_utils import EpisodicEnv

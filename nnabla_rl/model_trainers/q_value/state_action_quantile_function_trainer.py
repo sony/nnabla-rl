@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,20 +44,24 @@ class StateActionQuantileFunctionTrainer(MultiStepTrainer):
     _quantile_huber_loss: nn.Variable
     _prev_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 models: Union[StateActionQuantileFunction, Sequence[StateActionQuantileFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: StateActionQuantileFunctionTrainerConfig = StateActionQuantileFunctionTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[StateActionQuantileFunction, Sequence[StateActionQuantileFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: StateActionQuantileFunctionTrainerConfig = StateActionQuantileFunctionTrainerConfig(),
+    ):
         self._prev_rnn_states = {}
         super(StateActionQuantileFunctionTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -87,12 +91,10 @@ class StateActionQuantileFunctionTrainer(MultiStepTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['q_loss'] = self._quantile_huber_loss.d.copy()
+        trainer_state["q_loss"] = self._quantile_huber_loss.d.copy()
         return trainer_state
 
-    def _build_training_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables):
+    def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
         self._quantile_huber_loss = 0
         ignore_intermediate_loss = self._config.loss_integration is LossIntegration.LAST_TIMESTEP_ONLY
         for step_index, variables in enumerate(training_variables):
@@ -101,10 +103,7 @@ class StateActionQuantileFunctionTrainer(MultiStepTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         models = cast(Sequence[StateActionQuantileFunction], models)
 
         batch_size = training_variables.batch_size
@@ -124,16 +123,13 @@ class StateActionQuantileFunctionTrainer(MultiStepTrainer):
     def _compute_target(self, training_variables: TrainingVariables):
         raise NotImplementedError
 
-    def _compute_loss(self,
-                      model: StateActionQuantileFunction,
-                      target: nn.Variable,
-                      training_variables: TrainingVariables) -> nn.Variable:
+    def _compute_loss(
+        self, model: StateActionQuantileFunction, target: nn.Variable, training_variables: TrainingVariables
+    ) -> nn.Variable:
         batch_size = training_variables.batch_size
 
         tau_i = model.sample_tau(shape=(batch_size, self._config.N))
-        Z_tau_i = model.quantile_values(training_variables.s_current,
-                                        training_variables.a_current,
-                                        tau_i)
+        Z_tau_i = model.quantile_values(training_variables.s_current, training_variables.a_current, tau_i)
         Z_tau_i = RF.expand_dims(Z_tau_i, axis=2)
         tau_i = RF.expand_dims(tau_i, axis=2)
         assert Z_tau_i.shape == (batch_size, self._config.N, 1)
@@ -160,14 +156,16 @@ class StateActionQuantileFunctionTrainer(MultiStepTrainer):
                 rnn_state_variables = create_variables(batch_size, model.internal_state_shapes())
                 rnn_states[model.scope_name] = rnn_state_variables
 
-        training_variables = TrainingVariables(batch_size=batch_size,
-                                               s_current=s_current_var,
-                                               a_current=a_current_var,
-                                               reward=reward_var,
-                                               gamma=gamma_var,
-                                               non_terminal=non_terminal_var,
-                                               s_next=s_next_var,
-                                               rnn_states=rnn_states)
+        training_variables = TrainingVariables(
+            batch_size=batch_size,
+            s_current=s_current_var,
+            a_current=a_current_var,
+            reward=reward_var,
+            gamma=gamma_var,
+            non_terminal=non_terminal_var,
+            s_next=s_next_var,
+            rnn_states=rnn_states,
+        )
 
         return training_variables
 

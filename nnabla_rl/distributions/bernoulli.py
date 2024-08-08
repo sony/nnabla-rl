@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,6 +90,8 @@ class Bernoulli(DiscreteDistribution):
 
     def kl_divergence(self, q):
         assert isinstance(q, Bernoulli)
-        return NF.sum(self._distribution * (self._log_distribution - q._log_distribution),
-                      axis=len(self._distribution.shape) - 1,
-                      keepdims=True)
+        return NF.sum(
+            self._distribution * (self._log_distribution - q._log_distribution),
+            axis=len(self._distribution.shape) - 1,
+            keepdims=True,
+        )

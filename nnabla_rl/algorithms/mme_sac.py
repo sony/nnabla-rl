@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,9 +19,14 @@ import gym
 
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithms import ICML2018SAC, ICML2018SACConfig
-from nnabla_rl.algorithms.icml2018_sac import (DefaultExplorerBuilder, DefaultPolicyBuilder, DefaultQFunctionBuilder,
-                                               DefaultReplayBufferBuilder, DefaultSolverBuilder,
-                                               DefaultVFunctionBuilder)
+from nnabla_rl.algorithms.icml2018_sac import (
+    DefaultExplorerBuilder,
+    DefaultPolicyBuilder,
+    DefaultQFunctionBuilder,
+    DefaultReplayBufferBuilder,
+    DefaultSolverBuilder,
+    DefaultVFunctionBuilder,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import QFunction, StochasticPolicy, VFunction
@@ -37,6 +42,7 @@ class MMESACConfig(ICML2018SACConfig):
             Otherwise 1/alpha_pi will be used to scale the reward. Defaults to None.
         alpha_q (float): Temperature value for negative entropy term. Defaults to 1.0.
     """
+
     # override configurations
     reward_scalar: float = 5.0
     alpha_pi: Optional[float] = None
@@ -89,37 +95,43 @@ class MMESAC(ICML2018SAC):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: MMESACConfig
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: MMESACConfig = MMESACConfig(),
-                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
-                 v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super(MMESAC, self).__init__(env_or_env_info,
-                                     config=config,
-                                     v_function_builder=v_function_builder,
-                                     v_solver_builder=v_solver_builder,
-                                     q_function_builder=q_function_builder,
-                                     q_solver_builder=q_solver_builder,
-                                     policy_builder=policy_builder,
-                                     policy_solver_builder=policy_solver_builder,
-                                     replay_buffer_builder=replay_buffer_builder,
-                                     explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: MMESACConfig = MMESACConfig(),
+        v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
+        v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super(MMESAC, self).__init__(
+            env_or_env_info,
+            config=config,
+            v_function_builder=v_function_builder,
+            v_solver_builder=v_solver_builder,
+            q_function_builder=q_function_builder,
+            q_solver_builder=q_solver_builder,
+            policy_builder=policy_builder,
+            policy_solver_builder=policy_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_v_function_training(self, env_or_buffer):
         alpha_q = MT.policy_trainers.soft_policy_trainer.AdjustableTemperature(
-            scope_name='alpha_q',
-            initial_value=self._config.alpha_q)
+            scope_name="alpha_q", initial_value=self._config.alpha_q
+        )
         v_function_trainer_config = MT.v_value_trainers.MMEVTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             v_loss_scalar=0.5,
             unroll_steps=self._config.v_unroll_steps,
             burn_in_steps=self._config.v_burn_in_steps,
-            reset_on_terminal=self._config.v_reset_rnn_on_terminal)
+            reset_on_terminal=self._config.v_reset_rnn_on_terminal,
+        )
         v_function_trainer = MT.v_value_trainers.MMEVTrainer(
             train_functions=self._v,
             temperature=alpha_q,
@@ -127,7 +139,8 @@ class MMESAC(ICML2018SAC):
             target_functions=self._train_q_functions,  # Set training q as target
             target_policy=self._pi,
             env_info=self._env_info,
-            config=v_function_trainer_config)
+            config=v_function_trainer_config,
+        )
         sync_model(self._v, self._target_v, 1.0)
 
         return v_function_trainer

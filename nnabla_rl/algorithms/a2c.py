@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,8 +34,14 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import ModelTrainer, TrainingBatch
 from nnabla_rl.models import A3CPolicy, A3CSharedFunctionHead, A3CVFunction, StochasticPolicy, VFunction
 from nnabla_rl.utils.data import marshal_experiences, unzip
-from nnabla_rl.utils.multiprocess import (copy_mp_arrays_to_params, copy_params_to_mp_arrays, mp_array_from_np_array,
-                                          mp_to_np_array, new_mp_arrays_from_params, np_to_mp_array)
+from nnabla_rl.utils.multiprocess import (
+    copy_mp_arrays_to_params,
+    copy_params_to_mp_arrays,
+    mp_array_from_np_array,
+    mp_to_np_array,
+    new_mp_arrays_from_params,
+    np_to_mp_array,
+)
 from nnabla_rl.utils.reproductions import set_global_seed
 from nnabla_rl.utils.solver_wrappers import AutoClipGradByGlobalNorm
 
@@ -67,6 +73,7 @@ class A2CConfig(AlgorithmConfig):
         learning_rate_decay_iterations (int): learning rate will be decreased lineary to 0 till this iteration number.
             If 0 or negative, learning rate will be kept fixed. Defaults to 50000000.
     """
+
     gamma: float = 0.99
     n_steps: int = 5
     learning_rate: float = 7e-4
@@ -86,48 +93,49 @@ class A2CConfig(AlgorithmConfig):
 
         Check the set values are in valid range.
         """
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_between(self.decay, 0.0, 1.0, 'decay')
-        self._assert_positive(self.n_steps, 'n_steps')
-        self._assert_positive(self.actor_num, 'actor num')
-        self._assert_positive(self.learning_rate, 'learning_rate')
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_between(self.decay, 0.0, 1.0, "decay")
+        self._assert_positive(self.n_steps, "n_steps")
+        self._assert_positive(self.actor_num, "actor num")
+        self._assert_positive(self.learning_rate, "learning_rate")
 
 
 class DefaultPolicyBuilder(ModelBuilder[StochasticPolicy]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: A2CConfig,
-                    **kwargs) -> StochasticPolicy:
-        _shared_function_head = A3CSharedFunctionHead(scope_name="shared",
-                                                      state_shape=env_info.state_shape)
-        return A3CPolicy(head=_shared_function_head,
-                         scope_name="shared",
-                         state_shape=env_info.state_shape,
-                         action_dim=env_info.action_dim)
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: A2CConfig,
+        **kwargs,
+    ) -> StochasticPolicy:
+        _shared_function_head = A3CSharedFunctionHead(scope_name="shared", state_shape=env_info.state_shape)
+        return A3CPolicy(
+            head=_shared_function_head,
+            scope_name="shared",
+            state_shape=env_info.state_shape,
+            action_dim=env_info.action_dim,
+        )
 
 
 class DefaultVFunctionBuilder(ModelBuilder[VFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: A2CConfig,
-                    **kwargs) -> VFunction:
-        _shared_function_head = A3CSharedFunctionHead(scope_name="shared",
-                                                      state_shape=env_info.state_shape)
-        return A3CVFunction(head=_shared_function_head,
-                            scope_name="shared",
-                            state_shape=env_info.state_shape)
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: A2CConfig,
+        **kwargs,
+    ) -> VFunction:
+        _shared_function_head = A3CSharedFunctionHead(scope_name="shared", state_shape=env_info.state_shape)
+        return A3CVFunction(head=_shared_function_head, scope_name="shared", state_shape=env_info.state_shape)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: A2CConfig,
-                     **kwargs) -> nn.solver.Solver:
-        solver = NS.RMSprop(lr=algorithm_config.learning_rate,
-                            decay=algorithm_config.decay,
-                            eps=algorithm_config.epsilon)
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: A2CConfig, **kwargs
+    ) -> nn.solver.Solver:
+        solver = NS.RMSprop(
+            lr=algorithm_config.learning_rate, decay=algorithm_config.decay, eps=algorithm_config.epsilon
+        )
         if algorithm_config.max_grad_norm is None:
             return solver
         else:
@@ -165,7 +173,7 @@ class A2C(Algorithm):
     _v_function_solver: nn.solver.Solver
     _policy: StochasticPolicy
     _policy_solver: nn.solver.Solver
-    _actors: List['_A2CActor']
+    _actors: List["_A2CActor"]
     _actor_processes: List[mp.Process]
     _s_current_var: nn.Variable
     _a_current_var: nn.Variable
@@ -182,18 +190,21 @@ class A2C(Algorithm):
 
     _evaluation_actor: _StochasticPolicyActionSelector
 
-    def __init__(self, env_or_env_info,
-                 v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
-                 v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 config=A2CConfig()):
+    def __init__(
+        self,
+        env_or_env_info,
+        v_function_builder: ModelBuilder[VFunction] = DefaultVFunctionBuilder(),
+        v_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        config=A2CConfig(),
+    ):
         super(A2C, self).__init__(env_or_env_info, config=config)
 
         # Initialize on cpu and change the context later
         with nn.context_scope(context.get_nnabla_context(-1)):
-            self._policy = policy_builder('pi', self._env_info, self._config)
-            self._v_function = v_function_builder('v', self._env_info, self._config)
+            self._policy = policy_builder("pi", self._env_info, self._config)
+            self._v_function = v_function_builder("v", self._env_info, self._config)
 
             self._policy_solver = policy_solver_builder(self._env_info, self._config)
             self._policy_solver_builder = policy_solver_builder  # keep for later use
@@ -201,7 +212,8 @@ class A2C(Algorithm):
             self._v_solver_builder = v_solver_builder  # keep for later use
 
         self._evaluation_actor = _StochasticPolicyActionSelector(
-            self._env_info, self._policy.shallowcopy(), deterministic=False)
+            self._env_info, self._policy.shallowcopy(), deterministic=False
+        )
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
@@ -211,7 +223,7 @@ class A2C(Algorithm):
 
     def _before_training_start(self, env_or_buffer):
         if not self._is_env(env_or_buffer):
-            raise ValueError('A2C only supports online training')
+            raise ValueError("A2C only supports online training")
         env = env_or_buffer
 
         # FIXME: This setup is a workaround for creating underlying model parameters
@@ -246,20 +258,20 @@ class A2C(Algorithm):
             models=self._policy,
             solvers={self._policy.scope_name: self._policy_solver},
             env_info=self._env_info,
-            config=policy_trainer_config)
+            config=policy_trainer_config,
+        )
         return policy_trainer
 
     def _setup_v_function_training(self, env_or_buffer):
         # training input/loss variables
         v_function_trainer_config = MT.v_value.MonteCarloVTrainerConfig(
-            reduction_method='mean',
-            v_loss_scalar=self._config.value_coefficient
+            reduction_method="mean", v_loss_scalar=self._config.value_coefficient
         )
         v_function_trainer = MT.v_value.MonteCarloVTrainer(
             train_functions=self._v_function,
             solvers={self._v_function.scope_name: self._v_function_solver},
             env_info=self._env_info,
-            config=v_function_trainer_config
+            config=v_function_trainer_config,
         )
         return v_function_trainer
 
@@ -275,12 +287,9 @@ class A2C(Algorithm):
     def _build_a2c_actors(self, env, v_function, policy):
         actors = []
         for i in range(self._config.actor_num):
-            actor = _A2CActor(actor_num=i,
-                              env=env,
-                              env_info=self._env_info,
-                              v_function=v_function,
-                              policy=policy,
-                              config=self._config)
+            actor = _A2CActor(
+                actor_num=i, env=env, env_info=self._env_info, v_function=v_function, policy=policy, config=self._config
+            )
             actors.append(actor)
         return actors
 
@@ -318,12 +327,9 @@ class A2C(Algorithm):
         s, a, returns = experiences
         advantage = self._compute_advantage(s, returns)
         extra = {}
-        extra['advantage'] = advantage
-        extra['v_target'] = returns
-        batch = TrainingBatch(batch_size=len(a),
-                              s_current=s,
-                              a_current=a,
-                              extra=extra)
+        extra["advantage"] = advantage
+        extra["v_target"] = returns
+        batch = TrainingBatch(batch_size=len(a), s_current=s, a_current=a, extra=extra)
 
         # lr decay
         alpha = self._config.learning_rate
@@ -338,7 +344,7 @@ class A2C(Algorithm):
         self._v_function_trainer_state = self._v_function_trainer.train(batch)
 
     def _compute_advantage(self, s, returns):
-        if not hasattr(self, '_state_var_for_advantage'):
+        if not hasattr(self, "_state_var_for_advantage"):
             self._state_var_for_advantage = nn.Variable(s.shape)
             self._returns_var_for_advantage = nn.Variable(returns.shape)
             v_for_advantage = self._v_function.v(self._state_var_for_advantage)
@@ -364,17 +370,18 @@ class A2C(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_continuous_action_env() and not env_info.is_tuple_action_env()
 
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(A2C, self).latest_iteration_state
-        if hasattr(self, '_policy_trainer_state'):
-            latest_iteration_state['scalar'].update({'pi_loss': float(self._policy_trainer_state['pi_loss'])})
-        if hasattr(self, '_v_function_trainer_state'):
-            latest_iteration_state['scalar'].update({'v_loss': float(self._v_function_trainer_state['v_loss'])})
+        if hasattr(self, "_policy_trainer_state"):
+            latest_iteration_state["scalar"].update({"pi_loss": float(self._policy_trainer_state["pi_loss"])})
+        if hasattr(self, "_v_function_trainer_state"):
+            latest_iteration_state["scalar"].update({"v_loss": float(self._v_function_trainer_state["v_loss"])})
         return latest_iteration_state
 
     @property
@@ -394,44 +401,41 @@ class _A2CActor(object):
         self._config = config
 
         # IPC communication variables
-        self._disposed = mp.Value('i', False)
+        self._disposed = mp.Value("i", False)
         self._task_start_event = mp.Event()
         self._task_finish_event = mp.Event()
 
         self._policy_mp_arrays = new_mp_arrays_from_params(policy.get_parameters())
         self._v_function_mp_arrays = new_mp_arrays_from_params(v_function.get_parameters())
 
-        explorer_config = EE.RawPolicyExplorerConfig(initial_step_num=0,
-                                                     timelimit_as_terminal=self._config.timelimit_as_terminal)
-        self._environment_explorer = EE.RawPolicyExplorer(policy_action_selector=self._compute_action,
-                                                          env_info=self._env_info,
-                                                          config=explorer_config)
+        explorer_config = EE.RawPolicyExplorerConfig(
+            initial_step_num=0, timelimit_as_terminal=self._config.timelimit_as_terminal
+        )
+        self._environment_explorer = EE.RawPolicyExplorer(
+            policy_action_selector=self._compute_action, env_info=self._env_info, config=explorer_config
+        )
 
         obs_space = self._env.observation_space
         action_space = self._env.action_space
 
-        MultiProcessingArrays = namedtuple('MultiProcessingArrays', ['state', 'action', 'returns'])
+        MultiProcessingArrays = namedtuple("MultiProcessingArrays", ["state", "action", "returns"])
 
         state_mp_array_shape = (self._n_steps, *obs_space.shape)
-        state_mp_array = mp_array_from_np_array(
-            np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
+        state_mp_array = mp_array_from_np_array(np.empty(shape=state_mp_array_shape, dtype=obs_space.dtype))
         if env_info.is_discrete_action_env():
             action_mp_array_shape = (self._n_steps, 1)
-            action_mp_array = mp_array_from_np_array(
-                np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
+            action_mp_array = mp_array_from_np_array(np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
         else:
             action_mp_array_shape = (self._n_steps, action_space.shape[0])
-            action_mp_array = mp_array_from_np_array(
-                np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
+            action_mp_array = mp_array_from_np_array(np.empty(shape=action_mp_array_shape, dtype=action_space.dtype))
 
         scalar_mp_array_shape = (self._n_steps, 1)
-        returns_mp_array = mp_array_from_np_array(
-            np.empty(shape=scalar_mp_array_shape, dtype=np.float32))
+        returns_mp_array = mp_array_from_np_array(np.empty(shape=scalar_mp_array_shape, dtype=np.float32))
 
         self._mp_arrays = MultiProcessingArrays(
             (state_mp_array, state_mp_array_shape, obs_space.dtype),
             (action_mp_array, action_mp_array_shape, action_space.dtype),
-            (returns_mp_array, scalar_mp_array_shape, np.float32)
+            (returns_mp_array, scalar_mp_array_shape, np.float32),
         )
 
         self._exploration_actor = _StochasticPolicyActionSelector(env_info, policy, deterministic=False)
@@ -465,7 +469,7 @@ class _A2CActor(object):
             seed = os.getpid()
         set_global_seed(seed)
         self._env.seed(seed)
-        while (True):
+        while True:
             self._task_start_event.wait()
             if self._disposed.get_obj():
                 break
@@ -481,8 +485,7 @@ class _A2CActor(object):
     def _run_data_collection(self):
         experiences = self._environment_explorer.step(self._env, n=self._n_steps, break_if_done=False)
         s_last = experiences[-1][4]
-        experiences = [(s, a, r, non_terminal)
-                       for (s, a, r, non_terminal, *_) in experiences]
+        experiences = [(s, a, r, non_terminal) for (s, a, r, non_terminal, *_) in experiences]
         processed_experiences = self._process_experiences(experiences, s_last)
         return processed_experiences
 
@@ -502,7 +505,7 @@ class _A2CActor(object):
 
     def _compute_v(self, s):
         s = np.expand_dims(s, axis=0)
-        if not hasattr(self, '_state_var'):
+        if not hasattr(self, "_state_var"):
             self._state_var = nn.Variable(s.shape)
             self._v_var = self._v_function.v(self._state_var)
             self._v_var.need_grad = False
@@ -514,6 +517,7 @@ class _A2CActor(object):
     def _fill_result(self, experiences):
         def array_and_dtype(mp_arrays_item):
             return mp_arrays_item[0], mp_arrays_item[2]
+
         (s, a, returns) = experiences
         np_to_mp_array(s, *array_and_dtype(self._mp_arrays.state))
         np_to_mp_array(a, *array_and_dtype(self._mp_arrays.action))

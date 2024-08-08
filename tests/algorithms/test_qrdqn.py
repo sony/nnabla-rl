@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,8 +59,7 @@ class RNNQuantileDistributionFunction(DiscreteQuantileDistributionFunction):
             h = NF.relu(x=h)
             with nn.parameter_scope("affine2"):
                 h = NPF.affine(h, n_outmaps=self._n_action * self._n_quantile)
-            quantiles = NF.reshape(
-                h, (-1, self._n_action, self._n_quantile))
+            quantiles = NF.reshape(h, (-1, self._n_action, self._n_quantile))
         assert quantiles.shape == (batch_size, self._n_action, self._n_quantile)
         return quantiles
 
@@ -69,14 +68,14 @@ class RNNQuantileDistributionFunction(DiscreteQuantileDistributionFunction):
 
     def internal_state_shapes(self) -> Dict[str, Tuple[int, ...]]:
         shapes: Dict[str, nn.Variable] = {}
-        shapes['lstm_hidden'] = (self._lstm_state_size, )
-        shapes['lstm_cell'] = (self._lstm_state_size, )
+        shapes["lstm_hidden"] = (self._lstm_state_size,)
+        shapes["lstm_cell"] = (self._lstm_state_size,)
         return shapes
 
     def get_internal_states(self) -> Dict[str, nn.Variable]:
         states: Dict[str, nn.Variable] = {}
-        states['lstm_hidden'] = self._h
-        states['lstm_cell'] = self._c
+        states["lstm_hidden"] = self._h
+        states["lstm_cell"] = self._c
         return states
 
     def set_internal_states(self, states: Optional[Dict[str, nn.Variable]] = None):
@@ -86,8 +85,8 @@ class RNNQuantileDistributionFunction(DiscreteQuantileDistributionFunction):
             if self._c is not None:
                 self._c.data.zero()
         else:
-            self._h = states['lstm_hidden']
-            self._c = states['lstm_cell']
+            self._h = states["lstm_hidden"]
+            self._c = states["lstm_cell"]
 
     def _create_internal_states(self, batch_size):
         self._h = nn.Variable((batch_size, self._lstm_state_size))
@@ -108,7 +107,7 @@ class TestQRDQN(object):
         dummy_env = E.DummyDiscreteImg()
         qrdqn = A.QRDQN(dummy_env)
 
-        assert qrdqn.__name__ == 'QRDQN'
+        assert qrdqn.__name__ == "QRDQN"
 
     def test_continuous_action_env_unsupported(self):
         """Check that error occurs when training on continuous action env."""
@@ -145,11 +144,13 @@ class TestQRDQN(object):
     def test_run_online_rnn_training(self):
         """Check that no error occurs when calling online training with RNN
         model."""
+
         class RNNModelBuilder(ModelBuilder[QuantileDistributionFunction]):
             def build_model(self, scope_name: str, env_info, algorithm_config, **kwargs):
                 n_action = env_info.action_dim
                 n_quantile = algorithm_config.num_quantiles
                 return RNNQuantileDistributionFunction(scope_name, n_action, n_quantile)
+
         dummy_env = E.DummyDiscreteImg()
         config = A.QRDQNConfig()
         config.num_steps = 2
@@ -187,7 +188,7 @@ class TestQRDQN(object):
         state = np.float32(state)
         action = qrdqn.compute_eval_action(state)
 
-        assert action.shape == (1, )
+        assert action.shape == (1,)
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
@@ -222,15 +223,16 @@ class TestQRDQN(object):
         dummy_env = E.DummyDiscreteImg()
         qrdqn = A.QRDQN(dummy_env)
 
-        qrdqn._quantile_dist_trainer_state = {'q_loss': 0.}
+        qrdqn._quantile_dist_trainer_state = {"q_loss": 0.0}
 
         latest_iteration_state = qrdqn.latest_iteration_state
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['q_loss'] == 0.
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["q_loss"] == 0.0
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

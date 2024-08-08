@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,13 +43,15 @@ class Gaussian(ContinuosDistribution):
             warnings.warn(
                 "Numpy ndarrays are given as mean and ln_var.\n"
                 "From v0.12.0, if numpy.ndarray is given, "
-                "all Gaussian class methods return numpy.ndarray not nnabla.Variable")
+                "all Gaussian class methods return numpy.ndarray not nnabla.Variable"
+            )
             self._delegate = NumpyGaussian(mean, ln_var)
         elif isinstance(mean, nn.Variable) and isinstance(ln_var, nn.Variable):
             self._delegate = NnablaGaussian(mean, ln_var)
         else:
             raise ValueError(
-                f"Invalid type or a pair of types, mean type is {type(mean)} and ln type is {type(ln_var)}")
+                f"Invalid type or a pair of types, mean type is {type(mean)} and ln type is {type(ln_var)}"
+            )
 
     @property
     def ndim(self):
@@ -106,32 +108,29 @@ class NnablaGaussian(Distribution):
         return self._ndim
 
     def sample(self, noise_clip=None):
-        return RF.sample_gaussian(self._mean,
-                                  self._ln_var,
-                                  noise_clip=noise_clip)
+        return RF.sample_gaussian(self._mean, self._ln_var, noise_clip=noise_clip)
 
     def sample_multiple(self, num_samples, noise_clip=None):
-        return RF.sample_gaussian_multiple(self._mean,
-                                           self._ln_var,
-                                           num_samples,
-                                           noise_clip=noise_clip)
+        return RF.sample_gaussian_multiple(self._mean, self._ln_var, num_samples, noise_clip=noise_clip)
 
     def sample_and_compute_log_prob(self, noise_clip=None):
-        x = RF.sample_gaussian(mean=self._mean,
-                               ln_var=self._ln_var,
-                               noise_clip=noise_clip)
+        x = RF.sample_gaussian(mean=self._mean, ln_var=self._ln_var, noise_clip=noise_clip)
         return x, self.log_prob(x)
 
     def sample_multiple_and_compute_log_prob(self, num_samples, noise_clip=None):
-        x = RF.sample_gaussian_multiple(self._mean,
-                                        self._ln_var,
-                                        num_samples,
-                                        noise_clip=noise_clip)
+        x = RF.sample_gaussian_multiple(self._mean, self._ln_var, num_samples, noise_clip=noise_clip)
         mean = RF.expand_dims(self._mean, axis=1)
         var = RF.expand_dims(self._var, axis=1)
         ln_var = RF.expand_dims(self._ln_var, axis=1)
 
-        assert mean.shape == (self._batch_size, 1, ) + self._data_dim
+        assert (
+            mean.shape
+            == (
+                self._batch_size,
+                1,
+            )
+            + self._data_dim
+        )
         assert var.shape == mean.shape
         assert ln_var.shape == mean.shape
 
@@ -155,9 +154,9 @@ class NnablaGaussian(Distribution):
     def kl_divergence(self, q):
         assert isinstance(q, NnablaGaussian)
         p = self
-        return 0.5 * NF.sum(q._ln_var - p._ln_var + (p._var + (p._mean - q._mean) ** 2.0) / q._var - 1,
-                            axis=1,
-                            keepdims=True)
+        return 0.5 * NF.sum(
+            q._ln_var - p._ln_var + (p._var + (p._mean - q._mean) ** 2.0) / q._var - 1, axis=1, keepdims=True
+        )
 
 
 class NumpyGaussian(Distribution):
@@ -167,7 +166,7 @@ class NumpyGaussian(Distribution):
     def __init__(self, mean: np.ndarray, ln_var: np.ndarray) -> None:
         super(Distribution, self).__init__()
         self._dim = mean.shape[0]
-        assert (self._dim, ) == mean.shape
+        assert (self._dim,) == mean.shape
         assert (self._dim, self._dim) == ln_var.shape
         self._mean = mean
         self._var = np.exp(ln_var)
@@ -199,7 +198,7 @@ class NumpyGaussian(Distribution):
     def sample_multiple_and_compute_log_prob(self, num_samples, noise_clip=None):
         raise NotImplementedError
 
-    def kl_divergence(self, q: 'Distribution'):
+    def kl_divergence(self, q: "Distribution"):
         if not isinstance(q, NumpyGaussian):
             raise NotImplementedError
 

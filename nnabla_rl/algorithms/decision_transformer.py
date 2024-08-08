@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ class DecisionTransformerConfig(AlgorithmConfig):
         target_return (int): Initial target return used to compute the evaluation action. Defaults to 90.
         reward_scale (float): Reward scaler. Reward received during evaluation will be multiplied by this value.
     """
+
     learning_rate: float = 6.0e-4
     batch_size: int = 128
     context_length: int = 30
@@ -69,34 +70,34 @@ class DecisionTransformerConfig(AlgorithmConfig):
 
         Check set values are in valid range.
         """
-        self._assert_positive(self.learning_rate, 'learning_rate')
-        self._assert_positive(self.batch_size, 'batch_size')
-        self._assert_positive(self.context_length, 'context_length')
-        self._assert_positive(self.grad_clip_norm, 'grad_clip_norm')
+        self._assert_positive(self.learning_rate, "learning_rate")
+        self._assert_positive(self.batch_size, "batch_size")
+        self._assert_positive(self.context_length, "context_length")
+        self._assert_positive(self.grad_clip_norm, "grad_clip_norm")
         if self.max_timesteps is not None:
-            self._assert_positive(self.max_timesteps, 'max_timesteps')
-        self._assert_positive(self.weight_decay, 'weight_decay')
-        self._assert_positive(self.target_return, 'target_return')
+            self._assert_positive(self.max_timesteps, "max_timesteps")
+        self._assert_positive(self.weight_decay, "weight_decay")
+        self._assert_positive(self.target_return, "target_return")
 
 
 class DefaultTransformerBuilder(ModelBuilder[DecisionTransformerModel]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: DecisionTransformerConfig,
-                    **kwargs) -> DecisionTransformerModel:
-        max_timesteps = cast(int, kwargs['max_timesteps'])
-        return AtariDecisionTransformer(scope_name,
-                                        env_info.action_dim,
-                                        max_timestep=max_timesteps,
-                                        context_length=algorithm_config.context_length)
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: DecisionTransformerConfig,
+        **kwargs,
+    ) -> DecisionTransformerModel:
+        max_timesteps = cast(int, kwargs["max_timesteps"])
+        return AtariDecisionTransformer(
+            scope_name, env_info.action_dim, max_timestep=max_timesteps, context_length=algorithm_config.context_length
+        )
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: DecisionTransformerConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: DecisionTransformerConfig, **kwargs
+    ) -> nn.solver.Solver:
         solver = NS.Adam(alpha=algorithm_config.learning_rate, beta1=0.9, beta2=0.95)
         return AutoClipGradByNorm(solver, algorithm_config.grad_clip_norm)
 
@@ -128,12 +129,15 @@ class DecisionTransformer(Algorithm):
     _decision_transformer_trainer_state: Dict[str, Any]
     _action_selector: _DecisionTransformerActionSelector
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: DecisionTransformerConfig = DecisionTransformerConfig(),
-                 transformer_builder: ModelBuilder[DecisionTransformerModel] = DefaultTransformerBuilder(),
-                 transformer_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 transformer_wd_solver_builder: Optional[SolverBuilder] = None,
-                 lr_scheduler_builder: Optional[LearningRateSchedulerBuilder] = None):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: DecisionTransformerConfig = DecisionTransformerConfig(),
+        transformer_builder: ModelBuilder[DecisionTransformerModel] = DefaultTransformerBuilder(),
+        transformer_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        transformer_wd_solver_builder: Optional[SolverBuilder] = None,
+        lr_scheduler_builder: Optional[LearningRateSchedulerBuilder] = None,
+    ):
         super(DecisionTransformer, self).__init__(env_or_env_info, config=config)
         if config.max_timesteps is None:
             assert not np.isposinf(self._env_info.max_episode_steps)
@@ -141,29 +145,42 @@ class DecisionTransformer(Algorithm):
         else:
             self._max_timesteps = config.max_timesteps
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            self._decision_transformer = transformer_builder(scope_name='decision_transformer',
-                                                             env_info=self._env_info,
-                                                             algorithm_config=self._config,
-                                                             max_timesteps=self._max_timesteps)
+            self._decision_transformer = transformer_builder(
+                scope_name="decision_transformer",
+                env_info=self._env_info,
+                algorithm_config=self._config,
+                max_timesteps=self._max_timesteps,
+            )
             self._decision_transformer_solver = transformer_solver_builder(
-                env_info=self._env_info, algorithm_config=self._config)
-            self._decision_transformer_wd_solver = None if transformer_wd_solver_builder is None else \
-                transformer_wd_solver_builder(env_info=self._env_info, algorithm_config=self._config)
-        self._lr_scheduler = None if lr_scheduler_builder is None else lr_scheduler_builder(
-            env_info=self._env_info, algorithm_config=self._config)
+                env_info=self._env_info, algorithm_config=self._config
+            )
+            self._decision_transformer_wd_solver = (
+                None
+                if transformer_wd_solver_builder is None
+                else transformer_wd_solver_builder(env_info=self._env_info, algorithm_config=self._config)
+            )
+        self._lr_scheduler = (
+            None
+            if lr_scheduler_builder is None
+            else lr_scheduler_builder(env_info=self._env_info, algorithm_config=self._config)
+        )
 
-        self._action_selector = _DecisionTransformerActionSelector(self._env_info,
-                                                                   self._decision_transformer.shallowcopy(),
-                                                                   self._max_timesteps,
-                                                                   self._config.context_length,
-                                                                   self._config.target_return,
-                                                                   self._config.reward_scale)
+        self._action_selector = _DecisionTransformerActionSelector(
+            self._env_info,
+            self._decision_transformer.shallowcopy(),
+            self._max_timesteps,
+            self._config.context_length,
+            self._config.target_return,
+            self._config.reward_scale,
+        )
 
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
-        if 'reward' not in extra_info:
-            raise ValueError(f'{self.__name__} requires previous reward info in addition to state to compute action.'
-                             'use extra_info["reward"]=reward')
+        if "reward" not in extra_info:
+            raise ValueError(
+                f"{self.__name__} requires previous reward info in addition to state to compute action."
+                'use extra_info["reward"]=reward'
+            )
         return self._action_selector(state, begin_of_episode=begin_of_episode, extra_info=extra_info)
 
     def _before_training_start(self, env_or_buffer):
@@ -174,7 +191,8 @@ class DecisionTransformer(Algorithm):
     def _setup_decision_transformer_training(self, env_or_buffer):
         if isinstance(self._decision_transformer, DeterministicDecisionTransformer):
             trainer_config = MT.dt_trainers.DeterministicDecisionTransformerTrainerConfig(
-                context_length=self._config.context_length)
+                context_length=self._config.context_length
+            )
             solvers = {self._decision_transformer.scope_name: self._decision_transformer_solver}
             wd_solver = self._decision_transformer_wd_solver
             wd_solvers = None if wd_solver is None else {self._decision_transformer.scope_name: wd_solver}
@@ -183,11 +201,13 @@ class DecisionTransformer(Algorithm):
                 solvers=solvers,
                 wd_solvers=wd_solvers,
                 env_info=self._env_info,
-                config=trainer_config)
+                config=trainer_config,
+            )
             return decision_transformer_trainer
         if isinstance(self._decision_transformer, StochasticDecisionTransformer):
             trainer_config = MT.dt_trainers.StochasticDecisionTransformerTrainerConfig(
-                context_length=self._config.context_length)
+                context_length=self._config.context_length
+            )
             solvers = {self._decision_transformer.scope_name: self._decision_transformer_solver}
             wd_solver = self._decision_transformer_wd_solver
             wd_solvers = None if wd_solver is None else {self._decision_transformer.scope_name: wd_solver}
@@ -196,13 +216,15 @@ class DecisionTransformer(Algorithm):
                 solvers=solvers,
                 wd_solvers=wd_solvers,
                 env_info=self._env_info,
-                config=trainer_config)
+                config=trainer_config,
+            )
             return decision_transformer_trainer
         raise NotImplementedError(
-            'Unknown model type. Model should be either Deterministic/StochasticDecisionTransformer')
+            "Unknown model type. Model should be either Deterministic/StochasticDecisionTransformer"
+        )
 
     def _run_online_training_iteration(self, env):
-        raise NotImplementedError(f'Online training is not supported for {self.__name__}')
+        raise NotImplementedError(f"Online training is not supported for {self.__name__}")
 
     def _run_offline_training_iteration(self, buffer):
         assert isinstance(buffer, TrajectoryReplayBuffer)
@@ -211,13 +233,15 @@ class DecisionTransformer(Algorithm):
     def _decision_transformer_training(self, replay_buffer, run_epoch):
         if run_epoch:
             buffer_iterator = _TrajectoryBufferIterator(
-                replay_buffer, self._config.batch_size, self._config.context_length)
+                replay_buffer, self._config.batch_size, self._config.context_length
+            )
             # Run 1 epoch
             for trajectories, info in buffer_iterator:
                 self._decision_transformer_iteration(trajectories, info)
         else:
-            trajectories, info = replay_buffer.sample_trajectories_portion(self._config.batch_size,
-                                                                           self._config.context_length)
+            trajectories, info = replay_buffer.sample_trajectories_portion(
+                self._config.batch_size, self._config.context_length
+            )
             self._decision_transformer_iteration(trajectories, info)
 
     def _decision_transformer_iteration(self, trajectories, info):
@@ -229,15 +253,17 @@ class DecisionTransformer(Algorithm):
             marshaled = marshal_experiences(trajectory)
             experiences.append(marshaled)
         (s, a, _, _, _, extra, *_) = marshal_experiences(experiences)
-        extra['target'] = a
-        extra['rtg'] = extra['rtg']  # NOTE: insure that 'rtg' exists
-        extra['timesteps'] = extra['timesteps'][:, 0:1, :]
-        batch = TrainingBatch(batch_size=self._config.batch_size,
-                              s_current=s,
-                              a_current=a,
-                              weight=info['weights'],
-                              next_step_batch=None,
-                              extra=extra)
+        extra["target"] = a
+        extra["rtg"] = extra["rtg"]  # NOTE: insure that 'rtg' exists
+        extra["timesteps"] = extra["timesteps"][:, 0:1, :]
+        batch = TrainingBatch(
+            batch_size=self._config.batch_size,
+            s_current=s,
+            a_current=a,
+            weight=info["weights"],
+            next_step_batch=None,
+            extra=extra,
+        )
 
         self._decision_transformer_trainer_state = self._decision_transformer_trainer.train(batch)
         if self._lr_scheduler is not None:
@@ -249,22 +275,24 @@ class DecisionTransformer(Algorithm):
         models = {}
         models[self._decision_transformer.scope_name] = self._decision_transformer
         if self._decision_transformer_wd_solver is not None:
-            models[f'{self._decision_transformer.scope_name}_wd'] = self._decision_transformer
+            models[f"{self._decision_transformer.scope_name}_wd"] = self._decision_transformer
         return models
 
     def _solvers(self):
         solvers = {}
         solvers[self._decision_transformer.scope_name] = self._decision_transformer_solver
         if self._decision_transformer_wd_solver is not None:
-            solvers[f'{self._decision_transformer.scope_name}_wd'] = self._decision_transformer_wd_solver
+            solvers[f"{self._decision_transformer.scope_name}_wd"] = self._decision_transformer_wd_solver
         return solvers
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(
-            env_or_env_info, gym.Env) else env_or_env_info
-        return ((env_info.is_continuous_action_env() or env_info.is_discrete_action_env())
-                and not env_info.is_tuple_action_env())
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
+        return (
+            env_info.is_continuous_action_env() or env_info.is_discrete_action_env()
+        ) and not env_info.is_tuple_action_env()
 
     @classmethod
     def is_rnn_supported(self):
@@ -273,9 +301,8 @@ class DecisionTransformer(Algorithm):
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(DecisionTransformer, self).latest_iteration_state
-        if hasattr(self, '_decision_transformer_trainer_state'):
-            latest_iteration_state['scalar'].update(
-                {'loss': float(self._decision_transformer_trainer_state['loss'])})
+        if hasattr(self, "_decision_transformer_trainer_state"):
+            latest_iteration_state["scalar"].update({"loss": float(self._decision_transformer_trainer_state["loss"])})
         return latest_iteration_state
 
     @property

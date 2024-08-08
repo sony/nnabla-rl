@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,9 @@ import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
 from nnabla_rl.model_trainers.q_value.value_distribution_function_trainer import (
-    ValueDistributionFunctionTrainer, ValueDistributionFunctionTrainerConfig)
+    ValueDistributionFunctionTrainer,
+    ValueDistributionFunctionTrainerConfig,
+)
 from nnabla_rl.models import ValueDistributionFunction
 from nnabla_rl.utils.misc import create_variables
 
@@ -39,12 +41,14 @@ class CategoricalDQNQTrainer(ValueDistributionFunctionTrainer):
     _target_function: ValueDistributionFunction
     _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_functions: Union[ValueDistributionFunction, Sequence[ValueDistributionFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_function: ValueDistributionFunction,
-                 env_info: EnvironmentInfo,
-                 config: CategoricalDQNQTrainerConfig = CategoricalDQNQTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[ValueDistributionFunction, Sequence[ValueDistributionFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_function: ValueDistributionFunction,
+        env_info: EnvironmentInfo,
+        config: CategoricalDQNQTrainerConfig = CategoricalDQNQTrainerConfig(),
+    ):
         self._target_function = target_function
         self._prev_target_rnn_states = {}
         super(CategoricalDQNQTrainer, self).__init__(train_functions, solvers, env_info, config)
@@ -100,7 +104,7 @@ class CategoricalDQNQTrainer(ValueDistributionFunctionTrainer):
         result_upper = NF.scatter_add(mi, ml_indices, pj * (upper - bj), axis=-1)
         result_lower = NF.scatter_add(mi, mu_indices, pj * (bj - lower), axis=-1)
 
-        return (result_upper + result_lower)
+        return result_upper + result_lower
 
     def _setup_training_variables(self, batch_size: int) -> TrainingVariables:
         training_variables = super()._setup_training_variables(batch_size)

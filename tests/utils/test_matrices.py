@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,25 +24,26 @@ from nnabla.parameter import get_parameter_or_create
 from nnabla_rl.utils.matrices import compute_hessian
 
 
-class TestComputeHessian():
+class TestComputeHessian:
     def setup_method(self, method):
         nn.clear_parameters()
 
     def test_compute_hessian(self):
-        x = get_parameter_or_create("x", shape=(1, ))
-        y = get_parameter_or_create("y", shape=(1, ))
-        loss = x**3 + 2.*x*y + y**2 - x
+        x = get_parameter_or_create("x", shape=(1,))
+        y = get_parameter_or_create("y", shape=(1,))
+        loss = x**3 + 2.0 * x * y + y**2 - x
 
-        x.d = 2.
-        y.d = 3.
+        x.d = 2.0
+        y.d = 3.0
         actual = compute_hessian(loss, nn.get_parameters().values())
 
-        assert np.array([[12., 2.], [2., 2.]]) == pytest.approx(actual)
+        assert np.array([[12.0, 2.0], [2.0, 2.0]]) == pytest.approx(actual)
 
     def test_compute_network_parameters(self):
         state = nn.Variable((1, 2))
-        output = NPF.affine(state, 1, w_init=NI.ConstantInitializer(
-            value=1.), b_init=NI.ConstantInitializer(value=1.))
+        output = NPF.affine(
+            state, 1, w_init=NI.ConstantInitializer(value=1.0), b_init=NI.ConstantInitializer(value=1.0)
+        )
 
         loss = NF.sum(output**2)
         state_array = np.array([[1.0, 0.5]])
@@ -51,15 +52,11 @@ class TestComputeHessian():
         actual = compute_hessian(loss, nn.get_parameters().values())
 
         expected = np.array(
-            [[2*state_array[0, 0]**2,
-              2*state_array[0, 0]*state_array[0, 1],
-              2*state_array[0, 0]],
-             [2*state_array[0, 0]*state_array[0, 1],
-              2*state_array[0, 1]**2,
-              2*state_array[0, 1]],
-             [2*state_array[0, 0],
-              2*state_array[0, 1],
-              2.]]
+            [
+                [2 * state_array[0, 0] ** 2, 2 * state_array[0, 0] * state_array[0, 1], 2 * state_array[0, 0]],
+                [2 * state_array[0, 0] * state_array[0, 1], 2 * state_array[0, 1] ** 2, 2 * state_array[0, 1]],
+                [2 * state_array[0, 0], 2 * state_array[0, 1], 2.0],
+            ]
         )
 
         assert expected == pytest.approx(actual)

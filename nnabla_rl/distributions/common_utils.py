@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,4 +22,4 @@ def gaussian_log_prob(x, mean, var, ln_var):
     # log N(x|mu, var)
     # = -0.5*log2*pi - 0.5 * ln_var - 0.5 * (x-mu)**2 / var
     axis = len(x.shape) - 1
-    return NF.sum(-0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - 0.5 * (x-mean)**2 / var, axis=axis, keepdims=True)
+    return NF.sum(-0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - 0.5 * (x - mean) ** 2 / var, axis=axis, keepdims=True)

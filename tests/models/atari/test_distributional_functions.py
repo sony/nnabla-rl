@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,11 @@ import numpy as np
 import pytest
 
 import nnabla as nn
-from nnabla_rl.models.atari.distributional_functions import (C51ValueDistributionFunction, IQNQuantileFunction,
-                                                             QRDQNQuantileDistributionFunction)
+from nnabla_rl.models.atari.distributional_functions import (
+    C51ValueDistributionFunction,
+    IQNQuantileFunction,
+    QRDQNQuantileDistributionFunction,
+)
 
 
 def risk_measure_function(tau):
@@ -33,11 +36,9 @@ class TestC51ValueDistributionFunction(object):
         scope_name = "test"
         v_min = 0
         v_max = 10
-        model = C51ValueDistributionFunction(scope_name=scope_name,
-                                             n_action=n_action,
-                                             n_atom=n_atom,
-                                             v_max=v_max,
-                                             v_min=v_min)
+        model = C51ValueDistributionFunction(
+            scope_name=scope_name, n_action=n_action, n_atom=n_atom, v_max=v_max, v_min=v_min
+        )
 
         assert scope_name == model.scope_name
 
@@ -50,11 +51,9 @@ class TestC51ValueDistributionFunction(object):
         scope_name = "test"
         v_min = 0
         v_max = 10
-        model = C51ValueDistributionFunction(scope_name=scope_name,
-                                             n_action=n_action,
-                                             n_atom=n_atom,
-                                             v_max=v_max,
-                                             v_min=v_min)
+        model = C51ValueDistributionFunction(
+            scope_name=scope_name, n_action=n_action, n_atom=n_atom, v_max=v_max, v_min=v_min
+        )
 
         # Fake input to initialize parameters
         input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
@@ -70,11 +69,9 @@ class TestC51ValueDistributionFunction(object):
         scope_name = "test"
         v_min = 0
         v_max = 10
-        model = C51ValueDistributionFunction(scope_name=scope_name,
-                                             n_action=n_action,
-                                             n_atom=n_atom,
-                                             v_max=v_max,
-                                             v_min=v_min)
+        model = C51ValueDistributionFunction(
+            scope_name=scope_name, n_action=n_action, n_atom=n_atom, v_max=v_max, v_min=v_min
+        )
 
         input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         val = model.all_probs(input_state)
@@ -91,9 +88,7 @@ class TestQRDQNQuantileDistributionFunction(object):
         n_action = 4
         n_quantile = 10
         scope_name = "test"
-        model = QRDQNQuantileDistributionFunction(scope_name=scope_name,
-                                                  n_action=n_action,
-                                                  n_quantile=n_quantile)
+        model = QRDQNQuantileDistributionFunction(scope_name=scope_name, n_action=n_action, n_quantile=n_quantile)
 
         assert scope_name == model.scope_name
 
@@ -104,9 +99,7 @@ class TestQRDQNQuantileDistributionFunction(object):
         n_action = 4
         n_quantile = 10
         scope_name = "test"
-        model = QRDQNQuantileDistributionFunction(scope_name=scope_name,
-                                                  n_action=n_action,
-                                                  n_quantile=n_quantile)
+        model = QRDQNQuantileDistributionFunction(scope_name=scope_name, n_action=n_action, n_quantile=n_quantile)
         # Fake input to initialize parameters
         input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         model.all_quantiles(input_state)
@@ -119,9 +112,7 @@ class TestQRDQNQuantileDistributionFunction(object):
         n_action = 4
         n_quantile = 10
         scope_name = "test"
-        model = QRDQNQuantileDistributionFunction(scope_name=scope_name,
-                                                  n_action=n_action,
-                                                  n_quantile=n_quantile)
+        model = QRDQNQuantileDistributionFunction(scope_name=scope_name, n_action=n_action, n_quantile=n_quantile)
 
         input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         val = model.all_quantiles(input_state)
@@ -138,11 +129,13 @@ class TestIQNQuantileFunction(object):
         embedding_dim = 10
         scope_name = "test"
         K = 10
-        model = IQNQuantileFunction(scope_name=scope_name,
-                                    n_action=n_action,
-                                    embedding_dim=embedding_dim,
-                                    K=K,
-                                    risk_measure_function=risk_measure_function)
+        model = IQNQuantileFunction(
+            scope_name=scope_name,
+            n_action=n_action,
+            embedding_dim=embedding_dim,
+            K=K,
+            risk_measure_function=risk_measure_function,
+        )
 
         assert scope_name == model.scope_name
 
@@ -154,11 +147,13 @@ class TestIQNQuantileFunction(object):
         embedding_dim = 10
         scope_name = "test"
         K = 10
-        model = IQNQuantileFunction(scope_name=scope_name,
-                                    n_action=n_action,
-                                    embedding_dim=embedding_dim,
-                                    K=K,
-                                    risk_measure_function=risk_measure_function)
+        model = IQNQuantileFunction(
+            scope_name=scope_name,
+            n_action=n_action,
+            embedding_dim=embedding_dim,
+            K=K,
+            risk_measure_function=risk_measure_function,
+        )
         # Fake input to initialize parameters
         input_state = nn.Variable.from_numpy_array(np.random.rand(1, *state_shape))
         tau = nn.Variable.from_numpy_array(np.random.rand(1, 10))
@@ -173,11 +168,13 @@ class TestIQNQuantileFunction(object):
         embedding_dim = 64
         scope_name = "test"
         K = 10
-        model = IQNQuantileFunction(scope_name=scope_name,
-                                    n_action=n_action,
-                                    embedding_dim=embedding_dim,
-                                    K=K,
-                                    risk_measure_function=risk_measure_function)
+        model = IQNQuantileFunction(
+            scope_name=scope_name,
+            n_action=n_action,
+            embedding_dim=embedding_dim,
+            K=K,
+            risk_measure_function=risk_measure_function,
+        )
 
         # Initialize parameters
         n_sample = 5
@@ -196,11 +193,13 @@ class TestIQNQuantileFunction(object):
         embedding_dim = 64
         scope_name = "test"
         K = 10
-        model = IQNQuantileFunction(scope_name=scope_name,
-                                    n_action=n_action,
-                                    embedding_dim=embedding_dim,
-                                    K=K,
-                                    risk_measure_function=risk_measure_function)
+        model = IQNQuantileFunction(
+            scope_name=scope_name,
+            n_action=n_action,
+            embedding_dim=embedding_dim,
+            K=K,
+            risk_measure_function=risk_measure_function,
+        )
 
         # Initialize parameters
         n_sample = 5
@@ -211,7 +210,7 @@ class TestIQNQuantileFunction(object):
 
         assert encoded.shape == (1, n_sample, 3136)
         assert np.alltrue(encoded[:, 1:, :] == encoded[:, 0, :])
-        print('encoded: ', encoded)
+        print("encoded: ", encoded)
 
     def test_compute_embeddings(self):
         nn.clear_parameters()
@@ -220,11 +219,13 @@ class TestIQNQuantileFunction(object):
         embedding_dim = 64
         scope_name = "test"
         K = 10
-        model = IQNQuantileFunction(scope_name=scope_name,
-                                    n_action=n_action,
-                                    embedding_dim=embedding_dim,
-                                    K=K,
-                                    risk_measure_function=risk_measure_function)
+        model = IQNQuantileFunction(
+            scope_name=scope_name,
+            n_action=n_action,
+            embedding_dim=embedding_dim,
+            K=K,
+            risk_measure_function=risk_measure_function,
+        )
 
         # Initialize parameters
         n_sample = 5
@@ -235,7 +236,7 @@ class TestIQNQuantileFunction(object):
 
         params = model.get_parameters()
         for key, param in params.items():
-            if 'embedding' not in key:
+            if "embedding" not in key:
                 continue
             param.d = np.ones(param.shape)
         embedding.forward()
@@ -244,8 +245,7 @@ class TestIQNQuantileFunction(object):
         expected = []
         for t in tau[0]:
             for _ in range(encode_dim):
-                embedding = np.sum(
-                    [np.cos(np.pi * (i + 1) * t) for i in range(embedding_dim)])
+                embedding = np.sum([np.cos(np.pi * (i + 1) * t) for i in range(embedding_dim)])
                 embedding += 1  # Add bias
                 embedding = np.maximum(0.0, embedding)
                 expected.append(embedding)

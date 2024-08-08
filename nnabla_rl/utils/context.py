@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,13 +32,14 @@ def get_nnabla_context(gpu_id):
     if gpu_id in contexts:
         return contexts[gpu_id]
     if gpu_id < 0:
-        ctx = get_extension_context('cpu')
+        ctx = get_extension_context("cpu")
     else:
         try:
-            ctx = get_extension_context('cudnn', device_id=gpu_id)
+            ctx = get_extension_context("cudnn", device_id=gpu_id)
         except ModuleNotFoundError:
-            warnings.warn('Could not get CUDA context and cuDNN context. Fallback to CPU context instead',
-                          RuntimeWarning)
-            ctx = get_extension_context('cpu')
+            warnings.warn(
+                "Could not get CUDA context and cuDNN context. Fallback to CPU context instead", RuntimeWarning
+            )
+            ctx = get_extension_context("cpu")
     contexts[gpu_id] = ctx
     return ctx

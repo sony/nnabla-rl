@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,9 +23,9 @@ from nnabla_rl.environments.wrappers import NumpyFloat32Env, ScreenRenderEnv
 
 def build_env(seed=None):
     try:
-        env = gym.make('Pendulum-v0')
+        env = gym.make("Pendulum-v0")
     except gym.error.DeprecatedEnv:
-        env = gym.make('Pendulum-v1')
+        env = gym.make("Pendulum-v1")
     env = NumpyFloat32Env(env)
     env = ScreenRenderEnv(env)
     env.seed(seed)
@@ -36,15 +36,14 @@ def main():
     # Evaluate the trained network (Optional)
     eval_env = build_env(seed=100)
     evaluation_hook = H.EvaluationHook(
-        eval_env,
-        timing=1000,
-        writer=W.FileWriter(outdir='./pendulum_v0_ddpg_results', file_prefix='evaluation_result'))
+        eval_env, timing=1000, writer=W.FileWriter(outdir="./pendulum_v0_ddpg_results", file_prefix="evaluation_result")
+    )
 
     # Pring iteration number every 100 iterations.
     iteration_num_hook = H.IterationNumHook(timing=100)
 
     # Save trained algorithm snapshot (Optional)
-    save_snapshot_hook = H.SaveSnapshotHook('./pendulum_v0_ddpg_results', timing=1000)
+    save_snapshot_hook = H.SaveSnapshotHook("./pendulum_v0_ddpg_results", timing=1000)
 
     train_env = build_env()
     config = A.DDPGConfig(start_timesteps=200, gpu_id=0)

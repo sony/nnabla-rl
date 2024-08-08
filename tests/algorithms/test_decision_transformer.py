@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ class TestDecisionTransformer(object):
         dummy_env = E.DummyDiscreteImg(max_episode_steps=10)
         decision_transformer = A.DecisionTransformer(dummy_env)
 
-        assert decision_transformer.__name__ == 'DecisionTransformer'
+        assert decision_transformer.__name__ == "DecisionTransformer"
 
     def test_run_online_training(self):
         """Check that error occurs when calling online training."""
@@ -53,8 +53,9 @@ class TestDecisionTransformer(object):
         for _ in range(trajectory_num):
             trajectory = generate_dummy_trajectory(dummy_env, trajectory_length)
             # Add info required by decision transformer
-            trajectory = tuple((s, a, r, done, s_next, {'rtg': 1, 'timesteps': 1})
-                               for (s, a, r, done, s_next, *_) in trajectory)
+            trajectory = tuple(
+                (s, a, r, done, s_next, {"rtg": 1, "timesteps": 1}) for (s, a, r, done, s_next, *_) in trajectory
+            )
             buffer.append_trajectory(trajectory)
 
         batch_size = 3
@@ -73,12 +74,12 @@ class TestDecisionTransformer(object):
 
         state = dummy_env.reset()
         state = np.float32(state)
-        extra_info = {'reward': 0.0}
+        extra_info = {"reward": 0.0}
         action = decision_transformer.compute_eval_action(state, extra_info=extra_info, begin_of_episode=True)
-        assert action.shape == (1, )
+        assert action.shape == (1,)
 
         action = decision_transformer.compute_eval_action(state, extra_info=extra_info, begin_of_episode=False)
-        assert action.shape == (1, )
+        assert action.shape == (1,)
 
     def test_parameter_range(self):
         with pytest.raises(ValueError):
@@ -115,15 +116,16 @@ class TestDecisionTransformer(object):
         config = A.DecisionTransformerConfig(batch_size=batch_size, max_timesteps=trajectory_length, context_length=10)
         decision_transformer = A.DecisionTransformer(dummy_env, config=config)
 
-        decision_transformer._decision_transformer_trainer_state = {'loss': 0.}
+        decision_transformer._decision_transformer_trainer_state = {"loss": 0.0}
 
         latest_iteration_state = decision_transformer.latest_iteration_state
-        assert 'loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['loss'] == 0.
+        assert "loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["loss"] == 0.0
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_trajectory
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_trajectory

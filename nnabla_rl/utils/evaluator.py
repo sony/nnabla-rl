@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from nnabla_rl.logger import logger
 from nnabla_rl.typing import Experience
 
 
-class EpisodicEvaluator():
+class EpisodicEvaluator:
     def __init__(self, run_per_evaluation=10):
         self._num_episodes = run_per_evaluation
 
@@ -31,12 +31,12 @@ class EpisodicEvaluator():
             reward_sum, *_ = run_one_episode(algorithm, env)
             returns.append(reward_sum)
             logger.info(
-                'Finished evaluation run: #{} out of {}. Total reward: {}'
-                .format(num, self._num_episodes, reward_sum))
+                "Finished evaluation run: #{} out of {}. Total reward: {}".format(num, self._num_episodes, reward_sum)
+            )
         return returns
 
 
-class TimestepEvaluator():
+class TimestepEvaluator:
     def __init__(self, num_timesteps):
         self._num_timesteps = num_timesteps
 
@@ -56,17 +56,18 @@ class TimestepEvaluator():
 
             returns.append(reward_sum)
             logger.info(
-                'Finished evaluation run: Time step #{} out of {}, Episode #{}. Total reward: {}'
-                .format(timesteps, self._num_timesteps, len(returns), reward_sum))
+                "Finished evaluation run: Time step #{} out of {}, Episode #{}. Total reward: {}".format(
+                    timesteps, self._num_timesteps, len(returns), reward_sum
+                )
+            )
         if len(returns) == 0:
             # In case the time limit reaches on first episode, save the return received up to that time
             returns.append(reward_sum)
         return returns
 
 
-class EpisodicSuccessEvaluator():
-    def __init__(self, check_success: Callable[[List[Experience]], Union[bool, float]],
-                 run_per_evaluation=10):
+class EpisodicSuccessEvaluator:
+    def __init__(self, check_success: Callable[[List[Experience]], Union[bool, float]], run_per_evaluation=10):
         self._num_episodes = run_per_evaluation
         self._compute_success_func = check_success
 
@@ -76,11 +77,8 @@ class EpisodicSuccessEvaluator():
             _, _, experiences = run_one_episode(algorithm, env)
             success = self._compute_success_func(experiences)
             results.append(success)
-            success_tag = 'Success' if success else 'Failed'
-            logger.info(
-                'Finished evaluation run: #{} out of {}. {}'
-                .format(num, self._num_episodes, success_tag)
-            )
+            success_tag = "Success" if success else "Failed"
+            logger.info("Finished evaluation run: #{} out of {}. {}".format(num, self._num_episodes, success_tag))
 
         return results
 
@@ -90,7 +88,7 @@ def run_one_episode(algorithm, env, timestep_limit=lambda t: False):
     rewards = []
     timesteps = 0
     state = env.reset()
-    extra_info = {'reward': 0}
+    extra_info = {"reward": 0}
     action = algorithm.compute_eval_action(state, begin_of_episode=True, extra_info=extra_info)
     while True:
         next_state, reward, done, info = env.step(action)
@@ -104,6 +102,6 @@ def run_one_episode(algorithm, env, timestep_limit=lambda t: False):
             break
         else:
             state = next_state
-            extra_info['reward'] = reward
+            extra_info["reward"] = reward
             action = algorithm.compute_eval_action(state, begin_of_episode=False, extra_info=extra_info)
     return np.sum(rewards), timesteps, experiences

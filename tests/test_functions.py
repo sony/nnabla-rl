@@ -37,8 +37,7 @@ class TestFunctions(object):
         ln_sigma_var = nn.Variable(input_shape)
         ln_sigma_var.d = ln_sigma
 
-        sampled_value = RF.sample_gaussian(
-            mean=mean_var, ln_var=(ln_sigma_var * 2.0))
+        sampled_value = RF.sample_gaussian(mean=mean_var, ln_var=(ln_sigma_var * 2.0))
         assert sampled_value.shape == (batch_size, output_dim)
 
     def test_sample_gaussian_wrong_parameter_shape(self):
@@ -56,8 +55,7 @@ class TestFunctions(object):
         ln_sigma_var.d = ln_sigma
 
         with pytest.raises(ValueError):
-            RF.sample_gaussian(
-                mean=mean_var, ln_var=(ln_sigma_var * 2.0))
+            RF.sample_gaussian(mean=mean_var, ln_var=(ln_sigma_var * 2.0))
 
     def test_expand_dims(self):
         batch_size = 4
@@ -121,7 +119,7 @@ class TestFunctions(object):
         num_samples = 100
         batch_num = 100
         # exp to enforce positive value
-        data = np.exp(np.random.normal(size=(num_samples,  batch_num, 1)))
+        data = np.exp(np.random.normal(size=(num_samples, batch_num, 1)))
         data = np.float32(data)
         data_var = nn.Variable(data.shape)
         data_var.d = data
@@ -136,7 +134,7 @@ class TestFunctions(object):
         # stddev computation
         num_samples = 100
         batch_num = 100
-        data = np.random.normal(size=(num_samples,  batch_num, 1))
+        data = np.random.normal(size=(num_samples, batch_num, 1))
         data = np.float32(data)
         data_var = nn.Variable(data.shape)
         data_var.d = data
@@ -157,7 +155,7 @@ class TestFunctions(object):
     def test_argmax(self):
         num_samples = 100
         batch_num = 100
-        data = np.random.normal(size=(num_samples,  batch_num, 1))
+        data = np.random.normal(size=(num_samples, batch_num, 1))
         data = np.float32(data)
         data_var = nn.Variable(data.shape)
         data_var.d = data
@@ -172,7 +170,7 @@ class TestFunctions(object):
     def test_argmin(self):
         num_samples = 100
         batch_num = 100
-        data = np.random.normal(size=(num_samples,  batch_num, 1))
+        data = np.random.normal(size=(num_samples, batch_num, 1))
         data = np.float32(data)
         data_var = nn.Variable(data.shape)
         data_var.d = data
@@ -192,7 +190,7 @@ class TestFunctions(object):
         def huber_loss(x0, x1, kappa):
             diff = x0 - x1
             flag = (np.abs(diff) < kappa).astype(np.float32)
-            return (flag) * 0.5 * (diff ** 2.0) + (1.0 - flag) * kappa * (np.abs(diff) - 0.5 * kappa)
+            return (flag) * 0.5 * (diff**2.0) + (1.0 - flag) * kappa * (np.abs(diff) - 0.5 * kappa)
 
         def quantile_huber_loss(x0, x1, kappa, tau):
             u = x0 - x1
@@ -234,94 +232,99 @@ class TestFunctions(object):
 
         actual = RF.mean_squared_error(x0_var, x1_var)
         actual.forward(clear_buffer=True)
-        expected = np.mean((x0 - x1)**2)
+        expected = np.mean((x0 - x1) ** 2)
         assert actual.shape == expected.shape
         assert np.all(np.isclose(actual.d, expected))
 
     def test_gaussian_cross_entropy_method(self):
         def objective_function(x):
-            return -((x - 3.)**2)
+            return -((x - 3.0) ** 2)
 
         batch_size = 1
         var_size = 1
 
         init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, var_size)))
-        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, var_size))*4.)
+        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, var_size)) * 4.0)
         optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(
-            objective_function, init_mean, init_var, alpha=0., num_iterations=10)
+            objective_function, init_mean, init_var, alpha=0.0, num_iterations=10
+        )
 
         nn.forward_all([optimal_mean, optimal_top])
 
-        assert np.allclose(optimal_mean.d, np.array([[3.]]), atol=1e-2)
-        assert np.allclose(optimal_top.d, np.array([[3.]]), atol=1e-2)
+        assert np.allclose(optimal_mean.d, np.array([[3.0]]), atol=1e-2)
+        assert np.allclose(optimal_top.d, np.array([[3.0]]), atol=1e-2)
 
     def test_gaussian_cross_entropy_method_with_complicated_objective_function(self):
         def dummy_q_function(s, a):
-            return -((a - s)**2)
+            return -((a - s) ** 2)
 
         batch_size = 5
         pop_size = 500
         state_size = 1
         action_size = 1
 
-        s = np.arange(batch_size*state_size).reshape(batch_size, state_size)
+        s = np.arange(batch_size * state_size).reshape(batch_size, state_size)
         s = np.tile(s, (pop_size, 1, 1))
         s = np.transpose(s, (1, 0, 2))
         s_var = nn.Variable.from_numpy_array(s.reshape(batch_size, pop_size, state_size))
-        def objective_function(x): return dummy_q_function(s_var, x)
+
+        def objective_function(x):
+            return dummy_q_function(s_var, x)
 
         init_mean = nn.Variable.from_numpy_array(np.zeros((batch_size, action_size)))
-        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, action_size))*4)
+        init_var = nn.Variable.from_numpy_array(np.ones((batch_size, action_size)) * 4)
         optimal_mean, optimal_top = RF.gaussian_cross_entropy_method(
-            objective_function, init_mean, init_var, pop_size, alpha=0., num_iterations=10)
+            objective_function, init_mean, init_var, pop_size, alpha=0.0, num_iterations=10
+        )
 
         nn.forward_all([optimal_mean, optimal_top])
 
-        assert np.allclose(optimal_mean.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-2)
-        assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-2)
+        assert np.allclose(optimal_mean.d, np.array([[0.0], [1.0], [2.0], [3.0], [4.0]]), atol=1e-2)
+        assert np.allclose(optimal_top.d, np.array([[0.0], [1.0], [2.0], [3.0], [4.0]]), atol=1e-2)
 
     def test_random_shooting_method(self):
         def objective_function(x):
-            return -((x - 3.)**2)
+            return -((x - 3.0) ** 2)
 
         batch_size = 1
         var_size = 1
 
         upper_bound = np.ones((batch_size, var_size)) * 3.5
         lower_bound = np.ones((batch_size, var_size)) * 2.5
-        optimal_top = RF.random_shooting_method(
-            objective_function, upper_bound, lower_bound)
+        optimal_top = RF.random_shooting_method(objective_function, upper_bound, lower_bound)
 
         nn.forward_all([optimal_top])
 
-        assert np.allclose(optimal_top.d, np.array([[3.]]), atol=1e-1)
+        assert np.allclose(optimal_top.d, np.array([[3.0]]), atol=1e-1)
 
     def test_random_shooting_method_with_complicated_objective_function(self):
         def dummy_q_function(s, a):
-            return -((a - s)**2)
+            return -((a - s) ** 2)
 
         batch_size = 5
         sample_size = 500
         state_size = 1
         action_size = 1
 
-        s = np.arange(batch_size*state_size).reshape(batch_size, state_size)
+        s = np.arange(batch_size * state_size).reshape(batch_size, state_size)
         s = np.tile(s, (sample_size, 1, 1))
         s = np.transpose(s, (1, 0, 2))
         s_var = nn.Variable.from_numpy_array(s.reshape(batch_size, sample_size, state_size))
-        def objective_function(x): return dummy_q_function(s_var, x)
 
-        upper_bound = np.ones((batch_size, action_size))*5
+        def objective_function(x):
+            return dummy_q_function(s_var, x)
+
+        upper_bound = np.ones((batch_size, action_size)) * 5
         lower_bound = np.zeros((batch_size, action_size))
         optimal_top = RF.random_shooting_method(objective_function, upper_bound, lower_bound)
 
         nn.forward_all([optimal_top])
 
-        assert np.allclose(optimal_top.d, np.array([[0.], [1.], [2.], [3.], [4.]]), atol=1e-1)
+        assert np.allclose(optimal_top.d, np.array([[0.0], [1.0], [2.0], [3.0], [4.0]]), atol=1e-1)
 
     def test_random_shooting_method_with_invalid_bounds(self):
         def objective_function(x):
-            return -((x - 3.)**2)
+            return -((x - 3.0) ** 2)
 
         batch_size = 1
         var_size = 1
@@ -338,8 +341,9 @@ class TestFunctions(object):
     def test_triangular_matrix(self, batch_size, diag_size, upper):
         non_diag_size = diag_size * (diag_size - 1) // 2
         diagonal = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, diag_size)).astype(np.float32))
-        non_diagonal = nn.Variable.from_numpy_array(np.random.normal(
-            size=(batch_size, non_diag_size)).astype(np.float32))
+        non_diagonal = nn.Variable.from_numpy_array(
+            np.random.normal(size=(batch_size, non_diag_size)).astype(np.float32)
+        )
 
         triangular_matrix = RF.triangular_matrix(diagonal, non_diagonal, upper)
         triangular_matrix.forward()
@@ -385,7 +389,7 @@ class TestFunctions(object):
                         assert value == 0
 
     @pytest.mark.parametrize("batch_size", [i for i in range(1, 4)])
-    @pytest.mark.parametrize("shape", [(1, ), (1, 2), (2, 3), (4, 5, 6)])
+    @pytest.mark.parametrize("shape", [(1,), (1, 2), (2, 3), (4, 5, 6)])
     def test_batch_flatten(self, batch_size, shape):
         x = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, *shape)).astype(np.float32))
         flattened_x = RF.batch_flatten(x)
@@ -406,12 +410,12 @@ class TestFunctions(object):
                     z = NPF.affine(s, n_outmaps=5)
                 return D.Gaussian(z, nn.Variable.from_numpy_array(np.zeros(z.shape)))
 
-        test_model = TestModel('test')
+        test_model = TestModel("test")
         for parameter in test_model.get_parameters().values():
             parameter.grad.zero()
 
         batch_size = 3
-        shape = (10, )
+        shape = (10,)
         s = nn.Variable.from_numpy_array(np.random.normal(size=(batch_size, *shape)).astype(np.float32))
         distribution = test_model.pi(s)
 
@@ -513,14 +517,15 @@ class TestFunctions(object):
 
         assert np.allclose(original.d, reswapped.d)
 
-    @pytest.mark.parametrize("x, mean, std, value_clip, expected",
-                             [
-                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]), None,  np.array([5.0])),
-                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]),  (-1.5, 1.5), np.array([1.5])),
-                                 (np.array([-2.0]), np.array([1.0]), np.array([0.2]),  (-1.5, 1.5), np.array([-1.5])),
-                                 (np.array([[2.0], [1.0]]), np.array([[1.0]]), np.array([[0.2]]), None,
-                                  np.array([[5.0], [0.0]])),
-                             ])
+    @pytest.mark.parametrize(
+        "x, mean, std, value_clip, expected",
+        [
+            (np.array([2.0]), np.array([1.0]), np.array([0.2]), None, np.array([5.0])),
+            (np.array([2.0]), np.array([1.0]), np.array([0.2]), (-1.5, 1.5), np.array([1.5])),
+            (np.array([-2.0]), np.array([1.0]), np.array([0.2]), (-1.5, 1.5), np.array([-1.5])),
+            (np.array([[2.0], [1.0]]), np.array([[1.0]]), np.array([[0.2]]), None, np.array([[5.0], [0.0]])),
+        ],
+    )
     def test_normalize(self, x, expected, mean, std, value_clip):
         x_var = nn.Variable.from_numpy_array(x)
         mean_var = nn.Variable.from_numpy_array(mean)
@@ -531,14 +536,15 @@ class TestFunctions(object):
 
         assert np.allclose(actual_var.d, expected)
 
-    @pytest.mark.parametrize("x, mean, std, value_clip, expected",
-                             [
-                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]), None, np.array([1.4])),
-                                 (np.array([2.0]), np.array([1.0]), np.array([0.2]),  (-1.0, 1.0), np.array([1.0])),
-                                 (np.array([-2.0]), np.array([-1.0]), np.array([0.2]),  (-1.0, 1.0),  np.array([-1.0])),
-                                 (np.array([[2.0], [1.0]]), np.array([[1.0]]), np.array([[0.2]]), None,
-                                  np.array([[1.4], [1.2]])),
-                             ])
+    @pytest.mark.parametrize(
+        "x, mean, std, value_clip, expected",
+        [
+            (np.array([2.0]), np.array([1.0]), np.array([0.2]), None, np.array([1.4])),
+            (np.array([2.0]), np.array([1.0]), np.array([0.2]), (-1.0, 1.0), np.array([1.0])),
+            (np.array([-2.0]), np.array([-1.0]), np.array([0.2]), (-1.0, 1.0), np.array([-1.0])),
+            (np.array([[2.0], [1.0]]), np.array([[1.0]]), np.array([[0.2]]), None, np.array([[1.4], [1.2]])),
+        ],
+    )
     def test_unnormalize(self, x, expected, mean, std, value_clip):
         x_var = nn.Variable.from_numpy_array(x)
         mean_var = nn.Variable.from_numpy_array(mean)
@@ -549,15 +555,17 @@ class TestFunctions(object):
 
         assert np.allclose(actual_var.d, expected)
 
-    @pytest.mark.parametrize("var, epsilon, mode_for_floating_point_error, expected",
-                             [
-                                 (np.array([3.0]), 1.0, "add", np.array([2.0])),
-                                 (np.array([4.0]), 0.01, "max", np.array([2.0])),
-                                 (np.array([0.4]), 1.0, "max", np.array([1.0])),
-                                 (np.array([[3.0], [8.0]]), 1.0, "add", np.array([[2.0], [3.0]])),
-                                 (np.array([[4.0], [9.0]]), 0.01, "max", np.array([[2.0], [3.0]])),
-                                 (np.array([[0.4], [0.9]]), 1.0, "max", np.array([[1.0], [1.0]])),
-                             ])
+    @pytest.mark.parametrize(
+        "var, epsilon, mode_for_floating_point_error, expected",
+        [
+            (np.array([3.0]), 1.0, "add", np.array([2.0])),
+            (np.array([4.0]), 0.01, "max", np.array([2.0])),
+            (np.array([0.4]), 1.0, "max", np.array([1.0])),
+            (np.array([[3.0], [8.0]]), 1.0, "add", np.array([[2.0], [3.0]])),
+            (np.array([[4.0], [9.0]]), 0.01, "max", np.array([[2.0], [3.0]])),
+            (np.array([[0.4], [0.9]]), 1.0, "max", np.array([[1.0], [1.0]])),
+        ],
+    )
     def test_compute_std(self, var, epsilon, mode_for_floating_point_error, expected):
         variance_variable = nn.Variable.from_numpy_array(var)
         actual_var = RF.compute_std(variance_variable, epsilon, mode_for_floating_point_error)

@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,22 +18,17 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.preprocessors.preprocessor import Preprocessor
 
 
-class PreprocessorBuilder():
-    """Preprocessor builder interface class
-    """
+class PreprocessorBuilder:
+    """Preprocessor builder interface class"""
 
-    def __call__(self,
-                 scope_name: str,
-                 env_info: EnvironmentInfo,
-                 algorithm_config: AlgorithmConfig,
-                 **kwargs) -> Preprocessor:
+    def __call__(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs
+    ) -> Preprocessor:
         return self.build_preprocessor(scope_name, env_info, algorithm_config, **kwargs)
 
-    def build_preprocessor(self,
-                           scope_name: str,
-                           env_info: EnvironmentInfo,
-                           algorithm_config: AlgorithmConfig,
-                           **kwargs) -> Preprocessor:
+    def build_preprocessor(
+        self, scope_name: str, env_info: EnvironmentInfo, algorithm_config: AlgorithmConfig, **kwargs
+    ) -> Preprocessor:
         """Build preprocessor
 
         Args:

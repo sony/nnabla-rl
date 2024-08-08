@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,10 @@ from typing import Dict
 import nnabla as nn
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
-from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (SquaredTDQFunctionTrainer,
-                                                                            SquaredTDQFunctionTrainerConfig)
+from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (
+    SquaredTDQFunctionTrainer,
+    SquaredTDQFunctionTrainerConfig,
+)
 from nnabla_rl.models import QFunction
 from nnabla_rl.utils.misc import create_variables
 
@@ -38,12 +40,14 @@ class DDQNQTrainer(SquaredTDQFunctionTrainer):
     _prev_train_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_function: QFunction,
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_function: QFunction,
-                 env_info: EnvironmentInfo,
-                 config: DDQNQTrainerConfig = DDQNQTrainerConfig()):
+    def __init__(
+        self,
+        train_function: QFunction,
+        solvers: Dict[str, nn.solver.Solver],
+        target_function: QFunction,
+        env_info: EnvironmentInfo,
+        config: DDQNQTrainerConfig = DDQNQTrainerConfig(),
+    ):
         self._train_function = train_function
         self._target_function = target_function
         self._prev_train_rnn_states = {}
@@ -69,7 +73,7 @@ class DDQNQTrainer(SquaredTDQFunctionTrainer):
             a_next = self._train_function.argmax_q(s_next)
 
         prev_rnn_states = self._prev_target_rnn_states
-        with rnn_support(self._target_function, prev_rnn_states, train_rnn_states,  training_variables, self._config):
+        with rnn_support(self._target_function, prev_rnn_states, train_rnn_states, training_variables, self._config):
             double_q_target = self._target_function.q(s_next, a_next)
 
         return reward + gamma * non_terminal * double_q_target

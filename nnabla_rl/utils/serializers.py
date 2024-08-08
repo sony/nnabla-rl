@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,14 +25,14 @@ import nnabla_rl.utils.files as files
 from nnabla_rl.algorithm import Algorithm
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 
-_TRAINING_INFO_FILENAME = 'training_info.json'
+_TRAINING_INFO_FILENAME = "training_info.json"
 
-_KEY_ALGORITHM_NAME = 'algorithm_name'
-_KEY_ALGORITHM_CLASS_NAME = 'algorithm_class_name'
-_KEY_ALGORITHM_CONFIG = 'algorithm_config'
-_KEY_ITERATION_NUM = 'iteration_num'
-_KEY_MODELS = 'models'
-_KEY_SOLVERS = 'solvers'
+_KEY_ALGORITHM_NAME = "algorithm_name"
+_KEY_ALGORITHM_CLASS_NAME = "algorithm_class_name"
+_KEY_ALGORITHM_CONFIG = "algorithm_config"
+_KEY_ITERATION_NUM = "iteration_num"
+_KEY_MODELS = "models"
+_KEY_SOLVERS = "solvers"
 
 
 def save_snapshot(path, algorithm):
@@ -48,7 +48,7 @@ def save_snapshot(path, algorithm):
     assert isinstance(algorithm, Algorithm)
     if isinstance(path, str):
         path = pathlib.Path(path)
-    dirname = 'iteration-' + str(algorithm.iteration_num)
+    dirname = "iteration-" + str(algorithm.iteration_num)
     outdir = path / dirname
     files.create_dir_if_not_exist(outdir=outdir)
 
@@ -60,9 +60,7 @@ def save_snapshot(path, algorithm):
     return outdir
 
 
-def load_snapshot(path,
-                  env_or_env_info,
-                  algorithm_kwargs={}):
+def load_snapshot(path, env_or_env_info, algorithm_kwargs={}):
     """Load training snapshot from file.
 
     Args:
@@ -76,11 +74,11 @@ def load_snapshot(path,
         path = pathlib.Path(path)
     if not isinstance(env_or_env_info, (gym.Env, EnvironmentInfo)):
         raise RuntimeError(
-            'load_snapshot requires training gym.Env or EnvironmentInfo. '
-            'Automatic loading of env_info is no longer supported since v0.10.0')
+            "load_snapshot requires training gym.Env or EnvironmentInfo. "
+            "Automatic loading of env_info is no longer supported since v0.10.0"
+        )
     training_info = _load_training_info(path)
-    algorithm = _instantiate_algorithm_from_training_info(
-        training_info, env_or_env_info, **algorithm_kwargs)
+    algorithm = _instantiate_algorithm_from_training_info(training_info, env_or_env_info, **algorithm_kwargs)
     _load_network_parameters(path, algorithm)
     _load_solver_states(path, algorithm)
     return algorithm
@@ -90,12 +88,12 @@ def _instantiate_algorithm_from_training_info(training_info, env_info, **kwargs)
     algorithm_name = training_info[_KEY_ALGORITHM_CLASS_NAME]
     (algorithm_klass, config_klass) = A.get_class_of(algorithm_name)
 
-    config = kwargs.get('config', None)
+    config = kwargs.get("config", None)
     if not isinstance(config, config_klass):
         saved_config = training_info[_KEY_ALGORITHM_CONFIG]
         saved_config = config_klass(**saved_config)
         config = dataclasses.replace(saved_config, **config) if isinstance(config, dict) else saved_config
-    kwargs['config'] = config
+    kwargs["config"] = config
     algorithm = algorithm_klass(env_info, **kwargs)
     algorithm._iteration_num = training_info[_KEY_ITERATION_NUM]
     return algorithm
@@ -115,34 +113,34 @@ def _create_training_info(algorithm):
 
 def _save_training_info(path, training_info):
     filepath = path / _TRAINING_INFO_FILENAME
-    with open(filepath, 'w+') as outfile:
+    with open(filepath, "w+") as outfile:
         json.dump(training_info, outfile)
 
 
 def _load_training_info(path):
     filepath = path / _TRAINING_INFO_FILENAME
-    with open(filepath, 'r') as infile:
+    with open(filepath, "r") as infile:
         training_info = json.load(infile)
     return training_info
 
 
 def _save_network_parameters(path, algorithm):
     for scope_name, model in algorithm._models().items():
-        filename = scope_name + '.h5'
+        filename = scope_name + ".h5"
         filepath = path / filename
         model.save_parameters(filepath)
 
 
 def _load_network_parameters(path, algorithm):
     for scope_name, model in algorithm._models().items():
-        filename = scope_name + '.h5'
+        filename = scope_name + ".h5"
         filepath = path / filename
         model.load_parameters(filepath)
 
 
 def _save_solver_states(path, algorithm):
     for scope_name, solver in algorithm._solvers().items():
-        filename = scope_name + '_solver' + '.h5'
+        filename = scope_name + "_solver" + ".h5"
         filepath = path / filename
         solver.save_states(filepath)
 
@@ -150,7 +148,7 @@ def _save_solver_states(path, algorithm):
 def _load_solver_states(path, algorithm):
     models = algorithm._models()
     for scope_name, solver in algorithm._solvers().items():
-        filename = scope_name + '_solver' + '.h5'
+        filename = scope_name + "_solver" + ".h5"
         filepath = path / filename
         if not filepath.exists():
             warnings.warn(f"No solver file found in: {filepath}. Ommitting...")

@@ -1,5 +1,5 @@
 # Copyright 2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,13 @@ import gym
 import nnabla as nn
 import nnabla.solvers as NS
 import nnabla_rl.model_trainers as MT
-from nnabla_rl.algorithms.dqn import (DQN, DefaultExplorerBuilder, DefaultQFunctionBuilder, DefaultReplayBufferBuilder,
-                                      DQNConfig)
+from nnabla_rl.algorithms.dqn import (
+    DQN,
+    DefaultExplorerBuilder,
+    DefaultQFunctionBuilder,
+    DefaultReplayBufferBuilder,
+    DQNConfig,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import QFunction
@@ -60,15 +65,14 @@ class MunchausenDQNConfig(DQNConfig):
         Check set values are in valid range.
         """
         super().__post_init__()
-        self._assert_positive(self.max_explore_steps, 'max_explore_steps')
-        self._assert_negative(self.clipping_value, 'clipping_value')
+        self._assert_positive(self.max_explore_steps, "max_explore_steps")
+        self._assert_negative(self.clipping_value, "clipping_value")
 
 
 class DefaultQSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: MunchausenDQNConfig,
-                     **kwargs) -> nn.solvers.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: MunchausenDQNConfig, **kwargs
+    ) -> nn.solvers.Solver:
         assert isinstance(algorithm_config, MunchausenDQNConfig)
         return NS.Adam(algorithm_config.learning_rate, eps=1e-2 / algorithm_config.batch_size)
 
@@ -101,23 +105,28 @@ class MunchausenDQN(DQN):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: MunchausenDQNConfig
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: MunchausenDQNConfig = MunchausenDQNConfig(),
-                 q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultQSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
-        super(MunchausenDQN, self).__init__(env_or_env_info=env_or_env_info,
-                                            config=config,
-                                            q_func_builder=q_func_builder,
-                                            q_solver_builder=q_solver_builder,
-                                            replay_buffer_builder=replay_buffer_builder,
-                                            explorer_builder=explorer_builder)
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: MunchausenDQNConfig = MunchausenDQNConfig(),
+        q_func_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultQSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
+        super(MunchausenDQN, self).__init__(
+            env_or_env_info=env_or_env_info,
+            config=config,
+            q_func_builder=q_func_builder,
+            q_solver_builder=q_solver_builder,
+            replay_buffer_builder=replay_buffer_builder,
+            explorer_builder=explorer_builder,
+        )
 
     def _setup_q_function_training(self, env_or_buffer):
         trainer_config = MT.q_value_trainers.MunchausenDQNQTrainerConfig(
             num_steps=self._config.num_steps,
-            reduction_method='mean',
+            reduction_method="mean",
             q_loss_scalar=0.5,
             grad_clip=(-1.0, 1.0),
             tau=self._config.entropy_temperature,
@@ -126,13 +135,15 @@ class MunchausenDQN(DQN):
             clip_max=0.0,
             unroll_steps=self._config.unroll_steps,
             burn_in_steps=self._config.burn_in_steps,
-            reset_on_terminal=self._config.reset_rnn_on_terminal)
+            reset_on_terminal=self._config.reset_rnn_on_terminal,
+        )
 
         q_function_trainer = MT.q_value_trainers.MunchausenDQNQTrainer(
             train_functions=self._q,
             solvers={self._q.scope_name: self._q_solver},
             target_function=self._target_q,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
         sync_model(self._q, self._target_q)
         return q_function_trainer

@@ -34,8 +34,9 @@ class AMPDiscriminator(RewardFunction):
         assert output_layer_initializer_scale > 0.0, f"{output_layer_initializer_scale} should be larger than 0.0"
         self._output_layer_initializer_scale = output_layer_initializer_scale
 
-    def r(self, s_current: Tuple[nn.Variable, ...], a_current: nn.Variable, s_next: Tuple[nn.Variable, ...]
-          ) -> nn.Variable:
+    def r(
+        self, s_current: Tuple[nn.Variable, ...], a_current: nn.Variable, s_next: Tuple[nn.Variable, ...]
+    ) -> nn.Variable:
         assert len(s_current) == 7 or len(s_current) == 3
         for _s in s_current[1:]:
             assert s_current[0].shape[0] == _s.shape[0]
@@ -45,19 +46,21 @@ class AMPDiscriminator(RewardFunction):
         # NOTE: s_for_reward has s and s_next.
         # See author's enviroment implmentation and our env wrapper implementation.
         with nn.parameter_scope(self.scope_name):
-            h = NPF.affine(s_for_reward,
-                           n_outmaps=1024,
-                           name="linear1",
-                           w_init=RI.GlorotUniform(inmaps=s_for_reward.shape[1], outmaps=1024))
+            h = NPF.affine(
+                s_for_reward,
+                n_outmaps=1024,
+                name="linear1",
+                w_init=RI.GlorotUniform(inmaps=s_for_reward.shape[1], outmaps=1024),
+            )
             h = NF.relu(x=h)
-            h = NPF.affine(h,
-                           n_outmaps=512,
-                           name="linear2",
-                           w_init=RI.GlorotUniform(inmaps=h.shape[1], outmaps=512))
+            h = NPF.affine(h, n_outmaps=512, name="linear2", w_init=RI.GlorotUniform(inmaps=h.shape[1], outmaps=512))
             h = NF.relu(x=h)
-            h = NPF.affine(h,
-                           n_outmaps=1,
-                           name="logits",
-                           w_init=NI.UniformInitializer((-1.0 * self._output_layer_initializer_scale,
-                                                         self._output_layer_initializer_scale)))
+            h = NPF.affine(
+                h,
+                n_outmaps=1,
+                name="logits",
+                w_init=NI.UniformInitializer(
+                    (-1.0 * self._output_layer_initializer_scale, self._output_layer_initializer_scale)
+                ),
+            )
         return h

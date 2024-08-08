@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,14 +23,14 @@ import nnabla_rl.distributions as D
 from nnabla_rl.distributions.gaussian import NnablaGaussian, NumpyGaussian
 
 
-class TestGaussian():
+class TestGaussian:
     def _generate_dummy_mean_var(self):
         batch_size = 10
         output_dim = 10
         input_shape = (batch_size, output_dim)
         mean = np.zeros(shape=input_shape)
-        sigma = np.ones(shape=input_shape) * 5.
-        ln_var = np.log(sigma) * 2.
+        sigma = np.ones(shape=input_shape) * 5.0
+        ln_var = np.log(sigma) * 2.0
         return mean, ln_var
 
     def test_nnabla_constructor(self):
@@ -73,12 +73,13 @@ class TestNnablaGaussian(object):
 
         input_shape = (batch_size, output_dim)
         mean = np.zeros(shape=input_shape)
-        sigma = np.ones(shape=input_shape) * 5.
-        ln_var = np.log(sigma) * 2.
+        sigma = np.ones(shape=input_shape) * 5.0
+        ln_var = np.log(sigma) * 2.0
 
-        with mock.patch('nnabla_rl.functions.sample_gaussian') as mock_sample_gaussian:
-            distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mean),
-                                          ln_var=nn.Variable.from_numpy_array(ln_var))
+        with mock.patch("nnabla_rl.functions.sample_gaussian") as mock_sample_gaussian:
+            distribution = NnablaGaussian(
+                mean=nn.Variable.from_numpy_array(mean), ln_var=nn.Variable.from_numpy_array(ln_var)
+            )
             noise_clip = None
             sampled = distribution.sample(noise_clip=noise_clip)
             sampled.forward()
@@ -101,8 +102,9 @@ class TestNnablaGaussian(object):
         ln_var = np.ones(shape=input_shape) * np.log(var)
         var = np.exp(ln_var)
 
-        distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mu),
-                                      ln_var=nn.Variable.from_numpy_array(ln_var))
+        distribution = NnablaGaussian(
+            mean=nn.Variable.from_numpy_array(mu), ln_var=nn.Variable.from_numpy_array(ln_var)
+        )
 
         sample, log_prob = distribution.sample_and_compute_log_prob()
 
@@ -112,9 +114,7 @@ class TestNnablaGaussian(object):
         nn.forward_all([sample, log_prob])
 
         x = sample.d
-        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) \
-            - 0.5 * ln_var \
-            - (x - mu) ** 2 / (2.0 * var)
+        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - (x - mu) ** 2 / (2.0 * var)
         expected = np.sum(gaussian_log_prob, axis=-1, keepdims=True)
         actual = log_prob.d
 
@@ -127,23 +127,22 @@ class TestNnablaGaussian(object):
 
         input_shape = (batch_size, output_dim)
         mean = np.zeros(shape=input_shape)
-        sigma = np.ones(shape=input_shape) * 5.
-        ln_var = np.log(sigma) * 2.
+        sigma = np.ones(shape=input_shape) * 5.0
+        ln_var = np.log(sigma) * 2.0
 
-        with mock.patch('nnabla_rl.functions.sample_gaussian_multiple') as mock_sample_multiple_gaussian:
-            distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mean),
-                                          ln_var=nn.Variable.from_numpy_array(ln_var))
+        with mock.patch("nnabla_rl.functions.sample_gaussian_multiple") as mock_sample_multiple_gaussian:
+            distribution = NnablaGaussian(
+                mean=nn.Variable.from_numpy_array(mean), ln_var=nn.Variable.from_numpy_array(ln_var)
+            )
             noise_clip = None
             num_samples = 10
-            sampled = distribution.sample_multiple(
-                num_samples, noise_clip=noise_clip)
+            sampled = distribution.sample_multiple(num_samples, noise_clip=noise_clip)
             sampled.forward()
 
             assert mock_sample_multiple_gaussian.call_count == 1
 
             args, kwargs = mock_sample_multiple_gaussian.call_args
-            assert args == (distribution._mean,
-                            distribution._ln_var, num_samples)
+            assert args == (distribution._mean, distribution._ln_var, num_samples)
             assert kwargs == {"noise_clip": noise_clip}
 
     @pytest.mark.parametrize("mean", np.arange(start=-1.0, stop=1.0, step=0.25))
@@ -157,11 +156,11 @@ class TestNnablaGaussian(object):
         mu = np.ones(shape=input_shape) * mean
         ln_var = np.ones(shape=input_shape) * np.log(var)
 
-        distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mu),
-                                      ln_var=nn.Variable.from_numpy_array(ln_var))
+        distribution = NnablaGaussian(
+            mean=nn.Variable.from_numpy_array(mu), ln_var=nn.Variable.from_numpy_array(ln_var)
+        )
         num_samples = 10
-        samples, log_probs = distribution.sample_multiple_and_compute_log_prob(
-            num_samples=num_samples)
+        samples, log_probs = distribution.sample_multiple_and_compute_log_prob(num_samples=num_samples)
         # FIXME: if you enable clear_no_need_grad seems to compute something different
         # Do NOT use forward_all and no_need_grad flag at same time
         # nnabla's bug?
@@ -169,22 +168,17 @@ class TestNnablaGaussian(object):
 
         x = samples.d[:, 0, :]
         assert x.shape == (batch_size, output_dim)
-        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) \
-            - 0.5 * ln_var \
-            - (x - mu) ** 2 / (2.0 * var)
+        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - (x - mu) ** 2 / (2.0 * var)
         expected = np.sum(gaussian_log_prob, axis=-1, keepdims=True)
         actual = log_probs.d
         assert expected.shape == (batch_size, 1)
         assert np.allclose(expected, actual[:, 0, :])
 
         mu = np.reshape(mu, newshape=(batch_size, 1, output_dim))
-        ln_var = np.reshape(ln_var, newshape=(
-            batch_size, 1, output_dim))
+        ln_var = np.reshape(ln_var, newshape=(batch_size, 1, output_dim))
 
         x = samples.d
-        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) \
-            - 0.5 * ln_var \
-            - (x - mu) ** 2 / (2.0 * var)
+        gaussian_log_prob = -0.5 * np.log(2.0 * np.pi) - 0.5 * ln_var - (x - mu) ** 2 / (2.0 * var)
         expected = np.sum(gaussian_log_prob, axis=-1, keepdims=True)
 
         assert expected.shape == actual.shape
@@ -196,14 +190,14 @@ class TestNnablaGaussian(object):
 
         input_shape = (batch_size, output_dim)
         mean = np.zeros(shape=input_shape)
-        sigma = np.ones(shape=input_shape) * 5.
-        ln_var = np.log(sigma) * 2.
+        sigma = np.ones(shape=input_shape) * 5.0
+        ln_var = np.log(sigma) * 2.0
 
-        distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mean),
-                                      ln_var=nn.Variable.from_numpy_array(ln_var))
+        distribution = NnablaGaussian(
+            mean=nn.Variable.from_numpy_array(mean), ln_var=nn.Variable.from_numpy_array(ln_var)
+        )
         num_samples = 10
-        samples, log_probs = distribution.sample_multiple_and_compute_log_prob(
-            num_samples=num_samples)
+        samples, log_probs = distribution.sample_multiple_and_compute_log_prob(num_samples=num_samples)
         nn.forward_all([samples, log_probs])
 
         assert samples.shape == (batch_size, num_samples, output_dim)
@@ -215,25 +209,23 @@ class TestNnablaGaussian(object):
 
         input_shape = (batch_size, output_dim)
         mean = np.zeros(shape=input_shape)
-        sigma = np.ones(shape=input_shape) * 5.
-        ln_var = np.log(sigma) * 2.
-        dummy_input = nn.Variable.from_numpy_array(
-            np.random.randn(batch_size, output_dim))
+        sigma = np.ones(shape=input_shape) * 5.0
+        ln_var = np.log(sigma) * 2.0
+        dummy_input = nn.Variable.from_numpy_array(np.random.randn(batch_size, output_dim))
 
-        with mock.patch('nnabla_rl.distributions.common_utils.gaussian_log_prob',
-                        return_value=nn.Variable.from_numpy_array(np.empty(shape=input_shape))) \
-                as mock_gaussian_log_prob:
-            distribution = NnablaGaussian(mean=nn.Variable.from_numpy_array(mean),
-                                          ln_var=nn.Variable.from_numpy_array(ln_var))
+        with mock.patch(
+            "nnabla_rl.distributions.common_utils.gaussian_log_prob",
+            return_value=nn.Variable.from_numpy_array(np.empty(shape=input_shape)),
+        ) as mock_gaussian_log_prob:
+            distribution = NnablaGaussian(
+                mean=nn.Variable.from_numpy_array(mean), ln_var=nn.Variable.from_numpy_array(ln_var)
+            )
             distribution.log_prob(dummy_input)
 
             assert mock_gaussian_log_prob.call_count == 1
 
             args, _ = mock_gaussian_log_prob.call_args
-            assert args == (dummy_input,
-                            distribution._mean,
-                            distribution._var,
-                            distribution._ln_var)
+            assert args == (dummy_input, distribution._mean, distribution._var, distribution._ln_var)
 
     @pytest.mark.parametrize("batch_size", range(1, 10))
     @pytest.mark.parametrize("output_dim", range(1, 10))
@@ -242,7 +234,7 @@ class TestNnablaGaussian(object):
 
         mean = np.zeros(shape=input_shape)
         sigma = np.ones(shape=input_shape)
-        ln_var = np.log(sigma) * 2.
+        ln_var = np.log(sigma) * 2.0
         distribution = NnablaGaussian(nn.Variable.from_numpy_array(mean), nn.Variable.from_numpy_array(ln_var))
 
         actual = distribution.entropy()
@@ -261,8 +253,8 @@ class TestNnablaGaussian(object):
         input_shape = (batch_size, output_dim)
 
         mean = np.zeros(shape=input_shape)
-        sigma = np.ones(shape=input_shape) * 5.
-        ln_var = np.log(sigma) * 2.
+        sigma = np.ones(shape=input_shape) * 5.0
+        ln_var = np.log(sigma) * 2.0
         distribution_p = NnablaGaussian(nn.Variable.from_numpy_array(mean), nn.Variable.from_numpy_array(ln_var))
         distribution_q = NnablaGaussian(nn.Variable.from_numpy_array(mean), nn.Variable.from_numpy_array(ln_var))
 
@@ -283,10 +275,10 @@ class TestNnablaGaussian(object):
         return 0.5 * np.log(np.power(2.0 * np.pi * np.e, covariance_matrix.shape[0]) * determinant)
 
 
-class TestNumpyGaussian():
-    def _generate_dummy_mean_var(self, scale=5.):
+class TestNumpyGaussian:
+    def _generate_dummy_mean_var(self, scale=5.0):
         gaussian_dim = 10
-        mean_shape = (gaussian_dim, )
+        mean_shape = (gaussian_dim,)
         mean = np.random.normal(size=mean_shape)
         sigma = np.diag(np.ones(shape=mean_shape) * scale)
         sigma_inv = np.diag(1.0 / np.diag(sigma))
@@ -337,10 +329,10 @@ class TestNumpyGaussian():
         distribution_q = NumpyGaussian(mean, np.log(sigma))
 
         actual = distribution_p.kl_divergence(distribution_q)
-        expected = np.zeros((1, ))
+        expected = np.zeros((1,))
 
         assert expected == pytest.approx(actual, abs=1e-5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

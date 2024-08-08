@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import nnabla as nn
 from nnabla_rl.utils.misc import create_attention_mask, create_variable
 
 
-class TestMisc():
+class TestMisc:
     def test_create_variable_int(self):
         batch_size = 3
         shape = 5
@@ -36,7 +36,7 @@ class TestMisc():
 
     def test_create_variable_tuples(self):
         batch_size = 3
-        shape = ((6, ), (3, ))
+        shape = ((6,), (3,))
         actual_var = create_variable(batch_size, shape)
 
         assert isinstance(actual_var, tuple)

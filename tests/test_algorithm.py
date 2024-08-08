@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,8 +26,8 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 
 class TestAlgorithm(object):
     @patch.multiple(Algorithm, __abstractmethods__=set())
-    @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
-    @patch('nnabla_rl.algorithm.Algorithm._has_rnn_models', lambda self: False)
+    @patch("nnabla_rl.algorithm.Algorithm.is_supported_env", lambda self, env_info: True)
+    @patch("nnabla_rl.algorithm.Algorithm._has_rnn_models", lambda self: False)
     def test_resume_online_training(self):
         env = E.DummyContinuous()
         algorithm = Algorithm(env)
@@ -41,8 +41,8 @@ class TestAlgorithm(object):
         assert algorithm._run_online_training_iteration.call_count == total_iterations * 2
 
     @patch.multiple(Algorithm, __abstractmethods__=set())
-    @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
-    @patch('nnabla_rl.algorithm.Algorithm._has_rnn_models', lambda self: False)
+    @patch("nnabla_rl.algorithm.Algorithm.is_supported_env", lambda self, env_info: True)
+    @patch("nnabla_rl.algorithm.Algorithm._has_rnn_models", lambda self: False)
     def test_resume_offline_training(self):
         env = E.DummyContinuous()
         algorithm = Algorithm(env)
@@ -58,9 +58,9 @@ class TestAlgorithm(object):
         assert algorithm._run_offline_training_iteration.call_count == total_iterations * 2
 
     @patch.multiple(Algorithm, __abstractmethods__=set())
-    @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
-    @patch('nnabla_rl.algorithm.Algorithm.is_rnn_supported', lambda self: False)
-    @patch('nnabla_rl.algorithm.Algorithm._has_rnn_models', lambda self: True)
+    @patch("nnabla_rl.algorithm.Algorithm.is_supported_env", lambda self, env_info: True)
+    @patch("nnabla_rl.algorithm.Algorithm.is_rnn_supported", lambda self: False)
+    @patch("nnabla_rl.algorithm.Algorithm._has_rnn_models", lambda self: True)
     def test_rnn_unsupported_algorithm(self):
         env = E.DummyContinuous()
         algorithm = Algorithm(env)
@@ -73,9 +73,9 @@ class TestAlgorithm(object):
             algorithm.train(buffer, total_iterations=total_iterations)
 
     @patch.multiple(Algorithm, __abstractmethods__=set())
-    @patch('nnabla_rl.algorithm.Algorithm.is_supported_env', lambda self, env_info: True)
-    @patch('nnabla_rl.algorithm.Algorithm.is_rnn_supported', lambda self: True)
-    @patch('nnabla_rl.algorithm.Algorithm._has_rnn_models', lambda self: True)
+    @patch("nnabla_rl.algorithm.Algorithm.is_supported_env", lambda self, env_info: True)
+    @patch("nnabla_rl.algorithm.Algorithm.is_rnn_supported", lambda self: True)
+    @patch("nnabla_rl.algorithm.Algorithm._has_rnn_models", lambda self: True)
     def test_rnn_supported_algorithm(self):
         env = E.DummyContinuous()
         algorithm = Algorithm(env)

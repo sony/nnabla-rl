@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,11 +26,12 @@ from nnabla_rl.models import Model
 @dataclass
 class MultiStepTrainerConfig(TrainerConfig):
     """Configuration class for ModelTrainer."""
+
     num_steps: int = 1
 
     def __post_init__(self):
         super(MultiStepTrainerConfig, self).__post_init__()
-        self._assert_positive(self.num_steps, 'num_steps')
+        self._assert_positive(self.num_steps, "num_steps")
 
 
 class MultiStepTrainer(ModelTrainer):
@@ -39,11 +40,13 @@ class MultiStepTrainer(ModelTrainer):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: MultiStepTrainerConfig
 
-    def __init__(self,
-                 models: Union[Model, Sequence[Model]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: MultiStepTrainerConfig):
+    def __init__(
+        self,
+        models: Union[Model, Sequence[Model]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: MultiStepTrainerConfig,
+    ):
         super(MultiStepTrainer, self).__init__(models, solvers, env_info, config)
 
     def _setup_batch(self, training_batch: TrainingBatch) -> TrainingBatch:
@@ -74,16 +77,18 @@ class MultiStepTrainer(ModelTrainer):
                     continue
 
                 last_batch = training_batch_list[training_batch_length - 1 - (i - self._config.num_steps + 1)]
-                n_step_batch = TrainingBatch(batch_size=batch.batch_size,
-                                             s_current=batch.s_current,
-                                             a_current=batch.a_current,
-                                             reward=np.sum(n_step_reward, axis=1, keepdims=True),
-                                             gamma=np.prod(n_step_gamma, axis=1, keepdims=True),
-                                             non_terminal=np.prod(n_step_non_terminal, axis=1, keepdims=True),
-                                             s_next=last_batch.s_next,
-                                             weight=batch.weight,
-                                             extra=batch.extra,
-                                             next_step_batch=next_step_batch)
+                n_step_batch = TrainingBatch(
+                    batch_size=batch.batch_size,
+                    s_current=batch.s_current,
+                    a_current=batch.a_current,
+                    reward=np.sum(n_step_reward, axis=1, keepdims=True),
+                    gamma=np.prod(n_step_gamma, axis=1, keepdims=True),
+                    non_terminal=np.prod(n_step_non_terminal, axis=1, keepdims=True),
+                    s_next=last_batch.s_next,
+                    weight=batch.weight,
+                    extra=batch.extra,
+                    next_step_batch=next_step_batch,
+                )
                 next_step_batch = n_step_batch
 
             return cast(TrainingBatch, n_step_batch)

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,12 +25,10 @@ class TestMDecorableReplayBuffer(object):
         pass
 
     def test_getitem(self):
-        mock_decor_fun = create_autospec(
-            self.decor_fun, return_value=(1, 2, 3, 4, 5))
+        mock_decor_fun = create_autospec(self.decor_fun, return_value=(1, 2, 3, 4, 5))
 
         capacity = 10
-        buffer = DecorableReplayBuffer(capacity=capacity,
-                                       decor_fun=mock_decor_fun)
+        buffer = DecorableReplayBuffer(capacity=capacity, decor_fun=mock_decor_fun)
 
         append_num = 10
         for i in range(append_num):

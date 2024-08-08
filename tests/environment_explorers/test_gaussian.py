@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,51 +20,38 @@ from nnabla_rl.environment_explorers.gaussian_explorer import GaussianExplorer, 
 
 
 class TestRandomGaussianActionStrategy(object):
-    @pytest.mark.parametrize('clip_low', np.arange(start=-1.0, stop=0.0, step=0.25))
+    @pytest.mark.parametrize("clip_low", np.arange(start=-1.0, stop=0.0, step=0.25))
     @pytest.mark.parametrize("clip_high", np.arange(start=0.0, stop=1.0, step=0.25))
     @pytest.mark.parametrize("sigma", np.arange(start=0.01, stop=5.0, step=1.0))
     def test_random_gaussian_action_selection(self, clip_low, clip_high, sigma):
-        def policy_action_selector(state, *,  begin_of_episode=False):
-            return np.zeros(shape=state.shape), {'test': 'success'}
-        config = GaussianExplorerConfig(
-            action_clip_low=clip_low,
-            action_clip_high=clip_high,
-            sigma=sigma
-        )
-        explorer = GaussianExplorer(
-            env_info=None,
-            policy_action_selector=policy_action_selector,
-            config=config
-        )
+        def policy_action_selector(state, *, begin_of_episode=False):
+            return np.zeros(shape=state.shape), {"test": "success"}
+
+        config = GaussianExplorerConfig(action_clip_low=clip_low, action_clip_high=clip_high, sigma=sigma)
+        explorer = GaussianExplorer(env_info=None, policy_action_selector=policy_action_selector, config=config)
 
         steps = 1
         state = np.empty(shape=(1, 4))
         action, info = explorer.action(steps, state)
 
         assert np.all(clip_low <= action) and np.all(action <= clip_high)
-        assert info['test'] == 'success'
+        assert info["test"] == "success"
 
     @pytest.mark.parametrize("sigma", np.arange(start=0.01, stop=5.0, step=1.0))
     def test_random_gaussian_without_clipping(self, sigma):
-        def policy_action_selector(state, *,  begin_of_episode=False):
-            return np.zeros(shape=state.shape), {'test': 'success'}
+        def policy_action_selector(state, *, begin_of_episode=False):
+            return np.zeros(shape=state.shape), {"test": "success"}
 
-        config = GaussianExplorerConfig(
-            sigma=sigma
-        )
-        explorer = GaussianExplorer(
-            env_info=None,
-            policy_action_selector=policy_action_selector,
-            config=config
-        )
+        config = GaussianExplorerConfig(sigma=sigma)
+        explorer = GaussianExplorer(env_info=None, policy_action_selector=policy_action_selector, config=config)
 
         steps = 1
         state = np.empty(shape=(1, 4))
         action, info = explorer.action(steps, state)
 
         assert not np.allclose(action, np.zeros(action.shape))
-        assert info['test'] == 'success'
+        assert info["test"] == "success"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

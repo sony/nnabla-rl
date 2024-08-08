@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import pytest
 from nnabla_rl.utils.solver_wrappers import AutoClipGradByNorm, AutoWeightDecay, SolverWrapper
 
 
-class TestSolverWrappers():
+class TestSolverWrappers:
     def test_auto_clip_grad_by_norm(self):
         norm = 10.0
         solver_mock = mock.MagicMock()
@@ -51,5 +51,5 @@ class TestSolverWrappers():
         weight_decay_mock.assert_called_once()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main()

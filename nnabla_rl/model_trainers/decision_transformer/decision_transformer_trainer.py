@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,33 +46,38 @@ class StochasticDecisionTransformerTrainerConfig(DecisionTransformerTrainerConfi
 
 class DecisionTransformerTrainer(ModelTrainer):
     """Decision transformer trainer for Stochastic environment."""
+
     # type declarations to type check with mypy
     # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: DecisionTransformerTrainerConfig
     _pi_loss: nn.Variable
 
-    def __init__(self,
-                 models: Union[DecisionTransformerModel, Sequence[DecisionTransformerModel]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 wd_solvers: Optional[Dict[str, nn.solver.Solver]],
-                 config: DecisionTransformerTrainerConfig):
+    def __init__(
+        self,
+        models: Union[DecisionTransformerModel, Sequence[DecisionTransformerModel]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        wd_solvers: Optional[Dict[str, nn.solver.Solver]],
+        config: DecisionTransformerTrainerConfig,
+    ):
         self._wd_solvers = {} if wd_solvers is None else wd_solvers
         super(DecisionTransformerTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
-            set_data_to_variable(t.extra['timesteps'], b.extra['timesteps'])
-            set_data_to_variable(t.extra['rtg'], b.extra['rtg'])
-            set_data_to_variable(t.extra['target'], b.extra['target'])
+            set_data_to_variable(t.extra["timesteps"], b.extra["timesteps"])
+            set_data_to_variable(t.extra["rtg"], b.extra["rtg"])
+            set_data_to_variable(t.extra["target"], b.extra["target"])
 
         # update model
         for solver in solvers.values():
@@ -87,7 +92,7 @@ class DecisionTransformerTrainer(ModelTrainer):
             wd_solver.update()
 
         trainer_state = {}
-        trainer_state['loss'] = self._pi_loss.d.copy()
+        trainer_state["loss"] = self._pi_loss.d.copy()
         return trainer_state
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
@@ -99,14 +104,15 @@ class DecisionTransformerTrainer(ModelTrainer):
         rtg_var = create_variable(batch_size, (self._config.context_length, 1))
 
         extra = {}
-        extra['target'] = target_var
-        extra['timesteps'] = timesteps_var
-        extra['rtg'] = rtg_var
+        extra["target"] = target_var
+        extra["timesteps"] = timesteps_var
+        extra["rtg"] = rtg_var
         return TrainingVariables(batch_size, s_current_var, a_current_var, extra=extra)
 
     def _setup_solver(self):
         def _should_decay(param_key):
-            return 'affine/W' in param_key or 'conv/W' in param_key
+            return "affine/W" in param_key or "conv/W" in param_key
+
         for model in self._models:
             if model.scope_name in self._wd_solvers.keys():
                 solver = self._solvers[model.scope_name]
@@ -151,12 +157,14 @@ class StochasticDecisionTransformerTrainer(DecisionTransformerTrainer):
     _config: StochasticDecisionTransformerTrainerConfig
     _pi_loss: nn.Variable
 
-    def __init__(self,
-                 models: Union[StochasticDecisionTransformer, Sequence[StochasticDecisionTransformer]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 wd_solvers: Optional[Dict[str, nn.solver.Solver]] = None,
-                 config: StochasticDecisionTransformerTrainerConfig = StochasticDecisionTransformerTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[StochasticDecisionTransformer, Sequence[StochasticDecisionTransformer]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        wd_solvers: Optional[Dict[str, nn.solver.Solver]] = None,
+        config: StochasticDecisionTransformerTrainerConfig = StochasticDecisionTransformerTrainerConfig(),
+    ):
         super(StochasticDecisionTransformerTrainer, self).__init__(models, solvers, env_info, wd_solvers, config)
 
     def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
@@ -165,9 +173,9 @@ class StochasticDecisionTransformerTrainer(DecisionTransformerTrainer):
         for policy in models:
             s = training_variables.s_current
             a = training_variables.a_current
-            rtg = training_variables.extra['rtg']
-            timesteps = training_variables.extra['timesteps']
-            target = training_variables.extra['target']
+            rtg = training_variables.extra["rtg"]
+            timesteps = training_variables.extra["timesteps"]
+            target = training_variables.extra["target"]
             distribution = policy.pi(s, a, rtg, timesteps)
             # This loss calculation should be same as cross entropy loss
             loss = -distribution.log_prob(target)
@@ -183,13 +191,14 @@ class DeterministicDecisionTransformerTrainer(DecisionTransformerTrainer):
     _config: DeterministicDecisionTransformerTrainerConfig
     _pi_loss: nn.Variable
 
-    def __init__(self,
-                 models: Union[DeterministicDecisionTransformer, Sequence[DeterministicDecisionTransformer]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 wd_solvers: Optional[Dict[str, nn.solver.Solver]] = None,
-                 config: DeterministicDecisionTransformerTrainerConfig =
-                 DeterministicDecisionTransformerTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[DeterministicDecisionTransformer, Sequence[DeterministicDecisionTransformer]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        wd_solvers: Optional[Dict[str, nn.solver.Solver]] = None,
+        config: DeterministicDecisionTransformerTrainerConfig = DeterministicDecisionTransformerTrainerConfig(),
+    ):
         super(DeterministicDecisionTransformerTrainer, self).__init__(models, solvers, env_info, wd_solvers, config)
 
     def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
@@ -198,9 +207,9 @@ class DeterministicDecisionTransformerTrainer(DecisionTransformerTrainer):
         for policy in models:
             s = training_variables.s_current
             a = training_variables.a_current
-            rtg = training_variables.extra['rtg']
-            timesteps = training_variables.extra['timesteps']
-            target = training_variables.extra['target']
+            rtg = training_variables.extra["rtg"]
+            timesteps = training_variables.extra["timesteps"]
+            target = training_variables.extra["target"]
             actions = policy.pi(s, a, rtg, timesteps)
             loss = RF.mean_squared_error(actions, target)
             self._pi_loss += loss

@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,8 +23,13 @@ import nnabla.functions as NF
 import nnabla_rl.functions as RNF
 from nnabla_rl.distributions import Gaussian
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+)
 from nnabla_rl.models import HyARVAE, Model
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
@@ -42,19 +47,23 @@ class HyARVAETrainer(ModelTrainer):
     _config: HyARVAETrainerConfig
     _encoder_loss: nn.Variable  # Training loss/output
 
-    def __init__(self,
-                 models: Union[HyARVAE, Sequence[HyARVAE]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 env_info: EnvironmentInfo,
-                 config: HyARVAETrainerConfig = HyARVAETrainerConfig()):
+    def __init__(
+        self,
+        models: Union[HyARVAE, Sequence[HyARVAE]],
+        solvers: Dict[str, nn.solver.Solver],
+        env_info: EnvironmentInfo,
+        config: HyARVAETrainerConfig = HyARVAETrainerConfig(),
+    ):
         super().__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Iterable[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Iterable[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.a_current, b.a_current)
@@ -69,10 +78,10 @@ class HyARVAETrainer(ModelTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['encoder_loss'] = self._encoder_loss.d.copy()
-        trainer_state['kl_loss'] = self._kl_loss.d.copy()
-        trainer_state['reconstruction_loss'] = self._reconstruction_loss.d.copy()
-        trainer_state['dyn_loss'] = self._dyn_loss.d.copy()
+        trainer_state["encoder_loss"] = self._encoder_loss.d.copy()
+        trainer_state["kl_loss"] = self._kl_loss.d.copy()
+        trainer_state["reconstruction_loss"] = self._reconstruction_loss.d.copy()
+        trainer_state["dyn_loss"] = self._dyn_loss.d.copy()
         return trainer_state
 
     def _build_training_graph(self, models: Union[Model, Sequence[Model]], training_variables: TrainingVariables):
@@ -85,10 +94,7 @@ class HyARVAETrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         batch_size = training_variables.batch_size
 
         models = cast(Sequence[HyARVAE], models)
@@ -96,14 +102,14 @@ class HyARVAETrainer(ModelTrainer):
             action1, action2 = training_variables.a_current
             action_space = cast(gym.spaces.Tuple, self._env_info.action_space)
             xk = action1 if isinstance(action_space[0], gym.spaces.Box) else action2
-            latent_distribution, (xk_tilde, ds_tilde) = vae.encode_and_decode(x=xk,
-                                                                              state=training_variables.s_current,
-                                                                              action=training_variables.a_current)
+            latent_distribution, (xk_tilde, ds_tilde) = vae.encode_and_decode(
+                x=xk, state=training_variables.s_current, action=training_variables.a_current
+            )
 
             latent_shape = (batch_size, latent_distribution.ndim)
             target_latent_distribution = Gaussian(
                 mean=nn.Variable.from_numpy_array(np.zeros(shape=latent_shape, dtype=np.float32)),
-                ln_var=nn.Variable.from_numpy_array(np.zeros(shape=latent_shape, dtype=np.float32))
+                ln_var=nn.Variable.from_numpy_array(np.zeros(shape=latent_shape, dtype=np.float32)),
             )
 
             reconstruction_loss = RNF.mean_squared_error(xk, xk_tilde)

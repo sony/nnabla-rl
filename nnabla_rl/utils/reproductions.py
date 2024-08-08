@@ -22,8 +22,13 @@ import numpy as np
 import nnabla as nn
 import nnabla_rl as rl
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.environments.wrappers import (Gymnasium2GymWrapper, NumpyFloat32Env, ScreenRenderEnv, make_atari,
-                                             wrap_deepmind)
+from nnabla_rl.environments.wrappers import (
+    Gymnasium2GymWrapper,
+    NumpyFloat32Env,
+    ScreenRenderEnv,
+    make_atari,
+    wrap_deepmind,
+)
 from nnabla_rl.logger import logger
 
 
@@ -48,15 +53,17 @@ def build_classic_control_env(id_or_env, seed=None, render=False):
     return env
 
 
-def build_atari_env(id_or_env,
-                    test=False,
-                    seed=None,
-                    render=False,
-                    print_info=True,
-                    max_frames_per_episode=None,
-                    frame_stack=True,
-                    flicker_probability=0.0,
-                    use_gymnasium=False):
+def build_atari_env(
+    id_or_env,
+    test=False,
+    seed=None,
+    render=False,
+    print_info=True,
+    max_frames_per_episode=None,
+    frame_stack=True,
+    flicker_probability=0.0,
+    use_gymnasium=False,
+):
     if isinstance(id_or_env, gym.Env):
         env = id_or_env
     elif isinstance(id_or_env, gymnasium.Env):
@@ -66,11 +73,13 @@ def build_atari_env(id_or_env,
     if print_info:
         print_env_info(env)
 
-    env = wrap_deepmind(env,
-                        episode_life=not test,
-                        clip_rewards=not test,
-                        frame_stack=frame_stack,
-                        flicker_probability=flicker_probability)
+    env = wrap_deepmind(
+        env,
+        episode_life=not test,
+        clip_rewards=not test,
+        frame_stack=frame_stack,
+        flicker_probability=flicker_probability,
+    )
     env = NumpyFloat32Env(env)
 
     if render:
@@ -125,12 +134,10 @@ def build_dmc_env(id_or_env, test=False, seed=None, render=False, print_info=Tru
     elif id_or_env.startswith("FakeDMControl"):
         env = gym.make(id_or_env)
     else:
-        domain_name, task_name = id_or_env.split('-')
-        env = DMCEnv(domain_name,
-                     task_name=task_name,
-                     task_kwargs={'random': seed})
+        domain_name, task_name = id_or_env.split("-")
+        env = DMCEnv(domain_name, task_name=task_name, task_kwargs={"random": seed})
         env = gym.wrappers.FlattenObservation(env)
-        env = gym.wrappers.RescaleAction(env, min_action=-1., max_action=1.)
+        env = gym.wrappers.RescaleAction(env, min_action=-1.0, max_action=1.0)
 
     if print_info:
         print_env_info(env)
@@ -144,11 +151,11 @@ def build_dmc_env(id_or_env, test=False, seed=None, render=False, print_info=Tru
 
 
 def d4rl_dataset_to_experiences(dataset, size=1000000):
-    size = min(dataset['observations'].shape[0], size)
-    states = dataset['observations'][:size]
-    actions = dataset['actions'][:size]
-    rewards = dataset['rewards'][:size].reshape(size, 1)
-    non_terminals = 1.0 - dataset['terminals'][:size].reshape(size, 1)
+    size = min(dataset["observations"].shape[0], size)
+    states = dataset["observations"][:size]
+    actions = dataset["actions"][:size]
+    rewards = dataset["rewards"][:size].reshape(size, 1)
+    non_terminals = 1.0 - dataset["terminals"][:size].reshape(size, 1)
     next_states = np.concatenate([states[1:size, :], np.zeros(shape=states[0].shape)[np.newaxis, :]], axis=0)
     infos = [{} for _ in range(size)]
     assert len(states) == size
@@ -164,11 +171,11 @@ def print_env_info(env):
     if env.unwrapped.spec is not None:
         env_name = env.unwrapped.spec.id
     else:
-        env_name = 'Unknown'
+        env_name = "Unknown"
 
     env_info = EnvironmentInfo.from_env(env)
 
-    info = f'''env: {env_name},
+    info = f"""env: {env_name},
                state_dim: {env_info.state_dim},
                state_shape: {env_info.state_shape},
                state_high: {env_info.state_high},
@@ -177,5 +184,5 @@ def print_env_info(env):
                action_shape: {env_info.action_shape},
                action_high: {env_info.action_high},
                action_low: {env_info.action_low},
-               max_episode_steps: {env.spec.max_episode_steps}'''
+               max_episode_steps: {env.spec.max_episode_steps}"""
     logger.info(info)

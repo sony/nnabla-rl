@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ def run_training(args):
     # Save trained parameters every "timing" steps.
     # Without this, the parameters will not be saved.
     # We recommend saving parameters at every evaluation timing.
-    outdir = pathlib.Path(args.save_dir) / 'snapshots'
+    outdir = pathlib.Path(args.save_dir) / "snapshots"
     save_snapshot_hook = H.SaveSnapshotHook(outdir=outdir, timing=1000)
 
     # All instantiated hooks should be set at once.
@@ -87,13 +87,13 @@ def run_training(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=int, default=-1)
-    parser.add_argument('--save-dir', type=str, default=str(pathlib.Path(__file__).parent))
-    parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument("--gpu", type=int, default=-1)
+    parser.add_argument("--save-dir", type=str, default=str(pathlib.Path(__file__).parent))
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
     run_training(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

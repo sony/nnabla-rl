@@ -19,21 +19,21 @@ from rliable import library as rly
 from rliable import metrics
 
 DMC15_TASKS = [
-    'acrobot-swingup',
-    'cheetah-run',
-    'finger-turn_hard',
-    'fish-swim',
-    'hopper-hop',
-    'hopper-stand',
-    'humanoid-run',
-    'humanoid-stand',
-    'humanoid-walk',
-    'pendulum-swingup',
-    'quadruped-run',
-    'quadruped-walk',
-    'reacher-hard',
-    'swimmer-swimmer6',
-    'walker-run'
+    "acrobot-swingup",
+    "cheetah-run",
+    "finger-turn_hard",
+    "fish-swim",
+    "hopper-hop",
+    "hopper-stand",
+    "humanoid-run",
+    "humanoid-stand",
+    "humanoid-walk",
+    "pendulum-swingup",
+    "quadruped-run",
+    "quadruped-walk",
+    "reacher-hard",
+    "swimmer-swimmer6",
+    "walker-run",
 ]
 
 
@@ -88,33 +88,30 @@ def data_to_matrix(data):
 
 def evaluate(args):
     training_data = load_training_data(args.rootdir)
-    print(f'training_data: {training_data}')
+    print(f"training_data: {training_data}")
     data_matrix = data_to_matrix(training_data)
-    print(f'data_matrix: {data_matrix}. shape: {data_matrix.shape}')
+    print(f"data_matrix: {data_matrix}. shape: {data_matrix.shape}")
 
     # data should be num_runs x num_tasks
-    data = {'score': data_matrix}
+    data = {"score": data_matrix}
 
     def aggregate_func(x):
-        return np.array([metrics.aggregate_iqm(x),
-                         metrics.aggregate_median(x),
-                         metrics.aggregate_mean(x)])
-    aggregate_scores, aggregate_cis = rly.get_interval_estimates(
-        data, aggregate_func, reps=50000
-    )
-    print(f'aggregate scores: {aggregate_scores}')
-    print(f'aggregate cis: {aggregate_cis}')
+        return np.array([metrics.aggregate_iqm(x), metrics.aggregate_median(x), metrics.aggregate_mean(x)])
+
+    aggregate_scores, aggregate_cis = rly.get_interval_estimates(data, aggregate_func, reps=50000)
+    print(f"aggregate scores: {aggregate_scores}")
+    print(f"aggregate cis: {aggregate_cis}")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--rootdir', type=str, required=True)
-    parser.add_argument('--target-file-name', type=str, default=None)
+    parser.add_argument("--rootdir", type=str, required=True)
+    parser.add_argument("--target-file-name", type=str, default=None)
 
     args = parser.parse_args()
 
     evaluate(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

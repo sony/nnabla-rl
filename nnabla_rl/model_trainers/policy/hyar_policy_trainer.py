@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,20 +40,24 @@ class HyARPolicyTrainer(DPGPolicyTrainer):
     _config: HyARPolicyTrainerConfig
     _action_and_grads: Dict[str, List[Tuple[nn.Variable, nn.Variable]]]
 
-    def __init__(self,
-                 models: Union[DeterministicPolicy, Sequence[DeterministicPolicy]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 q_function: QFunction,
-                 env_info: EnvironmentInfo,
-                 config: HyARPolicyTrainerConfig = HyARPolicyTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[DeterministicPolicy, Sequence[DeterministicPolicy]],
+        solvers: Dict[str, nn.solver.Solver],
+        q_function: QFunction,
+        env_info: EnvironmentInfo,
+        config: HyARPolicyTrainerConfig = HyARPolicyTrainerConfig(),
+    ):
         super().__init__(models, solvers, q_function, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict[str, np.ndarray]:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
             set_data_to_variable(t.non_terminal, b.non_terminal)
@@ -86,7 +90,7 @@ class HyARPolicyTrainer(DPGPolicyTrainer):
         for solver in solvers.values():
             solver.update()
 
-        trainer_state: Dict[str, Any] = {'pi_loss': 0}
+        trainer_state: Dict[str, Any] = {"pi_loss": 0}
         return trainer_state
 
     def _build_training_graph(self, models: Sequence[Model], training_variables: TrainingVariables):
@@ -125,7 +129,7 @@ class HyARPolicyTrainer(DPGPolicyTrainer):
     def _invert_gradients(self, p: nn.Variable, grads: nn.Variable, p_min: nn.Variable, p_max: nn.Variable):
         increasing = NF.greater_equal_scalar(grads, val=0)
         decreasing = NF.less_scalar(grads, val=0)
-        p_range = (p_max - p_min)
+        p_range = p_max - p_min
         return grads * increasing * (p_max - p) / p_range + grads * decreasing * (p - p_min) / p_range
 
     @property

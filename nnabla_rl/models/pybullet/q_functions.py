@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,15 +42,16 @@ class ICRA2018QtOptQFunction(ContinuousQFunction):
         cem_num_elites: int = 50,
         cem_num_iterations: int = 100,
         cem_alpha: float = 0.0,
-        random_sample_size: int = 500
+        random_sample_size: int = 500,
     ):
         super(ICRA2018QtOptQFunction, self).__init__(scope_name)
         self._action_high = action_high
         self._action_low = action_low
 
         self._cem_initial_mean_numpy = np.zeros(action_dim) if cem_initial_mean is None else np.array(cem_initial_mean)
-        self._cem_initial_variance_numpy = 0.5 * \
-            np.ones(action_dim) if cem_initial_variance is None else np.array(cem_initial_variance)
+        self._cem_initial_variance_numpy = (
+            0.5 * np.ones(action_dim) if cem_initial_variance is None else np.array(cem_initial_variance)
+        )
         self._cem_sample_size = cem_sample_size
         self._cem_num_elites = cem_num_elites
         self._cem_num_iterations = cem_num_iterations
@@ -67,31 +68,31 @@ class ICRA2018QtOptQFunction(ContinuousQFunction):
         tiled_time_step = NF.reshape(tiled_time_step, (batch_size, 1, 7, 7))
 
         with nn.parameter_scope(self.scope_name):
-            with nn.parameter_scope('state_conv1'):
+            with nn.parameter_scope("state_conv1"):
                 h = NF.relu(NPF.convolution(image, 32, (3, 3), stride=(2, 2)))
 
-            with nn.parameter_scope('state_conv2'):
+            with nn.parameter_scope("state_conv2"):
                 h = NF.relu(NPF.convolution(h, 32, (3, 3), stride=(2, 2)))
 
-            with nn.parameter_scope('state_conv3'):
+            with nn.parameter_scope("state_conv3"):
                 h = NF.relu(NPF.convolution(h, 32, (3, 3), stride=(2, 2)))
 
             encoded_state = NF.concatenate(tiled_time_step, h, axis=1)
 
-            with nn.parameter_scope('action_affine1'):
+            with nn.parameter_scope("action_affine1"):
                 h = NF.relu(NPF.affine(a, 33))
                 encoded_action = NF.reshape(h, (batch_size, 33, 1, 1))
 
             h = encoded_state + encoded_action
             h = NF.reshape(h, (batch_size, -1))
 
-            with nn.parameter_scope('affine1'):
+            with nn.parameter_scope("affine1"):
                 h = NF.relu(NPF.affine(h, 32))
 
-            with nn.parameter_scope('affine2'):
+            with nn.parameter_scope("affine2"):
                 h = NF.relu(NPF.affine(h, 32))
 
-            with nn.parameter_scope('affine3'):
+            with nn.parameter_scope("affine3"):
                 q_value = NPF.affine(h, 1)
 
         return q_value
@@ -106,7 +107,7 @@ class ICRA2018QtOptQFunction(ContinuousQFunction):
 
         def objective_function(a: nn.Variable) -> nn.Variable:
             batch_size, sample_size, action_dim = a.shape
-            a = a.reshape((batch_size*sample_size, action_dim))
+            a = a.reshape((batch_size * sample_size, action_dim))
             q_value = self.q(tiled_s, a)
             q_value = q_value.reshape((batch_size, sample_size, 1))
             return q_value
@@ -114,7 +115,8 @@ class ICRA2018QtOptQFunction(ContinuousQFunction):
         if is_eval_scope():
             initial_mean_var = nn.Variable.from_numpy_array(np.tile(self._cem_initial_mean_numpy, (batch_size, 1)))
             initial_variance_var = nn.Variable.from_numpy_array(
-                np.tile(self._cem_initial_variance_numpy, (batch_size, 1)))
+                np.tile(self._cem_initial_variance_numpy, (batch_size, 1))
+            )
             optimized_action, _ = RF.gaussian_cross_entropy_method(
                 objective_function,
                 initial_mean_var,
@@ -122,7 +124,7 @@ class ICRA2018QtOptQFunction(ContinuousQFunction):
                 sample_size=self._cem_sample_size,
                 num_elites=self._cem_num_elites,
                 num_iterations=self._cem_num_iterations,
-                alpha=self._cem_alpha
+                alpha=self._cem_alpha,
             )
         else:
             upper_bound = np.tile(self._action_high, (batch_size, 1))
@@ -131,15 +133,24 @@ class ICRA2018QtOptQFunction(ContinuousQFunction):
                 objective_function,
                 upper_bound=upper_bound,
                 lower_bound=lower_bound,
-                sample_size=self._random_sample_size
+                sample_size=self._random_sample_size,
             )
 
         return optimized_action
 
     def _tile_state(self, s: nn.Variable, tile_size: int) -> nn.Variable:
-        tile_reps = [tile_size, ] + [1, ] * len(s.shape)
+        tile_reps = [
+            tile_size,
+        ] + [
+            1,
+        ] * len(s.shape)
         s = NF.tile(s, tile_reps)
-        transpose_reps = [1, 0, ] + list(range(len(s.shape)))[2:]
+        transpose_reps = [
+            1,
+            0,
+        ] + list(
+            range(len(s.shape))
+        )[2:]
         s = NF.transpose(s, transpose_reps)
         s = NF.reshape(s, (-1, *s.shape[2:]))
         return s

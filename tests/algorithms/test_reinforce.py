@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ class TestREINFORCE(object):
         dummy_env = E.DummyDiscrete()
         reinforce = A.REINFORCE(dummy_env)
 
-        assert reinforce.__name__ == 'REINFORCE'
+        assert reinforce.__name__ == "REINFORCE"
 
     def test_run_online_training(self):
         """Check that no error occurs when calling online training."""
@@ -62,15 +62,16 @@ class TestREINFORCE(object):
         dummy_env = E.DummyContinuous()
         reinforce = A.REINFORCE(dummy_env)
 
-        reinforce._policy_trainer_state = {'pi_loss': 0.}
+        reinforce._policy_trainer_state = {"pi_loss": 0.0}
 
         latest_iteration_state = reinforce.latest_iteration_state
-        assert 'pi_loss' in latest_iteration_state['scalar']
-        assert latest_iteration_state['scalar']['pi_loss'] == 0.
+        assert "pi_loss" in latest_iteration_state["scalar"]
+        assert latest_iteration_state["scalar"]["pi_loss"] == 0.0
 
 
 if __name__ == "__main__":
     from testing_utils import EpisodicEnv
+
     pytest.main()
 else:
     from ..testing_utils import EpisodicEnv

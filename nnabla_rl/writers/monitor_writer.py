@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ class MonitorWriter(Writer):
         self._monitors = {}
 
     def write_scalar(self, iteration_num, scalar):
-        prefix = self._file_prefix + '_scalar_'
+        prefix = self._file_prefix + "_scalar_"
         for name, value in scalar.items():
             monitor = self._create_or_get_monitor_series(prefix + name)
             monitor.add(iteration_num, value)

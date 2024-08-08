@@ -28,9 +28,14 @@ class FlattenActionWrapper(gym.Wrapper):
         original_action_space = env.action_space
         num_actions = original_action_space.spaces[0].n
         discrete_space = original_action_space.spaces[0]
-        continuous_space = [gym.spaces.Box(original_action_space.spaces[1].spaces[i].low,
-                                           original_action_space.spaces[1].spaces[i].high,
-                                           dtype=np.float32) for i in range(0, num_actions)]
+        continuous_space = [
+            gym.spaces.Box(
+                original_action_space.spaces[1].spaces[i].low,
+                original_action_space.spaces[1].spaces[i].high,
+                dtype=np.float32,
+            )
+            for i in range(0, num_actions)
+        ]
         self.action_space = gym.spaces.Tuple((discrete_space, *continuous_space))
 
     def step(self, action):
@@ -47,14 +52,18 @@ class ScaleStateWrapper(gym.ObservationWrapper):
 
         if self._is_box(env.observation_space):
             observation_shape = cast(SupportsIndex, env.observation_space.shape)
-            self.observation_space = gym.spaces.Box(low=-np.ones(shape=observation_shape),
-                                                    high=np.ones(shape=observation_shape),
-                                                    dtype=np.float32)
+            self.observation_space = gym.spaces.Box(
+                low=-np.ones(shape=observation_shape), high=np.ones(shape=observation_shape), dtype=np.float32
+            )
         elif self._is_tuple(env.observation_space):
-            spaces = [gym.spaces.Box(low=-np.ones(shape=space.shape),
-                                     high=np.ones(shape=space.shape),
-                                     dtype=np.float32)
-                      if self._is_box(space) else space for space in cast(gym.spaces.Tuple, env.observation_space)]
+            spaces = [
+                (
+                    gym.spaces.Box(low=-np.ones(shape=space.shape), high=np.ones(shape=space.shape), dtype=np.float32)
+                    if self._is_box(space)
+                    else space
+                )
+                for space in cast(gym.spaces.Tuple, env.observation_space)
+            ]
             self.observation_space = gym.spaces.Tuple(spaces)  # type: ignore
         else:
             raise NotImplementedError
@@ -87,14 +96,18 @@ class ScaleActionWrapper(gym.ActionWrapper):
 
         if self._is_box(env.action_space):
             action_shape = cast(SupportsIndex, env.action_space.shape)
-            self.action_space = gym.spaces.Box(low=-np.ones(shape=action_shape),
-                                               high=np.ones(shape=action_shape),
-                                               dtype=np.float32)
+            self.action_space = gym.spaces.Box(
+                low=-np.ones(shape=action_shape), high=np.ones(shape=action_shape), dtype=np.float32
+            )
         elif self._is_tuple(env.action_space):
-            spaces = [gym.spaces.Box(low=-np.ones(shape=space.shape),
-                                     high=np.ones(shape=space.shape),
-                                     dtype=np.float32)
-                      if self._is_box(space) else space for space in cast(gym.spaces.Tuple, env.action_space)]
+            spaces = [
+                (
+                    gym.spaces.Box(low=-np.ones(shape=space.shape), high=np.ones(shape=space.shape), dtype=np.float32)
+                    if self._is_box(space)
+                    else space
+                )
+                for space in cast(gym.spaces.Tuple, env.action_space)
+            ]
             self.action_space = gym.spaces.Tuple(spaces)  # type: ignore
         else:
             raise NotImplementedError
@@ -133,9 +146,9 @@ class MergeBoxActionWrapper(gym.ActionWrapper):
         self._original_action_range = [space.high - space.low for space in original_action_space[1:]]
         action_size = max(self._original_action_size)
         d_action_space = original_action_space[0]
-        c_action_space = gym.spaces.Box(low=-np.ones(shape=(action_size, )),
-                                        high=np.ones(shape=(action_size, )),
-                                        dtype=np.float32)
+        c_action_space = gym.spaces.Box(
+            low=-np.ones(shape=(action_size,)), high=np.ones(shape=(action_size,)), dtype=np.float32
+        )
         self.action_space = gym.spaces.Tuple((d_action_space, c_action_space))  # type: ignore
 
     def action(self, action):
@@ -163,8 +176,8 @@ class EmbedActionWrapper(gym.ActionWrapper):
         self.embed_map = np.random.normal(size=(self.d_action_dim, self.d_action_dim))
 
     def action(self, action):
-        d_action = self._decode(action[:self.d_action_dim])
-        c_action = action[self.d_action_dim:]
+        d_action = self._decode(action[: self.d_action_dim])
+        c_action = action[self.d_action_dim :]
         return (d_action, c_action)
 
     def reverse_action(self, action):
@@ -182,7 +195,7 @@ class RemoveStepWrapper(gym.ObservationWrapper):
     def __init__(self, env: Env):
         super().__init__(env)
         if not isinstance(env.observation_space, gym.spaces.Tuple):  # type: ignore
-            raise ValueError('observation space is not a tuple!')
+            raise ValueError("observation space is not a tuple!")
         self.observation_space = cast(gym.spaces.Tuple, env.observation_space)[0]
 
     def observation(self, observation):

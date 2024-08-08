@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,35 +17,41 @@ import numpy as np
 import pytest
 
 import nnabla_rl.environments as E
-from nnabla_rl.environments.gym_utils import (extract_max_episode_steps, get_space_dim, get_space_shape,
-                                              is_same_space_type)
+from nnabla_rl.environments.gym_utils import (
+    extract_max_episode_steps,
+    get_space_dim,
+    get_space_shape,
+    is_same_space_type,
+)
 
 
-class TestGymUtils():
+class TestGymUtils:
     def test_get_tuple_space_shape(self):
-        tuple_space = gym.spaces.Tuple((gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
-                                        gym.spaces.Box(low=0.0, high=1.0, shape=(3, ))))
+        tuple_space = gym.spaces.Tuple(
+            (gym.spaces.Box(low=0.0, high=1.0, shape=(2,)), gym.spaces.Box(low=0.0, high=1.0, shape=(3,)))
+        )
 
         with pytest.raises(ValueError):
             get_space_shape(tuple_space)
 
     def test_get_box_space_shape(self):
-        shape = (5, )
+        shape = (5,)
         box_space_shape = gym.spaces.Box(low=0.0, high=1.0, shape=shape)
         actual_shape = get_space_shape(box_space_shape)
 
         assert actual_shape == shape
 
     def test_get_discrete_space_shape(self):
-        shape = (1, )
+        shape = (1,)
         discrete_space_shape = gym.spaces.Discrete(4)
         actual_shape = get_space_shape(discrete_space_shape)
 
         assert actual_shape == shape
 
     def test_get_tuple_space_dim(self):
-        tuple_space = gym.spaces.Tuple((gym.spaces.Box(low=0.0, high=1.0, shape=(2, )),
-                                        gym.spaces.Box(low=0.0, high=1.0, shape=(3, ))))
+        tuple_space = gym.spaces.Tuple(
+            (gym.spaces.Box(low=0.0, high=1.0, shape=(2,)), gym.spaces.Box(low=0.0, high=1.0, shape=(3,)))
+        )
 
         with pytest.raises(ValueError):
             get_space_dim(tuple_space)
@@ -62,7 +68,7 @@ class TestGymUtils():
         discrete_space_shape = gym.spaces.Discrete(dim)
         actual_dim = get_space_shape(discrete_space_shape)
 
-        assert actual_dim == (1, )
+        assert actual_dim == (1,)
 
     def test_extract_None_max_episode_steps(self):
         env = E.DummyContinuous(max_episode_steps=None)
@@ -78,7 +84,7 @@ class TestGymUtils():
         assert actual_max_episode_steps == max_episode_steps
 
     def test_is_same_space_type_box(self):
-        box_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4, ))
+        box_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4,))
         tuple_box_space = gym.spaces.Tuple((box_space, box_space))
 
         assert is_same_space_type(tuple_box_space, gym.spaces.Box)
@@ -90,7 +96,7 @@ class TestGymUtils():
         assert is_same_space_type(tuple_discrete_space, gym.spaces.Discrete)
 
     def test_is_same_space_type_mixed(self):
-        box_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4, ))
+        box_space = gym.spaces.Box(low=0.0, high=1.0, shape=(4,))
         discrete_space = gym.spaces.Discrete(4)
 
         tuple_mixed_space = gym.spaces.Tuple((box_space, discrete_space))

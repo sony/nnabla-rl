@@ -1,4 +1,4 @@
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,22 +27,24 @@ from nnabla.parametric_functions import parametric_function_api
 from nnabla_rl.initializers import HeUniform
 
 
-def noisy_net(inp: nn.Variable,
-              n_outmap: int,
-              base_axis: int = 1,
-              w_init: Optional[Callable[[Tuple[int, ...]], np.ndarray]] = None,
-              b_init: Optional[Callable[[Tuple[int, ...]], np.ndarray]] = None,
-              noisy_w_init: Optional[Callable[[Tuple[int, ...]], np.ndarray]] = None,
-              noisy_b_init: Optional[Callable[[Tuple[int, ...]], np.ndarray]] = None,
-              fix_parameters: bool = False,
-              rng: Optional[np.random.RandomState] = None,
-              with_bias: bool = True,
-              with_noisy_bias: bool = True,
-              apply_w: Optional[Callable[[nn.Variable], nn.Variable]] = None,
-              apply_b: Optional[Callable[[nn.Variable], nn.Variable]] = None,
-              apply_noisy_w: Optional[Callable[[nn.Variable], nn.Variable]] = None,
-              apply_noisy_b: Optional[Callable[[nn.Variable], nn.Variable]] = None,
-              seed: int = -1) -> nn.Variable:
+def noisy_net(
+    inp: nn.Variable,
+    n_outmap: int,
+    base_axis: int = 1,
+    w_init: Optional[Callable[[Tuple[int, ...]], np.ndarray]] = None,
+    b_init: Optional[Callable[[Tuple[int, ...]], np.ndarray]] = None,
+    noisy_w_init: Optional[Callable[[Tuple[int, ...]], np.ndarray]] = None,
+    noisy_b_init: Optional[Callable[[Tuple[int, ...]], np.ndarray]] = None,
+    fix_parameters: bool = False,
+    rng: Optional[np.random.RandomState] = None,
+    with_bias: bool = True,
+    with_noisy_bias: bool = True,
+    apply_w: Optional[Callable[[nn.Variable], nn.Variable]] = None,
+    apply_b: Optional[Callable[[nn.Variable], nn.Variable]] = None,
+    apply_noisy_w: Optional[Callable[[nn.Variable], nn.Variable]] = None,
+    apply_noisy_b: Optional[Callable[[nn.Variable], nn.Variable]] = None,
+    seed: int = -1,
+) -> nn.Variable:
     """Noisy linear layer with factorized gaussian noise  proposed by Fortunato
     et al. in the paper "Noisy networks for exploration". See:
     https://arxiv.org/abs/1706.10295 for details.
@@ -83,7 +85,7 @@ def noisy_net(inp: nn.Variable,
 
     inmaps = int(np.prod(inp.shape[base_axis:]))
     if w_init is None:
-        w_init = HeUniform(inmaps, n_outmap, factor=1.0/3.0, rng=rng)
+        w_init = HeUniform(inmaps, n_outmap, factor=1.0 / 3.0, rng=rng)
     if noisy_w_init is None:
         noisy_w_init = ConstantInitializer(0.5 / np.sqrt(inmaps))
     w = get_parameter_or_create("W", (inmaps, n_outmap), w_init, True, not fix_parameters)
@@ -97,8 +99,8 @@ def noisy_net(inp: nn.Variable,
     b = None
     if with_bias:
         if b_init is None:
-            b_init = HeUniform(inmaps, n_outmap, factor=1.0/3.0, rng=rng)
-        b = get_parameter_or_create("b", (n_outmap, ), b_init, True, not fix_parameters)
+            b_init = HeUniform(inmaps, n_outmap, factor=1.0 / 3.0, rng=rng)
+        b = get_parameter_or_create("b", (n_outmap,), b_init, True, not fix_parameters)
         if apply_b is not None:
             b = apply_b(b)
 
@@ -106,7 +108,7 @@ def noisy_net(inp: nn.Variable,
     if with_noisy_bias:
         if noisy_b_init is None:
             noisy_b_init = ConstantInitializer(0.5 / np.sqrt(inmaps))
-        noisy_b = get_parameter_or_create("noisy_b", (n_outmap, ), noisy_b_init, True, not fix_parameters)
+        noisy_b = get_parameter_or_create("noisy_b", (n_outmap,), noisy_b_init, True, not fix_parameters)
         if apply_noisy_b is not None:
             noisy_b = apply_noisy_b(noisy_b)
 
@@ -142,7 +144,7 @@ def noisy_net(inp: nn.Variable,
     return NF.affine(inp, weight, bias, base_axis)
 
 
-def spatial_softmax(inp: nn.Variable, alpha_init: float = 1., fix_alpha: bool = False) -> nn.Variable:
+def spatial_softmax(inp: nn.Variable, alpha_init: float = 1.0, fix_alpha: bool = False) -> nn.Variable:
     r"""Spatial softmax layer proposed in https://arxiv.org/abs/1509.06113.
     Computes.
 
@@ -168,33 +170,36 @@ def spatial_softmax(inp: nn.Variable, alpha_init: float = 1., fix_alpha: bool = 
     """
     assert len(inp.shape) == 4
     (batch_size, channel, height, width) = inp.shape
-    alpha = get_parameter_or_create("alpha", shape=(1, 1), initializer=ConstantInitializer(alpha_init),
-                                    need_grad=True, as_need_grad=not fix_alpha)
+    alpha = get_parameter_or_create(
+        "alpha", shape=(1, 1), initializer=ConstantInitializer(alpha_init), need_grad=True, as_need_grad=not fix_alpha
+    )
 
-    features = NF.reshape(inp, (-1, height*width))
+    features = NF.reshape(inp, (-1, height * width))
     softmax_attention = NF.softmax(features / alpha)
 
     # Image positions are normalized and defined by -1 to 1.
     # This normalization is referring to the original Guided Policy Search implementation.
     # See: https://github.com/cbfinn/gps/blob/master/python/gps/algorithm/policy_opt/tf_model_example.py#L238
-    pos_x, pos_y = np.meshgrid(np.linspace(-1., 1., height), np.linspace(-1., 1., width))
-    pos_x = nn.Variable.from_numpy_array(pos_x.reshape(-1, (height*width)))
-    pos_y = nn.Variable.from_numpy_array(pos_y.reshape(-1, (height*width)))
+    pos_x, pos_y = np.meshgrid(np.linspace(-1.0, 1.0, height), np.linspace(-1.0, 1.0, width))
+    pos_x = nn.Variable.from_numpy_array(pos_x.reshape(-1, (height * width)))
+    pos_y = nn.Variable.from_numpy_array(pos_y.reshape(-1, (height * width)))
 
-    expected_x = NF.sum(pos_x*softmax_attention, axis=1, keepdims=True)
-    expected_y = NF.sum(pos_y*softmax_attention, axis=1, keepdims=True)
+    expected_x = NF.sum(pos_x * softmax_attention, axis=1, keepdims=True)
+    expected_y = NF.sum(pos_y * softmax_attention, axis=1, keepdims=True)
     expected_xy = NF.concatenate(expected_x, expected_y, axis=1)
 
-    feature_points = NF.reshape(expected_xy, (batch_size, channel*2))
+    feature_points = NF.reshape(expected_xy, (batch_size, channel * 2))
 
     return feature_points
 
 
-@parametric_function_api("lstm", [
-    ('affine/W', 'Stacked weight matrixes of LSTM block',
-     '(inmaps, 4, state_size)', True),
-    ('affine/b', 'Stacked bias vectors of LSTM block', '(4, state_size,)', True),
-])
+@parametric_function_api(
+    "lstm",
+    [
+        ("affine/W", "Stacked weight matrixes of LSTM block", "(inmaps, 4, state_size)", True),
+        ("affine/b", "Stacked bias vectors of LSTM block", "(4, state_size,)", True),
+    ],
+)
 def lstm_cell(x, h, c, state_size, w_init=None, b_init=None, fix_parameters=False, base_axis=1):
     """Long Short-Term Memory with base_axis.
 
@@ -230,22 +235,27 @@ def lstm_cell(x, h, c, state_size, w_init=None, b_init=None, fix_parameters=Fals
         :class:`~nnabla.Variable`
     """
     xh = NF.concatenate(*(x, h), axis=base_axis)
-    iofc = NPF.affine(xh, (4, state_size), base_axis=base_axis, w_init=w_init,
-                      b_init=b_init, fix_parameters=fix_parameters)
+    iofc = NPF.affine(
+        xh, (4, state_size), base_axis=base_axis, w_init=w_init, b_init=b_init, fix_parameters=fix_parameters
+    )
     i_t, o_t, f_t, gate = NF.split(iofc, axis=base_axis)
     c_t = NF.sigmoid(f_t) * c + NF.sigmoid(i_t) * NF.tanh(gate)
     h_t = NF.sigmoid(o_t) * NF.tanh(c_t)
     return h_t, c_t
 
 
-def causal_self_attention(x: nn.Variable, embed_dim: int, num_heads: int,
-                          mask: Optional[nn.Variable] = None,
-                          attention_dropout: Optional[float] = None,
-                          output_dropout: Optional[float] = None,
-                          w_init_key: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
-                          w_init_query: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
-                          w_init_value: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
-                          w_init_proj: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02)) -> nn.Variable:
+def causal_self_attention(
+    x: nn.Variable,
+    embed_dim: int,
+    num_heads: int,
+    mask: Optional[nn.Variable] = None,
+    attention_dropout: Optional[float] = None,
+    output_dropout: Optional[float] = None,
+    w_init_key: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
+    w_init_query: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
+    w_init_value: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
+    w_init_proj: Optional[Callable[[Any], Any]] = NI.NormalInitializer(0.02),
+) -> nn.Variable:
     """Causal self attention used in https://arxiv.org/abs/2106.01345.
 
     Args:
@@ -265,15 +275,15 @@ def causal_self_attention(x: nn.Variable, embed_dim: int, num_heads: int,
         nn.Variables: Encoded vector
     """
     batch_size, timesteps, _ = x.shape
-    with nn.parameter_scope('key'):
+    with nn.parameter_scope("key"):
         k = NPF.affine(x, n_outmaps=embed_dim, base_axis=2, w_init=w_init_key)
         k = NF.reshape(k, shape=(batch_size, timesteps, num_heads, embed_dim // num_heads))
         k = NF.transpose(k, axes=(0, 2, 1, 3))
-    with nn.parameter_scope('query'):
+    with nn.parameter_scope("query"):
         q = NPF.affine(x, n_outmaps=embed_dim, base_axis=2, w_init=w_init_query)
         q = NF.reshape(q, shape=(batch_size, timesteps, num_heads, embed_dim // num_heads))
         q = NF.transpose(q, axes=(0, 2, 1, 3))
-    with nn.parameter_scope('value'):
+    with nn.parameter_scope("value"):
         v = NPF.affine(x, n_outmaps=embed_dim, base_axis=2, w_init=w_init_value)
         v = NF.reshape(v, shape=(batch_size, timesteps, num_heads, embed_dim // num_heads))
         v = NF.transpose(v, axes=(0, 2, 1, 3))
@@ -296,7 +306,7 @@ def causal_self_attention(x: nn.Variable, embed_dim: int, num_heads: int,
     output = NF.reshape(output, shape=(batch_size, timesteps, -1))
     assert output.shape == (batch_size, timesteps, embed_dim)
 
-    with nn.parameter_scope('proj'):
+    with nn.parameter_scope("proj"):
         output = NPF.affine(output, n_outmaps=embed_dim, base_axis=2, w_init=w_init_proj)
     if output_dropout is not None:
         output = NF.dropout(output, p=output_dropout)

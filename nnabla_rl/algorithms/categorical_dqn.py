@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,71 +106,72 @@ class CategoricalDQNConfig(AlgorithmConfig):
 
         Check set values are in valid range.
         """
-        self._assert_between(self.gamma, 0.0, 1.0, 'gamma')
-        self._assert_positive(self.learning_rate, 'learning_rate')
-        self._assert_positive(self.batch_size, 'batch_size')
-        self._assert_positive(self.num_steps, 'num_steps')
-        self._assert_positive(self.learner_update_frequency, 'learner_update_frequency')
-        self._assert_positive(self.target_update_frequency, 'target_update_frequency')
-        self._assert_positive(self.start_timesteps, 'start_timesteps')
-        self._assert_positive(self.replay_buffer_size, 'replay_buffer_size')
-        self._assert_smaller_than(self.start_timesteps, self.replay_buffer_size, 'start_timesteps')
-        self._assert_positive(self.max_explore_steps, 'max_explore_steps')
-        self._assert_between(self.initial_epsilon, 0.0, 1.0, 'initial_epsilon')
-        self._assert_between(self.final_epsilon, 0.0, 1.0, 'final_epsilon')
-        self._assert_between(self.test_epsilon, 0.0, 1.0, 'test_epsilon')
-        self._assert_positive(self.num_atoms, 'num_atoms')
-        self._assert_positive(self.unroll_steps, 'unroll_steps')
-        self._assert_positive_or_zero(self.burn_in_steps, 'burn_in_steps')
+        self._assert_between(self.gamma, 0.0, 1.0, "gamma")
+        self._assert_positive(self.learning_rate, "learning_rate")
+        self._assert_positive(self.batch_size, "batch_size")
+        self._assert_positive(self.num_steps, "num_steps")
+        self._assert_positive(self.learner_update_frequency, "learner_update_frequency")
+        self._assert_positive(self.target_update_frequency, "target_update_frequency")
+        self._assert_positive(self.start_timesteps, "start_timesteps")
+        self._assert_positive(self.replay_buffer_size, "replay_buffer_size")
+        self._assert_smaller_than(self.start_timesteps, self.replay_buffer_size, "start_timesteps")
+        self._assert_positive(self.max_explore_steps, "max_explore_steps")
+        self._assert_between(self.initial_epsilon, 0.0, 1.0, "initial_epsilon")
+        self._assert_between(self.final_epsilon, 0.0, 1.0, "final_epsilon")
+        self._assert_between(self.test_epsilon, 0.0, 1.0, "test_epsilon")
+        self._assert_positive(self.num_atoms, "num_atoms")
+        self._assert_positive(self.unroll_steps, "unroll_steps")
+        self._assert_positive_or_zero(self.burn_in_steps, "burn_in_steps")
 
 
 class DefaultValueDistFunctionBuilder(ModelBuilder[ValueDistributionFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: CategoricalDQNConfig,
-                    **kwargs) -> ValueDistributionFunction:
-        return C51ValueDistributionFunction(scope_name,
-                                            env_info.action_dim,
-                                            algorithm_config.num_atoms,
-                                            algorithm_config.v_min,
-                                            algorithm_config.v_max)
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: CategoricalDQNConfig,
+        **kwargs,
+    ) -> ValueDistributionFunction:
+        return C51ValueDistributionFunction(
+            scope_name, env_info.action_dim, algorithm_config.num_atoms, algorithm_config.v_min, algorithm_config.v_max
+        )
 
 
 class DefaultReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(self,  # type: ignore[override]
-                            env_info: EnvironmentInfo,
-                            algorithm_config: CategoricalDQNConfig,
-                            **kwargs) -> ReplayBuffer:
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: CategoricalDQNConfig, **kwargs
+    ) -> ReplayBuffer:
         return ReplayBuffer(capacity=algorithm_config.replay_buffer_size)
 
 
 class DefaultSolverBuilder(SolverBuilder):
-    def build_solver(self,  # type: ignore[override]
-                     env_info: EnvironmentInfo,
-                     algorithm_config: CategoricalDQNConfig,
-                     **kwargs) -> nn.solver.Solver:
+    def build_solver(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: CategoricalDQNConfig, **kwargs
+    ) -> nn.solver.Solver:
         return NS.Adam(alpha=algorithm_config.learning_rate, eps=1e-2 / algorithm_config.batch_size)
 
 
 class DefaultExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self,  # type: ignore[override]
-                       env_info: EnvironmentInfo,
-                       algorithm_config: CategoricalDQNConfig,
-                       algorithm: "CategoricalDQN",
-                       **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: CategoricalDQNConfig,
+        algorithm: "CategoricalDQN",
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
             warmup_random_steps=algorithm_config.start_timesteps,
             initial_step_num=algorithm.iteration_num,
             initial_epsilon=algorithm_config.initial_epsilon,
             final_epsilon=algorithm_config.final_epsilon,
-            max_explore_steps=algorithm_config.max_explore_steps
+            max_explore_steps=algorithm_config.max_explore_steps,
         )
         explorer = EE.LinearDecayEpsilonGreedyExplorer(
             greedy_action_selector=algorithm._exploration_action_selector,
             random_action_selector=algorithm._random_action_selector,
             env_info=env_info,
-            config=explorer_config)
+            config=explorer_config,
+        )
         return explorer
 
 
@@ -214,21 +215,23 @@ class CategoricalDQN(Algorithm):
 
     _model_trainer_state: Dict[str, Any]
 
-    def __init__(self, env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: CategoricalDQNConfig = CategoricalDQNConfig(),
-                 value_distribution_builder: ModelBuilder[ValueDistributionFunction]
-                 = DefaultValueDistFunctionBuilder(),
-                 value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: CategoricalDQNConfig = CategoricalDQNConfig(),
+        value_distribution_builder: ModelBuilder[ValueDistributionFunction] = DefaultValueDistFunctionBuilder(),
+        value_distribution_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(CategoricalDQN, self).__init__(env_or_env_info, config=config)
 
         self._explorer_builder = explorer_builder
 
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            self._atom_p = value_distribution_builder('atom_p_train', self._env_info, self._config)
+            self._atom_p = value_distribution_builder("atom_p_train", self._env_info, self._config)
             self._atom_p_solver = value_distribution_solver_builder(self._env_info, self._config)
-            self._target_atom_p = self._atom_p.deepcopy('target_atom_p_train')
+            self._target_atom_p = self._atom_p.deepcopy("target_atom_p_train")
 
             self._replay_buffer = replay_buffer_builder(self._env_info, self._config)
 
@@ -238,11 +241,13 @@ class CategoricalDQN(Algorithm):
     @eval_api
     def compute_eval_action(self, state, *, begin_of_episode=False, extra_info={}):
         with nn.context_scope(context.get_nnabla_context(self._config.gpu_id)):
-            (action, _), _ = epsilon_greedy_action_selection(state,
-                                                             self._evaluation_action_selector,
-                                                             self._random_action_selector,
-                                                             epsilon=self._config.test_epsilon,
-                                                             begin_of_episode=begin_of_episode)
+            (action, _), _ = epsilon_greedy_action_selection(
+                state,
+                self._evaluation_action_selector,
+                self._random_action_selector,
+                epsilon=self._config.test_epsilon,
+                begin_of_episode=begin_of_episode,
+            )
             return action
 
     def _before_training_start(self, env_or_buffer):
@@ -263,14 +268,16 @@ class CategoricalDQN(Algorithm):
             reduction_method=self._config.loss_reduction_method,
             unroll_steps=self._config.unroll_steps,
             burn_in_steps=self._config.burn_in_steps,
-            reset_on_terminal=self._config.reset_rnn_on_terminal)
+            reset_on_terminal=self._config.reset_rnn_on_terminal,
+        )
 
         model_trainer = MT.q_value_trainers.CategoricalDQNQTrainer(
             train_functions=self._atom_p,
             solvers={self._atom_p.scope_name: self._atom_p_solver},
             target_function=self._target_atom_p,
             env_info=self._env_info,
-            config=trainer_config)
+            config=trainer_config,
+        )
 
         # NOTE: Copy initial parameters after setting up the training
         # Because the parameter is created after training graph construction
@@ -291,28 +298,30 @@ class CategoricalDQN(Algorithm):
         num_steps = self._config.num_steps + self._config.burn_in_steps + self._config.unroll_steps - 1
         experiences_tuple, info = replay_buffer.sample(self._config.batch_size, num_steps=num_steps)
         if num_steps == 1:
-            experiences_tuple = (experiences_tuple, )
+            experiences_tuple = (experiences_tuple,)
         assert len(experiences_tuple) == num_steps
 
         batch = None
         for experiences in reversed(experiences_tuple):
             (s, a, r, non_terminal, s_next, rnn_states_dict, *_) = marshal_experiences(experiences)
-            rnn_states = rnn_states_dict['rnn_states'] if 'rnn_states' in rnn_states_dict else {}
-            batch = TrainingBatch(batch_size=self._config.batch_size,
-                                  s_current=s,
-                                  a_current=a,
-                                  gamma=self._config.gamma,
-                                  reward=r,
-                                  non_terminal=non_terminal,
-                                  s_next=s_next,
-                                  weight=info['weights'],
-                                  next_step_batch=batch,
-                                  rnn_states=rnn_states)
+            rnn_states = rnn_states_dict["rnn_states"] if "rnn_states" in rnn_states_dict else {}
+            batch = TrainingBatch(
+                batch_size=self._config.batch_size,
+                s_current=s,
+                a_current=a,
+                gamma=self._config.gamma,
+                reward=r,
+                non_terminal=non_terminal,
+                s_next=s_next,
+                weight=info["weights"],
+                next_step_batch=batch,
+                rnn_states=rnn_states,
+            )
 
         self._model_trainer_state = self._model_trainer.train(batch)
         if self.iteration_num % self._config.target_update_frequency == 0:
             sync_model(self._atom_p, self._target_atom_p)
-        td_errors = self._model_trainer_state['td_errors']
+        td_errors = self._model_trainer_state["td_errors"]
         replay_buffer.update_priorities(td_errors)
 
     def _evaluation_action_selector(self, s, *, begin_of_episode=False):
@@ -323,7 +332,7 @@ class CategoricalDQN(Algorithm):
 
     def _random_action_selector(self, s, *, begin_of_episode=False):
         action = self._env_info.action_space.sample()
-        return np.asarray(action).reshape((1, )), {}
+        return np.asarray(action).reshape((1,)), {}
 
     def _models(self):
         models = {}
@@ -337,8 +346,9 @@ class CategoricalDQN(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_continuous_action_env() and not env_info.is_tuple_action_env()
 
     @classmethod
@@ -348,10 +358,11 @@ class CategoricalDQN(Algorithm):
     @property
     def latest_iteration_state(self):
         latest_iteration_state = super(CategoricalDQN, self).latest_iteration_state
-        if hasattr(self, '_model_trainer_state'):
-            latest_iteration_state['scalar'].update(
-                {'cross_entropy_loss': float(self._model_trainer_state['cross_entropy_loss'])})
-            latest_iteration_state['histogram'].update({'td_errors': self._model_trainer_state['td_errors'].flatten()})
+        if hasattr(self, "_model_trainer_state"):
+            latest_iteration_state["scalar"].update(
+                {"cross_entropy_loss": float(self._model_trainer_state["cross_entropy_loss"])}
+            )
+            latest_iteration_state["histogram"].update({"td_errors": self._model_trainer_state["td_errors"].flatten()})
         return latest_iteration_state
 
     @property

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ class TestBEAR(object):
         dummy_env = E.DummyContinuous()
         bear = A.BEAR(dummy_env)
 
-        assert bear.__name__ == 'BEAR'
+        assert bear.__name__ == "BEAR"
 
     def test_discrete_action_env_unsupported(self):
         """Check that error occurs when training on discrete action env."""
@@ -94,23 +94,24 @@ class TestBEAR(object):
         dummy_env = E.DummyContinuous()
         bear = A.BEAR(dummy_env)
 
-        bear._encoder_trainer_state = {'encoder_loss': 0.}
-        bear._q_function_trainer_state = {'q_loss': 1., 'td_errors': np.array([0., 1.])}
-        bear._policy_trainer_state = {'pi_loss': 2.}
+        bear._encoder_trainer_state = {"encoder_loss": 0.0}
+        bear._q_function_trainer_state = {"q_loss": 1.0, "td_errors": np.array([0.0, 1.0])}
+        bear._policy_trainer_state = {"pi_loss": 2.0}
 
         latest_iteration_state = bear.latest_iteration_state
-        assert 'encoder_loss' in latest_iteration_state['scalar']
-        assert 'q_loss' in latest_iteration_state['scalar']
-        assert 'pi_loss' in latest_iteration_state['scalar']
-        assert 'td_errors' in latest_iteration_state['histogram']
-        assert latest_iteration_state['scalar']['encoder_loss'] == 0.
-        assert latest_iteration_state['scalar']['q_loss'] == 1.
-        assert latest_iteration_state['scalar']['pi_loss'] == 2.
-        assert np.allclose(latest_iteration_state['histogram']['td_errors'], np.array([0., 1.]))
+        assert "encoder_loss" in latest_iteration_state["scalar"]
+        assert "q_loss" in latest_iteration_state["scalar"]
+        assert "pi_loss" in latest_iteration_state["scalar"]
+        assert "td_errors" in latest_iteration_state["histogram"]
+        assert latest_iteration_state["scalar"]["encoder_loss"] == 0.0
+        assert latest_iteration_state["scalar"]["q_loss"] == 1.0
+        assert latest_iteration_state["scalar"]["pi_loss"] == 2.0
+        assert np.allclose(latest_iteration_state["histogram"]["td_errors"], np.array([0.0, 1.0]))
 
 
 if __name__ == "__main__":
     from testing_utils import generate_dummy_experiences
+
     pytest.main()
 else:
     from ..testing_utils import generate_dummy_experiences

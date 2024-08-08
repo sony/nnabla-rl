@@ -21,7 +21,16 @@ from nnabla_rl.model_trainers.policy.her_policy_trainer import HERPolicyTrainer,
 from nnabla_rl.model_trainers.policy.hyar_policy_trainer import HyARPolicyTrainer, HyARPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.ppo_policy_trainer import PPOPolicyTrainer, PPOPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.soft_policy_trainer import SoftPolicyTrainer, SoftPolicyTrainerConfig  # noqa
-from nnabla_rl.model_trainers.policy.reinforce_policy_trainer import REINFORCEPolicyTrainer, REINFORCEPolicyTrainerConfig  # noqa
+from nnabla_rl.model_trainers.policy.reinforce_policy_trainer import (  # noqa
+    REINFORCEPolicyTrainer,
+    REINFORCEPolicyTrainerConfig,
+)
 from nnabla_rl.model_trainers.policy.trpo_policy_trainer import TRPOPolicyTrainer, TRPOPolicyTrainerConfig  # noqa
-from nnabla_rl.model_trainers.policy.xql_forward_policy_trainer import XQLForwardPolicyTrainer, XQLForwardPolicyTrainerConfig  # noqa
-from nnabla_rl.model_trainers.policy.xql_reverse_policy_trainer import XQLReversePolicyTrainer, XQLReversePolicyTrainerConfig  # noqa
+from nnabla_rl.model_trainers.policy.xql_forward_policy_trainer import (  # noqa
+    XQLForwardPolicyTrainer,
+    XQLForwardPolicyTrainerConfig,
+)
+from nnabla_rl.model_trainers.policy.xql_reverse_policy_trainer import (  # noqa
+    XQLReversePolicyTrainer,
+    XQLReversePolicyTrainerConfig,
+)

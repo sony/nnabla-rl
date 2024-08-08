@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,14 @@ import nnabla as nn
 import nnabla_rl.model_trainers as MT
 from nnabla_rl.algorithm import eval_api
 from nnabla_rl.algorithms.common_utils import _InfluenceMetricsEvaluator
-from nnabla_rl.algorithms.sac import (SAC, DefaultExplorerBuilder, DefaultPolicyBuilder, DefaultReplayBufferBuilder,
-                                      DefaultSolverBuilder, SACConfig)
+from nnabla_rl.algorithms.sac import (
+    SAC,
+    DefaultExplorerBuilder,
+    DefaultPolicyBuilder,
+    DefaultReplayBufferBuilder,
+    DefaultSolverBuilder,
+    SACConfig,
+)
 from nnabla_rl.builders import ExplorerBuilder, ModelBuilder, ReplayBufferBuilder, SolverBuilder
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import QFunction, SACDQFunction, StochasticPolicy
@@ -79,15 +85,17 @@ class SACDConfig(SACConfig):
 
     def __post_init__(self):
         super().__post_init__()
-        self._assert_positive(self.reward_dimension, 'reward_dimension')
+        self._assert_positive(self.reward_dimension, "reward_dimension")
 
 
 class DefaultQFunctionBuilder(ModelBuilder[QFunction]):
-    def build_model(self,  # type: ignore[override]
-                    scope_name: str,
-                    env_info: EnvironmentInfo,
-                    algorithm_config: SACDConfig,
-                    **kwargs) -> QFunction:
+    def build_model(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: SACDConfig,
+        **kwargs,
+    ) -> QFunction:
         # increment reward dimension to accomodate entropy bonus
         return SACDQFunction(scope_name, algorithm_config.reward_dimension + 1)
 
@@ -129,16 +137,18 @@ class SACD(SAC):
     _config: SACDConfig
     _influence_metrics_evaluator: _InfluenceMetricsEvaluator
 
-    def __init__(self,
-                 env_or_env_info: Union[gym.Env, EnvironmentInfo],
-                 config: SACDConfig = SACDConfig(),
-                 q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
-                 q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
-                 policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
-                 replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
-                 explorer_builder: ExplorerBuilder = DefaultExplorerBuilder()):
+    def __init__(
+        self,
+        env_or_env_info: Union[gym.Env, EnvironmentInfo],
+        config: SACDConfig = SACDConfig(),
+        q_function_builder: ModelBuilder[QFunction] = DefaultQFunctionBuilder(),
+        q_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        policy_builder: ModelBuilder[StochasticPolicy] = DefaultPolicyBuilder(),
+        policy_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        temperature_solver_builder: SolverBuilder = DefaultSolverBuilder(),
+        replay_buffer_builder: ReplayBufferBuilder = DefaultReplayBufferBuilder(),
+        explorer_builder: ExplorerBuilder = DefaultExplorerBuilder(),
+    ):
         super(SACD, self).__init__(
             env_or_env_info=env_or_env_info,
             config=config,
@@ -156,13 +166,14 @@ class SACD(SAC):
     def _setup_q_function_training(self, env_or_buffer):
         # training input/loss variables
         q_function_trainer_config = MT.q_value_trainers.SoftQDTrainerConfig(
-            reduction_method='mean',
+            reduction_method="mean",
             grad_clip=None,
             num_steps=self._config.num_steps,
             unroll_steps=self._config.critic_unroll_steps,
             burn_in_steps=self._config.critic_burn_in_steps,
             reset_on_terminal=self._config.critic_reset_rnn_on_terminal,
-            reward_dimension=self._config.reward_dimension)
+            reward_dimension=self._config.reward_dimension,
+        )
 
         q_function_trainer = MT.q_value_trainers.SoftQDTrainer(
             train_functions=self._train_q_functions,
@@ -171,17 +182,16 @@ class SACD(SAC):
             target_policy=self._pi,
             temperature=self._policy_trainer.get_temperature(),
             env_info=self._env_info,
-            config=q_function_trainer_config)
+            config=q_function_trainer_config,
+        )
         for q, target_q in zip(self._train_q_functions, self._target_q_functions):
             sync_model(q, target_q)
         return q_function_trainer
 
     @eval_api
-    def compute_influence_metrics(self,
-                                  state: np.ndarray,
-                                  action: np.ndarray,
-                                  *,
-                                  begin_of_episode: bool = False) -> np.ndarray:
+    def compute_influence_metrics(
+        self, state: np.ndarray, action: np.ndarray, *, begin_of_episode: bool = False
+    ) -> np.ndarray:
         """Compute relative influence metrics.
 
         The influence metrics represent how much each reward component contributes to an agent's decisions.

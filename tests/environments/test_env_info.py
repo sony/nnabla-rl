@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,13 +22,13 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 
 
 class TestEnvInfo(object):
-    @pytest.mark.parametrize("max_episode_steps", [None, 100, 10000, float('inf')])
+    @pytest.mark.parametrize("max_episode_steps", [None, 100, 10000, float("inf")])
     def test_spec_max_episode_steps(self, max_episode_steps):
         dummy_env = E.DummyContinuous(max_episode_steps=max_episode_steps)
         env_info = EnvironmentInfo.from_env(dummy_env)
 
         if max_episode_steps is None:
-            assert env_info.max_episode_steps == float('inf')
+            assert env_info.max_episode_steps == float("inf")
         else:
             assert env_info.max_episode_steps == max_episode_steps
 
@@ -102,7 +102,7 @@ class TestEnvInfo(object):
         dummy_env = E.DummyDiscreteImg()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.action_shape == (1, )
+        assert env_info.action_shape == (1,)
 
     def test_action_shape_tuple_continuous(self):
         dummy_env = E.DummyTupleContinuous()
@@ -114,14 +114,15 @@ class TestEnvInfo(object):
         dummy_env = E.DummyTupleDiscrete()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.action_shape == ((1, ), (1, ))
+        assert env_info.action_shape == ((1,), (1,))
 
     def test_action_shape_tuple_mixed(self):
         dummy_env = E.DummyTupleMixed()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.action_shape == tuple(space.shape if isinstance(
-            space, gym.spaces.Box) else (1, ) for space in dummy_env.action_space)
+        assert env_info.action_shape == tuple(
+            space.shape if isinstance(space, gym.spaces.Box) else (1,) for space in dummy_env.action_space
+        )
 
     def test_action_dim_continuous(self):
         dummy_env = E.DummyContinuous()
@@ -151,14 +152,15 @@ class TestEnvInfo(object):
         dummy_env = E.DummyTupleMixed()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.action_dim == tuple(np.prod(space.shape) if isinstance(
-            space, gym.spaces.Box) else space.n for space in env_info.action_space)
+        assert env_info.action_dim == tuple(
+            np.prod(space.shape) if isinstance(space, gym.spaces.Box) else space.n for space in env_info.action_space
+        )
 
     def test_state_shape_discrete(self):
         dummy_env = E.DummyDiscrete()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.state_shape == (1, )
+        assert env_info.state_shape == (1,)
 
     def test_state_shape_continuous(self):
         dummy_env = E.DummyContinuous()
@@ -176,7 +178,7 @@ class TestEnvInfo(object):
         dummy_env = E.DummyTupleDiscrete()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.state_shape == ((1, ), (1, ))
+        assert env_info.state_shape == ((1,), (1,))
 
     def test_state_shape_tuple_continuous(self):
         dummy_env = E.DummyTupleContinuous()
@@ -188,8 +190,9 @@ class TestEnvInfo(object):
         dummy_env = E.DummyTupleMixed()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.state_shape == tuple(space.shape if isinstance(
-            space, gym.spaces.Box) else (1, ) for space in dummy_env.observation_space)
+        assert env_info.state_shape == tuple(
+            space.shape if isinstance(space, gym.spaces.Box) else (1,) for space in dummy_env.observation_space
+        )
 
     def test_state_dim_discrete(self):
         dummy_env = E.DummyDiscrete()
@@ -225,8 +228,10 @@ class TestEnvInfo(object):
         dummy_env = E.DummyTupleMixed()
         env_info = EnvironmentInfo.from_env(dummy_env)
 
-        assert env_info.state_dim == tuple(np.prod(space.shape) if isinstance(
-            space, gym.spaces.Box) else space.n for space in env_info.observation_space)
+        assert env_info.state_dim == tuple(
+            np.prod(space.shape) if isinstance(space, gym.spaces.Box) else space.n
+            for space in env_info.observation_space
+        )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 # Copyright 2020,2021 Sony Corporation.
-# Copyright 2021,2022,2023 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -85,6 +85,5 @@ def copy_mp_arrays_to_params(mp_arrays, params):
         param_shape = params[key].shape
         # FIXME: force using float32.
         # This is a workaround for compensating nnabla's parameter initialization with float64
-        np_array = mp_to_np_array(
-            mp_array, np_shape=param_shape, dtype=np.float32)
+        np_array = mp_to_np_array(mp_array, np_shape=param_shape, dtype=np.float32)
         params[key].d = np_array

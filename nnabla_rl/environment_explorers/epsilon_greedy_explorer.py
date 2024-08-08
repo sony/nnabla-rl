@@ -23,12 +23,14 @@ from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.typing import ActionSelector
 
 
-def epsilon_greedy_action_selection(state: np.ndarray,
-                                    greedy_action_selector: ActionSelector,
-                                    random_action_selector: ActionSelector,
-                                    epsilon: float,
-                                    *,
-                                    begin_of_episode: bool = False):
+def epsilon_greedy_action_selection(
+    state: np.ndarray,
+    greedy_action_selector: ActionSelector,
+    random_action_selector: ActionSelector,
+    epsilon: float,
+    *,
+    begin_of_episode: bool = False,
+):
     if np.random.rand() > epsilon:
         # optimal action
         return greedy_action_selector(state, begin_of_episode=begin_of_episode), True
@@ -42,7 +44,7 @@ class NoDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
     epsilon: float = 1.0
 
     def __post_init__(self):
-        self._assert_between(self.epsilon, 0.0, 1.0, 'epsilon')
+        self._assert_between(self.epsilon, 0.0, 1.0, "epsilon")
 
 
 class NoDecayEpsilonGreedyExplorer(EnvironmentExplorer):
@@ -51,22 +53,26 @@ class NoDecayEpsilonGreedyExplorer(EnvironmentExplorer):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: NoDecayEpsilonGreedyExplorerConfig
 
-    def __init__(self,
-                 greedy_action_selector: ActionSelector,
-                 random_action_selector: ActionSelector,
-                 env_info: EnvironmentInfo,
-                 config: NoDecayEpsilonGreedyExplorerConfig = NoDecayEpsilonGreedyExplorerConfig()):
+    def __init__(
+        self,
+        greedy_action_selector: ActionSelector,
+        random_action_selector: ActionSelector,
+        env_info: EnvironmentInfo,
+        config: NoDecayEpsilonGreedyExplorerConfig = NoDecayEpsilonGreedyExplorerConfig(),
+    ):
         super().__init__(env_info, config)
         self._greedy_action_selector = greedy_action_selector
         self._random_action_selector = random_action_selector
 
     def action(self, step: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
         epsilon = self._config.epsilon
-        (action, info), _ = epsilon_greedy_action_selection(state,
-                                                            self._greedy_action_selector,
-                                                            self._random_action_selector,
-                                                            epsilon,
-                                                            begin_of_episode=begin_of_episode)
+        (action, info), _ = epsilon_greedy_action_selection(
+            state,
+            self._greedy_action_selector,
+            self._random_action_selector,
+            epsilon,
+            begin_of_episode=begin_of_episode,
+        )
         return action, info
 
 
@@ -90,10 +96,10 @@ class LinearDecayEpsilonGreedyExplorerConfig(EnvironmentExplorerConfig):
     append_explorer_info: bool = False
 
     def __post_init__(self):
-        self._assert_between(self.initial_epsilon, 0.0, 1.0, 'initial_epsilon')
-        self._assert_between(self.final_epsilon, 0.0, 1.0, 'final_epsilon')
-        self._assert_descending_order([self.initial_epsilon, self.final_epsilon], 'initial/final epsilon')
-        self._assert_positive(self.max_explore_steps, 'max_explore_steps')
+        self._assert_between(self.initial_epsilon, 0.0, 1.0, "initial_epsilon")
+        self._assert_between(self.final_epsilon, 0.0, 1.0, "final_epsilon")
+        self._assert_descending_order([self.initial_epsilon, self.final_epsilon], "initial/final epsilon")
+        self._assert_positive(self.max_explore_steps, "max_explore_steps")
 
 
 class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
@@ -117,29 +123,34 @@ class LinearDecayEpsilonGreedyExplorer(EnvironmentExplorer):
     # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
     _config: LinearDecayEpsilonGreedyExplorerConfig
 
-    def __init__(self,
-                 greedy_action_selector: ActionSelector,
-                 random_action_selector: ActionSelector,
-                 env_info: EnvironmentInfo,
-                 config: LinearDecayEpsilonGreedyExplorerConfig = LinearDecayEpsilonGreedyExplorerConfig()):
+    def __init__(
+        self,
+        greedy_action_selector: ActionSelector,
+        random_action_selector: ActionSelector,
+        env_info: EnvironmentInfo,
+        config: LinearDecayEpsilonGreedyExplorerConfig = LinearDecayEpsilonGreedyExplorerConfig(),
+    ):
         super().__init__(env_info, config)
         self._greedy_action_selector = greedy_action_selector
         self._random_action_selector = random_action_selector
 
     def action(self, step: int, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
         epsilon = self._compute_epsilon(step)
-        (action, info), is_greedy_action = epsilon_greedy_action_selection(state,
-                                                                           self._greedy_action_selector,
-                                                                           self._random_action_selector,
-                                                                           epsilon,
-                                                                           begin_of_episode=begin_of_episode)
+        (action, info), is_greedy_action = epsilon_greedy_action_selection(
+            state,
+            self._greedy_action_selector,
+            self._random_action_selector,
+            epsilon,
+            begin_of_episode=begin_of_episode,
+        )
         if self._config.append_explorer_info:
             info.update({"greedy_action": is_greedy_action, "explore_rate": epsilon})
         return action, info
 
     def _compute_epsilon(self, step):
         assert 0 <= step
-        delta_epsilon = step / self._config.max_explore_steps \
-            * (self._config.initial_epsilon - self._config.final_epsilon)
+        delta_epsilon = (
+            step / self._config.max_explore_steps * (self._config.initial_epsilon - self._config.final_epsilon)
+        )
         epsilon = self._config.initial_epsilon - delta_epsilon
         return max(epsilon, self._config.final_epsilon)

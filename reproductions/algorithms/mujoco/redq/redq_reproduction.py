@@ -24,26 +24,28 @@ from nnabla_rl.utils.reproductions import build_mujoco_env, set_global_seed
 
 
 def select_total_iterations(env_name):
-    if env_name in ['Hopper-v2']:
+    if env_name in ["Hopper-v2"]:
         total_iterations = 120000
     else:
         total_iterations = 300000
-    print(f'Selected total iterations: {total_iterations}')
+    print(f"Selected total iterations: {total_iterations}")
     return total_iterations
 
 
 def run_training(args):
-    outdir = f'{args.env}_results/seed-{args.seed}'
+    outdir = f"{args.env}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
     eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 100, use_gymnasium=args.use_gymnasium)
     evaluator = EpisodicEvaluator(run_per_evaluation=10)
-    evaluation_hook = H.EvaluationHook(eval_env,
-                                       evaluator,
-                                       timing=args.eval_timing,
-                                       writer=W.FileWriter(outdir=outdir, file_prefix='evaluation_result'))
+    evaluation_hook = H.EvaluationHook(
+        eval_env,
+        evaluator,
+        timing=args.eval_timing,
+        writer=W.FileWriter(outdir=outdir, file_prefix="evaluation_result"),
+    )
 
     iteration_num_hook = H.IterationNumHook(timing=100)
     save_snapshot_hook = H.SaveSnapshotHook(outdir, timing=args.save_timing)
@@ -64,14 +66,14 @@ def run_training(args):
 
 def run_showcase(args):
     if args.snapshot_dir is None:
-        raise ValueError(
-            'Please specify the snapshot dir for showcasing')
-    eval_env = build_mujoco_env(args.env, test=True, seed=args.seed + 200, render=args.render,
-                                use_gymnasium=args.use_gymnasium)
+        raise ValueError("Please specify the snapshot dir for showcasing")
+    eval_env = build_mujoco_env(
+        args.env, test=True, seed=args.seed + 200, render=args.render, use_gymnasium=args.use_gymnasium
+    )
     config = A.REDQConfig(gpu_id=args.gpu)
     redq = serializers.load_snapshot(args.snapshot_dir, eval_env, algorithm_kwargs={"config": config})
     if not isinstance(redq, A.REDQ):
-        raise ValueError('Loaded snapshot is not trained with REDQ!')
+        raise ValueError("Loaded snapshot is not trained with REDQ!")
 
     evaluator = EpisodicEvaluator(run_per_evaluation=args.showcase_runs)
     evaluator(redq, eval_env)
@@ -79,21 +81,21 @@ def run_showcase(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='Ant-v2')
-    parser.add_argument('--gpu', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--showcase', action='store_true')
-    parser.add_argument('--snapshot-dir', type=str, default=None)
-    parser.add_argument('--save-dir', type=str, default=None)
-    parser.add_argument('--total_iterations', type=int, default=None)
-    parser.add_argument('--save_timing', type=int, default=5000)
-    parser.add_argument('--eval_timing', type=int, default=5000)
-    parser.add_argument('--showcase_runs', type=int, default=10)
+    parser.add_argument("--env", type=str, default="Ant-v2")
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--showcase", action="store_true")
+    parser.add_argument("--snapshot-dir", type=str, default=None)
+    parser.add_argument("--save-dir", type=str, default=None)
+    parser.add_argument("--total_iterations", type=int, default=None)
+    parser.add_argument("--save_timing", type=int, default=5000)
+    parser.add_argument("--eval_timing", type=int, default=5000)
+    parser.add_argument("--showcase_runs", type=int, default=10)
 
     # REDQ algorithm config
-    parser.add_argument('--fix-temperature', action='store_true')
-    parser.add_argument('--use-gymnasium', action='store_true')
+    parser.add_argument("--fix-temperature", action="store_true")
+    parser.add_argument("--use-gymnasium", action="store_true")
 
     args = parser.parse_args()
 
@@ -103,5 +105,5 @@ def main():
         run_training(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

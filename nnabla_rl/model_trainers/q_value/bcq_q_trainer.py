@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ import nnabla.functions as NF
 import nnabla_rl.functions as RNF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.model_trainers.model_trainer import TrainingVariables, rnn_support
-from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (SquaredTDQFunctionTrainer,
-                                                                            SquaredTDQFunctionTrainerConfig)
+from nnabla_rl.model_trainers.q_value.squared_td_q_function_trainer import (
+    SquaredTDQFunctionTrainer,
+    SquaredTDQFunctionTrainerConfig,
+)
 from nnabla_rl.models import DeterministicPolicy, QFunction
 from nnabla_rl.utils.data import convert_to_list_if_not_list
 from nnabla_rl.utils.misc import create_variables
@@ -42,13 +44,15 @@ class BCQQTrainer(SquaredTDQFunctionTrainer):
     _prev_target_rnn_states: Dict[str, Dict[str, nn.Variable]]
     _prev_q_rnn_states: Dict[str, Dict[str, nn.Variable]]
 
-    def __init__(self,
-                 train_functions: Union[QFunction, Sequence[QFunction]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 target_functions: Union[QFunction, Sequence[QFunction]],
-                 target_policy: DeterministicPolicy,
-                 env_info: EnvironmentInfo,
-                 config: BCQQTrainerConfig = BCQQTrainerConfig()):
+    def __init__(
+        self,
+        train_functions: Union[QFunction, Sequence[QFunction]],
+        solvers: Dict[str, nn.solver.Solver],
+        target_functions: Union[QFunction, Sequence[QFunction]],
+        target_policy: DeterministicPolicy,
+        env_info: EnvironmentInfo,
+        config: BCQQTrainerConfig = BCQQTrainerConfig(),
+    ):
         self._target_functions = convert_to_list_if_not_list(target_functions)
         self._assert_no_duplicate_model(self._target_functions)
         self._target_policy = target_policy
@@ -84,8 +88,9 @@ class BCQQTrainer(SquaredTDQFunctionTrainer):
         num_q_ensembles = len(self._target_functions)
         assert isinstance(q_values, nn.Variable)
         assert q_values.shape == (num_q_ensembles, batch_size * self._config.num_action_samples, 1)
-        weighted_q_minmax = self._config.lmb * NF.min(q_values, axis=0) + \
-            (1.0 - self._config.lmb) * NF.max(q_values, axis=0)
+        weighted_q_minmax = self._config.lmb * NF.min(q_values, axis=0) + (1.0 - self._config.lmb) * NF.max(
+            q_values, axis=0
+        )
         assert weighted_q_minmax.shape == (batch_size * self._config.num_action_samples, 1)
 
         next_q_value = NF.max(NF.reshape(weighted_q_minmax, shape=(batch_size, -1)), axis=1, keepdims=True)

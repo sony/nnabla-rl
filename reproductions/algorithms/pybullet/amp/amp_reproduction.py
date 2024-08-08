@@ -23,8 +23,10 @@ from deepmimic_utils.deepmimic_buffer import RandomRemovalReplayBuffer
 from deepmimic_utils.deepmimic_env import DeepMimicEnv, DeepMimicGoalEnv, DeepMimicWindowViewer
 from deepmimic_utils.deepmimic_evaluator import DeepMimicEpisodicEvaluator
 from deepmimic_utils.deepmimic_explorer import DeepMimicExplorer
-from deepmimic_utils.deepmimic_normalizer import (DeepMimicGoalTupleRunningMeanNormalizer,
-                                                  DeepMimicTupleRunningMeanNormalizer)
+from deepmimic_utils.deepmimic_normalizer import (
+    DeepMimicGoalTupleRunningMeanNormalizer,
+    DeepMimicTupleRunningMeanNormalizer,
+)
 
 import nnabla_rl.algorithms as A
 import nnabla_rl.environment_explorers as EE
@@ -41,8 +43,13 @@ from nnabla_rl.utils.reproductions import print_env_info, set_global_seed
 
 
 class DeepMimicTupleStatePreprocessorBuilder(PreprocessorBuilder):
-    def build_preprocessor(self, scope_name: str, env_info: EnvironmentInfo,  # type: ignore[override]
-                           algorithm_config: A.AMPConfig, **kwargs) -> Preprocessor:
+    def build_preprocessor(  # type: ignore[override]
+        self,
+        scope_name: str,
+        env_info: EnvironmentInfo,
+        algorithm_config: A.AMPConfig,
+        **kwargs,
+    ) -> Preprocessor:
         assert algorithm_config.state_mean_initializer is not None
         assert algorithm_config.state_var_initializer is not None
 
@@ -59,7 +66,8 @@ class DeepMimicTupleStatePreprocessorBuilder(PreprocessorBuilder):
                 goal_state_mean_initializer=np.array(algorithm_config.state_mean_initializer[3], dtype=np.float32),
                 goal_state_var_initializer=np.array(algorithm_config.state_var_initializer[3], dtype=np.float32),
                 epsilon=0.02,
-                mode_for_floating_point_error="max")
+                mode_for_floating_point_error="max",
+            )
         else:
             return DeepMimicTupleRunningMeanNormalizer(
                 scope_name,
@@ -70,54 +78,69 @@ class DeepMimicTupleStatePreprocessorBuilder(PreprocessorBuilder):
                 reward_state_mean_initializer=np.array(algorithm_config.state_mean_initializer[1], dtype=np.float32),
                 reward_state_var_initializer=np.array(algorithm_config.state_var_initializer[1], dtype=np.float32),
                 epsilon=0.02,
-                mode_for_floating_point_error="max")
+                mode_for_floating_point_error="max",
+            )
 
 
 class DeepMimicExplorerBuilder(ExplorerBuilder):
-    def build_explorer(self, env_info: EnvironmentInfo, algorithm_config: A.AMPConfig,  # type: ignore[override]
-                       algorithm: A.AMP, **kwargs) -> EnvironmentExplorer:
+    def build_explorer(  # type: ignore[override]
+        self,
+        env_info: EnvironmentInfo,
+        algorithm_config: A.AMPConfig,
+        algorithm: A.AMP,
+        **kwargs,
+    ) -> EnvironmentExplorer:
         explorer_config = EE.LinearDecayEpsilonGreedyExplorerConfig(
             initial_step_num=0,
             timelimit_as_terminal=algorithm_config.timelimit_as_terminal,
             initial_epsilon=1.0,
             final_epsilon=algorithm_config.final_explore_rate,
             max_explore_steps=algorithm_config.max_explore_steps,
-            append_explorer_info=True)
-        explorer = DeepMimicExplorer(greedy_action_selector=kwargs["greedy_action_selector"],
-                                     random_action_selector=kwargs["random_action_selector"],
-                                     env_info=env_info,
-                                     config=explorer_config)
+            append_explorer_info=True,
+        )
+        explorer = DeepMimicExplorer(
+            greedy_action_selector=kwargs["greedy_action_selector"],
+            random_action_selector=kwargs["random_action_selector"],
+            env_info=env_info,
+            config=explorer_config,
+        )
         return explorer
 
 
 class DeepMimicReplayBufferBuilder(ReplayBufferBuilder):
-    def build_replay_buffer(
-        self, env_info: EnvironmentInfo, algorithm_config: A.AMPConfig, **kwargs  # type: ignore[override]
+    def build_replay_buffer(  # type: ignore[override]
+        self, env_info: EnvironmentInfo, algorithm_config: A.AMPConfig, **kwargs
     ) -> RandomRemovalReplayBuffer:
         return RandomRemovalReplayBuffer(
             capacity=int(np.ceil(algorithm_config.discriminator_agent_replay_buffer_size / algorithm_config.actor_num))
         )
 
 
-def build_deepmimic_env(args_file_path: str,
-                        goal_conditioned_env: bool,
-                        seed: int,
-                        eval_mode: bool,
-                        print_env: bool,
-                        num_processes: int,
-                        render_env: bool) -> gym.Env:
+def build_deepmimic_env(
+    args_file_path: str,
+    goal_conditioned_env: bool,
+    seed: int,
+    eval_mode: bool,
+    print_env: bool,
+    num_processes: int,
+    render_env: bool,
+) -> gym.Env:
     env: gym.Env
     if args_file_path == "FakeAMPNNablaRL-v1":
         # NOTE: FakeAMPNNablaRL-v1 is for the algorithm test.
         env = gym.make(args_file_path)
     else:
         if goal_conditioned_env:
-            env = GoalConditionedTupleObservationEnv(DeepMimicGoalEnv(
-                args_file_path, eval_mode, num_processes=num_processes, step_until_action_needed=not render_env))
+            env = GoalConditionedTupleObservationEnv(
+                DeepMimicGoalEnv(
+                    args_file_path, eval_mode, num_processes=num_processes, step_until_action_needed=not render_env
+                )
+            )
             env = FlattenNestedTupleStateWrapper(env)
         else:
-            env = DeepMimicEnv(args_file_path, eval_mode, num_processes=num_processes,
-                               step_until_action_needed=not render_env)
+            env = DeepMimicEnv(
+                args_file_path, eval_mode, num_processes=num_processes, step_until_action_needed=not render_env
+            )
 
     # dummy reset for generating core
     env.reset()
@@ -139,80 +162,95 @@ def build_config(args, train_env: Union[DeepMimicEnv, DeepMimicGoalEnv]):
         achieved_goal_mean = tuple([mean.tolist() for mean in train_env.unwrapped.observation_mean["achieved_goal"]])
         achieved_goal_var = tuple([var.tolist() for var in train_env.unwrapped.observation_var["achieved_goal"]])
 
-        config = A.AMPConfig(gpu_id=args.gpu,
-                             seed=args.seed,
-                             normalize_action=True,
-                             preprocess_state=True,
-                             use_reward_from_env=True,
-                             gamma=0.99,
-                             action_mean=tuple(train_env.unwrapped.action_mean.tolist()),
-                             action_var=tuple(train_env.unwrapped.action_var.tolist()),
-                             state_mean_initializer=tuple([*observation_mean, *desired_goal_mean, *achieved_goal_mean]),
-                             state_var_initializer=tuple([*observation_var, *desired_goal_var, *achieved_goal_var]),
-                             value_at_task_fail=train_env.unwrapped.reward_at_task_fail / (1.0 - 0.99),
-                             value_at_task_success=train_env.unwrapped.reward_at_task_success / (1.0 - 0.99),
-                             target_value_clip=(train_env.unwrapped.reward_range[0] / (1.0 - 0.99),
-                                                train_env.unwrapped.reward_range[1] / (1.0 - 0.99)),
-                             v_function_learning_rate=2e-05,
-                             policy_learning_rate=4e-06,
-                             actor_num=args.actor_num,
-                             actor_timesteps=4096 // args.actor_num,
-                             max_explore_steps=200000000 // args.actor_num)
+        config = A.AMPConfig(
+            gpu_id=args.gpu,
+            seed=args.seed,
+            normalize_action=True,
+            preprocess_state=True,
+            use_reward_from_env=True,
+            gamma=0.99,
+            action_mean=tuple(train_env.unwrapped.action_mean.tolist()),
+            action_var=tuple(train_env.unwrapped.action_var.tolist()),
+            state_mean_initializer=tuple([*observation_mean, *desired_goal_mean, *achieved_goal_mean]),
+            state_var_initializer=tuple([*observation_var, *desired_goal_var, *achieved_goal_var]),
+            value_at_task_fail=train_env.unwrapped.reward_at_task_fail / (1.0 - 0.99),
+            value_at_task_success=train_env.unwrapped.reward_at_task_success / (1.0 - 0.99),
+            target_value_clip=(
+                train_env.unwrapped.reward_range[0] / (1.0 - 0.99),
+                train_env.unwrapped.reward_range[1] / (1.0 - 0.99),
+            ),
+            v_function_learning_rate=2e-05,
+            policy_learning_rate=4e-06,
+            actor_num=args.actor_num,
+            actor_timesteps=4096 // args.actor_num,
+            max_explore_steps=200000000 // args.actor_num,
+        )
     else:
-        config = A.AMPConfig(gpu_id=args.gpu,
-                             seed=args.seed,
-                             normalize_action=True,
-                             preprocess_state=True,
-                             gamma=0.95,
-                             action_mean=tuple(train_env.unwrapped.action_mean.tolist()),
-                             action_var=tuple(train_env.unwrapped.action_var.tolist()),
-                             state_mean_initializer=tuple([mean.tolist()
-                                                          for mean in train_env.unwrapped.observation_mean]),
-                             state_var_initializer=tuple([var.tolist() for var in train_env.unwrapped.observation_var]),
-                             value_at_task_fail=train_env.unwrapped.reward_at_task_fail / (1.0 - 0.95),
-                             value_at_task_success=train_env.unwrapped.reward_at_task_success / (1.0 - 0.95),
-                             target_value_clip=(train_env.unwrapped.reward_range[0] / (1.0 - 0.95),
-                                                train_env.unwrapped.reward_range[1] / (1.0 - 0.95)),
-                             actor_num=args.actor_num,
-                             actor_timesteps=4096 // args.actor_num,
-                             max_explore_steps=200000000 // args.actor_num)
+        config = A.AMPConfig(
+            gpu_id=args.gpu,
+            seed=args.seed,
+            normalize_action=True,
+            preprocess_state=True,
+            gamma=0.95,
+            action_mean=tuple(train_env.unwrapped.action_mean.tolist()),
+            action_var=tuple(train_env.unwrapped.action_var.tolist()),
+            state_mean_initializer=tuple([mean.tolist() for mean in train_env.unwrapped.observation_mean]),
+            state_var_initializer=tuple([var.tolist() for var in train_env.unwrapped.observation_var]),
+            value_at_task_fail=train_env.unwrapped.reward_at_task_fail / (1.0 - 0.95),
+            value_at_task_success=train_env.unwrapped.reward_at_task_success / (1.0 - 0.95),
+            target_value_clip=(
+                train_env.unwrapped.reward_range[0] / (1.0 - 0.95),
+                train_env.unwrapped.reward_range[1] / (1.0 - 0.95),
+            ),
+            actor_num=args.actor_num,
+            actor_timesteps=4096 // args.actor_num,
+            max_explore_steps=200000000 // args.actor_num,
+        )
     return config
 
 
 def run_training(args):
-    env_name = str(pathlib.Path(args.args_file_path).name).replace('_args.txt', '').replace('train_amp_', '')
+    env_name = str(pathlib.Path(args.args_file_path).name).replace("_args.txt", "").replace("train_amp_", "")
     outdir = f"{env_name}_results/seed-{args.seed}"
     if args.save_dir:
         outdir = os.path.join(os.path.abspath(args.save_dir), outdir)
     set_global_seed(args.seed)
 
-    train_env = build_deepmimic_env(args.args_file_path,
-                                    goal_conditioned_env=args.goal_conditioned_env,
-                                    seed=args.seed,
-                                    eval_mode=False,
-                                    print_env=True,
-                                    num_processes=args.actor_num,
-                                    render_env=False)
+    train_env = build_deepmimic_env(
+        args.args_file_path,
+        goal_conditioned_env=args.goal_conditioned_env,
+        seed=args.seed,
+        eval_mode=False,
+        print_env=True,
+        num_processes=args.actor_num,
+        render_env=False,
+    )
     config = build_config(args, train_env)
 
-    amp = A.AMP(train_env,
-                config=config,
-                env_explorer_builder=DeepMimicExplorerBuilder(),
-                state_preprocessor_builder=DeepMimicTupleStatePreprocessorBuilder(),
-                discriminator_replay_buffer_builder=DeepMimicReplayBufferBuilder())
+    amp = A.AMP(
+        train_env,
+        config=config,
+        env_explorer_builder=DeepMimicExplorerBuilder(),
+        state_preprocessor_builder=DeepMimicTupleStatePreprocessorBuilder(),
+        discriminator_replay_buffer_builder=DeepMimicReplayBufferBuilder(),
+    )
 
-    eval_env = build_deepmimic_env(args.args_file_path,
-                                   goal_conditioned_env=args.goal_conditioned_env,
-                                   seed=args.seed + 100,
-                                   eval_mode=True,
-                                   print_env=False,
-                                   num_processes=1,
-                                   render_env=False)
+    eval_env = build_deepmimic_env(
+        args.args_file_path,
+        goal_conditioned_env=args.goal_conditioned_env,
+        seed=args.seed + 100,
+        eval_mode=True,
+        print_env=False,
+        num_processes=1,
+        render_env=False,
+    )
     evaluator = DeepMimicEpisodicEvaluator(run_per_evaluation=32)
-    evaluation_hook = H.EvaluationHook(eval_env,
-                                       evaluator,
-                                       timing=args.eval_timing,
-                                       writer=W.FileWriter(outdir=outdir, file_prefix="evaluation_result"))
+    evaluation_hook = H.EvaluationHook(
+        eval_env,
+        evaluator,
+        timing=args.eval_timing,
+        writer=W.FileWriter(outdir=outdir, file_prefix="evaluation_result"),
+    )
     iteration_state_hook = H.IterationStateHook(
         writer=W.FileWriter(outdir=outdir, file_prefix="iteration_state"), timing=args.iteration_state_timing
     )
@@ -231,19 +269,21 @@ def run_training(args):
 def run_showcase(args):
     if args.snapshot_dir is None:
         raise ValueError("Please specify the snapshot dir for showcasing")
-    eval_env = build_deepmimic_env(args.args_file_path,
-                                   goal_conditioned_env=args.goal_conditioned_env,
-                                   seed=args.seed + 200,
-                                   eval_mode=True,
-                                   print_env=True,
-                                   num_processes=1,
-                                   render_env=args.render_in_showcase)
+    eval_env = build_deepmimic_env(
+        args.args_file_path,
+        goal_conditioned_env=args.goal_conditioned_env,
+        seed=args.seed + 200,
+        eval_mode=True,
+        print_env=True,
+        num_processes=1,
+        render_env=args.render_in_showcase,
+    )
     config = build_config(args, eval_env)
     amp = serializers.load_snapshot(
         args.snapshot_dir,
         eval_env,
-        algorithm_kwargs={"config": config,
-                          "state_preprocessor_builder": DeepMimicTupleStatePreprocessorBuilder()})
+        algorithm_kwargs={"config": config, "state_preprocessor_builder": DeepMimicTupleStatePreprocessorBuilder()},
+    )
     if not isinstance(amp, A.AMP):
         raise ValueError("Loaded snapshot is not trained with AMP!")
 

@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Group Corporation.
+# Copyright 2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,19 +19,21 @@ from nnabla_rl.replay_buffer import ReplayBuffer
 from nnabla_rl.replay_buffers.trajectory_replay_buffer import TrajectoryReplayBuffer
 
 
-class TestTrajectoryReplayBuffer():
+class TestTrajectoryReplayBuffer:
     def test_len(self):
         trajectory_num = 10
         trajectory_length = 5
-        buffer = self._generate_buffer_with_trajectories(trajectory_num=trajectory_num,
-                                                         trajectory_length=trajectory_length)
+        buffer = self._generate_buffer_with_trajectories(
+            trajectory_num=trajectory_num, trajectory_length=trajectory_length
+        )
         assert len(buffer) == trajectory_num * trajectory_length
 
     def test_trajectory_num(self):
         trajectory_num = 10
         trajectory_length = 5
-        buffer = self._generate_buffer_with_trajectories(trajectory_num=trajectory_num,
-                                                         trajectory_length=trajectory_length)
+        buffer = self._generate_buffer_with_trajectories(
+            trajectory_num=trajectory_num, trajectory_length=trajectory_length
+        )
         assert buffer.trajectory_num == trajectory_num
 
     def test_sample_from_insufficient_size_buffer(self):
@@ -71,7 +73,7 @@ class TestTrajectoryReplayBuffer():
             index = index - 10 * trajectory_index
             start_index = min(index, len(trajectory) - portion_length)
 
-            expected = trajectory[start_index:start_index+portion_length]
+            expected = trajectory[start_index : start_index + portion_length]
             actual = trajectories[i]
             assert len(expected) == len(actual)
             for expected_element, actual_element in zip(expected, actual):
@@ -104,13 +106,13 @@ class TestTrajectoryReplayBuffer():
         samples_from_trajectory_buffer, _ = trajectory_buffer.sample_indices(indices)
         samples_from_conventional_buffer, _ = conventional_buffer.sample_indices(indices)
 
-        for (actual_sample, expected_sample) in zip(samples_from_trajectory_buffer, samples_from_conventional_buffer):
+        for actual_sample, expected_sample in zip(samples_from_trajectory_buffer, samples_from_conventional_buffer):
             for actual_item, expected_item in zip(actual_sample, expected_sample):
                 np.testing.assert_almost_equal(actual_item, expected_item)
 
     def _generate_experience_mock(self):
-        state_shape = (5, )
-        action_shape = (10, )
+        state_shape = (5,)
+        action_shape = (10,)
 
         state = np.empty(shape=state_shape)
         action = np.empty(shape=action_shape)

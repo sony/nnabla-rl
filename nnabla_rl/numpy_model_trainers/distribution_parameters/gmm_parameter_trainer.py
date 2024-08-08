@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,9 +43,7 @@ class GMMParameterTrainer(NumpyModelTrainer):
     _parameter: GMMParameter
     _config: GMMParameterTrainerConfig
 
-    def __init__(self,
-                 parameter: GMMParameter,
-                 config: GMMParameterTrainerConfig = GMMParameterTrainerConfig()):
+    def __init__(self, parameter: GMMParameter, config: GMMParameterTrainerConfig = GMMParameterTrainerConfig()):
         super(GMMParameterTrainer, self).__init__(config)
         self._parameter = parameter
 
@@ -55,7 +53,7 @@ class GMMParameterTrainer(NumpyModelTrainer):
         Args:
             data (np.ndarray): data, shape(num_data, dim)
         """
-        prev_log_likelihood = -float('inf')
+        prev_log_likelihood = -float("inf")
         for _ in range(self._config.num_iterations_per_update):
             probs, responsibility = self._e_step(data)
 
@@ -90,7 +88,7 @@ class GMMParameterTrainer(NumpyModelTrainer):
 
     def _has_converged(self, new_log_likelihood, prev_log_likelihood):
         if np.abs(new_log_likelihood - prev_log_likelihood) < self._config.threshold:
-            logger.debug('GMM converged before reaching max iterations')
+            logger.debug("GMM converged before reaching max iterations")
             return True
         else:
             return False

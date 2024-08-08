@@ -1,4 +1,4 @@
-# Copyright 2022,2023 Sony Group Corporation.
+# Copyright 2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ class DDPConfig(AlgorithmConfig):
         modification_factor (float): Modification factor for the regularizer. Defaults to 2.0.
         accept_improvement_ratio (float): Threshold value for deciding to accept the update or not. Defaults to 0.0
     """
+
     T_max: int = 50
     num_iterations: int = 10
     mu_min: float = 1e-6
@@ -45,8 +46,8 @@ class DDPConfig(AlgorithmConfig):
     def __post_init__(self):
         super().__post_init__()
 
-        self._assert_positive(self.T_max, 'T_max')
-        self._assert_positive(self.num_iterations, 'num_iterations')
+        self._assert_positive(self.T_max, "T_max")
+        self._assert_positive(self.num_iterations, "num_iterations")
 
 
 class DDP(Algorithm):
@@ -69,13 +70,10 @@ class DDP(Algorithm):
         config (:py:class:`DDPConfig <nnabla_rl.algorithmss.ilqr.DDPConfig>`):
             the parameter for DDP controller
     """
+
     _config: DDPConfig
 
-    def __init__(self,
-                 env_or_env_info,
-                 dynamics: Dynamics,
-                 cost_function: CostFunction,
-                 config=DDPConfig()):
+    def __init__(self, env_or_env_info, dynamics: Dynamics, cost_function: CostFunction, config=DDPConfig()):
         super(DDP, self).__init__(env_or_env_info, config=config)
         self._dynamics = dynamics
         self._cost_function = cost_function
@@ -92,9 +90,9 @@ class DDP(Algorithm):
         return improved_trajectory[0][1]
 
     @eval_api
-    def compute_trajectory(self,
-                           initial_trajectory:  Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]) \
-            -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
+    def compute_trajectory(
+        self, initial_trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]
+    ) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
         assert len(initial_trajectory) == self._config.T_max
         dynamics = self._dynamics
         cost_function = self._cost_function
@@ -102,25 +100,28 @@ class DDP(Algorithm):
         delta = 0.0
         trajectory = initial_trajectory
         for _ in range(self._config.num_iterations):
-            trajectory, trajectory_info, mu, delta = \
-                self._improve_trajectory(trajectory, dynamics, cost_function, mu, delta)
+            trajectory, trajectory_info, mu, delta = self._improve_trajectory(
+                trajectory, dynamics, cost_function, mu, delta
+            )
 
         return trajectory, trajectory_info
 
-    def _optimize(self,
-                  initial_state: Union[np.ndarray, Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]],
-                  dynamics: Dynamics,
-                  cost_function: CostFunction,
-                  **kwargs) \
-            -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
+    def _optimize(
+        self,
+        initial_state: Union[np.ndarray, Sequence[Tuple[np.ndarray, Optional[np.ndarray]]]],
+        dynamics: Dynamics,
+        cost_function: CostFunction,
+        **kwargs,
+    ) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
         assert len(initial_state) == self._config.T_max
         initial_state = cast(Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], initial_state)
         mu = 0.0
         delta = 0.0
         trajectory = initial_state
         for _ in range(self._config.num_iterations):
-            trajectory, trajectory_info, mu, delta = \
-                self._improve_trajectory(trajectory, dynamics, cost_function, mu, delta)
+            trajectory, trajectory_info, mu, delta = self._improve_trajectory(
+                trajectory, dynamics, cost_function, mu, delta
+            )
 
         return trajectory, trajectory_info
 
@@ -133,15 +134,14 @@ class DDP(Algorithm):
         trajectory.append((x, None))
         return trajectory
 
-    def _improve_trajectory(self,
-                            trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]],
-                            dynamics: Dynamics,
-                            cost_function: CostFunction,
-                            mu: float,
-                            delta: float) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]],
-                                                   Sequence[Dict[str, Any]],
-                                                   float,
-                                                   float]:
+    def _improve_trajectory(
+        self,
+        trajectory: Sequence[Tuple[np.ndarray, Optional[np.ndarray]]],
+        dynamics: Dynamics,
+        cost_function: CostFunction,
+        mu: float,
+        delta: float,
+    ) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]], float, float]:
         while True:
             ks, Ks, Qus, Quus, Quu_invs, success = self._backward_pass(trajectory, dynamics, cost_function, mu)
             mu, delta = self._update_regularizer(mu, delta, increase=not success)
@@ -149,7 +149,7 @@ class DDP(Algorithm):
                 break
 
         # Backtracking linear search
-        alphas = 0.9**(np.arange(10) ** 2)
+        alphas = 0.9 ** (np.arange(10) ** 2)
         improved_trajectory = trajectory
         improved_trajectory_info: Sequence[Dict[str, Any]] = []
         J_current = self._compute_cost(trajectory, cost_function)
@@ -163,7 +163,7 @@ class DDP(Algorithm):
                 improved_trajectory = new_trajectory
                 # append Quu
                 for info, k, K, Quu, Quu_inv in zip(new_trajectory_info, ks, Ks, Quus, Quu_invs):
-                    info.update({'k': k, 'K': K, 'Quu': Quu, 'Quu_inv': Quu_inv})
+                    info.update({"k": k, "K": K, "Quu": Quu, "Quu_inv": Quu_inv})
                 improved_trajectory_info = new_trajectory_info
                 break
         return improved_trajectory, improved_trajectory_info, mu, delta
@@ -204,7 +204,7 @@ class DDP(Algorithm):
 
             Fx, Fu = dynamics.gradient(x, u, self._config.T_max - t - 1)
             # Hessians should be a 3d tensor
-            Fxx, Fxu, Fux, Fuu = dynamics.hessian(x, u,  self._config.T_max - t - 1)
+            Fxx, Fxu, Fux, Fuu = dynamics.hessian(x, u, self._config.T_max - t - 1)
 
             Quu = Cuu + Fu.T.dot(Vxx + mu * E).dot(Fu) + np.tensordot(Vx, Fuu, axes=(0, 0)).reshape((u_dim, u_dim))
 
@@ -247,7 +247,7 @@ class DDP(Algorithm):
         dynamics: Dynamics,
         ks: List[np.ndarray],
         Ks: List[np.ndarray],
-        alpha: float
+        alpha: float,
     ) -> Tuple[Sequence[Tuple[np.ndarray, Optional[np.ndarray]]], Sequence[Dict[str, Any]]]:
         x_hat = trajectory[0][0]
         new_trajectory = []
@@ -277,9 +277,9 @@ class DDP(Algorithm):
 
     def _expected_cost_reduction(self, ks, Qus, Quus, alpha) -> float:
         delta_J = 0.0
-        for (k, Qu, Quu) in zip(ks, Qus, Quus):
+        for k, Qu, Quu in zip(ks, Qus, Quus):
             linear_part = alpha * k.T.dot(Qu)
-            squared_part = 0.5 * (alpha ** 2.0) * k.T.dot(Quu).dot(k)
+            squared_part = 0.5 * (alpha**2.0) * k.T.dot(Quu).dot(k)
             delta_J += float(linear_part) + float(squared_part)
         return delta_J
 
@@ -287,16 +287,16 @@ class DDP(Algorithm):
         return np.all(np.linalg.eigvals(symmetric_matrix) > 0.0)
 
     def _before_training_start(self, env_or_buffer):
-        raise NotImplementedError('You do not need training to use this algorithm.')
+        raise NotImplementedError("You do not need training to use this algorithm.")
 
     def _run_online_training_iteration(self, env):
-        raise NotImplementedError('You do not need training to use this algorithm.')
+        raise NotImplementedError("You do not need training to use this algorithm.")
 
     def _run_offline_training_iteration(self, buffer):
-        raise NotImplementedError('You do not need training to use this algorithm.')
+        raise NotImplementedError("You do not need training to use this algorithm.")
 
     def _after_training_finish(self, env_or_buffer):
-        raise NotImplementedError('You do not need training to use this algorithm.')
+        raise NotImplementedError("You do not need training to use this algorithm.")
 
     def _models(self):
         return {}
@@ -306,8 +306,9 @@ class DDP(Algorithm):
 
     @classmethod
     def is_supported_env(cls, env_or_env_info):
-        env_info = EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) \
-            else env_or_env_info
+        env_info = (
+            EnvironmentInfo.from_env(env_or_env_info) if isinstance(env_or_env_info, gym.Env) else env_or_env_info
+        )
         return not env_info.is_discrete_action_env() and not env_info.is_tuple_action_env()
 
     @property

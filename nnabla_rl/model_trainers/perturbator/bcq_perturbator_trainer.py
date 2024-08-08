@@ -1,4 +1,4 @@
-# Copyright 2021,2022 Sony Group Corporation.
+# Copyright 2021,2022,2023,2024 Sony Group Corporation.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,13 @@ from typing import Dict, Sequence, Union, cast
 import nnabla as nn
 import nnabla.functions as NF
 from nnabla_rl.environments.environment_info import EnvironmentInfo
-from nnabla_rl.model_trainers.model_trainer import (LossIntegration, ModelTrainer, TrainerConfig, TrainingBatch,
-                                                    TrainingVariables)
+from nnabla_rl.model_trainers.model_trainer import (
+    LossIntegration,
+    ModelTrainer,
+    TrainerConfig,
+    TrainingBatch,
+    TrainingVariables,
+)
 from nnabla_rl.models import Model, Perturbator, QFunction, VariationalAutoEncoder
 from nnabla_rl.utils.data import set_data_to_variable
 from nnabla_rl.utils.misc import create_variable
@@ -27,10 +32,11 @@ from nnabla_rl.utils.misc import create_variable
 
 @dataclass
 class BCQPerturbatorTrainerConfig(TrainerConfig):
-    '''
+    """
     Args:
         phi(float): action perturbator noise coefficient
-    '''
+    """
+
     phi: float = 0.05
 
 
@@ -43,23 +49,27 @@ class BCQPerturbatorTrainer(ModelTrainer):
     _vae: VariationalAutoEncoder
     _perturbator_loss: nn.Variable
 
-    def __init__(self,
-                 models: Union[Perturbator, Sequence[Perturbator]],
-                 solvers: Dict[str, nn.solver.Solver],
-                 q_function: QFunction,
-                 vae: VariationalAutoEncoder,
-                 env_info: EnvironmentInfo,
-                 config: BCQPerturbatorTrainerConfig = BCQPerturbatorTrainerConfig()):
+    def __init__(
+        self,
+        models: Union[Perturbator, Sequence[Perturbator]],
+        solvers: Dict[str, nn.solver.Solver],
+        q_function: QFunction,
+        vae: VariationalAutoEncoder,
+        env_info: EnvironmentInfo,
+        config: BCQPerturbatorTrainerConfig = BCQPerturbatorTrainerConfig(),
+    ):
         self._q_function = q_function
         self._vae = vae
         super(BCQPerturbatorTrainer, self).__init__(models, solvers, env_info, config)
 
-    def _update_model(self,
-                      models: Sequence[Model],
-                      solvers: Dict[str, nn.solver.Solver],
-                      batch: TrainingBatch,
-                      training_variables: TrainingVariables,
-                      **kwargs) -> Dict:
+    def _update_model(
+        self,
+        models: Sequence[Model],
+        solvers: Dict[str, nn.solver.Solver],
+        batch: TrainingBatch,
+        training_variables: TrainingVariables,
+        **kwargs,
+    ) -> Dict:
         for t, b in zip(training_variables, batch):
             set_data_to_variable(t.s_current, b.s_current)
 
@@ -72,7 +82,7 @@ class BCQPerturbatorTrainer(ModelTrainer):
             solver.update()
 
         trainer_state = {}
-        trainer_state['perturbator_loss'] = float(self._perturbator_loss.d.copy())
+        trainer_state["perturbator_loss"] = float(self._perturbator_loss.d.copy())
         return trainer_state
 
     def _build_training_graph(self, models: Union[Model, Sequence[Model]], training_variables: TrainingVariables):
@@ -85,10 +95,7 @@ class BCQPerturbatorTrainer(ModelTrainer):
             ignore_loss = is_burn_in_steps or (is_intermediate_steps and ignore_intermediate_loss)
             self._build_one_step_graph(models, variables, ignore_loss=ignore_loss)
 
-    def _build_one_step_graph(self,
-                              models: Sequence[Model],
-                              training_variables: TrainingVariables,
-                              ignore_loss: bool):
+    def _build_one_step_graph(self, models: Sequence[Model], training_variables: TrainingVariables, ignore_loss: bool):
         assert training_variables.s_current is not None
         batch_size = training_variables.batch_size
 
