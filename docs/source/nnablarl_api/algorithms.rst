@@ -260,6 +260,16 @@ Munchausen IQN
    :members:
    :show-inheritance:
 
+Option Critic Architecture
+===============
+.. autoclass:: nnabla_rl.algorithms.option_critic.OptionCriticConfig
+   :members:
+   :show-inheritance:
+
+.. autoclass:: nnabla_rl.algorithms.option_critic.OptionCritic
+   :members:
+   :show-inheritance:
+
 PPO
 ====
 .. autoclass:: nnabla_rl.algorithms.ppo.PPOConfig

@@ -29,14 +29,18 @@ class IterationStateHook(Hook):
             Defaults to None.
     """
 
-    def __init__(self, writer=None, timing=1000):
+    def __init__(self, writer=None, timing=1000, start_timing=0):
         self._timing = timing
         self._writer = writer
+        self._start_timing = start_timing
 
     def on_hook_called(self, algorithm):
         logger.info("Iteration state at iteration {}".format(algorithm.iteration_num))
 
         latest_iteration_state = algorithm.latest_iteration_state
+
+        if algorithm.iteration_num < self._start_timing:
+            return
 
         if "scalar" in latest_iteration_state:
             logger.info(pprint.pformat(latest_iteration_state["scalar"]))

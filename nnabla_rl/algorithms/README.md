@@ -32,6 +32,7 @@ nnabla-rl offers various (deep) reinforcement learning and optimal control algor
 |[MME-SAC](https://arxiv.org/abs/2106.10517)|:heavy_check_mark:|:heavy_check_mark:|:heavy_check_mark:|:x:|:x:|:heavy_check_mark:|
 |[M-DQN](https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|:x:|:heavy_check_mark:|
 |[M-IQN](https://proceedings.neurips.cc/paper/2020/file/2c6a0bae0f071cbbf0bb3d5b11d90a82-Paper.pdf)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|:x:|:heavy_check_mark:|
+|[Option Critic Architecture](https://arxiv.org/abs/1609.05140)|:heavy_check_mark:|:x:|(We will support continuous action in the future)|:heavy_check_mark:|:x:|:x:|
 |[PPO](https://arxiv.org/abs/1707.06347)|:heavy_check_mark:|:x:|:heavy_check_mark:|:heavy_check_mark:|:x:|:x:|
 |[QRSAC](https://www.nature.com/articles/s41586-021-04357-7)|:heavy_check_mark:|:heavy_check_mark:|:heavy_check_mark:|:x:|:x:|:heavy_check_mark:|
 |[QRDQN](https://arxiv.org/abs/1710.10044)|:heavy_check_mark:|:heavy_check_mark:|:x:|:heavy_check_mark:|:x:|:x:|:heavy_check_mark:|

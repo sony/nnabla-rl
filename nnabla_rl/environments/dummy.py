@@ -173,6 +173,10 @@ class DummyAtariEnv(AbstractDummyEnv):
                 self._lives = 100
             return self._lives
 
+        def setBool(self, key, flag):
+            # dummy function for running reproduction tests
+            pass
+
     # seeding.np_random outputs np_random and seed
     np_random = cast("RandomNumberGenerator", nnabla_rl.random.drng)
 

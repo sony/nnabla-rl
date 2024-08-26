@@ -47,6 +47,16 @@ class ActionSelector(Protocol):
     def __call__(self, state: np.ndarray, *, begin_of_episode=False) -> Tuple[np.ndarray, Dict]: ...
 
 
+class OptionSelector(Protocol):
+    def __call__(
+        self, state: np.ndarray, option: Optional[np.ndarray], *, begin_of_episode=False
+    ) -> Tuple[np.ndarray, Dict]: ...
+
+
+class IntraActionSelector(Protocol):
+    def __call__(self, state: np.ndarray, option: np.ndarray, *, begin_of_episode=False) -> Tuple[np.ndarray, Dict]: ...
+
+
 def accepted_shapes(**shape_kwargs: Dict[str, Optional[Tuple[int]]]) -> Callable[[F], F]:
     """Accepted shape decorator. This decorator checks the argument shapes are
     the same as the expected shapes. If their sizes are different, Assertation

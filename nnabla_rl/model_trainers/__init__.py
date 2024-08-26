@@ -22,3 +22,6 @@ from nnabla_rl.model_trainers import policy as policy_trainers  # noqa
 from nnabla_rl.model_trainers import q_value as q_value_trainers  # noqa
 from nnabla_rl.model_trainers import v_value as v_value_trainers  # noqa
 from nnabla_rl.model_trainers import reward as reward_trainiers  # noqa
+from nnabla_rl.model_trainers import intra_policy as intra_policy_trainers  # noqa
+from nnabla_rl.model_trainers import option_value as option_value_trainers  # noqa
+from nnabla_rl.model_trainers import termination as termination_trainers  # noqa

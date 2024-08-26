@@ -23,6 +23,7 @@ import nnabla.functions as NF
 import nnabla_rl.functions as RF
 from nnabla_rl.algorithm import eval_api
 from nnabla_rl.distributions.distribution import Distribution
+from nnabla_rl.environment_explorers.epsilon_greedy_explorer import epsilon_greedy_option_selection
 from nnabla_rl.environments.environment_info import EnvironmentInfo
 from nnabla_rl.models import (
     DeterministicDecisionTransformer,
@@ -30,14 +31,18 @@ from nnabla_rl.models import (
     DeterministicPolicy,
     FactoredContinuousQFunction,
     Model,
+    OptionValueFunction,
     QFunction,
     RewardFunction,
     StochasticDecisionTransformer,
+    StochasticIntraPolicy,
     StochasticPolicy,
+    StochasticTerminationFunction,
     VFunction,
 )
 from nnabla_rl.preprocessors import Preprocessor
-from nnabla_rl.typing import Experience, State
+from nnabla_rl.random import drng
+from nnabla_rl.typing import Experience, IntraActionSelector, OptionSelector, State
 from nnabla_rl.utils.data import add_batch_dimension, marshal_experiences, set_data_to_variable
 from nnabla_rl.utils.misc import create_variable, create_variables
 
@@ -665,3 +670,304 @@ class _InfluenceMetricsEvaluator:
 
         # normalize
         return influence / (NF.sum(influence, axis=1, keepdims=True) + 1e-5)
+
+
+class _IntraPolicyActionSelector(Generic[M], metaclass=ABCMeta):
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _env_info: EnvironmentInfo
+    _model: M
+
+    def __init__(self, env_info: EnvironmentInfo, model: M):
+        self._env_info = env_info
+        self._model = model
+        self._batch_size = 1
+
+    @eval_api
+    def __call__(
+        self,
+        s: Union[np.ndarray, Tuple[np.ndarray, ...]],
+        option: np.ndarray,
+        *,
+        begin_of_episode: bool = False,
+        extra_info={},
+    ):
+        if not has_batch_dimension(s, self._env_info):
+            s = add_batch_dimension(s)
+
+        if len(option.shape) == 0:
+            option = option.reshape(1, 1)
+        elif len(option.shape) == 1:
+            # cast for avoiding mypy error, add_batch_dimention should return np.ndarray in this case.
+            option = cast(np.ndarray, add_batch_dimension(option))
+
+        if len(option.shape) != 2:
+            raise ValueError("Invalid option shape")
+
+        batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
+        assert batch_size == option.shape[0]
+
+        if not hasattr(self, "_eval_state_var") or batch_size != self._batch_size:
+            # Variable creation
+            self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)
+            self._eval_option_var = create_variable(batch_size, 1)
+
+            if self._model.is_recurrent():
+                self._rnn_internal_states = create_variables(batch_size, self._model.internal_state_shapes())
+                self._model.set_internal_states(self._rnn_internal_states)
+
+            self._action = self._compute_action(self._eval_state_var, self._eval_option_var)
+            self._action.need_grad = False
+
+            if self._model.is_recurrent():
+                self._model.reset_internal_states()
+
+            self._batch_size = batch_size
+
+        # Forward network
+        if self._model.is_recurrent() and begin_of_episode:
+            self._model.reset_internal_states()
+
+        set_data_to_variable(self._eval_state_var, s)
+        set_data_to_variable(self._eval_option_var, option)
+
+        if self._model.is_recurrent():
+            prev_rnn_states = self._model.get_internal_states()
+            for key in self._rnn_internal_states.keys():
+                # copy internal states of previous iteration
+                self._rnn_internal_states[key].d = prev_rnn_states[key].d
+
+        if self._env_info.is_tuple_action_env():
+            nn.forward_all(self._action, clear_no_need_grad=True)
+            action = tuple(np.squeeze(a.d, axis=0) if batch_size == 1 else a.d for a in self._action)
+        else:
+            self._action.forward(clear_no_need_grad=True)
+            # No need to save internal states
+            action = np.squeeze(self._action.d, axis=0) if batch_size == 1 else self._action.d
+
+        return action, {}
+
+    @abstractmethod
+    def _compute_action(self, state_var: nn.Variable, option_var: nn.Variable) -> nn.Variable:
+        raise NotImplementedError
+
+
+class _StochasticIntraPolicyActionSelector(_IntraPolicyActionSelector[StochasticIntraPolicy]):
+    def __init__(self, env_info: EnvironmentInfo, policy: StochasticIntraPolicy, deterministic: bool = False):
+        super().__init__(env_info, policy)
+        self._deterministic = deterministic
+
+    def _compute_action(self, state_var: nn.Variable, option_var: nn.Variable) -> nn.Variable:
+        distribution = self._model.intra_pi(state_var, option_var)
+
+        if self._deterministic:
+            return distribution.choose_probable()
+        else:
+            return distribution.sample()
+
+
+class _GreedyOptionSelector:
+    _env_info: EnvironmentInfo
+    _option_model: OptionValueFunction
+    _termination_model: StochasticTerminationFunction
+
+    def __init__(
+        self,
+        num_options: int,
+        env_info: EnvironmentInfo,
+        option_model: OptionValueFunction,
+        termination_model: StochasticTerminationFunction,
+        deterministic_termination: bool = False,
+    ):
+        self._env_info = env_info
+        self._option_model = option_model
+        self._termination_model = termination_model
+        self._deterministic_termination = deterministic_termination
+        self._num_options = num_options
+
+        self._batch_size = 1
+
+    @eval_api
+    def __call__(
+        self,
+        s: Union[np.ndarray, Tuple[np.ndarray, ...]],
+        option: Optional[np.ndarray],
+        *,
+        begin_of_episode: bool = False,
+        extra_info={},
+    ):
+        if not has_batch_dimension(s, self._env_info):
+            s = add_batch_dimension(s)
+
+        batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
+        if batch_size != 1:  # TODO: Support batch prediction
+            raise NotImplementedError
+
+        if not hasattr(self, "_eval_state_var") or batch_size != self._batch_size:
+            self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)
+            self._eval_option_var = create_variable(batch_size, 1)
+
+            if self._option_model.is_recurrent():  # TODO: Support recurrent prediction
+                raise NotImplementedError
+
+            if self._termination_model.is_recurrent():  # TODO: Support recurrent prediction
+                raise NotImplementedError
+
+            self._option_var = self._compute_option(self._eval_state_var)
+            self._option_var.need_grad = False
+            self._termination_var = self._compute_termination(self._eval_state_var, self._eval_option_var)
+            self._termination_var.need_grad = False
+            self._batch_size = batch_size
+
+        set_data_to_variable(self._eval_state_var, s)
+
+        if begin_of_episode:  # if it's a begining of an episode, not predict termination
+            nn.forward_all([self._option_var], clear_no_need_grad=True)
+            new_option = np.squeeze(self._option_var.d, axis=0) if batch_size == 1 else self._option_var.d
+            option_termination = True
+        else:
+            assert option is not None
+            if len(option.shape) == 1:
+                # cast for avoiding mypy error, add_batch_dimention should return np.ndarray in this case.
+                option = cast(np.ndarray, add_batch_dimension(option))
+            elif len(option.shape) == 2:
+                pass
+            else:
+                raise ValueError("Invalid option shape")
+
+            set_data_to_variable(self._eval_option_var, option)
+            nn.forward_all([self._option_var, self._termination_var], clear_no_need_grad=True)
+            new_option = np.squeeze(self._option_var.d, axis=0) if batch_size == 1 else self._option_var.d
+            option_termination = bool(
+                (np.squeeze(self._termination_var.d, axis=0) if batch_size == 1 else self._termination_var.d).flatten()
+            )
+
+        # if not use current option, then update to use new option
+        if option_termination:
+            option = new_option
+        else:
+            assert option is not None
+            option = np.squeeze(option, axis=0) if batch_size == 1 else option
+
+        assert option is not None
+        return option.copy(), {"termination": option_termination}
+
+    def _compute_option(self, state_var: nn.Variable) -> nn.Variable:
+        return self._option_model.argmax_option_v(state_var)
+
+    def _compute_termination(self, state_var: nn.Variable, option_var: nn.Variable) -> nn.Variable:
+        distribution = self._termination_model.termination(state_var, option_var)
+
+        if self._deterministic_termination:
+            return distribution.choose_probable()
+        else:
+            return distribution.sample()
+
+
+class _RandomOptionSelector:
+    _env_info: EnvironmentInfo
+    _termination_model: StochasticTerminationFunction
+
+    def __init__(
+        self,
+        num_options: int,
+        env_info: EnvironmentInfo,
+        termination_model: StochasticTerminationFunction,
+        deterministic_termination: bool = False,
+    ):
+        self._env_info = env_info
+        self._termination_model = termination_model
+        self._deterministic_termination = deterministic_termination
+        self._num_options = num_options
+        self._batch_size = 1
+
+    @eval_api
+    def __call__(
+        self,
+        s: Union[np.ndarray, Tuple[np.ndarray, ...]],
+        option: Optional[np.ndarray],
+        *,
+        begin_of_episode: bool = False,
+        extra_info={},
+    ):
+        if not has_batch_dimension(s, self._env_info):
+            s = add_batch_dimension(s)
+
+        batch_size = len(s[0]) if self._env_info.is_tuple_state_env() else len(s)
+        if batch_size != 1:  # TODO: Support batched prediction
+            raise NotImplementedError
+
+        if not hasattr(self, "_eval_state_var") or batch_size != self._batch_size:
+            self._eval_state_var = create_variable(batch_size, self._env_info.state_shape)
+            self._eval_option_var = create_variable(batch_size, 1)
+
+            if self._termination_model.is_recurrent():  # TODO: Support recurrent prediction
+                raise NotImplementedError
+
+            self._termination_var = self._compute_termination(self._eval_state_var, self._eval_option_var)
+            self._batch_size = batch_size
+
+        if begin_of_episode:
+            option = drng.integers(low=0, high=self._num_options, size=1)
+            option_termination = True
+        else:
+            assert option is not None
+            if len(option.shape) == 1:
+                # cast for avoiding mypy error, add_batch_dimention should return np.ndarray in this case.
+                option = cast(np.ndarray, add_batch_dimension(option))
+            elif len(option.shape) == 2:
+                pass
+            else:
+                raise ValueError("Invalid option shape")
+
+            set_data_to_variable(self._eval_state_var, s)
+            set_data_to_variable(self._eval_option_var, option)
+
+            nn.forward_all([self._termination_var], clear_no_need_grad=True)
+
+            option_termination = bool(
+                (np.squeeze(self._termination_var.d, axis=0) if batch_size == 1 else self._termination_var.d).flatten()
+            )
+
+            if option_termination:
+                option = drng.integers(low=0, high=self._num_options, size=1)
+            else:
+                option = np.squeeze(option, axis=0) if batch_size == 1 else option
+
+        return option.copy(), {"termination": option_termination}
+
+    def _compute_termination(self, state_var: nn.Variable, option_var: nn.Variable) -> nn.Variable:
+        distribution = self._termination_model.termination(state_var, option_var)
+
+        if self._deterministic_termination:
+            return distribution.choose_probable()
+        else:
+            return distribution.sample()
+
+
+class _EpsilonGreedyOptionSelector:
+    _option: np.ndarray
+
+    def __init__(self, random_option_selector: OptionSelector, greedy_option_selector: OptionSelector, epsilon: float):
+        self._random_option_selector = random_option_selector
+        self._greedy_option_selector = greedy_option_selector
+        self._epsilon = epsilon
+
+    @eval_api
+    def __call__(self, state: np.ndarray, *, begin_of_episode: bool = False) -> Tuple[np.ndarray, Dict]:
+        if begin_of_episode:  # force to use greedy option selection in the begin of episode.
+            self._option, option_info = self._greedy_option_selector(
+                state, None if begin_of_episode else self._option, begin_of_episode=begin_of_episode
+            )
+        else:
+            (self._option, option_info), _ = epsilon_greedy_option_selection(
+                state,
+                greedy_option_selector=self._greedy_option_selector,
+                random_option_selector=self._random_option_selector,
+                epsilon=self._epsilon,
+                option=self._option,
+                begin_of_episode=begin_of_episode,
+            )
+
+        return self._option, option_info

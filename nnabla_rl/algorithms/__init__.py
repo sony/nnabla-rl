@@ -43,6 +43,7 @@ from nnabla_rl.algorithms.mme_sac import MMESAC, MMESACConfig
 from nnabla_rl.algorithms.mppi import MPPI, MPPIConfig
 from nnabla_rl.algorithms.munchausen_dqn import MunchausenDQN, MunchausenDQNConfig
 from nnabla_rl.algorithms.munchausen_iqn import MunchausenIQN, MunchausenIQNConfig
+from nnabla_rl.algorithms.option_critic import OptionCritic, OptionCriticConfig
 from nnabla_rl.algorithms.ppo import PPO, PPOConfig
 from nnabla_rl.algorithms.qrdqn import QRDQN, QRDQNConfig
 from nnabla_rl.algorithms.qrsac import QRSAC, QRSACConfig
@@ -107,6 +108,7 @@ register_algorithm(MMESAC, MMESACConfig)
 register_algorithm(MPPI, MPPIConfig)
 register_algorithm(MunchausenDQN, MunchausenDQNConfig)
 register_algorithm(MunchausenIQN, MunchausenIQNConfig)
+register_algorithm(OptionCritic, OptionCriticConfig)
 register_algorithm(PPO, PPOConfig)
 register_algorithm(QRSAC, QRSACConfig)
 register_algorithm(QRDQN, QRDQNConfig)

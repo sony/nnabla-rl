@@ -47,3 +47,27 @@ class TestIterationStateHook:
             dummy_algorithm.iteration_num, test_latest_iteration_state["histogram"]
         )
         writer.write_image.assert_called_once_with(dummy_algorithm.iteration_num, test_latest_iteration_state["image"])
+
+    def test_not_called(self):
+        dummy_algorithm = mock.MagicMock()
+
+        test_latest_iteration_state = {}
+        test_latest_iteration_state["scalar"] = {}
+        test_latest_iteration_state["histogram"] = {}
+        test_latest_iteration_state["image"] = {}
+
+        dummy_algorithm.iteration_num = 1
+        dummy_algorithm.latest_iteration_state = test_latest_iteration_state
+
+        writer = Writer()
+        writer.write_scalar = mock.MagicMock()
+        writer.write_histogram = mock.MagicMock()
+        writer.write_image = mock.MagicMock()
+
+        hook = IterationStateHook(writer=writer, timing=1, start_timing=1000)
+
+        hook(dummy_algorithm)
+
+        writer.write_scalar.assert_not_called()
+        writer.write_histogram.assert_not_called()
+        writer.write_image.assert_not_called()
