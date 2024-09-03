@@ -194,3 +194,35 @@ class XQLQFunction(ContinuousQFunction):
         assert self._optimal_policy, "Optimal policy is not set!"
         optimal_action = self._optimal_policy.pi(s)
         return self.q(s, optimal_action)
+
+
+class IQLQFunction(ContinuousQFunction):
+    """QFunciton model proposed by Ilya Kostrikov in IQL paper for mujoco
+    environment.
+
+    See: https://arxiv.org/pdf/2110.06169
+    """
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _optimal_policy: Optional[DeterministicPolicy]
+
+    def __init__(self, scope_name, optimal_policy: Optional[DeterministicPolicy] = None):
+        super(IQLQFunction, self).__init__(scope_name)
+        self._optimal_policy = optimal_policy
+
+    def q(self, s: nn.Variable, a: nn.Variable) -> nn.Variable:
+        with nn.parameter_scope(self.scope_name):
+            h = NF.concatenate(s, a)
+            h = NPF.affine(h, w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)), n_outmaps=256, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)), n_outmaps=256, name="linear2")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)), n_outmaps=1, name="linear3")
+        return h
+
+    def max_q(self, s: nn.Variable) -> nn.Variable:
+        assert self._optimal_policy, "Optimal policy is not set!"
+        optimal_action = self._optimal_policy.pi(s)
+        return self.q(s, optimal_action)

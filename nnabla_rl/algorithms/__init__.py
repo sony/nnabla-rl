@@ -36,6 +36,7 @@ from nnabla_rl.algorithms.icml2015_trpo import ICML2015TRPO, ICML2015TRPOConfig
 from nnabla_rl.algorithms.icml2018_sac import ICML2018SAC, ICML2018SACConfig
 from nnabla_rl.algorithms.icra2018_qtopt import ICRA2018QtOpt, ICRA2018QtOptConfig
 from nnabla_rl.algorithms.ilqr import iLQR, iLQRConfig
+from nnabla_rl.algorithms.iql import IQL, IQLConfig
 from nnabla_rl.algorithms.iqn import IQN, IQNConfig
 from nnabla_rl.algorithms.lqr import LQR, LQRConfig
 from nnabla_rl.algorithms.mme_sac import MMESAC, MMESACConfig
@@ -99,6 +100,7 @@ register_algorithm(HER, HERConfig)
 register_algorithm(HyAR, HyARConfig)
 register_algorithm(ICML2018SAC, ICML2018SACConfig)
 register_algorithm(iLQR, iLQRConfig)
+register_algorithm(IQL, IQLConfig)
 register_algorithm(IQN, IQNConfig)
 register_algorithm(LQR, LQRConfig)
 register_algorithm(MMESAC, MMESACConfig)

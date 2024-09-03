@@ -691,3 +691,23 @@ def compute_std(var: nn.Variable, epsilon: float, mode_for_floating_point_error:
     else:
         raise ValueError
     return std
+
+
+def expectile_regression(x: nn.Variable, tau: float) -> nn.Variable:
+    """Expectile regression function.
+
+    math::
+        L_2^\\tau(u) = |\\tau - 1(x < 0)|x^2
+
+    Args:
+        x (nn.Variable): the input variable.
+        tau (float): the expectile level. It should be between 0 and 1.
+
+    Returns:
+        nn.Variable: the expectile regression loss.
+    """
+    ones_var = nn.Variable.from_numpy_array(np.ones(x.shape))
+    weight = NF.where(
+        NF.greater_scalar(x.get_unlinked_variable(need_grad=False), 0.0), ones_var * tau, ones_var * (1 - tau)
+    )
+    return weight * NF.pow_scalar(x, 2)

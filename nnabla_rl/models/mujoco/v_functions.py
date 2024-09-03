@@ -155,3 +155,20 @@ class XQLVFunction(VFunction):
             with nn.parameter_scope("linear3"):
                 h = NPF.affine(h, n_outmaps=1, w_init=w_init)
         return h
+
+
+class IQLVFunction(VFunction):
+    """VFunciton model proposed by Ilya Kostrikov in IQL paper for mujoco
+    environment.
+
+    See: https://arxiv.org/pdf/2110.06169
+    """
+
+    def v(self, s: nn.Variable) -> nn.Variable:
+        with nn.parameter_scope(self.scope_name):
+            h = NPF.affine(s, w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)), n_outmaps=256, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)), n_outmaps=256, name="linear2")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)), n_outmaps=1, name="linear3")
+        return h
