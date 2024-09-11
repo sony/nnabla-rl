@@ -108,10 +108,12 @@ class PPOPolicyTrainer(ModelTrainer):
             lower_bounds = NF.minimum2(probability_ratio * advantage, clipped_ratio * advantage)
             clip_loss = NF.mean(lower_bounds)
 
-            entropy = distribution.entropy()
-            entropy_loss = NF.mean(entropy)
-
-            self._pi_loss += 0.0 if ignore_loss else (-clip_loss - self._config.entropy_coefficient * entropy_loss)
+            if self._config.entropy_coefficient != 0.0:
+                entropy = distribution.entropy()
+                entropy_loss = NF.mean(entropy)
+                self._pi_loss += 0.0 if ignore_loss else (-clip_loss - self._config.entropy_coefficient * entropy_loss)
+            else:
+                self._pi_loss += 0.0 if ignore_loss else -clip_loss
 
     def _setup_training_variables(self, batch_size) -> TrainingVariables:
         # Training input variables
