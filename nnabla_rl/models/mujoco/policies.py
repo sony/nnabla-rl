@@ -385,3 +385,80 @@ class XQLPolicy(StochasticPolicy):
                 ln_sigma = NF.clip_by_value(ln_sigma, min=self._min_log_sigma, max=self._max_log_sigma)
             ln_var = ln_sigma * 2.0
         return D.Gaussian(mean=mean, ln_var=ln_var)
+
+
+class IQLPolicy(StochasticPolicy):
+    """Actor model proposed by Ilya Kostrikov in IQL paper for mujoco
+    environment.
+
+    See: https://arxiv.org/pdf/2110.06169
+    """
+
+    # type declarations to type check with mypy
+    # NOTE: declared variables are instance variable and NOT class variable, unless it is marked with ClassVar
+    # See https://mypy.readthedocs.io/en/stable/class_basics.html for details
+    _action_dim: int
+    _clip_log_sigma: bool
+    _min_log_sigma: float
+    _max_log_sigma: float
+
+    def __init__(
+        self,
+        scope_name: str,
+        action_dim: int,
+        clip_log_sigma: bool = True,
+        min_log_sigma: float = -5.0,
+        max_log_sigma: float = 2.0,
+        log_sigma_scale: float = 1.0e-3,
+        state_dependent_sigma: bool = False,
+        tanh_squash_distribution: bool = False,
+        temperature: float = 1.0,
+    ):
+        super(IQLPolicy, self).__init__(scope_name)
+        self._action_dim = action_dim
+        self._clip_log_sigma = clip_log_sigma
+        self._min_log_sigma = min_log_sigma
+        self._max_log_sigma = max_log_sigma
+        self._log_sigma_scale = log_sigma_scale
+        self._state_dependent_sigma = state_dependent_sigma
+        self._tanh_squash_distribution = tanh_squash_distribution
+        self._log_temperature = np.log(temperature)
+
+    def pi(self, s: nn.Variable) -> Distribution:
+        with nn.parameter_scope(self.scope_name):
+            h = NPF.affine(s, w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)), n_outmaps=256, name="linear1")
+            h = NF.relu(x=h)
+            h = NPF.affine(h, w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)), n_outmaps=256, name="linear2")
+            h = NF.relu(x=h)
+
+            mean = NPF.affine(
+                h,
+                w_init=NI.OrthogonalInitializer(gain=np.sqrt(2.0)),
+                n_outmaps=self._action_dim,
+                name="linear_mean",
+            )
+
+            if self._state_dependent_sigma:
+                ln_sigma = NPF.affine(
+                    h,
+                    w_init=NI.OrthogonalInitializer(gain=self._log_sigma_scale),
+                    n_outmaps=self._action_dim,
+                    name="linear_sigma",
+                )
+            else:
+                ln_sigma = get_parameter_or_create(
+                    "ln_sigma", shape=(1, self._action_dim), initializer=NI.ConstantInitializer(0.0)
+                )
+                ln_sigma = NF.broadcast(ln_sigma, (s.shape[0], self._action_dim))
+            if self._clip_log_sigma:
+                ln_sigma = NF.clip_by_value(ln_sigma, min=self._min_log_sigma, max=self._max_log_sigma)
+            ln_sigma += self._log_temperature
+            assert mean.shape == ln_sigma.shape
+            assert mean.shape == (s.shape[0], self._action_dim)
+            ln_var = ln_sigma * 2.0
+
+        if self._tanh_squash_distribution:
+            return D.SquashedGaussian(mean=mean, ln_var=ln_var)
+        else:
+            mean = NF.tanh(mean)
+            return D.Gaussian(mean=mean, ln_var=ln_var)

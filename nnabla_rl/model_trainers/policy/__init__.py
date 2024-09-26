@@ -14,6 +14,7 @@
 
 from nnabla_rl.model_trainers.policy.a2c_policy_trainer import A2CPolicyTrainer, A2CPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.amp_policy_trainer import AMPPolicyTrainer, AMPPolicyTrainerConfig  # noqa
+from nnabla_rl.model_trainers.policy.awr_policy_trainer import AWRPolicyTrainer, AWRPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.bear_policy_trainer import BEARPolicyTrainer, BEARPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.demme_policy_trainer import DEMMEPolicyTrainer, DEMMEPolicyTrainerConfig  # noqa
 from nnabla_rl.model_trainers.policy.dpg_policy_trainer import DPGPolicyTrainer, DPGPolicyTrainerConfig  # noqa

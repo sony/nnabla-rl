@@ -17,3 +17,7 @@ from nnabla_rl.model_trainers.v_value.xql_v_trainer import XQLVTrainer, XQLVTrai
 from nnabla_rl.model_trainers.v_value.mme_v_trainer import MMEVTrainer, MMEVTrainerConfig  # noqa
 from nnabla_rl.model_trainers.v_value.monte_carlo_v_trainer import MonteCarloVTrainer, MonteCarloVTrainerConfig  # noqa
 from nnabla_rl.model_trainers.v_value.soft_v_trainer import SoftVTrainer, SoftVTrainerConfig  # noqa
+from nnabla_rl.model_trainers.v_value.iql_v_function_trainer import (  # noqa
+    IQLVFunctionTrainer,
+    IQLVFunctionTrainerConfig,
+)

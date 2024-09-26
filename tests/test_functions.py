@@ -578,6 +578,16 @@ class TestFunctions(object):
         with pytest.raises(ValueError):
             RF.compute_std(variance_variable, 0.01, "dummy_add")
 
+    @pytest.mark.parametrize("expectile", [0.0, 0.25, 0.5, 0.75, 1.0])
+    def test_expectile_regression(self, expectile):
+        x_array = np.arange(-2.0, 3.0)
+        x = nn.Variable.from_numpy_array(x_array)
+        loss = RF.expectile_regression(x, expectile)
+        loss.forward()
+
+        expected = np.where(x.d > 0, expectile, 1 - expectile) * (x_array**2)
+        assert np.allclose(loss.d, expected)
+
 
 if __name__ == "__main__":
     pytest.main()

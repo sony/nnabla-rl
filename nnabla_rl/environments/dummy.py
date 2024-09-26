@@ -221,6 +221,19 @@ class DummyMujocoEnv(AbstractDummyEnv):
         dataset["timeouts"] = np.zeros((datasize, 1))
         return dataset
 
+    def get_qlearning_dataset(self):
+        dataset = self.get_dataset()
+
+        N = dataset["rewards"].shape[0]
+
+        return {
+            "observations": dataset["observations"][: N - 1].astype(np.float32),
+            "actions": dataset["actions"][: N - 1].astype(np.float32),
+            "next_observations": dataset["observations"][1:].astype(np.float32),
+            "rewards": dataset["rewards"][: N - 1].astype(np.float32),
+            "terminals": dataset["terminals"][: N - 1].astype(bool),
+        }
+
 
 class DummyDMControlEnv(DummyMujocoEnv):
     pass
