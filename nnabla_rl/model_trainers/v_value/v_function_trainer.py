@@ -114,7 +114,7 @@ class VFunctionTrainer(ModelTrainer):
         target_v = self._compute_target(training_variables)
         target_v.need_grad = False
 
-        loss = 0
+        loss = 0.0
         for v_function in models:
             v_function = cast(VFunction, v_function)
             v_loss = self._compute_loss(v_function, target_v, training_variables)
