@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 
 import nnabla as nn
-from nnabla_rl.utils.misc import create_attention_mask, create_variable
+from nnabla_rl.utils.misc import create_attention_mask, create_variable, create_variables
 
 
 class TestMisc:
@@ -53,6 +53,37 @@ class TestMisc:
         expected_mask = nn.Variable.from_numpy_array(expected_mask)
         actual_mask = create_attention_mask(num_query, num_key)
         assert np.allclose(expected_mask.d, actual_mask.d)
+
+    def test_create_variables_int(self):
+        batch_size = 3
+        shape = 5
+        shapes = {"var_int": shape}
+
+        actual_vars = create_variables(batch_size, shapes)
+
+        for name, shape in shapes.items():
+            assert actual_vars[name].shape == (batch_size, shape)
+
+    def test_create_variables_tuple(self):
+        batch_size = 3
+        shape = (5, 6)
+        shapes = {"var_tuple": shape}
+
+        actual_vars = create_variables(batch_size, shapes)
+
+        for name, shape in shapes.items():
+            assert actual_vars[name].shape == (batch_size, *shape)
+
+    def test_create_variables_tuples(self):
+        batch_size = 3
+        shape = ((6,), (3,))
+        shapes = {"var_tuples": shape}
+
+        actual_vars = create_variables(batch_size, shapes)
+
+        for name, shape in shapes.items():
+            for actual_var, expected_shape in zip(actual_vars[name], shape):
+                assert actual_var.shape == (batch_size, *expected_shape)
 
 
 if __name__ == "__main__":

@@ -60,9 +60,13 @@ def create_variable(batch_size: int, shape: Shape) -> Union[nn.Variable, Tuple[n
 def create_variables(batch_size: int, shapes: Dict[str, Tuple[int, ...]]) -> Dict[str, nn.Variable]:
     variables: Dict[str, nn.Variale] = {}
     for name, shape in shapes.items():
-        state: nn.Variable = create_variable(batch_size, shape)
-        state.data.zero()
-        variables[name] = state
+        var: nn.Variable = create_variable(batch_size, shape)
+        if isinstance(var, tuple):
+            for v in var:
+                v.data.zero()
+        else:
+            var.data.zero()
+        variables[name] = var
     return variables
 
 
