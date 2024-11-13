@@ -81,6 +81,8 @@ def marshal_dict_experiences(dict_experiences: Sequence[Dict[str, Any]]) -> Dict
         try:
             if isinstance(data[0], Dict):
                 marshaled_experiences.update({key: marshal_dict_experiences(data)})
+            elif isinstance(data[0], tuple):
+                marshaled_experiences.update({key: marshal_experiences(data)})
             else:
                 marshaled_experiences.update({key: add_axis_if_single_dim(np.asarray(data))})
         except ValueError as e:

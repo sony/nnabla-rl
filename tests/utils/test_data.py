@@ -128,6 +128,23 @@ class TestData:
         np.testing.assert_allclose(np.asarray(key1_experiences), 1)
         np.testing.assert_allclose(np.asarray(key2_experiences), 2)
 
+    def test_marshal_dict_experiences_with_tuple_values(self):
+        experiences = {"key1": (1, 1, 1), "key2": (2, 2)}
+        dict_experiences = [{"key_parent": experiences}, {"key_parent": experiences}]
+        marshaled_experience = marshal_dict_experiences(dict_experiences)
+
+        key1_experiences = marshaled_experience["key_parent"]["key1"]
+        key2_experiences = marshaled_experience["key_parent"]["key2"]
+
+        assert len(key1_experiences) == 3
+        assert len(key2_experiences) == 2
+        for key1_value in key1_experiences:
+            assert key1_value.shape == (2, 1)
+            np.testing.assert_allclose(np.asarray(key1_value), 1)
+        for key2_value in key2_experiences:
+            assert key2_value.shape == (2, 1)
+            np.testing.assert_allclose(np.asarray(key2_value), 2)
+
     def test_marshal_triple_nested_dict_experiences(self):
         experiences = {"key1": 1, "key2": 2}
         nested_experiences = {"nest1": experiences, "nest2": experiences}
