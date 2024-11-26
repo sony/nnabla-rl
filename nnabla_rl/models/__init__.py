@@ -46,6 +46,9 @@ from nnabla_rl.models.q_function import (  # noqa
 from nnabla_rl.models.v_function import VFunction  # noqa
 from nnabla_rl.models.reward_function import RewardFunction  # noqa
 from nnabla_rl.models.encoder import Encoder, VariationalAutoEncoder  # noqa
+from nnabla_rl.models.intra_policy import IntraPolicy, StochasticIntraPolicy  # noqa
+from nnabla_rl.models.termination_function import TerminationFunction, StochasticTerminationFunction  # noqa
+from nnabla_rl.models.option_value_function import OptionValueFunction, DiscreteOptionValueFunction  # noqa
 
 from nnabla_rl.models.mujoco.policies import TD3Policy, SACPolicy, BEARPolicy, TRPOPolicy  # noqa
 from nnabla_rl.models.mujoco.q_functions import (  # noqa
@@ -79,7 +82,11 @@ from nnabla_rl.models.atari.policies import A3CPolicy  # noqa
 from nnabla_rl.models.atari.q_functions import DQNQFunction, DRQNQFunction  # noqa
 from nnabla_rl.models.atari.v_functions import PPOVFunction as PPOAtariVFunction  # noqa
 from nnabla_rl.models.atari.v_functions import A3CVFunction  # noqa
-from nnabla_rl.models.atari.shared_functions import PPOSharedFunctionHead, A3CSharedFunctionHead  # noqa
+from nnabla_rl.models.atari.shared_functions import (  # noqa
+    PPOSharedFunctionHead,
+    A3CSharedFunctionHead,
+    OptionCriticSharedFunctionHead,
+)
 from nnabla_rl.models.atari.distributional_functions import (  # noqa
     C51ValueDistributionFunction,
     RainbowValueDistributionFunction,
@@ -89,6 +96,9 @@ from nnabla_rl.models.atari.distributional_functions import (  # noqa
     IQNQuantileFunction,
 )
 from nnabla_rl.models.atari.policies import ICML2015TRPOPolicy as ICML2015TRPOAtariPolicy  # noqa
+from nnabla_rl.models.atari.intra_policies import AtariOptionCriticIntraPolicy  # noqa
+from nnabla_rl.models.atari.termination_functions import AtariOptionCriticTerminationFunction  # noqa
+from nnabla_rl.models.atari.option_v_functions import AtariOptionCriticOptionVFunction  # noqa
 
 from nnabla_rl.models.pybullet.q_functions import ICRA2018QtOptQFunction  # noqa
 from nnabla_rl.models.pybullet.reward_functions import AMPDiscriminator  # noqa

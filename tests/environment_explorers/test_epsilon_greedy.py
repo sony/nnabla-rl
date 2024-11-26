@@ -21,6 +21,7 @@ import pytest
 from nnabla_rl.environment_explorers.epsilon_greedy_explorer import (
     LinearDecayEpsilonGreedyExplorer,
     LinearDecayEpsilonGreedyExplorerConfig,
+    compute_epsilon,
     epsilon_greedy_action_selection,
 )
 
@@ -69,24 +70,18 @@ class TestEpsilonGreedyActionStrategy(object):
         initial_epsilon = 1.0
         final_epsilon = 0.1
         max_explore_steps = 100
-        greedy_selector_mock = mock.MagicMock(return_value=(1, {}))
-        random_selector_mock = mock.MagicMock(return_value=(2, {}))
-        config = LinearDecayEpsilonGreedyExplorerConfig(
-            initial_epsilon=initial_epsilon, final_epsilon=final_epsilon, max_explore_steps=max_explore_steps
-        )
-        explorer = LinearDecayEpsilonGreedyExplorer(
-            greedy_selector_mock, random_selector_mock, env_info=None, config=config
-        )
 
         def expected_epsilon(step):
             epsilon = initial_epsilon - (initial_epsilon - final_epsilon) / max_explore_steps * step
             return max(epsilon, final_epsilon)
 
-        assert np.isclose(explorer._compute_epsilon(1), expected_epsilon(1))
-        assert np.isclose(explorer._compute_epsilon(50), expected_epsilon(50))
-        assert np.isclose(explorer._compute_epsilon(99), expected_epsilon(99))
-        assert np.isclose(explorer._compute_epsilon(100), expected_epsilon(100))
-        assert explorer._compute_epsilon(200) == final_epsilon
+        assert np.isclose(compute_epsilon(1, max_explore_steps, initial_epsilon, final_epsilon), expected_epsilon(1))
+        assert np.isclose(compute_epsilon(50, max_explore_steps, initial_epsilon, final_epsilon), expected_epsilon(50))
+        assert np.isclose(compute_epsilon(99, max_explore_steps, initial_epsilon, final_epsilon), expected_epsilon(99))
+        assert np.isclose(
+            compute_epsilon(100, max_explore_steps, initial_epsilon, final_epsilon), expected_epsilon(100)
+        )
+        assert compute_epsilon(200, max_explore_steps, initial_epsilon, final_epsilon) == final_epsilon
 
     def test_return_explorer_info(
         self,

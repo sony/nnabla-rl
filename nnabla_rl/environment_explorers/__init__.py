@@ -18,6 +18,8 @@ from nnabla_rl.environment_explorers.epsilon_greedy_explorer import (  # noqa
     NoDecayEpsilonGreedyExplorerConfig,
     LinearDecayEpsilonGreedyExplorer,
     LinearDecayEpsilonGreedyExplorerConfig,
+    LinearDecayEpsilonGreedyOptionExplorer,
+    LinearDecayEpsilonGreedyOptionExplorerConfig,
 )
 
 from nnabla_rl.environment_explorers.gaussian_explorer import GaussianExplorer, GaussianExplorerConfig  # noqa
